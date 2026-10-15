@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { MyData, MySensitiveData } from './MyData'
 import { PAY_STATUS_CLASS, PAY_STATUS_LABEL, type StaffPayment } from '@/modules/finance/service'
 
 const PIX_TYPES = [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email', 'E-mail'], ['telefone', 'Telefone'], ['aleatoria', 'Chave aleatória']] as const
@@ -76,6 +77,8 @@ export function ProfilePage() {
         <p className="font-display text-lg font-bold">{membership.display_name}</p>
         <p className="text-muted-foreground">{membership.name}</p>
       </Card>
+      <MyData memberId={memberId} />
+      <MySensitiveData memberId={memberId} />
       <PixSection memberId={memberId} />
       {(payments.isLoading || (payments.data?.length ?? 0) > 0) && (
         <section className="space-y-2">

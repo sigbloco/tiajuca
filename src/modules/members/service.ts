@@ -54,7 +54,7 @@ export async function createMember(orgId: string, m: NewMember) {
       full_name: m.full_name.trim(),
       display_name: clean(m.display_name),
       email: clean(m.email)?.toLowerCase() ?? null,
-      phone: clean(m.phone),
+      phone: clean(m.phone)?.replace(/\D/g, '') ?? null,
       birth_date: clean(m.birth_date),
       joined_at: new Date().toISOString().slice(0, 10),
     })
