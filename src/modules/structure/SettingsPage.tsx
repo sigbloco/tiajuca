@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { cn } from '@/components/ui/primitives'
 import { usePermission } from '@/core/permissions'
 import { ContributionsSettings, HolidaysSettings } from '@/modules/billing/BillingSettings'
+import { IntegrationsSettings } from '@/modules/integrations/IntegrationsSettings'
 import { RecurrencesSettings } from '@/modules/events/RecurrencesSettings'
 import { TemplatesSettings } from '@/modules/checklists/TemplatesSettings'
 import { CatalogEditor } from './CatalogEditor'
@@ -19,6 +20,7 @@ const TABS = [
   { key: 'checklists', label: 'Checklists' },
   { key: 'fees', label: 'Contribuições' },
   { key: 'holidays', label: 'Feriados' },
+  { key: 'integrations', label: 'Integrações' },
 ] as const
 
 export function SettingsPage() {
@@ -52,6 +54,7 @@ export function SettingsPage() {
       {tab === 'checklists' && <TemplatesSettings canEdit={canEvents} />}
       {tab === 'fees' && <ContributionsSettings canEdit={canBilling} />}
       {tab === 'holidays' && <HolidaysSettings />}
+      {tab === 'integrations' && <IntegrationsSettings />}
     </div>
   )
 }

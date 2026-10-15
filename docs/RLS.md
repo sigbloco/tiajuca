@@ -84,3 +84,6 @@ Testes: `rls_phase7_smoke.sql`.
 - **Aprovação** (`approve_submission`) cria o integrante a partir do mapeamento da versão respondida; dados sensíveis vão para a tabela restrita; registra consentimento; pode definir status no ciclo (lista de espera/ativo).
 - **Retenção** (`purge_old_submissions`): rejeitadas/arquivadas > 12 meses e pendentes > 6 meses são anonimizadas; aprovadas não são tocadas.
 Testes: `rls_phase8_smoke.sql`.
+
+## Fase 9 — Google Drive (migration `…000013`)
+`integrations` (somente `settings.manage`) guarda apenas `{folder_id}` e o estado ativo; **credencial nunca no banco**. `drive_integration_config` exige `repertoire.manage`; `save_drive_integration`/`set_drive_integration_active` exigem `settings.manage`. A Edge Function revalida a permissão com o JWT de quem chama, usa a pasta raiz do banco e só aceita subpastas dentro dela. Setup em `docs/GOOGLE_DRIVE.md`. Testes: `rls_phase9_smoke.sql` (a função em si depende de credenciais externas e não é testada aqui).

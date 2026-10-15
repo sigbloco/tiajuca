@@ -8,6 +8,8 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { DrivePicker } from './DrivePicker'
+import { getDriveConfig, type DriveFile } from './drive'
 import { KIND_LABEL, listAttachments, openAttachment, uploadSongFile, type Attachment, type AttachmentKind, type Song } from './service'
 
 const field = (v: string) => v.trim() || null
@@ -23,6 +25,8 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
   const [description, setDescription] = useState('')
   const [url, setUrl] = useState('')
   const [filterTarget, setFilterTarget] = useState('')
+  const [driveOpen, setDriveOpen] = useState(false)
+  const drive = useQuery({ queryKey: ['drive-config', orgId], enabled: canManage, retry: false, queryFn: () => getDriveConfig(orgId) })
 
   const { data } = useQuery({ queryKey: ['attachments', orgId, song.id], queryFn: () => listAttachments(song.id) })
   const refresh = () => qc.invalidateQueries({ queryKey: ['attachments', orgId, song.id] })
@@ -40,6 +44,17 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
     },
     onSuccess: () => { toast.success('Link adicionado.'); setUrl(''); setDescription(''); refresh() },
     onError: (e) => toast.error(/check|violat/i.test(String(e)) ? 'Informe um endereço que comece com http:// ou https://.' : friendlyError(e)),
+  })
+  const addDrive = useMutation({
+    mutationFn: async (f: DriveFile) => {
+      const { error } = await supabase.from('song_attachments').insert({
+        organization_id: orgId, song_id: song.id, kind, url: f.web_view_link, file_name: f.name, mime_type: f.mime_type,
+        description: field(description) ?? f.name, source: 'gdrive', external_ref: f.id, ...targetCols(),
+      })
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Arquivo do Drive anexado.'); setDriveOpen(false); setDescription(''); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
   })
   const upload = useMutation({
     mutationFn: async (file: File) => {
@@ -108,7 +123,11 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
           <Button size="sm" variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}>
             <FileUp className="h-4 w-4" /> {upload.isPending ? 'Enviando…' : 'Enviar arquivo (PDF, imagem, áudio; até 25 MB)'}
           </Button>
-          <p className="text-xs text-muted-foreground">Arquivos ficam em armazenamento privado da organização. A busca no Google Drive entra numa fase posterior.</p>
+          {drive.data?.active && (
+            <Button size="sm" variant="outline" onClick={() => setDriveOpen(!driveOpen)}>{driveOpen ? 'Fechar busca no Drive' : 'Buscar no Google Drive'}</Button>
+          )}
+          {driveOpen && <DrivePicker onPick={(f) => (f.web_view_link ? addDrive.mutate(f) : toast.error('Este arquivo não tem link de visualização.'))} />}
+          <p className="text-xs text-muted-foreground">Arquivos enviados ficam em armazenamento privado da organização. Links e arquivos do Drive também podem ser anexados.</p>
         </Card>
       )}
     </section>
