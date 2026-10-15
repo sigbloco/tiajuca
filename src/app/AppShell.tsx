@@ -1,5 +1,7 @@
 import { LogOut, Menu } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { OrgLogo } from '@/components/shared/OrgLogo'
+import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
@@ -12,6 +14,9 @@ export function AppShell() {
   const { membership } = useOrganization()
   const { signOut } = useAuth()
   const [moreOpen, setMoreOpen] = useState(false)
+  const brandName = membership?.name
+  const brandLogo = membership?.logo_path ?? null
+  useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
   if (!membership) return null
   const base = `/${membership.slug}`
   const items = NAV_ITEMS.filter((i) => !i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
@@ -26,7 +31,10 @@ export function AppShell() {
     <div className="min-h-screen md:flex">
       {/* Desktop: sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-4 md:flex">
-        <p className="mb-6 font-display text-2xl font-extrabold text-primary">{membership.short_name}</p>
+        <div className="mb-6 flex items-center gap-3">
+          <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-11 w-11 shrink-0" />
+          <p className="font-display text-xl font-extrabold leading-tight text-primary">{membership.name}</p>
+        </div>
         <nav className="flex-1 space-y-1">
           {items.map((i) => (
             <NavLink key={i.to} end={i.to === ''} to={`${base}/${i.to}`} className={link}>

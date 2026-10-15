@@ -4,13 +4,13 @@
 -- (a conta precisa existir em auth.users para o vínculo automático; senão vincule por convite.)
 
 with org as (
-  insert into public.organizations (name, short_name, slug, theme, timezone)
+  insert into public.organizations (name, short_name, slug, logo_path, theme, timezone)
   values (
-    'Cordão da Tia Juca', 'Tia Juca', 'tiajuca',
+    'Cordão da Tia Juca', 'Tia Juca', 'tiajuca', '/brand/tiajuca.png',
     '{"primary":"#E93D2B","primaryForeground":"#FFFFFF","secondary":"#DEE33B","secondaryForeground":"#2B2B14"}'::jsonb,
     'America/Sao_Paulo'
   )
-  on conflict (slug) do update set name = excluded.name
+  on conflict (slug) do update set name = excluded.name, logo_path = excluded.logo_path
   returning id
 )
 select public.seed_org_defaults(id) from org;
