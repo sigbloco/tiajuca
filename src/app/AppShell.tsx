@@ -6,6 +6,7 @@ import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { NAV_ITEMS } from './navigation'
+import { ViewAsBar } from './ViewAsBar'
 
 export function AppShell() {
   const { membership } = useOrganization()
@@ -20,6 +21,8 @@ export function AppShell() {
     cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive && 'bg-primary text-primary-foreground hover:bg-primary')
 
   return (
+    <>
+    <ViewAsBar />
     <div className="min-h-screen md:flex">
       {/* Desktop: sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-4 md:flex">
@@ -73,5 +76,6 @@ export function AppShell() {
         </SheetContent>
       </Sheet>
     </div>
+    </>
   )
 }
