@@ -6,7 +6,7 @@ Para os testes de permissão você precisará de **mais duas contas** (ex.: um e
 ## 0. Preparação (10 min)
 1. **Configurações → Equipe**: nada a fazer ainda. Em **Membros**, crie 4 pessoas de teste (maiores de 18): `Teste Aluno`, `Teste Músico`, `Teste Professor`, `Teste Integrante`. Use o e-mail alternativo no *Teste Professor* e no *Teste Integrante*.
 2. Em cada um, **Convidar** → copie o link → abra numa janela anônima, crie a conta (ou entre) e aceite o convite. Confirme que a conta passa a ver o app.
-3. Em **Acesso e papéis** (menu lateral/Mais): conceda **Professor** ao *Teste Professor* e **Integrante** ao *Teste Integrante*. Tente remover a Direção de si mesmo sendo o único diretor: o app recusa. Conceda Direção a outra pessoa e remova a sua: funciona; a partir daí a outra pessoa fica protegida.
+3. Em **Acesso e papéis** (menu lateral/Mais): conceda **Professor** ao *Teste Professor* e **Integrante** ao *Teste Integrante*. Tente remover a Direção de si mesmo sendo o único diretor: o app recusa. Conceda Direção a outra pessoa e remova a sua: funciona; a partir daí a outra pessoa fica protegida. **Titular** (cordaodatiajuca@gmail.com): só ele concede/remove a Direção e transfere a titularidade; um diretor comum vê o botão Direção bloqueado (cadeado). Em **Permissões dos papéis**, edite o que Professor/Monitor/Integrante podem fazer; itens com cadeado são só da Direção.
 
 ## 1. Estrutura e ciclos
 - [ ] **Configurações → Naipes**: Sopro, Percussão, Performance aparecem, **fechados**. Abra Percussão: subnaipes Graves/Leves/Agudos/Chocalhos. Crie um subnaipe, renomeie, mude a ordem, desative.
@@ -75,7 +75,6 @@ Teste também **digitando a URL** de páginas proibidas (ex.: `/tiajuca/financei
 - [ ] Apagar os dados de teste (integrantes "Teste …", cobranças, eventos).
 
 ## Pendências conhecidas (ainda não construído)
-- **Edição fina de permissões por papel** (a tela de Acesso e papéis concede/revoga papéis e mostra a matriz de permissões em leitura; alterar a matriz ainda é por SQL).
 - **Perfil completo do integrante** (edição dos próprios dados e dos dados sensíveis pelo titular) — há RPC, falta tela.
 - **Notificações** (e-mail/WhatsApp), lista de espera automática por naipe, fechamento mensal financeiro, relatórios financeiros históricos.
 - **Testes automatizados de front** e **pgTAP no CI** (os testes SQL atuais são manuais, no SQL Editor).

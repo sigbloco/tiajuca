@@ -7,7 +7,7 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { COLOR_BADGE, listActivities } from '@/modules/events/service'
 
-const ROLE_LABEL: Record<string, string> = { direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
+const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
 
 function Stat({ label, value, hint, tone }: { label: string; value: string | number; hint?: string; tone?: string }) {
   return (

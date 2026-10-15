@@ -90,3 +90,9 @@ Testes: `rls_phase8_smoke.sql`.
 
 ## Gestão de papéis (migration `…000014`)
 `grant_access_role` / `revoke_access_role` (somente `roles.manage`; INSERT/UPDATE direto continua só para quem tem a permissão). **Último diretor protegido** por RPC e por gatilhos (`guard_last_director_role`, `guard_last_director_archive`): não dá para remover o papel Direção nem arquivar o cadastro do único diretor ativo, nem por API direta. Tela: `/acesso` (pessoas × papéis; matriz de permissões em leitura). Testes: `rls_phase10_smoke.sql`.
+
+## Titular do bloco + matriz de permissões editável (migration `…000015`)
+- **Titular** (`titular`, rank 50): papel acima da Direção, **dentro do próprio bloco** (não enxerga outros blocos). Tem todas as permissões (org). Com titular no bloco, **só ele** concede/remove a Direção (RPC e gatilho `guard_privileged_roles`, valem também para INSERT/UPDATE direto). A titularidade só muda por `transfer_titular` (atômica; destino precisa ter conta); o titular não pode ser arquivado nem removido por outros. O **primeiro** titular é designado só no banco (`set_organization_titular`, `seed/tiajuca_owner.sql`) — nunca pela interface.
+- Sem titular no bloco, a Direção segue gerindo a própria Direção (comportamento anterior). A proteção do "último administrador" considera Direção + Titular.
+- **Matriz** editável em *Acesso e papéis → Permissões dos papéis* (`set_role_permission`). Direção e Titular são **fixos** (todas as permissões, escopo org; gatilho `guard_role_permissions` impede reduzir/apagar). Permissões críticas (`locked_permissions()`: organização, configurações, papéis, auditoria, dados sensíveis, financeiro, mensalidades, bolsas, pagamentos da equipe, atribuições, formulários) são **exclusivas da Direção/Titular**. Permissões novas do catálogo entram automaticamente na Direção e no Titular.
+Testes: `rls_phase10_smoke.sql` (papéis, sem titular) e `rls_phase11_smoke.sql` (titular + matriz).
