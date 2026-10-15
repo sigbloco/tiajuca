@@ -1,14 +1,15 @@
 import { supabase } from '@/core/supabase'
 
-export type CatalogTable = 'areas' | 'sections' | 'instruments' | 'artistic_functions' | 'skill_levels'
+// Naipe (sections) → Subnaipe (subsections, interno da equipe) → Instrumento (instruments)
+export type CatalogTable = 'sections' | 'subsections' | 'instruments' | 'artistic_functions' | 'skill_levels'
 
 export interface CatalogItem {
   id: string
   name: string
   sort_order: number
   is_active: boolean
-  area_id?: string | null
   section_id?: string | null
+  subsection_id?: string | null
 }
 
 export async function listCatalog(table: CatalogTable, orgId: string): Promise<CatalogItem[]> {
@@ -37,7 +38,8 @@ export async function saveCatalogItem(
 
 /** Troca a ordem de dois itens (reordenação simples por setas). */
 export async function swapOrder(table: CatalogTable, orgId: string, a: CatalogItem, b: CatalogItem) {
-  const first = saveCatalogItem(table, orgId, { id: a.id, name: a.name, sort_order: b.sort_order })
-  const second = saveCatalogItem(table, orgId, { id: b.id, name: b.name, sort_order: a.sort_order })
-  await Promise.all([first, second])
+  await Promise.all([
+    saveCatalogItem(table, orgId, { id: a.id, name: a.name, sort_order: b.sort_order }),
+    saveCatalogItem(table, orgId, { id: b.id, name: b.name, sort_order: a.sort_order }),
+  ])
 }

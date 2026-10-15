@@ -46,3 +46,6 @@ Testes: `supabase/tests/rls_phase2_smoke.sql`.
 ## Correção de segurança (migration `…000005`)
 `has_permission()` devolvia `NULL` (não `false`) quando o usuário não tinha a permissão; em `if not has_permission(...)` o NULL deixava a ação passar (afetava `create_member_invite`, `log_sensitive_access`, `set_member_cycle_status`). Encontrado pelo teste da Fase 2, corrigido com `coalesce`, e o teste agora cobre esses casos. Políticas RLS não eram afetadas (usam a forma positiva).
 **Regra:** em funções de permissão, nunca depender de booleano que possa ser NULL; sempre `coalesce(..., false)`.
+
+## Reestruturação de naipes (migration `…000006`)
+Naipe (Percussão/Sopro/Performance) → Subnaipe (opcional, interno) → Instrumento. Vagas (`instrument_cycle_capacity`) e acompanhamento (`staff_assignments`, aceita naipe, subnaipe ou instrumento) valem por instrumento; `is_in_my_group` expande. `subsections` só é legível pela equipe (`is_staff`): aluno/integrante comum nunca vê subnaipe. Subnaipe do instrumento deve pertencer ao mesmo naipe (FK composta).

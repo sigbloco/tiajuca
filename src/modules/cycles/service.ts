@@ -71,7 +71,7 @@ export async function setMemberCycleStatus(args: {
   cycle: string
   status: string
   notes?: string
-  waitlistSection?: string
+  waitlistInstrument?: string
   force?: boolean
 }) {
   const { error } = await supabase.rpc('set_member_cycle_status', {
@@ -79,7 +79,7 @@ export async function setMemberCycleStatus(args: {
     p_cycle: args.cycle,
     p_status_key: args.status,
     p_notes: args.notes ?? null,
-    p_waitlist_section: args.waitlistSection ?? null,
+    p_waitlist_instrument: args.waitlistInstrument ?? null,
     p_force: args.force ?? false,
   })
   if (error) throw error

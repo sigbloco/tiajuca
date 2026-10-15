@@ -18,7 +18,7 @@ interface WaitRow {
   member_id: string
   waitlisted_at: string | null
   members: { full_name: string; display_name: string | null } | null
-  sections: { name: string } | null
+  instruments: { name: string } | null
 }
 
 export function WaitlistPage() {
@@ -27,10 +27,10 @@ export function WaitlistPage() {
   const qc = useQueryClient()
   const canManage = usePermission('member_cycles.manage', 'group')
   const canForce = usePermission('capacity.manage')
-  const sections = useCatalog('sections')
+  const instruments = useCatalog('instruments')
   const [cycleId, setCycleId] = useState('')
   const [memberId, setMemberId] = useState('')
-  const [sectionId, setSectionId] = useState('')
+  const [instrumentId, setInstrumentId] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['waitlist', orgId, cycleId],
@@ -38,7 +38,7 @@ export function WaitlistPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('member_cycles')
-        .select('id, member_id, waitlisted_at, members(full_name, display_name), sections(name), member_cycle_statuses!inner(is_waitlist)')
+        .select('id, member_id, waitlisted_at, members(full_name, display_name), instruments(name), member_cycle_statuses!inner(is_waitlist)')
         .eq('organization_id', orgId)
         .eq('cycle_id', cycleId)
         .eq('member_cycle_statuses.is_waitlist', true)
@@ -66,7 +66,7 @@ export function WaitlistPage() {
     },
   })
   const enqueue = useMutation({
-    mutationFn: () => setMemberCycleStatus({ member: memberId, cycle: cycleId, status: 'waitlist', waitlistSection: sectionId || undefined }),
+    mutationFn: () => setMemberCycleStatus({ member: memberId, cycle: cycleId, status: 'waitlist', waitlistInstrument: instrumentId || undefined }),
     onSuccess: () => {
       toast.success('Adicionado à lista de espera.')
       setMemberId('')
@@ -87,10 +87,10 @@ export function WaitlistPage() {
           <h3>Adicionar à fila</h3>
           <MemberPicker value={memberId} onChange={setMemberId} />
           <div className="space-y-1.5">
-            <Label htmlFor="wl-section">Naipe desejado</Label>
-            <Select id="wl-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
+            <Label htmlFor="wl-instrument">Instrumento desejado</Label>
+            <Select id="wl-instrument" value={instrumentId} onChange={(e) => setInstrumentId(e.target.value)}>
               <option value="">Qualquer / não informado</option>
-              {sections.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {instruments.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           </div>
           <Button disabled={!memberId || enqueue.isPending} onClick={() => enqueue.mutate()}>Adicionar</Button>
@@ -105,7 +105,7 @@ export function WaitlistPage() {
             <div className="min-w-0">
               <p className="truncate font-semibold">{i + 1}. {r.members?.display_name ?? r.members?.full_name}</p>
               <p className="text-muted-foreground">
-                {r.sections?.name ?? 'Naipe não informado'} · desde {formatDateTime(r.waitlisted_at, membership?.timezone)}
+                {r.instruments?.name ?? 'Instrumento não informado'} · desde {formatDateTime(r.waitlisted_at, membership?.timezone)}
               </p>
             </div>
             {canManage && (

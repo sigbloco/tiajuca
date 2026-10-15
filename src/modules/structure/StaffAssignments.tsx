@@ -8,6 +8,14 @@ import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from './CatalogEditor'
+import type { CatalogTable } from './service'
+
+type ScopeKind = 'section' | 'subsection' | 'instrument'
+const SCOPE: Record<ScopeKind, { label: string; table: CatalogTable; column: string }> = {
+  section: { label: 'Naipe inteiro', table: 'sections', column: 'section_id' },
+  subsection: { label: 'Subnaipe', table: 'subsections', column: 'subsection_id' },
+  instrument: { label: 'Instrumento', table: 'instruments', column: 'instrument_id' },
+}
 
 interface Assignment {
   id: string
@@ -15,23 +23,26 @@ interface Assignment {
   valid_from: string
   members: { full_name: string; display_name: string | null } | null
   sections: { name: string } | null
+  subsections: { name: string } | null
+  instruments: { name: string } | null
 }
 
-/** Define quais naipes cada professor/monitor acompanha (base do escopo "grupo" no RLS). */
+/** Define o que cada professor/monitor acompanha. Naipe e subnaipe são expandidos para os instrumentos (RLS). */
 export function StaffAssignments() {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const sections = useCatalog('sections')
   const [memberId, setMemberId] = useState('')
-  const [sectionId, setSectionId] = useState('')
   const [kind, setKind] = useState<'professor' | 'monitor'>('professor')
+  const [scope, setScope] = useState<ScopeKind>('section')
+  const [targetId, setTargetId] = useState('')
+  const options = useCatalog(SCOPE[scope].table)
 
   const { data } = useQuery({
     queryKey: ['staff-assignments', orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('staff_section_assignments')
-        .select('id, staff_kind, valid_from, members(full_name, display_name), sections(name)')
+        .from('staff_assignments')
+        .select('id, staff_kind, valid_from, members(full_name, display_name), sections(name), subsections(name), instruments(name)')
         .eq('organization_id', orgId)
         .is('valid_to', null)
         .order('created_at', { ascending: false })
@@ -44,8 +55,8 @@ export function StaffAssignments() {
   const add = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
-        .from('staff_section_assignments')
-        .insert({ organization_id: orgId, member_id: memberId, section_id: sectionId, staff_kind: kind })
+        .from('staff_assignments')
+        .insert({ organization_id: orgId, member_id: memberId, staff_kind: kind, [SCOPE[scope].column]: targetId })
       if (error) throw error
     },
     onSuccess: () => {
@@ -57,7 +68,7 @@ export function StaffAssignments() {
   })
   const end = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('staff_section_assignments').update({ valid_to: new Date().toISOString().slice(0, 10) }).eq('id', id)
+      const { error } = await supabase.from('staff_assignments').update({ valid_to: new Date().toISOString().slice(0, 10) }).eq('id', id)
       if (error) throw error
     },
     onSuccess: refresh,
@@ -66,22 +77,27 @@ export function StaffAssignments() {
 
   return (
     <div className="space-y-3">
-      <h2>Equipe e naipes acompanhados</h2>
-      <p className="text-muted-foreground">Professores e monitores veem os integrantes dos naipes atribuídos aqui. Um naipe pode ter vários, e uma pessoa pode acompanhar vários naipes.</p>
+      <h2>Equipe e o que cada pessoa acompanha</h2>
+      <p className="text-muted-foreground">
+        Professores e monitores veem os integrantes dos instrumentos atribuídos aqui. Atribuir um naipe ou subnaipe vale para todos os seus instrumentos, e a pessoa pode ter várias atribuições.
+      </p>
       <Card className="space-y-3 p-4">
         <MemberPicker value={memberId} onChange={setMemberId} />
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           <Select value={kind} onChange={(e) => setKind(e.target.value as 'professor' | 'monitor')} aria-label="Função">
             <option value="professor">Professor</option>
             <option value="monitor">Monitor</option>
           </Select>
-          <Select value={sectionId} onChange={(e) => setSectionId(e.target.value)} aria-label="Naipe">
-            <option value="">Naipe…</option>
-            {sections.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <Select value={scope} onChange={(e) => { setScope(e.target.value as ScopeKind); setTargetId('') }} aria-label="Nível">
+            {Object.entries(SCOPE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </Select>
+          <Select value={targetId} onChange={(e) => setTargetId(e.target.value)} aria-label="Alvo">
+            <option value="">Selecione…</option>
+            {options.data?.filter((o) => o.is_active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
           </Select>
         </div>
-        <Button disabled={!memberId || !sectionId || add.isPending} onClick={() => add.mutate()}>Atribuir</Button>
-        <p className="text-xs text-muted-foreground">Lembre de também conceder o papel de acesso (Professor/Monitor) à pessoa; esta tela define apenas os naipes.</p>
+        <Button disabled={!memberId || !targetId || add.isPending} onClick={() => add.mutate()}>Atribuir</Button>
+        <p className="text-xs text-muted-foreground">Lembre de também conceder o papel de acesso (Professor/Monitor) à pessoa; esta tela define apenas o que ela acompanha.</p>
       </Card>
       {data?.length === 0 && <EmptyState>Nenhuma atribuição ativa.</EmptyState>}
       <div className="grid gap-2">
@@ -89,7 +105,10 @@ export function StaffAssignments() {
           <Card key={a.id} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
               <p className="truncate font-semibold">{a.members?.display_name ?? a.members?.full_name}</p>
-              <p className="text-muted-foreground"><Badge>{a.staff_kind === 'professor' ? 'Professor' : 'Monitor'}</Badge> {a.sections?.name} · desde {formatDate(a.valid_from)}</p>
+              <p className="text-muted-foreground">
+                <Badge>{a.staff_kind === 'professor' ? 'Professor' : 'Monitor'}</Badge>{' '}
+                {a.sections?.name ? `Naipe ${a.sections.name}` : a.subsections?.name ? `Subnaipe ${a.subsections.name}` : a.instruments?.name} · desde {formatDate(a.valid_from)}
+              </p>
             </div>
             <Button size="sm" variant="outline" onClick={() => end.mutate(a.id)}>Encerrar</Button>
           </Card>

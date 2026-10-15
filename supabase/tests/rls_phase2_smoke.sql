@@ -1,13 +1,16 @@
--- Teste de fumaça da Fase 2 (grupo por naipe, vagas, histórico, isolamento). Rodar APÓS a migration 0004.
--- Termina em ROLLBACK. Falhas lançam "FALHOU: ...".
+-- Teste de fumaça da Fase 2 (naipe → subnaipe → instrumento, grupos, vagas, histórico, isolamento).
+-- Rodar APÓS migrations 0004-0006. Sempre termina desfazendo tudo.
+-- Resultado esperado no SQL Editor: erro "TESTES_OK_ROLLBACK" (sentinela = todas as verificações passaram).
+-- Qualquer outra mensagem ("FALHOU: ...") indica problema.
 begin;
 
 do $$
 declare
-  org_a uuid; org_b uuid; cyc uuid; area uuid; s1 uuid; s2 uuid; n int;
+  org_a uuid; org_b uuid; cyc uuid; n int; ctype uuid;
+  sec_p uuid; sec_s uuid; sub_leves uuid; i1 uuid; i2 uuid; i3 uuid;
   u_dir uuid := gen_random_uuid(); u_prof uuid := gen_random_uuid();
   u_st1 uuid := gen_random_uuid(); u_dirb uuid := gen_random_uuid();
-  m_dir uuid; m_prof uuid; m_st1 uuid; m_st2 uuid; m_st3 uuid; m_dirb uuid; ctype uuid;
+  m_dir uuid; m_prof uuid; m_st1 uuid; m_st2 uuid; m_st3 uuid; m_dirb uuid;
 begin
   insert into public.organizations (name, short_name, slug) values ('Org A', 'A', 'p2-a') returning id into org_a;
   insert into public.organizations (name, short_name, slug) values ('Org B', 'B', 'p2-b') returning id into org_b;
@@ -30,28 +33,32 @@ begin
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_b, m_dirb, id from public.access_roles where organization_id=org_b and key='direcao';
 
-  insert into public.areas (organization_id, name) values (org_a,'Sopro') returning id into area;
-  insert into public.sections (organization_id, area_id, name) values (org_a, area, 'S1') returning id into s1;
-  insert into public.sections (organization_id, area_id, name) values (org_a, area, 'S2') returning id into s2;
+  insert into public.sections (organization_id, name) values (org_a, 'Percussão') returning id into sec_p;
+  insert into public.sections (organization_id, name) values (org_a, 'Sopro') returning id into sec_s;
+  insert into public.subsections (organization_id, section_id, name) values (org_a, sec_p, 'Leves') returning id into sub_leves;
+  insert into public.instruments (organization_id, section_id, subsection_id, name) values (org_a, sec_p, sub_leves, 'Tamborim') returning id into i1;
+  insert into public.instruments (organization_id, section_id, name) values (org_a, sec_p, 'Surdo') returning id into i2;
+  insert into public.instruments (organization_id, section_id, name) values (org_a, sec_s, 'Flauta') returning id into i3;
   select id into ctype from public.cycle_types where organization_id=org_a and key='carnaval';
   insert into public.cycles (organization_id, cycle_type_id, name, starts_on, ends_on)
     values (org_a, ctype, 'Carnaval 2026/2027', '2026-10-01', '2027-03-31') returning id into cyc;
-  insert into public.member_artistic_links (organization_id, member_id, area_id, section_id) values
-    (org_a, m_st1, area, s1), (org_a, m_st2, area, s1), (org_a, m_st3, area, s2);
-  insert into public.staff_section_assignments (organization_id, member_id, section_id, staff_kind)
-    values (org_a, m_prof, s1, 'professor');
-  insert into public.section_cycle_capacity (organization_id, section_id, cycle_id, capacity) values (org_a, s1, cyc, 1);
+  insert into public.member_artistic_links (organization_id, member_id, instrument_id) values
+    (org_a, m_st1, i1), (org_a, m_st2, i1), (org_a, m_st3, i2);
+  -- Professor acompanha apenas o subnaipe "Leves" (→ instrumento Tamborim)
+  insert into public.staff_assignments (organization_id, member_id, staff_kind, subsection_id)
+    values (org_a, m_prof, 'professor', sub_leves);
+  insert into public.instrument_cycle_capacity (organization_id, instrument_id, cycle_id, capacity) values (org_a, i1, cyc, 1);
 
-  -- 1. Professor enxerga só o grupo (alunos do naipe S1) + a si mesmo
+  -- ── Professor: grupo expandido do subnaipe ──
   perform set_config('request.jwt.claims', json_build_object('sub', u_prof, 'role','authenticated')::text, true);
   set local role authenticated;
   select count(*) into n from public.members;
-  if n <> 3 then raise exception 'FALHOU: Professor deveria ver 3 (S1 x2 + si), viu %', n; end if;
+  if n <> 3 then raise exception 'FALHOU: Professor deveria ver 3 (Tamborim x2 + si), viu %', n; end if;
   select count(*) into n from public.members where full_name = 'Aluno3';
-  if n <> 0 then raise exception 'FALHOU: Professor viu aluno de outro naipe'; end if;
-  raise notice 'OK 1: escopo de grupo por naipe';
+  if n <> 0 then raise exception 'FALHOU: Professor viu aluno fora do subnaipe'; end if;
+  select count(*) into n from public.subsections;
+  if n <> 1 then raise exception 'FALHOU: equipe deveria ver o subnaipe (viu %)', n; end if;
 
-  -- 2. Vagas: 1º ativa; 2º é barrado; professor não força; Direção força
   perform public.set_member_cycle_status(m_st1, cyc, 'active');
   begin
     perform public.set_member_cycle_status(m_st2, cyc, 'active');
@@ -69,32 +76,44 @@ begin
     perform public.log_sensitive_access(m_st1);
     raise exception 'FALHOU: Professor registrou acesso a dado sensível' using errcode = 'XX999';
   exception when insufficient_privilege then null; end;
-  perform public.set_member_cycle_status(m_st2, cyc, 'waitlist', null, s1);
-  raise notice 'OK 2: limite de vagas respeitado; lista de espera permitida';
+  perform public.set_member_cycle_status(m_st2, cyc, 'waitlist', null, i1);
+  update public.instrument_cycle_capacity set capacity = 99 where instrument_id = i1;
+  select count(*) into n from public.instrument_cycle_capacity where capacity = 99;
+  if n > 0 then raise exception 'FALHOU: Professor alterou capacidade'; end if;
 
-  -- 3. Professor não altera limite de vagas
-  begin
-    update public.section_cycle_capacity set capacity = 99 where section_id = s1;
-    select count(*) into n from public.section_cycle_capacity where capacity = 99;
-    if n > 0 then raise exception 'FALHOU: Professor alterou capacidade'; end if;
-  end;
-
-  -- 4. Direção força exceção e há histórico
+  -- ── Direção ──
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', u_dir, 'role','authenticated')::text, true);
   set local role authenticated;
   perform public.set_member_cycle_status(m_st2, cyc, 'active', 'exceção autorizada', null, true);
   select count(*) into n from public.member_cycle_status_history;
   if n < 3 then raise exception 'FALHOU: histórico incompleto (%)', n; end if;
-  select public.section_occupied(s1, cyc) into n;
+  select public.instrument_occupied(i1, cyc) into n;
   if n <> 2 then raise exception 'FALHOU: ocupação esperada 2, veio %', n; end if;
   perform public.create_member_invite(m_st2);
-  raise notice 'OK 3/4: exceção da Direção e histórico de status';
+  -- subnaipe de outro naipe é rejeitado (integridade)
+  begin
+    insert into public.instruments (organization_id, section_id, subsection_id, name) values (org_a, sec_s, sub_leves, 'Invalido');
+    raise exception 'FALHOU: instrumento aceitou subnaipe de outro naipe' using errcode = 'XX999';
+  exception when foreign_key_violation then null; end;
+  -- atribuição por naipe inteiro passa a incluir também o Surdo
+  insert into public.staff_assignments (organization_id, member_id, staff_kind, section_id)
+    values (org_a, m_prof, 'professor', sec_p);
 
-  -- 5. Integrante não altera status
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', u_prof, 'role','authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.members;
+  if n <> 4 then raise exception 'FALHOU: com naipe inteiro Professor deveria ver 4, viu %', n; end if;
+
+  -- ── Integrante (aluno): nunca vê subnaipes; não altera status; não convida ──
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', u_st1, 'role','authenticated')::text, true);
   set local role authenticated;
+  select count(*) into n from public.subsections;
+  if n <> 0 then raise exception 'FALHOU: aluno enxergou subnaipe (%)', n; end if;
+  select count(*) into n from public.instruments;
+  if n <> 3 then raise exception 'FALHOU: aluno deveria ver instrumentos (viu %)', n; end if;
   begin
     perform public.set_member_cycle_status(m_st1, cyc, 'inactive');
     raise exception 'FALHOU: Integrante alterou status' using errcode = 'XX999';
@@ -103,9 +122,8 @@ begin
     perform public.create_member_invite(m_st2);
     raise exception 'FALHOU: Integrante criou convite' using errcode = 'XX999';
   exception when insufficient_privilege then null; end;
-  raise notice 'OK 5: integrante sem permissão de status';
 
-  -- 6. Isolamento entre organizações
+  -- ── Direção de outra organização: isolamento total ──
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', u_dirb, 'role','authenticated')::text, true);
   set local role authenticated;
@@ -113,6 +131,8 @@ begin
   if n <> 0 then raise exception 'FALHOU: Direção B viu ciclos da org A'; end if;
   select count(*) into n from public.sections where organization_id = org_a;
   if n <> 0 then raise exception 'FALHOU: Direção B viu naipes da org A'; end if;
+  select count(*) into n from public.instruments where organization_id = org_a;
+  if n <> 0 then raise exception 'FALHOU: Direção B viu instrumentos da org A'; end if;
   select count(*) into n from public.member_cycles;
   if n <> 0 then raise exception 'FALHOU: Direção B viu participações da org A'; end if;
   begin
@@ -125,7 +145,6 @@ begin
   exception when insufficient_privilege then null; end;
 
   reset role;
-  -- Sentinela: o SQL Editor não mostra NOTICE. Esta exceção desfaz tudo e significa "todos passaram".
   raise exception 'TESTES_OK_ROLLBACK';
 end $$;
 

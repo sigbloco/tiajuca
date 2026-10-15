@@ -11,10 +11,11 @@ interface Props {
   table: CatalogTable
   title: string
   singular: string
-  /** Exige escolher a área (naipes, instrumentos). */
-  withArea?: boolean
-  /** Permite escolher o naipe do instrumento. */
+  /** Exige escolher o naipe (subnaipes e instrumentos). */
   withSection?: boolean
+  /** Permite escolher um subnaipe opcional (instrumentos). */
+  withSubsection?: boolean
+  hint?: string
   canEdit: boolean
 }
 
@@ -24,15 +25,15 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withArea, withSection, canEdit }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withSubsection, hint, canEdit }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
-  const areas = useCatalog('areas')
   const sections = useCatalog('sections')
+  const subsections = useCatalog('subsections')
   const [name, setName] = useState('')
-  const [areaId, setAreaId] = useState('')
   const [sectionId, setSectionId] = useState('')
+  const [subsectionId, setSubsectionId] = useState('')
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['catalog', orgId] })
   const onError = (e: unknown) => toast.error(friendlyError(e))
@@ -42,8 +43,8 @@ export function CatalogEditor({ table, title, singular, withArea, withSection, c
       saveCatalogItem(table, orgId, {
         name: name.trim(),
         sort_order: (items?.reduce((m, i) => Math.max(m, i.sort_order), 0) ?? 0) + 1,
-        ...(withArea ? { area_id: areaId } : {}),
-        ...(withSection && sectionId ? { section_id: sectionId } : {}),
+        ...(withSection ? { section_id: sectionId } : {}),
+        ...(withSubsection && subsectionId ? { subsection_id: subsectionId } : {}),
       }),
     onSuccess: () => {
       setName('')
@@ -63,25 +64,26 @@ export function CatalogEditor({ table, title, singular, withArea, withSection, c
     onError,
   })
 
-  const areaName = (id?: string | null) => areas.data?.find((a) => a.id === id)?.name
-  const canAdd = name.trim() && (!withArea || areaId)
+  const nameOf = (list: CatalogItem[] | undefined, id?: string | null) => list?.find((x) => x.id === id)?.name
+  const canAdd = name.trim() && (!withSection || sectionId)
 
   return (
     <div className="space-y-3">
       <h2>{title}</h2>
+      {hint && <p className="text-muted-foreground">{hint}</p>}
       {canEdit && (
         <Card className="flex flex-wrap items-end gap-2 p-3">
           <Input className="min-w-40 flex-1" placeholder={`Novo(a) ${singular.toLowerCase()}`} value={name} onChange={(e) => setName(e.target.value)} />
-          {withArea && (
-            <Select className="w-44" value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-              <option value="">Área…</option>
-              {areas.data?.filter((a) => a.is_active).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          {withSection && (
+            <Select className="w-44" value={sectionId} aria-label="Naipe" onChange={(e) => { setSectionId(e.target.value); setSubsectionId('') }}>
+              <option value="">Naipe…</option>
+              {sections.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           )}
-          {withSection && (
-            <Select className="w-44" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
-              <option value="">Naipe (opcional)</option>
-              {sections.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {withSubsection && (
+            <Select className="w-44" value={subsectionId} aria-label="Subnaipe" disabled={!sectionId} onChange={(e) => setSubsectionId(e.target.value)}>
+              <option value="">Subnaipe (opcional)</option>
+              {subsections.data?.filter((s) => s.is_active && s.section_id === sectionId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           )}
           <Button disabled={!canAdd || add.isPending} onClick={() => add.mutate()}><Plus className="h-4 w-4" /> Adicionar</Button>
@@ -109,7 +111,20 @@ export function CatalogEditor({ table, title, singular, withArea, withSection, c
                 else e.target.value = item.name
               }}
             />
-            {(withArea || withSection) && <Badge className="hidden sm:inline-flex">{areaName(item.area_id) ?? ''}</Badge>}
+            {withSection && <Badge className="hidden sm:inline-flex">{nameOf(sections.data, item.section_id)}</Badge>}
+            {withSubsection && (
+              <Select
+                className="h-9 w-36"
+                aria-label="Subnaipe do instrumento"
+                disabled={!canEdit}
+                value={item.subsection_id ?? ''}
+                onChange={(e) => save.mutate({ id: item.id, name: item.name, subsection_id: e.target.value || null })}
+              >
+                <option value="">Sem subnaipe</option>
+                {subsections.data?.filter((s) => s.section_id === item.section_id && (s.is_active || s.id === item.subsection_id))
+                  .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </Select>
+            )}
             {canEdit && (
               <Button size="sm" variant="outline" onClick={() => save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })}>
                 {item.is_active ? 'Desativar' : 'Ativar'}

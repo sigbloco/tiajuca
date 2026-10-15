@@ -5,8 +5,8 @@ import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
 
 const TABS = [
-  { key: 'areas', label: 'Áreas' },
   { key: 'sections', label: 'Naipes' },
+  { key: 'subsections', label: 'Subnaipes' },
   { key: 'instruments', label: 'Instrumentos' },
   { key: 'functions', label: 'Funções' },
   { key: 'levels', label: 'Níveis' },
@@ -15,7 +15,7 @@ const TABS = [
 
 export function SettingsPage() {
   const canEdit = usePermission('structure.manage')
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('areas')
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sections')
   return (
     <div className="space-y-4">
       <h1>Configurações</h1>
@@ -32,10 +32,16 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
-      {tab === 'areas' && <CatalogEditor table="areas" title="Áreas" singular="Área" canEdit={canEdit} />}
-      {tab === 'sections' && <CatalogEditor table="sections" title="Naipes" singular="Naipe" withArea canEdit={canEdit} />}
-      {tab === 'instruments' && <CatalogEditor table="instruments" title="Instrumentos" singular="Instrumento" withArea withSection canEdit={canEdit} />}
-      {tab === 'functions' && <CatalogEditor table="artistic_functions" title="Funções" singular="Função" canEdit={canEdit} />}
+      {tab === 'sections' && <CatalogEditor table="sections" title="Naipes" singular="Naipe" hint="Grandes grupos, como Percussão, Sopro e Performance." canEdit={canEdit} />}
+      {tab === 'subsections' && (
+        <CatalogEditor table="subsections" title="Subnaipes" singular="Subnaipe" withSection canEdit={canEdit}
+          hint="Agrupamentos internos dentro de um naipe (ex.: Metais, Leves). Só a equipe enxerga; alunos e integrantes não." />
+      )}
+      {tab === 'instruments' && (
+        <CatalogEditor table="instruments" title="Instrumentos" singular="Instrumento" withSection withSubsection canEdit={canEdit}
+          hint="Cada instrumento fica dentro de um naipe e, opcionalmente, de um subnaipe. Vagas e acompanhamento valem por instrumento." />
+      )}
+      {tab === 'functions' && <CatalogEditor table="artistic_functions" title="Funções" singular="Função" hint="Papéis que não são instrumentos (ex.: Produção, Apoio)." canEdit={canEdit} />}
       {tab === 'levels' && <CatalogEditor table="skill_levels" title="Níveis" singular="Nível" canEdit={canEdit} />}
       {tab === 'staff' && <StaffAssignments />}
     </div>
