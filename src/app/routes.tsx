@@ -12,6 +12,8 @@ import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/A
 import { EventsPage } from '@/modules/events/EventsPage'
 import { BillingPage } from '@/modules/billing/BillingPage'
 import { ScholarshipsPage } from '@/modules/billing/ScholarshipsPage'
+import { FinancePage } from '@/modules/finance/FinancePage'
+import { ProfilePage } from '@/modules/profile/ProfilePage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
@@ -74,6 +76,8 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'financeiro', element: <FinancePage /> },
+                { path: 'perfil', element: <ProfilePage /> },
                 { path: 'mensalidades', element: <BillingPage /> },
                 { path: 'bolsas', element: <ScholarshipsPage /> },
                 { path: 'eventos', element: <EventsPage /> },
