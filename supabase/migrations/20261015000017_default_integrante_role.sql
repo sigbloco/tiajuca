@@ -14,6 +14,7 @@ begin
 end $$;
 revoke all on function public.grant_default_member_role() from public, anon, authenticated;
 
+drop trigger if exists trg_members_default_role on public.members;
 create trigger trg_members_default_role after insert on public.members
   for each row execute function public.grant_default_member_role();
 

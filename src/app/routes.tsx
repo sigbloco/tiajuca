@@ -17,6 +17,7 @@ import { ProfilePage } from '@/modules/profile/ProfilePage'
 import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
 import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
 import { SuppliersPage } from '@/modules/suppliers/SuppliersPage'
+import { DriveFoldersPage } from '@/modules/drive/DriveFoldersPage'
 import { AccessPage } from '@/modules/access/AccessPage'
 import { AuditPage } from '@/modules/audit/AuditPage'
 import { ReportsPage } from '@/modules/reports/ReportsPage'
@@ -95,6 +96,7 @@ export const router = createBrowserRouter(
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'financeiro', element: <FinancePage /> },
                 { path: 'fornecedores', element: <SuppliersPage /> },
+                { path: 'drive', element: <DriveFoldersPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'mensalidades', element: <BillingPage /> },
                 { path: 'bolsas', element: <ScholarshipsPage /> },

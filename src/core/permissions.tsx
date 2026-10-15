@@ -10,7 +10,7 @@ export type PermissionKey =
   | 'events.read' | 'events.manage' | 'checklists.manage' | 'attendance.read' | 'attendance.record'
   | 'billing.read' | 'billing.manage' | 'scholarships.manage'
   | 'finance.read' | 'finance.manage' | 'staff_payments.read' | 'staff_payments.manage' | 'pix.manage'
-  | 'repertoire.read' | 'repertoire.manage' | 'forms.manage' | 'suppliers.read' | 'suppliers.manage'
+  | 'repertoire.read' | 'repertoire.manage' | 'forms.manage' | 'suppliers.read' | 'suppliers.manage' | 'drive.read' | 'drive.manage'
 
 export type PermissionScope = 'own' | 'group' | 'org'
 const RANK: Record<PermissionScope, number> = { own: 1, group: 2, org: 3 }
