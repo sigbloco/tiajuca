@@ -1,0 +1,35 @@
+@import '@fontsource-variable/baloo-2';
+@import '@fontsource-variable/plus-jakarta-sans';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens de tema. Os valores de marca (primary/secondary) são sobrescritos em runtime
+   pelo tema da organização (src/core/theme.ts). Aqui ficam apenas defaults neutros do SIGBloco. */
+:root {
+  --background: 250 248 243;
+  --foreground: 36 33 30;
+  --card: 255 255 255;
+  --muted: 241 238 231;
+  --muted-foreground: 112 106 98;
+  --border: 228 223 214;
+  --primary: 60 60 60;
+  --primary-foreground: 255 255 255;
+  --secondary: 220 220 220;
+  --secondary-foreground: 36 33 30;
+  --destructive: 200 40 40;
+  --success: 34 139 84;
+  --warning: 217 119 6;
+  --info: 37 99 235;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background font-sans text-sm text-foreground antialiased; }
+  h1, h2, h3 { @apply font-display font-bold tracking-tight; }
+  h1 { @apply text-2xl; }
+  h2 { @apply text-xl; }
+  h3 { @apply text-base; }
+}
