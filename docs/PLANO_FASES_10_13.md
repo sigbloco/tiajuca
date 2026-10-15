@@ -72,18 +72,24 @@ Multi-organização (`organization_id` + RLS), tudo configurável pela interface
 
 ---
 
-## Hospedagem do front (decisão pendente)
-O front é um site **estático** (Vite/React); todo o backend (banco, auth, storage, Edge Functions e webhooks) fica no **Supabase**. Qualquer hospedagem estática serve; o webhook de pagamento **não** depende dela.
-| Opção | Prós | Contras |
-|---|---|---|
-| **Cloudflare Pages** (recomendada) | grátis, CDN rápida, fallback de SPA nativo (rotas como `/f/...` funcionam), deploy automático do GitHub, domínio próprio e HTTPS, uso comercial permitido | conta Cloudflare |
-| **GitHub Pages** | já está no GitHub, grátis, simples | sem fallback de SPA nativo (precisa de truque com `404.html`; link compartilhado abre com status 404); build via GitHub Actions; sem cabeçalhos de segurança customizáveis |
-| **Vercel** | ótimo fluxo de deploy | plano grátis (Hobby) é para uso **não comercial**; lojinha com vendas pode violar os termos |
-Qualquer que seja a escolha: variáveis `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (públicas) no build; URL do site em *Supabase → Auth → URL Configuration*.
+## Hospedagem do front (decidido: Cloudflare Pages)
+O front é estático (Vite/React); todo o backend (banco, auth, storage, Edge Functions e webhooks) fica no **Supabase**. Cloudflare Pages: grátis, fallback de SPA nativo (rotas como `/f/...`), deploy automático do GitHub (`sigbloco/tiajuca`), HTTPS e domínio próprio, uso comercial permitido.
+Passos: conectar o repositório; build `npm run build`, saída `dist`; variáveis públicas `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`; cadastrar a URL final em *Supabase → Auth → URL Configuration*. Nunca colocar `service_role`/segredos no build.
 
-## Decisões pendentes (preciso de você)
-1. **Hospedagem** do front: Cloudflare Pages, GitHub Pages ou outra?
-2. **Lojinha:** o bloco tem **CNPJ e conta InfinitePay**? Quem confirma e entrega os pedidos? Quem fica com o WhatsApp da loja?
-3. **Estoque:** controlado pelo sistema desde o início ou só "disponível/esgotado" manual?
-4. **Mensagens:** quais as 10 mensagens mais usadas hoje (para semear a biblioteca)?
-5. **Inscrições v2:** enviar os formulários atuais (Google Forms) como referência dos modelos.
+## Decisões tomadas
+1. **Hospedagem:** Cloudflare Pages.
+2. **Lojinha/pagamento:** o bloco **não tem CNPJ**, mas tem **conta InfinitePay**. Pedidos tratados por **membros da Direção** (permissão própria, configurável na matriz). Conferir os termos da InfinitePay para conta sem CNPJ antes da Fase 13.
+3. **Estoque:** **controlado pelo sistema** desde o início (baixa só após pagamento confirmado).
+4. **Mensagens:** ainda não existem; a biblioteca começa vazia, com poucos exemplos editáveis.
+5. **Inscrições v2:** referências recebidas (abaixo).
+
+## Modelos de Inscrição (baseados nos Google Forms atuais)
+Campos comuns: e-mail*, nome completo*, como prefere ser chamado, celular/WhatsApp*, rede social, data de nascimento*, identidade de gênero*, transgênero*, cor/raça*, PCD* + qual, nível*, outros blocos, relação com a Grande Tijuca (pesquisa afetiva), "Estou ciente e concordo", declaração de veracidade. Gênero, raça e deficiência são **dados sensíveis** (tabela separada, consentimento). Textos informativos (valores, cronograma, bolsa, respeito e inclusão) viram blocos de texto editáveis.
+
+1. **Sopros 2026/27:** passo inicial condicional "Quero conhecer primeiro (aula aberta)" × "Tô dentro" que pula seções; participação Aluno R$150 / Músico convidado R$50 / Senior R$50; instrumentos (Flauta, Clarinete, Sax Soprano/Alto/Tenor, Trompete, Trombone, Bombardino, Tuba, Outro); nível (Nunca toquei…Avançado). Ramo **Aula aberta**: nome, apelido, WhatsApp, "chegando como", instrumento, nível, relação com a Tijuca, declarações — gera contato, não integrante.
+2. **Oficina de percussão:** Senior/Aluno/Banda (R$50/R$150/R$50); instrumentos (Agogô, Caixa de guerra, Repique, Surdo, Tamborim, Timbal, Xequerê); declaração "possuo o instrumento"; **lista de espera automática** quando o naipe lota; presença mínima 75%.
+3. **Pernaltagens:** contribuição R$35; níveis Iniciado/Intermediário/Avançado com descrição (só iniciados com perna de pau e joelheira própria); experiência com outras performances; comentário/sugestão; seção de pagamento.
+4. **Aula aberta:** modelo do ramo acima, também publicável sozinho.
+
+Necessidades novas para a Fase 11: seções com **salto condicional**, blocos de texto informativo, marcação de dado sensível por campo, opção "Outro" com texto livre, aprovação que escolhe categoria/instrumento e cai em lista de espera sem vaga.
+Observação: os PDFs trazem telefones e chave PIX institucionais; entram como **configuração do bloco**, não no código. O PDF de pernaltas cita "carnaval 2025" — revisar o texto.
