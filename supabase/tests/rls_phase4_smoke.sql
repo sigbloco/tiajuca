@@ -56,7 +56,7 @@ begin
   perform public.set_scholarship(m_st2, 100, current_date - 60);
   begin
     perform public.set_scholarship(m_st1, 101);
-    raise exception 'FALHOU: aceitou bolsa de 101%' using errcode = 'XX999';
+    raise exception 'FALHOU: aceitou bolsa acima de 100 por cento' using errcode = 'XX999';
   exception when numeric_value_out_of_range then null; end;
 
   r := public.generate_monthly_charges(org_a, comp);
