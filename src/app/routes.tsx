@@ -5,7 +5,11 @@ import { OrganizationProvider, useMemberships, useOrganization } from '@/core/or
 import { isSupabaseConfigured } from '@/core/supabase'
 import { ClaimInvitePage, ForgotPasswordPage, LoginPage, NoOrganizationPage, ResetPasswordPage, SignupPage, VerifyEmailPage } from '@/modules/auth/pages'
 import { HomePage } from '@/modules/dashboard/HomePage'
+import { CapacityPage } from '@/modules/capacity/CapacityPage'
+import { CyclesPage } from '@/modules/cycles/CyclesPage'
+import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
 import { MembersPage } from '@/modules/members/MembersPage'
+import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
 
 const Loading = () => <div className="p-8"><Skeleton className="h-10 w-64" /></div>
@@ -66,6 +70,10 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'vagas', element: <CapacityPage /> },
+                { path: 'lista-de-espera', element: <WaitlistPage /> },
+                { path: 'ciclos', element: <CyclesPage /> },
+                { path: 'configuracoes', element: <SettingsPage /> },
               ],
             },
           ],

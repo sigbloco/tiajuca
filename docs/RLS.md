@@ -26,3 +26,19 @@ Migration: `supabase/migrations/20261015000003_rls_policies.sql`. Helpers em `�
 - Não há proteção contra a Direção remover a si mesma do papel `direcao` (regra "último diretor" pendente).
 - Testes pgTAP (4 papéis × 2 organizações, casos cross-org) **ainda não escritos/executados**.
 - Migrations **não foram aplicadas** a nenhum projeto Supabase nem validadas em Postgres real.
+
+## Fase 2 — estrutura, ciclos, vagas (migration `…000004`)
+
+| Tabela | SELECT | Escrita |
+|---|---|---|
+| areas, sections, instruments, artistic_functions, skill_levels | membro da org | `structure.manage` |
+| cycle_types, cycles | membro da org | `cycles.manage` |
+| member_cycle_statuses | membro da org | `settings.manage` |
+| member_artistic_links | quem pode ler o membro (org/grupo/próprio) | `members.manage` |
+| member_cycles, member_cycle_status_history | idem | **somente RPC** `set_member_cycle_status` (permissão `member_cycles.manage` org ou grupo; vaga lotada exige exceção da Direção) |
+| section_cycle_capacity | quem tem `capacity.read` | `capacity.manage` |
+| staff_section_assignments | próprio · `staff_assignments.manage` | `staff_assignments.manage` |
+
+`is_in_my_group(org, member)` agora é real: o integrante tem vínculo artístico vigente em naipe atribuído ao usuário (professor/monitor) em `staff_section_assignments`.
+Ocupação de naipe = integrantes com status que `counts_as_active` no ciclo e vínculo vigente com o naipe (`section_occupied`).
+Testes: `supabase/tests/rls_phase2_smoke.sql`.

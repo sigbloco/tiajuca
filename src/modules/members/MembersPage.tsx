@@ -7,6 +7,7 @@ import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { Can } from '@/core/permissions'
+import { MemberDetailSheet } from './MemberDetailSheet'
 import { createInvite, createMember, listMembers, type MemberRow } from './service'
 
 const PAGE_SIZE = 20
@@ -81,6 +82,7 @@ export function MembersPage() {
   const [page, setPage] = useState(0)
   const [ascending, setAscending] = useState(true)
   const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<MemberRow | null>(null)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['members', orgId, { search, page, ascending }],
@@ -118,10 +120,10 @@ export function MembersPage() {
         {isLoading && Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16" />)}
         {data?.rows.map((m) => (
           <Card key={m.id} className="flex items-center justify-between gap-3 p-3">
-            <div className="min-w-0">
+            <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
               <p className="truncate font-semibold">{m.display_name ?? m.full_name}</p>
               <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
-            </div>
+            </button>
             <Can permission="members.manage"><InviteButton member={m} /></Can>
           </Card>
         ))}
@@ -131,6 +133,10 @@ export function MembersPage() {
           </Card>
         )}
       </div>
+
+      <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
+        {selected && <MemberDetailSheet member={selected} />}
+      </Sheet>
 
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'}</p>

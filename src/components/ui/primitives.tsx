@@ -97,3 +97,19 @@ export function SheetContent({ title, description, children, className }: {
     </DialogPrimitive.Portal>
   )
 }
+
+export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(({ className, ...props }, ref) => (
+  <select
+    ref={ref}
+    className={cn(
+      'flex h-10 w-full rounded-lg border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+      className,
+    )}
+    {...props}
+  />
+))
+Select.displayName = 'Select'
+
+export const EmptyState = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">{children}</div>
+)

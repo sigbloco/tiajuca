@@ -1,6 +1,7 @@
-import { LogOut } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Button, cn } from '@/components/ui/primitives'
+import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
@@ -9,9 +10,12 @@ import { NAV_ITEMS } from './navigation'
 export function AppShell() {
   const { membership } = useOrganization()
   const { signOut } = useAuth()
+  const [moreOpen, setMoreOpen] = useState(false)
   if (!membership) return null
   const base = `/${membership.slug}`
   const items = NAV_ITEMS.filter((i) => !i.permission || hasPermission(membership.permissions, i.permission, 'own'))
+  const primary = items.filter((i) => i.primary)
+  const more = items.filter((i) => !i.primary)
   const link = ({ isActive }: { isActive: boolean }) =>
     cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive && 'bg-primary text-primary-foreground hover:bg-primary')
 
@@ -39,9 +43,9 @@ export function AppShell() {
         <Outlet />
       </main>
 
-      {/* Mobile: barra inferior fixa */}
+      {/* Mobile: barra inferior fixa + "Mais" */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
-        {items.filter((i) => i.primary).map((i) => (
+        {primary.map((i) => (
           <NavLink
             key={i.to}
             end={i.to === ''}
@@ -51,10 +55,23 @@ export function AppShell() {
             <i.icon className="h-5 w-5" /> {i.label}
           </NavLink>
         ))}
-        <button onClick={() => signOut()} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground">
-          <LogOut className="h-5 w-5" /> Sair
+        <button onClick={() => setMoreOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground">
+          <Menu className="h-5 w-5" /> Mais
         </button>
       </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent title="Mais" description={membership.display_name}>
+          <nav className="space-y-1">
+            {more.map((i) => (
+              <NavLink key={i.to} to={`${base}/${i.to}`} className={link} onClick={() => setMoreOpen(false)}>
+                <i.icon className="h-5 w-5" /> {i.label}
+              </NavLink>
+            ))}
+          </nav>
+          <Button variant="outline" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
