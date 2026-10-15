@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link2, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Collapsible } from '@/components/shared/Collapsible'
+import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -156,27 +156,28 @@ export function MembersPage() {
     return { searching, sectionList, map, subById, total: seen.size }
   }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusOf, filter, sectionFilter])
 
-  const toggle = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }))
+  const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
   const forceOpen = tree.searching || sectionFilter !== ''
-  const isOpen = (k: string) => forceOpen || !!open[k]
+  // auto: grupo que é filho único do pai abre sozinho (evita clique redundante), mas o usuário ainda pode fechá-lo.
+  const isOpen = (k: string, auto = false) => forceOpen || (open[k] ?? auto)
   const loading = members.isLoading || sections.isLoading || instruments.isLoading
 
   const memberRow = (m: GroupMember) => {
     const st = statusOf.get(m.id)
     return (
-      <Card key={m.id} className="flex items-center justify-between gap-3 p-3">
+      <div key={m.id} className="flex items-center justify-between gap-3 rounded-md bg-card px-3 py-2">
         <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
           <p className="truncate font-semibold">{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!st && <Badge>Sem ciclo</Badge>}</p>
           <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
         </button>
         <Can permission="members.manage"><InviteButton member={m} /></Can>
-      </Card>
+      </div>
     )
   }
 
-  const renderLeaves = (leaves: Map<string, Leaf>, prefix: string) =>
+  const renderLeaves = (leaves: Map<string, Leaf>, prefix: string, tone: Tone) =>
     [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
-      <Collapsible key={prefix + leaf.key} level={1} title={leaf.label} count={leaf.members.length} open={isOpen(prefix + leaf.key)} onToggle={() => toggle(prefix + leaf.key)}>
+      <Collapsible key={prefix + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(prefix + leaf.key, leaves.size === 1)} onToggle={() => toggle(prefix + leaf.key, isOpen(prefix + leaf.key, leaves.size === 1))}>
         {leaf.members.map(memberRow)}
       </Collapsible>
     ))
@@ -203,22 +204,23 @@ export function MembersPage() {
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
       {loading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
 
-      {tree.sectionList.map((sec) => {
+      {tree.sectionList.map((sec, idx) => {
+        const tone = TONES[idx % TONES.length]
         const subs = tree.map.get(sec.id)!
         const count = new Set([...subs.values()].flatMap((l) => [...l.values()].flatMap((x) => x.members.map((m) => m.id)))).size
         const hasSubs = [...subs.keys()].some((k) => k !== '')
         const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : (tree.subById.get(a)?.sort_order ?? 0) - (tree.subById.get(b)?.sort_order ?? 0)))
         return (
-          <Collapsible key={sec.id} title={sec.name} count={count} open={isOpen(sec.id)} onToggle={() => toggle(sec.id)}>
+          <Collapsible key={sec.id} tone={tone} title={sec.name} count={count} open={isOpen(sec.id)} onToggle={() => toggle(sec.id, isOpen(sec.id))}>
             {subKeys.map((sk) => {
               const leaves = subs.get(sk)!
-              if (!hasSubs) return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sec.id}:`)}</div>
+              if (!hasSubs) return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sec.id}:`, tone)}</div>
               const subCount = new Set([...leaves.values()].flatMap((x) => x.members.map((m) => m.id))).size
               const subName = sk === '' ? 'Sem subnaipe' : tree.subById.get(sk)?.name ?? 'Subnaipe'
               const k = `${sec.id}:sub:${sk}`
               return (
-                <Collapsible key={k} level={1} title={subName} count={subCount} open={isOpen(k)} onToggle={() => toggle(k)}>
-                  {renderLeaves(leaves, `${k}:`)}
+                <Collapsible key={k} level={1} tone={tone} title={subName} count={subCount} open={isOpen(k, subKeys.length === 1)} onToggle={() => toggle(k, isOpen(k, subKeys.length === 1))}>
+                  {renderLeaves(leaves, `${k}:`, tone)}
                 </Collapsible>
               )
             })}
