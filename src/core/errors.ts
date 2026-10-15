@@ -15,6 +15,8 @@ const RULES: [RegExp, string][] = [
 
 export function friendlyError(err: unknown, fallback = 'Algo deu errado. Tente novamente.'): string {
   const e = err as { message?: string; code?: string } | null
+  // Regras de negócio do banco (RAISE EXCEPTION) já vêm escritas em pt-BR para o usuário final.
+  if ((e?.code === 'P0001' || e?.code === 'P0002') && e.message) return e.message
   const text = `${e?.message ?? ''} ${e?.code ?? ''}`.trim()
   if (!text) return fallback
   for (const [re, msg] of RULES) if (re.test(text)) return msg

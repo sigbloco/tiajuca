@@ -76,3 +76,11 @@ Tudo financeiro é restrito à Direção (`finance.read/manage`, `staff_payments
 - **Painel da Direção** (`dashboard_direction`): somente `finance.read`; contém contagens e valores agregados, **nunca** dados sensíveis LGPD.
 - **Auditoria**: página `/auditoria` lê `audit_logs` (somente `audit.read`); dados sensíveis registram só os nomes dos campos alterados.
 Testes: `rls_phase7_smoke.sql`.
+
+## Fase 8 — formulários de inscrição (migration `…000012`)
+- **Público (anon)** não acessa tabelas: apenas 3 RPCs (`get_public_form`, `begin_form_upload`, `submit_public_form`). Toda validação é no servidor, contra o **snapshot da versão publicada** (campos obrigatórios, tipos, opções, condições, 18+, consentimento, e-mail duplicado, limite, janela de datas, honeypot, limite de envios/min). O mapeamento para o cadastro **não** é exposto.
+- **Arquivos**: bucket privado `form-uploads`; upload anônimo só com token temporário (60 min, uso único, ≤ 10 arquivos, 5 MB, PDF/imagem), na pasta `{org}/{token}/`; leitura/remoção só `forms.manage`.
+- **Respostas** (`form_submissions`, `form_submission_files`): somente `forms.manage`. Não há trigger de auditoria nelas (evita copiar dados pessoais para o log); revisão/aprovação/retenção gravam eventos explícitos.
+- **Aprovação** (`approve_submission`) cria o integrante a partir do mapeamento da versão respondida; dados sensíveis vão para a tabela restrita; registra consentimento; pode definir status no ciclo (lista de espera/ativo).
+- **Retenção** (`purge_old_submissions`): rejeitadas/arquivadas > 12 meses e pendentes > 6 meses são anonimizadas; aprovadas não são tocadas.
+Testes: `rls_phase8_smoke.sql`.

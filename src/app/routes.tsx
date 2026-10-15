@@ -18,6 +18,9 @@ import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
 import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
 import { AuditPage } from '@/modules/audit/AuditPage'
 import { ReportsPage } from '@/modules/reports/ReportsPage'
+import { FormEditorPage } from '@/modules/forms/FormEditorPage'
+import { FormsPage } from '@/modules/forms/FormsPage'
+import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
@@ -70,6 +73,7 @@ export const router = createBrowserRouter(
         { path: '/recuperar-senha', element: <ForgotPasswordPage /> },
         { path: '/redefinir-senha', element: <ResetPasswordPage /> },
         { path: '/convite/:token', element: <ClaimInvitePage /> },
+        { path: '/f/:orgSlug/:formSlug', element: <PublicFormPage /> },
         {
           element: <RequireAuth />,
           children: [
@@ -80,6 +84,8 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'inscricoes', element: <FormsPage /> },
+                { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                 { path: 'relatorios', element: <ReportsPage /> },
                 { path: 'auditoria', element: <AuditPage /> },
                 { path: 'repertorio', element: <RepertoirePage /> },
