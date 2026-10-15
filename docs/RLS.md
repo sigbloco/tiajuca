@@ -49,3 +49,17 @@ Testes: `supabase/tests/rls_phase2_smoke.sql`.
 
 ## Reestruturação de naipes (migration `…000006`)
 Naipe (Percussão/Sopro/Performance) → Subnaipe (opcional, interno) → Instrumento. Vagas (`instrument_cycle_capacity`) e acompanhamento (`staff_assignments`, aceita naipe, subnaipe ou instrumento) valem por instrumento; `is_in_my_group` expande. `subsections` só é legível pela equipe (`is_staff`): aluno/integrante comum nunca vê subnaipe. Subnaipe do instrumento deve pertencer ao mesmo naipe (FK composta).
+
+## Fase 4 — contribuições, bolsas, mensalidades (migration `…000008`)
+| Tabela | SELECT | Escrita |
+|---|---|---|
+| fee_categories | membro da org | `billing.manage` |
+| fee_category_prices | membro da org | **só RPC** `set_fee_price` (versionado por vigência) |
+| member_fee_assignments | próprio · `billing.read` (Direção) | **só RPC** `assign_fee_category` |
+| scholarship_types | `scholarships.manage` | `scholarships.manage` |
+| scholarships | próprio · `scholarships.manage` | **só RPC** `set_scholarship` (0–100%) |
+| holidays | membro da org | `settings.manage` |
+| monthly_charges | próprio · `billing.read` (Direção) | **só RPCs** `generate_monthly_charges` (idempotente, UQ membro+competência), `adjust_charge`, `mark_charge_paid`, `change_charge_status` |
+| charge_adjustments | `billing.manage` | só RPC `adjust_charge` |
+Professor e Monitor **não** veem financeiro de ninguém (nem o próprio de equipe por esta tela). Dados sensíveis (LGPD) nunca entram em consultas financeiras.
+Testes: `supabase/tests/rls_phase4_smoke.sql`.

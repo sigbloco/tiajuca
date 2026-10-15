@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { formatDate } from '@/core/format'
+import { formatCurrency, formatDate } from '@/core/format'
 import { Input } from './primitives'
 
 /** '15102026' → '15/10/2026' (barras inseridas automaticamente enquanto digita). */
@@ -104,6 +104,18 @@ export function TimeInput({ id, value, onChange, required }: { id?: string; valu
         setText(masked)
         const ok = /^([01]\d|2[0-3]):[0-5]\d$/.test(masked)
         onChange(ok ? masked : '')
+      }} />
+  )
+}
+
+/** Valor em R$ com máscara (digita só números: 15000 → R$ 150,00). Emite número ou null. */
+export function MoneyInput({ id, value, onChange, required }: { id?: string; value: number | null; onChange: (v: number | null) => void; required?: boolean }) {
+  return (
+    <Input id={id} inputMode="numeric" autoComplete="off" placeholder="R$ 0,00" required={required}
+      value={value === null ? '' : formatCurrency(value)}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, '').slice(0, 9)
+        onChange(digits === '' ? null : Number(digits) / 100)
       }} />
   )
 }

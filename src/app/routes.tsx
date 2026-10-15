@@ -10,6 +10,8 @@ import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
 import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/AttendancePages'
 import { EventsPage } from '@/modules/events/EventsPage'
+import { BillingPage } from '@/modules/billing/BillingPage'
+import { ScholarshipsPage } from '@/modules/billing/ScholarshipsPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
@@ -72,6 +74,8 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'mensalidades', element: <BillingPage /> },
+                { path: 'bolsas', element: <ScholarshipsPage /> },
                 { path: 'eventos', element: <EventsPage /> },
                 { path: 'presenca', element: <AttendanceListPage /> },
                 { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },

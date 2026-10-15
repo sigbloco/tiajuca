@@ -7,6 +7,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { setMemberCycleStatus, useCycleStatuses, useCycles } from '@/modules/cycles/service'
+import { MemberBilling } from '@/modules/billing/MemberBilling'
 import { ArtisticLinks } from './ArtisticLinks'
 import type { MemberRow } from './service'
 
@@ -73,6 +74,7 @@ export function MemberDetailSheet({ member }: { member: MemberRow }) {
     <SheetContent title={member.display_name ?? member.full_name} description={member.display_name ? member.full_name : (member.email ?? '')}>
       <CycleParticipation memberId={member.id} />
       <ArtisticLinks memberId={member.id} />
+      <MemberBilling memberId={member.id} />
     </SheetContent>
   )
 }

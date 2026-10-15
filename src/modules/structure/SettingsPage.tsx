@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cn } from '@/components/ui/primitives'
 import { usePermission } from '@/core/permissions'
+import { ContributionsSettings, HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { RecurrencesSettings } from '@/modules/events/RecurrencesSettings'
 import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
@@ -14,11 +15,14 @@ const TABS = [
   { key: 'staff', label: 'Equipe' },
   { key: 'types', label: 'Tipos de evento' },
   { key: 'recurrences', label: 'Recorrências' },
+  { key: 'fees', label: 'Contribuições' },
+  { key: 'holidays', label: 'Feriados' },
 ] as const
 
 export function SettingsPage() {
   const canEdit = usePermission('structure.manage')
   const canEvents = usePermission('events.manage')
+  const canBilling = usePermission('billing.manage')
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sections')
   return (
     <div className="space-y-4">
@@ -50,6 +54,8 @@ export function SettingsPage() {
       {tab === 'staff' && <StaffAssignments />}
       {tab === 'types' && <CatalogEditor table="activity_types" title="Tipos de evento" singular="Tipo" withColor canEdit={canEvents} hint="Cada tipo tem uma cor no calendário." />}
       {tab === 'recurrences' && <RecurrencesSettings />}
+      {tab === 'fees' && <ContributionsSettings canEdit={canBilling} />}
+      {tab === 'holidays' && <HolidaysSettings />}
     </div>
   )
 }
