@@ -1,4 +1,4 @@
-import { Award, Banknote, CalendarDays, CalendarRange, ClipboardCheck, Hourglass, Home, Settings, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon } from 'lucide-react'
+import { Award, Banknote, CalendarDays, Music2, CalendarRange, ClipboardCheck, Hourglass, Home, Settings, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon } from 'lucide-react'
 import type { PermissionKey } from '@/core/permissions'
 
 export interface NavItem {
@@ -14,10 +14,11 @@ export interface NavItem {
 // Fonte única da navegação. Novos módulos (fases 4+) entram aqui.
 export const NAV_ITEMS: NavItem[] = [
   { to: '', label: 'Início', icon: Home, primary: true },
+  { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read', primary: true },
   { to: 'eventos', label: 'Eventos', icon: CalendarDays, permission: 'events.read', primary: true },
   { to: 'presenca', label: 'Presença', icon: ClipboardCheck, permission: 'attendance.record', primary: true },
   { to: 'mensalidades', label: 'Mensalidades', icon: Wallet, permission: 'billing.read', primary: true },
-  { to: 'membros', label: 'Membros', icon: Users, permission: 'members.read', primary: true },
+  { to: 'membros', label: 'Membros', icon: Users, permission: 'members.read' },
   { to: 'bolsas', label: 'Bolsas', icon: Award, permission: 'scholarships.manage' },
   { to: 'financeiro', label: 'Financeiro', icon: Banknote, permission: 'finance.read' },
   { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, permission: 'capacity.read' },

@@ -63,3 +63,9 @@ Naipe (Percussão/Sopro/Performance) → Subnaipe (opcional, interno) → Instru
 | charge_adjustments | `billing.manage` | só RPC `adjust_charge` |
 Professor e Monitor **não** veem financeiro de ninguém (nem o próprio de equipe por esta tela). Dados sensíveis (LGPD) nunca entram em consultas financeiras.
 Testes: `supabase/tests/rls_phase4_smoke.sql`.
+
+## Fase 5 — financeiro (migration `…000009`)
+Tudo financeiro é restrito à Direção (`finance.read/manage`, `staff_payments.manage`): `finance_categories`, `financial_entries`, `distribution_*`, razão `v_finance_ledger`. Escrita por RPC (`post_financial_entry`, `cancel_financial_entry` com motivo, `create_staff_payment`, `mark_staff_payment_paid` com snapshot da chave PIX, `set_pix_key`). `staff_payments` e `member_pix_keys`: o titular lê os próprios; PIX só para quem tem `pix.manage` (professor/monitor). Soma de percentuais por base ≤ 100% garantida por trigger. Testes: `rls_phase5_smoke.sql`.
+
+## Fase 6 — repertório (migration `…000010`)
+`repertoires`, `songs`, `song_attachments`: leitura para quem tem `repertoire.read` (todos os papéis; inativos só para quem gerencia), escrita `repertoire.manage` (Direção; configurável por papel). Arquivos no bucket **privado** `org-files`, pasta `{organization_id}/…`: leitura por membro da organização, escrita por `repertoire.manage`; abertura por URL assinada (1 h). CHECK impede `storage_path` fora da pasta da organização e URL que não seja http(s). Limitação: qualquer membro da organização lê qualquer arquivo da pasta (sem filtro por instrumento no Storage). Testes: `rls_phase6_smoke.sql`.

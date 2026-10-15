@@ -14,6 +14,8 @@ import { BillingPage } from '@/modules/billing/BillingPage'
 import { ScholarshipsPage } from '@/modules/billing/ScholarshipsPage'
 import { FinancePage } from '@/modules/finance/FinancePage'
 import { ProfilePage } from '@/modules/profile/ProfilePage'
+import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
+import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
@@ -76,6 +78,8 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'repertorio', element: <RepertoirePage /> },
+                { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'financeiro', element: <FinancePage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'mensalidades', element: <BillingPage /> },
