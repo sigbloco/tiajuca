@@ -28,7 +28,7 @@ export function formatCompetence(value: string): string {
   return `${month.charAt(0).toUpperCase()}${month.slice(1)} de ${year}`
 }
 
-/** Data mínima de nascimento para ser maior de idade (YYYY-MM-DD), útil em <input type="date" max>. */
+/** Data mínima de nascimento para ser maior de idade (YYYY-MM-DD), para validar o campo de data. */
 export function adultBirthDateMax(minAge = 18, now = new Date()): string {
   const d = new Date(now.getFullYear() - minAge, now.getMonth(), now.getDate())
   const p = (n: number) => String(n).padStart(2, '0')

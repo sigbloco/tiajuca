@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { DateInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDate } from '@/core/format'
@@ -40,8 +41,8 @@ function NewCycleSheet({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-1.5"><Label htmlFor="name">Nome</Label><Input id="name" required value={form.name} onChange={set('name')} /></div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5"><Label htmlFor="start">Início</Label><Input id="start" type="date" required value={form.starts_on} onChange={set('starts_on')} /></div>
-          <div className="space-y-1.5"><Label htmlFor="end">Término</Label><Input id="end" type="date" required min={form.starts_on} value={form.ends_on} onChange={set('ends_on')} /></div>
+          <div className="space-y-1.5"><Label htmlFor="start">Início</Label><DateInput id="start" required value={form.starts_on} onChange={(v) => setForm({ ...form, starts_on: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="end">Término</Label><DateInput id="end" required min={form.starts_on || undefined} value={form.ends_on} onChange={(v) => setForm({ ...form, ends_on: v })} /></div>
         </div>
         <Button type="submit" className="w-full" disabled={create.isPending}>Criar ciclo</Button>
       </form>
