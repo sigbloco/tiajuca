@@ -1,6 +1,6 @@
 # SIGBloco — Instância Cordão da Tia Juca · Proposta Técnica (v0.1)
 
-> Status: **proposta para aprovação**. Nenhuma tela ou migration foi implementada.
+> Status: Fases 1–9 **implementadas**. Próximas fases (10–13: mensagens, inscrições v2, lojinha, pedidos/InfinitePay) em [PLANO_FASES_10_13.md](PLANO_FASES_10_13.md).
 > Convenções: PKs `uuid` (`gen_random_uuid()`), `created_at/updated_at timestamptz`, `organization_id uuid not null` em toda tabela de domínio, soft delete via `archived_at timestamptz` ou `is_active`. Nomes de tabela em inglês (snake_case); UI em pt-BR.
 
 ---
