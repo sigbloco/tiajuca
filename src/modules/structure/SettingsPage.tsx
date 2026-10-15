@@ -5,10 +5,10 @@ import { ContributionsSettings, HolidaysSettings } from '@/modules/billing/Billi
 import { RecurrencesSettings } from '@/modules/events/RecurrencesSettings'
 import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
+import { InstrumentsManager, SectionsManager } from './StructureManagers'
 
 const TABS = [
   { key: 'sections', label: 'Naipes' },
-  { key: 'subsections', label: 'Subnaipes' },
   { key: 'instruments', label: 'Instrumentos' },
   { key: 'functions', label: 'Funções' },
   { key: 'levels', label: 'Níveis' },
@@ -40,15 +40,8 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
-      {tab === 'sections' && <CatalogEditor table="sections" title="Naipes" singular="Naipe" hint="Grandes grupos, como Percussão, Sopro e Performance." canEdit={canEdit} />}
-      {tab === 'subsections' && (
-        <CatalogEditor table="subsections" title="Subnaipes" singular="Subnaipe" withSection canEdit={canEdit}
-          hint="Agrupamentos internos dentro de um naipe (ex.: Metais, Leves). Só a equipe enxerga; alunos e integrantes não." />
-      )}
-      {tab === 'instruments' && (
-        <CatalogEditor table="instruments" title="Instrumentos" singular="Instrumento" withSection withSubsection canEdit={canEdit}
-          hint="Cada instrumento fica dentro de um naipe e, opcionalmente, de um subnaipe. Vagas e acompanhamento valem por instrumento." />
-      )}
+      {tab === 'sections' && <SectionsManager canEdit={canEdit} />}
+      {tab === 'instruments' && <InstrumentsManager canEdit={canEdit} />}
       {tab === 'functions' && <CatalogEditor table="artistic_functions" title="Funções" singular="Função" hint="Papéis que não são instrumentos (ex.: Produção, Apoio)." canEdit={canEdit} />}
       {tab === 'levels' && <CatalogEditor table="skill_levels" title="Níveis" singular="Nível" canEdit={canEdit} />}
       {tab === 'staff' && <StaffAssignments />}

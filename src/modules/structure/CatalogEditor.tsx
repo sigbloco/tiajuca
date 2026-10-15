@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
@@ -37,6 +38,8 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
   const [name, setName] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [subsectionId, setSubsectionId] = useState('')
+  const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
+  const visible = (items ?? []).filter((i) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search))
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['catalog', orgId] })
   const onError = (e: unknown) => toast.error(friendlyError(e))
@@ -93,16 +96,17 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
         </Card>
       )}
 
+      <FilterBar value={filter} onChange={setFilter} />
       {isLoading && <Skeleton className="h-24" />}
-      {items?.length === 0 && <EmptyState>Nada cadastrado ainda.</EmptyState>}
+      {items && visible.length === 0 && <EmptyState>{items.length === 0 ? 'Nada cadastrado ainda.' : 'Nenhum item encontrado.'}</EmptyState>}
       <div className="grid gap-2">
-        {items?.map((item, idx) => (
+        {visible.map((item, idx) => (
           <Card key={item.id} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60')}>
             <div className="flex flex-col">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx === 0}
-                onClick={() => move.mutate({ a: item, b: items[idx - 1] })}><ArrowUp className="h-4 w-4" /></Button>
-              <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === items.length - 1}
-                onClick={() => move.mutate({ a: item, b: items[idx + 1] })}><ArrowDown className="h-4 w-4" /></Button>
+                onClick={() => move.mutate({ a: item, b: visible[idx - 1] })}><ArrowUp className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === visible.length - 1}
+                onClick={() => move.mutate({ a: item, b: visible[idx + 1] })}><ArrowDown className="h-4 w-4" /></Button>
             </div>
             <Input
               className="flex-1 border-transparent bg-transparent font-semibold"

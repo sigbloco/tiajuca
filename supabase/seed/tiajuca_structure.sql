@@ -43,3 +43,11 @@ begin
     (v_org, 'Iniciante', 1), (v_org, 'Intermediário', 2), (v_org, 'Avançado', 3)
   on conflict (organization_id, name) do nothing;
 end $$;
+
+-- Subnaipes da Percussão (a Direção define quais instrumentos pertencem a cada um, em Configurações → Instrumentos).
+insert into public.subsections (organization_id, section_id, name, sort_order)
+select s.organization_id, s.id, n.name, n.ord
+from public.sections s
+cross join (values ('Graves', 1), ('Leves', 2), ('Agudos', 3), ('Chocalhos', 4)) as n(name, ord)
+where s.name = 'Percussão' and s.organization_id = (select id from public.organizations where slug = 'tiajuca')
+on conflict (organization_id, name) do nothing;
