@@ -69,3 +69,10 @@ Tudo financeiro é restrito à Direção (`finance.read/manage`, `staff_payments
 
 ## Fase 6 — repertório (migration `…000010`)
 `repertoires`, `songs`, `song_attachments`: leitura para quem tem `repertoire.read` (todos os papéis; inativos só para quem gerencia), escrita `repertoire.manage` (Direção; configurável por papel). Arquivos no bucket **privado** `org-files`, pasta `{organization_id}/…`: leitura por membro da organização, escrita por `repertoire.manage`; abertura por URL assinada (1 h). CHECK impede `storage_path` fora da pasta da organização e URL que não seja http(s). Limitação: qualquer membro da organização lê qualquer arquivo da pasta (sem filtro por instrumento no Storage). Testes: `rls_phase6_smoke.sql`.
+
+## Fase 7 — checklists, relatórios, painel (migration `…000011`)
+- **Checklists**: `checklist_templates` e itens só para `checklists.manage` (Direção). `activity_checklist_items` é **cópia** do modelo no evento; lê quem enxerga o evento (RLS de `activities`); escrita só por RPC: Direção altera tudo; o **responsável** do item altera apenas status e observação (`update_checklist_item`). Editar o modelo não altera eventos existentes; aplicar de novo não duplica.
+- **Relatórios**: `attendance_report` (por integrante, instrumento, naipe, ciclo, mês, atividade) e `absence_streaks` respeitam o escopo: Direção = organização; Professor/Monitor = apenas seu grupo; integrante comum recebe 42501. Subnaipe não é dimensão de relatório.
+- **Painel da Direção** (`dashboard_direction`): somente `finance.read`; contém contagens e valores agregados, **nunca** dados sensíveis LGPD.
+- **Auditoria**: página `/auditoria` lê `audit_logs` (somente `audit.read`); dados sensíveis registram só os nomes dos campos alterados.
+Testes: `rls_phase7_smoke.sql`.

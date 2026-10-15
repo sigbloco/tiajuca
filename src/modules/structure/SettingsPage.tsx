@@ -3,6 +3,7 @@ import { cn } from '@/components/ui/primitives'
 import { usePermission } from '@/core/permissions'
 import { ContributionsSettings, HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { RecurrencesSettings } from '@/modules/events/RecurrencesSettings'
+import { TemplatesSettings } from '@/modules/checklists/TemplatesSettings'
 import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
 import { InstrumentsManager, SectionsManager } from './StructureManagers'
@@ -15,6 +16,7 @@ const TABS = [
   { key: 'staff', label: 'Equipe' },
   { key: 'types', label: 'Tipos de evento' },
   { key: 'recurrences', label: 'Recorrências' },
+  { key: 'checklists', label: 'Checklists' },
   { key: 'fees', label: 'Contribuições' },
   { key: 'holidays', label: 'Feriados' },
 ] as const
@@ -47,6 +49,7 @@ export function SettingsPage() {
       {tab === 'staff' && <StaffAssignments />}
       {tab === 'types' && <CatalogEditor table="activity_types" title="Tipos de evento" singular="Tipo" withColor canEdit={canEvents} hint="Cada tipo tem uma cor no calendário." />}
       {tab === 'recurrences' && <RecurrencesSettings />}
+      {tab === 'checklists' && <TemplatesSettings canEdit={canEvents} />}
       {tab === 'fees' && <ContributionsSettings canEdit={canBilling} />}
       {tab === 'holidays' && <HolidaysSettings />}
     </div>

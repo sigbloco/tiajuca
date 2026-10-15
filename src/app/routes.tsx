@@ -16,6 +16,8 @@ import { FinancePage } from '@/modules/finance/FinancePage'
 import { ProfilePage } from '@/modules/profile/ProfilePage'
 import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
 import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
+import { AuditPage } from '@/modules/audit/AuditPage'
+import { ReportsPage } from '@/modules/reports/ReportsPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
@@ -78,6 +80,8 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'relatorios', element: <ReportsPage /> },
+                { path: 'auditoria', element: <AuditPage /> },
                 { path: 'repertorio', element: <RepertoirePage /> },
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'financeiro', element: <FinancePage /> },

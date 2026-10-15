@@ -9,6 +9,7 @@ import { friendlyError } from '@/core/errors'
 import { formatDayLong, formatTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
+import { ChecklistSection } from '@/modules/checklists/ChecklistSection'
 import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogTable } from '@/modules/structure/service'
@@ -107,6 +108,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           {activity.location && <div><dt className="text-muted-foreground">Local</dt><dd className="font-semibold">{activity.location}</dd></div>}
           {activity.description && <div><dt className="text-muted-foreground">Descrição</dt><dd className="whitespace-pre-wrap">{activity.description}</dd></div>}
         </dl>
+        <ChecklistSection activityId={activity.id} />
         <div className="mt-auto flex flex-col gap-2">
           {canRecord && activity.status !== 'cancelled' && (
             <Button asChild><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /> Abrir chamada</Link></Button>

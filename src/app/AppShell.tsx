@@ -13,7 +13,7 @@ export function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false)
   if (!membership) return null
   const base = `/${membership.slug}`
-  const items = NAV_ITEMS.filter((i) => !i.permission || hasPermission(membership.permissions, i.permission, 'own'))
+  const items = NAV_ITEMS.filter((i) => !i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
   const primary = items.filter((i) => i.primary)
   const more = items.filter((i) => !i.primary)
   const link = ({ isActive }: { isActive: boolean }) =>
