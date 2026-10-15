@@ -255,7 +255,7 @@ begin
   end if;
   if p_answers is null or jsonb_typeof(p_answers) <> 'object' then raise exception 'Envio inválido.' using errcode = 'P0001'; end if;
   select f2.* into f from public.forms f2 join public.organizations o on o.id = f2.organization_id and o.is_active
-   where o.slug = p_org_slug and f2.slug = p_form_slug and f2.status = 'published';
+   where o.slug = p_org_slug and f2.slug = p_form_slug and f2.status in ('published', 'closed');
   if f.id is null then raise exception 'Formulário não encontrado.' using errcode = 'P0002'; end if;
   case public._form_state(f)
     when 'not_open' then raise exception 'As inscrições ainda não abriram.' using errcode = 'P0001';
@@ -366,7 +366,7 @@ begin
   -- arquivos (token temporário, pasta própria, tipos e tamanhos limitados)
   if jsonb_array_length(coalesce(p_files, '[]'::jsonb)) > 0 or array_length(file_req, 1) > 0 then
     select * into tok from public.form_upload_tokens where token = p_upload_token and form_id = f.id and used_at is null and expires_at > now();
-    if tok.token is null and (jsonb_array_length(coalesce(p_files, '[]'::jsonb)) > 0 or array_length(file_req, 1) > 0) then
+    if tok.token is null then
       raise exception 'Envio de arquivos expirou. Anexe novamente.' using errcode = 'P0001';
     end if;
     for fl in select * from jsonb_array_elements(coalesce(p_files, '[]'::jsonb)) loop
