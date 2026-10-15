@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
+import { COLOR_LABEL, type TypeColor } from '@/modules/events/service'
 import { listCatalog, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   /** Permite escolher um subnaipe opcional (instrumentos). */
   withSubsection?: boolean
   hint?: string
+  /** Mostra seletor de cor (tipos de evento). */
+  withColor?: boolean
   canEdit: boolean
 }
 
@@ -25,7 +28,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withSubsection, hint, canEdit }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withSubsection, withColor, hint, canEdit }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -123,6 +126,12 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
                 <option value="">Sem subnaipe</option>
                 {subsections.data?.filter((s) => s.section_id === item.section_id && (s.is_active || s.id === item.subsection_id))
                   .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </Select>
+            )}
+            {withColor && (
+              <Select className="h-9 w-40" aria-label="Cor" disabled={!canEdit} value={item.color ?? 'primary'}
+                onChange={(e) => save.mutate({ id: item.id, name: item.name, color: e.target.value })}>
+                {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
               </Select>
             )}
             {canEdit && (

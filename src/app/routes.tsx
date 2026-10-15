@@ -8,6 +8,8 @@ import { HomePage } from '@/modules/dashboard/HomePage'
 import { CapacityPage } from '@/modules/capacity/CapacityPage'
 import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
+import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/AttendancePages'
+import { EventsPage } from '@/modules/events/EventsPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
@@ -70,6 +72,9 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'eventos', element: <EventsPage /> },
+                { path: 'presenca', element: <AttendanceListPage /> },
+                { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },
                 { path: 'vagas', element: <CapacityPage /> },
                 { path: 'lista-de-espera', element: <WaitlistPage /> },
                 { path: 'ciclos', element: <CyclesPage /> },

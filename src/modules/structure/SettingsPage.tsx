@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cn } from '@/components/ui/primitives'
 import { usePermission } from '@/core/permissions'
+import { RecurrencesSettings } from '@/modules/events/RecurrencesSettings'
 import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
 
@@ -11,10 +12,13 @@ const TABS = [
   { key: 'functions', label: 'Funções' },
   { key: 'levels', label: 'Níveis' },
   { key: 'staff', label: 'Equipe' },
+  { key: 'types', label: 'Tipos de evento' },
+  { key: 'recurrences', label: 'Recorrências' },
 ] as const
 
 export function SettingsPage() {
   const canEdit = usePermission('structure.manage')
+  const canEvents = usePermission('events.manage')
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sections')
   return (
     <div className="space-y-4">
@@ -44,6 +48,8 @@ export function SettingsPage() {
       {tab === 'functions' && <CatalogEditor table="artistic_functions" title="Funções" singular="Função" hint="Papéis que não são instrumentos (ex.: Produção, Apoio)." canEdit={canEdit} />}
       {tab === 'levels' && <CatalogEditor table="skill_levels" title="Níveis" singular="Nível" canEdit={canEdit} />}
       {tab === 'staff' && <StaffAssignments />}
+      {tab === 'types' && <CatalogEditor table="activity_types" title="Tipos de evento" singular="Tipo" withColor canEdit={canEvents} hint="Cada tipo tem uma cor no calendário." />}
+      {tab === 'recurrences' && <RecurrencesSettings />}
     </div>
   )
 }
