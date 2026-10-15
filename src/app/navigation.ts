@@ -1,4 +1,4 @@
-import { Award, Banknote, BarChart3, CalendarDays, ClipboardList, History, Music2, CalendarRange, ClipboardCheck, Hourglass, Home, Settings, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon } from 'lucide-react'
+import { ShieldCheck, Award, Banknote, BarChart3, CalendarDays, ClipboardList, History, Music2, CalendarRange, ClipboardCheck, Hourglass, Home, Settings, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
 export interface NavItem {
@@ -29,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'lista-de-espera', label: 'Lista de espera', icon: Hourglass, permission: 'member_cycles.read' },
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, permission: 'cycles.manage' },
   { to: 'configuracoes', label: 'Configurações', icon: Settings, permission: 'settings.manage' },
+  { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, permission: 'roles.manage' },
   { to: 'auditoria', label: 'Auditoria', icon: History, permission: 'audit.read' },
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
 ]

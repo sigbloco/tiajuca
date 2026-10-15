@@ -87,3 +87,6 @@ Testes: `rls_phase8_smoke.sql`.
 
 ## Fase 9 — Google Drive (migration `…000013`)
 `integrations` (somente `settings.manage`) guarda apenas `{folder_id}` e o estado ativo; **credencial nunca no banco**. `drive_integration_config` exige `repertoire.manage`; `save_drive_integration`/`set_drive_integration_active` exigem `settings.manage`. A Edge Function revalida a permissão com o JWT de quem chama, usa a pasta raiz do banco e só aceita subpastas dentro dela. Setup em `docs/GOOGLE_DRIVE.md`. Testes: `rls_phase9_smoke.sql` (a função em si depende de credenciais externas e não é testada aqui).
+
+## Gestão de papéis (migration `…000014`)
+`grant_access_role` / `revoke_access_role` (somente `roles.manage`; INSERT/UPDATE direto continua só para quem tem a permissão). **Último diretor protegido** por RPC e por gatilhos (`guard_last_director_role`, `guard_last_director_archive`): não dá para remover o papel Direção nem arquivar o cadastro do único diretor ativo, nem por API direta. Tela: `/acesso` (pessoas × papéis; matriz de permissões em leitura). Testes: `rls_phase10_smoke.sql`.

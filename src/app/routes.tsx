@@ -16,6 +16,7 @@ import { FinancePage } from '@/modules/finance/FinancePage'
 import { ProfilePage } from '@/modules/profile/ProfilePage'
 import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
 import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
+import { AccessPage } from '@/modules/access/AccessPage'
 import { AuditPage } from '@/modules/audit/AuditPage'
 import { ReportsPage } from '@/modules/reports/ReportsPage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
@@ -88,6 +89,7 @@ export const router = createBrowserRouter(
                 { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                 { path: 'relatorios', element: <ReportsPage /> },
                 { path: 'auditoria', element: <AuditPage /> },
+                { path: 'acesso', element: <AccessPage /> },
                 { path: 'repertorio', element: <RepertoirePage /> },
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'financeiro', element: <FinancePage /> },
