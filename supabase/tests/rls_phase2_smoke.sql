@@ -63,7 +63,11 @@ begin
   exception when sqlstate 'P0001' then null; end;
   begin
     perform public.set_member_cycle_status(m_st3, cyc, 'active');
-    raise exception 'FALHOU: Professor alterou status fora do grupo';
+    raise exception 'FALHOU: Professor alterou status fora do grupo' using errcode = 'XX999';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.log_sensitive_access(m_st1);
+    raise exception 'FALHOU: Professor registrou acesso a dado sensível' using errcode = 'XX999';
   exception when insufficient_privilege then null; end;
   perform public.set_member_cycle_status(m_st2, cyc, 'waitlist', null, s1);
   raise notice 'OK 2: limite de vagas respeitado; lista de espera permitida';
@@ -84,6 +88,7 @@ begin
   if n < 3 then raise exception 'FALHOU: histórico incompleto (%)', n; end if;
   select public.section_occupied(s1, cyc) into n;
   if n <> 2 then raise exception 'FALHOU: ocupação esperada 2, veio %', n; end if;
+  perform public.create_member_invite(m_st2);
   raise notice 'OK 3/4: exceção da Direção e histórico de status';
 
   -- 5. Integrante não altera status
@@ -92,7 +97,11 @@ begin
   set local role authenticated;
   begin
     perform public.set_member_cycle_status(m_st1, cyc, 'inactive');
-    raise exception 'FALHOU: Integrante alterou status';
+    raise exception 'FALHOU: Integrante alterou status' using errcode = 'XX999';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.create_member_invite(m_st2);
+    raise exception 'FALHOU: Integrante criou convite' using errcode = 'XX999';
   exception when insufficient_privilege then null; end;
   raise notice 'OK 5: integrante sem permissão de status';
 
@@ -108,12 +117,16 @@ begin
   if n <> 0 then raise exception 'FALHOU: Direção B viu participações da org A'; end if;
   begin
     perform public.set_member_cycle_status(m_st1, cyc, 'inactive');
-    raise exception 'FALHOU: Direção B alterou status na org A';
+    raise exception 'FALHOU: Direção B alterou status na org A' using errcode = 'XX999';
   exception when insufficient_privilege then null; end;
-  raise notice 'OK 6: isolamento entre organizações';
+  begin
+    perform public.create_member_invite(m_st2);
+    raise exception 'FALHOU: Direção B criou convite na org A' using errcode = 'XX999';
+  exception when insufficient_privilege then null; end;
 
   reset role;
-  raise notice 'TODOS OS TESTES DA FASE 2 PASSARAM';
+  -- Sentinela: o SQL Editor não mostra NOTICE. Esta exceção desfaz tudo e significa "todos passaram".
+  raise exception 'TESTES_OK_ROLLBACK';
 end $$;
 
 rollback;

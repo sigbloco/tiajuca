@@ -42,3 +42,7 @@ Migration: `supabase/migrations/20261015000003_rls_policies.sql`. Helpers em `�
 `is_in_my_group(org, member)` agora é real: o integrante tem vínculo artístico vigente em naipe atribuído ao usuário (professor/monitor) em `staff_section_assignments`.
 Ocupação de naipe = integrantes com status que `counts_as_active` no ciclo e vínculo vigente com o naipe (`section_occupied`).
 Testes: `supabase/tests/rls_phase2_smoke.sql`.
+
+## Correção de segurança (migration `…000005`)
+`has_permission()` devolvia `NULL` (não `false`) quando o usuário não tinha a permissão; em `if not has_permission(...)` o NULL deixava a ação passar (afetava `create_member_invite`, `log_sensitive_access`, `set_member_cycle_status`). Encontrado pelo teste da Fase 2, corrigido com `coalesce`, e o teste agora cobre esses casos. Políticas RLS não eram afetadas (usam a forma positiva).
+**Regra:** em funções de permissão, nunca depender de booleano que possa ser NULL; sempre `coalesce(..., false)`.
