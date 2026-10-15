@@ -98,7 +98,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
         </div>
       )}
       {sub.status !== 'pending' && sub.status !== 'approved' && !purged && <Button variant="outline" onClick={() => review.mutate('pending')}>Reabrir análise</Button>}
-      {sub.status === 'approved' && <p className="text-muted-foreground">Integrante criado. Veja em Membros.</p>}
+      {sub.status === 'approved' && <p className="text-muted-foreground">Integrante criado. Veja em Integrantes.</p>}
     </SheetContent>
   )
 }

@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toast } from 'sonner'
 import { Card, Select, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { maskPhone } from '@/components/ui/masked-inputs'
+import { socialLabel, socialUrl } from '@/core/social'
+import { whatsappUrl } from '@/modules/suppliers/service'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -69,9 +72,24 @@ function CycleParticipation({ memberId }: { memberId: string }) {
   )
 }
 
+function ContactLinks({ member }: { member: MemberRow }) {
+  const social = socialUrl(member.social_handle)
+  const wa = whatsappUrl(member.phone)
+  if (!member.phone && !social && !member.email) return null
+  const cls = 'inline-flex items-center rounded-md border border-border px-2 py-1 text-sm hover:bg-muted'
+  return (
+    <div className="flex flex-wrap gap-2">
+      {member.phone && <a className={cls} href={wa ?? `tel:${member.phone}`} target="_blank" rel="noreferrer noopener">WhatsApp {maskPhone(member.phone)}</a>}
+      {social && <a className={cls} href={social} target="_blank" rel="noreferrer noopener">{socialLabel(social)}</a>}
+      {member.email && <a className={cls} href={`mailto:${member.email}`}>{member.email}</a>}
+    </div>
+  )
+}
+
 export function MemberDetailSheet({ member }: { member: MemberRow }) {
   return (
     <SheetContent title={member.display_name ?? member.full_name} description={member.display_name ? member.full_name : (member.email ?? '')}>
+      <ContactLinks member={member} />
       <CycleParticipation memberId={member.id} />
       <ArtisticLinks memberId={member.id} />
       <MemberBilling memberId={member.id} />

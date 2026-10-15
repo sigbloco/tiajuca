@@ -25,7 +25,7 @@ function useDebounced<T>(value: T, ms = 300) {
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const [form, setForm] = useState({ full_name: '', display_name: '', email: '', phone: '', birth_date: '' })
+  const [form, setForm] = useState({ full_name: '', display_name: '', email: '', phone: '', social: '', birth_date: '' })
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value })
   const create = useMutation({
     mutationFn: () => createMember(orgId, form),
@@ -43,6 +43,7 @@ function NewMemberSheet({ onClose }: { onClose: () => void }) {
         <div className="space-y-1.5"><Label htmlFor="display_name">Como prefere ser chamado</Label><Input id="display_name" value={form.display_name} onChange={set('display_name')} /></div>
         <div className="space-y-1.5"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" value={form.email} onChange={set('email')} /></div>
         <div className="space-y-1.5"><Label htmlFor="phone">Celular</Label><PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="social">Rede social</Label><Input id="social" placeholder="@usuario" value={form.social} onChange={set('social')} /></div>
         <div className="space-y-1.5">
           <Label htmlFor="birth_date">Data de nascimento</Label>
           <DateInput id="birth_date" max={adultBirthDateMax()} maxMessage="Apenas maiores de 18 anos podem ser integrantes." value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} />
@@ -97,7 +98,7 @@ export function MembersPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Membros</h1>
+        <h1>Integrantes</h1>
         <Can permission="members.manage">
           <Sheet open={open} onOpenChange={setOpen}>
             <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo integrante</Button>

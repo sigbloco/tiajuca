@@ -1,3 +1,4 @@
+import { socialLabel, socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -39,7 +40,7 @@ export function MyData({ memberId }: { memberId: string }) {
       const { error } = await supabase.rpc('update_my_profile', {
         p_member: memberId,
         p_patch: {
-          display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: f.social_handle, affective_relation: f.affective_relation,
+          display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: socialUrl(f.social_handle) ?? '', affective_relation: f.affective_relation,
           played_other_blocks: f.played_other_blocks, other_blocks: f.played_other_blocks ? f.other_blocks : '',
         },
       })
@@ -68,7 +69,8 @@ export function MyData({ memberId }: { memberId: string }) {
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
-          <div className="space-y-1.5"><Label htmlFor="my-social">Rede social</Label><Input id="my-social" placeholder="@usuario" value={f.social_handle} onChange={(e) => setF({ ...f, social_handle: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="my-social">Rede social</Label><Input id="my-social" placeholder="@usuario" value={f.social_handle} onChange={(e) => setF({ ...f, social_handle: e.target.value })} />
+            {socialUrl(f.social_handle) && <a className="text-xs text-primary underline" href={socialUrl(f.social_handle)!} target="_blank" rel="noreferrer noopener">Abrir {socialLabel(socialUrl(f.social_handle)!)}</a>}</div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="my-aff">Qual é a sua relação com a Grande Tijuca?</Label>
           <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>

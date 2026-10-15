@@ -5,3 +5,6 @@ dist
 !.env.example
 *.local
 supabase/.temp
+
+# dados pessoais de importacao (nunca versionar)
+data-private/
