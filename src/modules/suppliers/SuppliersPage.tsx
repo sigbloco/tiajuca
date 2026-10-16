@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { friendlyError } from '@/core/errors'
@@ -176,7 +177,7 @@ export function SuppliersPage() {
           open={filter.search.trim() ? true : !!open[cat.id]} onToggle={() => setOpen((o) => ({ ...o, [cat.id]: !o[cat.id] }))}
           right={canManage ? <Button size="sm" variant="ghost" onClick={() => setSheet({ sup: null, category: cat.id })}><Plus className="h-4 w-4" /></Button> : undefined}>
           {items.length === 0 && <p className="text-muted-foreground">Nenhum fornecedor nesta categoria.</p>}
-          {items.map((s) => <SupplierRow key={s.id} s={s} canManage={canManage} onEdit={() => setSheet({ sup: s, category: s.category_id })} />)}
+          <ProgressiveList items={items} resetKey={filter.search} render={(s) => <SupplierRow key={s.id} s={s} canManage={canManage} onEdit={() => setSheet({ sup: s, category: s.category_id })} />} />
         </Collapsible>
       ))}
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>

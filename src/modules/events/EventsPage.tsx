@@ -8,6 +8,7 @@ import { usePermission } from '@/core/permissions'
 import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { EventSheet } from './EventSheet'
+import { RecurrencesSettings } from './RecurrencesSettings'
 import { COLOR_BADGE, COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
@@ -25,6 +26,7 @@ export function EventsPage() {
   const [typeId, setTypeId] = useState('')
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
+  const [tab, setTab] = useState<'agenda' | 'recorrencias'>('agenda')
   const cycles = useCycles()
   const types = useCatalog('activity_types')
 
@@ -59,12 +61,27 @@ export function EventsPage() {
     setSelectedDay(null)
   }
 
+  // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
+  const tabs = canManage && (
+    <div className="flex gap-2" role="tablist">
+      {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências']] as const).map(([k, label]) => (
+        <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+          className={cn('rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
+      ))}
+    </div>
+  )
+  if (tab === 'recorrencias' && canManage) {
+    return <div className="space-y-4"><h1>Calendário</h1>{tabs}<RecurrencesSettings /></div>
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Calendário</h1>
         {canManage && <Button onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
       </div>
+
+      {tabs}
 
       <div className="grid grid-cols-2 gap-2 sm:max-w-md">
         <Select aria-label="Filtrar por ciclo" value={cycleId} onChange={(e) => setCycleId(e.target.value)}>

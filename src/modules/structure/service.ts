@@ -44,3 +44,11 @@ export async function swapOrder(table: CatalogTable, orgId: string, a: CatalogIt
     saveCatalogItem(table, orgId, { id: b.id, name: b.name, sort_order: a.sort_order }),
   ])
 }
+
+/** Depois de mexer em qualquer catálogo (categorias, instrumentos, naipes…), tudo que mostra esses nomes se atualiza sozinho. */
+export function invalidateCatalog(qc: import('@tanstack/react-query').QueryClient, orgId: string) {
+  for (const key of [['catalog'], ['members'], ['member-links'], ['staff-assignments'], ['fee-prices'], ['drive-folders'], ['capacity'], ['waitlist']]) {
+    qc.invalidateQueries({ queryKey: key })
+  }
+  void orgId
+}

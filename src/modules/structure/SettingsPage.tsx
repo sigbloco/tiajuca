@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { cn } from '@/components/ui/primitives'
 import { usePermission } from '@/core/permissions'
-import { ContributionsSettings, HolidaysSettings } from '@/modules/billing/BillingSettings'
+import { ContributionsEditor } from '@/modules/billing/ContributionsEditor'
+import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { IntegrationsSettings } from '@/modules/integrations/IntegrationsSettings'
-import { RecurrencesSettings } from '@/modules/events/RecurrencesSettings'
 import { TemplatesSettings } from '@/modules/checklists/TemplatesSettings'
 import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
@@ -13,14 +13,12 @@ const TABS = [
   { key: 'sections', label: 'Naipes' },
   { key: 'instruments', label: 'Instrumentos' },
   { key: 'functions', label: 'Funções' },
-  { key: 'levels', label: 'Níveis' },
   { key: 'staff', label: 'Equipe' },
   { key: 'types', label: 'Tipos de evento' },
-  { key: 'recurrences', label: 'Recorrências' },
   { key: 'checklists', label: 'Checklists' },
   { key: 'fees', label: 'Contribuições' },
   { key: 'holidays', label: 'Feriados' },
-  { key: 'integrations', label: 'Integrações' },
+  { key: 'integrations', label: 'Drive (partituras)' },
 ] as const
 
 export function SettingsPage() {
@@ -47,12 +45,10 @@ export function SettingsPage() {
       {tab === 'sections' && <SectionsManager canEdit={canEdit} />}
       {tab === 'instruments' && <InstrumentsManager canEdit={canEdit} />}
       {tab === 'functions' && <CatalogEditor table="artistic_functions" title="Funções" singular="Função" hint="Papéis que não são instrumentos (ex.: Produção, Apoio)." canEdit={canEdit} />}
-      {tab === 'levels' && <CatalogEditor table="skill_levels" title="Níveis" singular="Nível" canEdit={canEdit} />}
       {tab === 'staff' && <StaffAssignments />}
       {tab === 'types' && <CatalogEditor table="activity_types" title="Tipos de evento" singular="Tipo" withColor canEdit={canEvents} hint="Cada tipo tem uma cor no calendário." />}
-      {tab === 'recurrences' && <RecurrencesSettings />}
       {tab === 'checklists' && <TemplatesSettings canEdit={canEvents} />}
-      {tab === 'fees' && <ContributionsSettings canEdit={canBilling} />}
+      {tab === 'fees' && <ContributionsEditor canEdit={canBilling} />}
       {tab === 'holidays' && <HolidaysSettings />}
       {tab === 'integrations' && <IntegrationsSettings />}
     </div>

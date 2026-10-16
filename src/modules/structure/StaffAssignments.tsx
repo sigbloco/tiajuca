@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Button, Card, EmptyState, Select } from '@/components/ui/primitives'
+import { X } from 'lucide-react'
+import { ProgressiveList } from '@/components/shared/LoadMore'
+import { Button, Card, EmptyState, Select } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDate } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -19,6 +21,7 @@ const SCOPE: Record<ScopeKind, { label: string; table: CatalogTable; column: str
 
 interface Assignment {
   id: string
+  member_id: string
   staff_kind: 'professor' | 'monitor'
   valid_from: string
   members: { full_name: string; display_name: string | null } | null
@@ -42,7 +45,7 @@ export function StaffAssignments() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('staff_assignments')
-        .select('id, staff_kind, valid_from, members(full_name, display_name), sections(name), subsections(name), instruments(name)')
+        .select('id, member_id, staff_kind, valid_from, members(full_name, display_name), sections(name), subsections(name), instruments(name)')
         .eq('organization_id', orgId)
         .is('valid_to', null)
         .order('created_at', { ascending: false })
@@ -100,20 +103,37 @@ export function StaffAssignments() {
         <p className="text-xs text-muted-foreground">Lembre de também conceder o papel de acesso (Professor/Monitor) à pessoa; esta tela define apenas o que ela acompanha.</p>
       </Card>
       {data?.length === 0 && <EmptyState>Nenhuma atribuição ativa.</EmptyState>}
-      <div className="grid gap-2">
-        {data?.map((a) => (
-          <Card key={a.id} className="flex items-center justify-between gap-3 p-3">
-            <div className="min-w-0">
-              <p className="truncate font-semibold">{a.members?.display_name ?? a.members?.full_name}</p>
-              <p className="text-muted-foreground">
-                <Badge>{a.staff_kind === 'professor' ? 'Professor' : 'Monitor'}</Badge>{' '}
-                {a.sections?.name ? `Naipe ${a.sections.name}` : a.subsections?.name ? `Subnaipe ${a.subsections.name}` : a.instruments?.name} · desde {formatDate(a.valid_from)}
-              </p>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => end.mutate(a.id)}>Encerrar</Button>
-          </Card>
-        ))}
-      </div>
+      {(['professor', 'monitor'] as const).map((k) => {
+        // Uma linha por pessoa; os instrumentos/naipes dela viram etiquetas (quem acompanha vários não se repete).
+        const people = new Map<string, { id: string; name: string; items: Assignment[] }>()
+        for (const a of (data ?? []).filter((x) => x.staff_kind === k)) {
+          const p = people.get(a.member_id) ?? { id: a.member_id, name: a.members?.display_name ?? a.members?.full_name ?? '—', items: [] }
+          p.items.push(a)
+          people.set(a.member_id, p)
+        }
+        const list = [...people.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+        if (list.length === 0) return null
+        const target = (a: Assignment) => a.sections?.name ? `Naipe ${a.sections.name}` : a.subsections?.name ? `Subnaipe ${a.subsections.name}` : a.instruments?.name ?? ''
+        return (
+          <section key={k} className="space-y-2">
+            <h3>{k === 'professor' ? 'Professores' : 'Monitores'} <span className="text-muted-foreground">({list.length})</span></h3>
+            <ProgressiveList items={list} resetKey={k} render={(p) => (
+              <Card key={p.id} className="space-y-2 p-3">
+                <p className="truncate font-semibold">{p.name}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {p.items.map((a) => (
+                    <span key={a.id} className="inline-flex items-center gap-1 rounded-full bg-muted py-1 pl-3 pr-1 text-sm font-semibold" title={`desde ${formatDate(a.valid_from)}`}>
+                      {target(a)}
+                      <Button size="icon" variant="ghost" className="h-6 w-6" aria-label={`Encerrar ${target(a)} de ${p.name}`}
+                        onClick={() => { if (window.confirm(`Encerrar a atribuição ${target(a)} de ${p.name}?`)) end.mutate(a.id) }}><X className="h-3.5 w-3.5" /></Button>
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            )} />
+          </section>
+        )
+      })}
     </div>
   )
 }

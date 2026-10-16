@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link2, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -12,7 +13,7 @@ import { useOrgId } from '@/core/organization'
 import { Can } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCycleStatuses, useCycles } from '@/modules/cycles/service'
-import { listCatalog } from '@/modules/structure/service'
+import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
 import { createInvite, createMember, type MemberRow } from './service'
 
@@ -119,10 +120,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       return (data ?? []) as { member_id: string; status_id: string }[]
     },
   })
-  const sections = useQuery({ queryKey: ['catalog', 'sections', orgId], queryFn: () => listCatalog('sections', orgId) })
-  const subsections = useQuery({ queryKey: ['catalog', 'subsections', orgId], queryFn: () => listCatalog('subsections', orgId) })
-  const instruments = useQuery({ queryKey: ['catalog', 'instruments', orgId], queryFn: () => listCatalog('instruments', orgId) })
-  const functions = useQuery({ queryKey: ['catalog', 'artistic_functions', orgId], queryFn: () => listCatalog('artistic_functions', orgId) })
+  const sections = useCatalog('sections')
+  const subsections = useCatalog('subsections')
+  const instruments = useCatalog('instruments')
+  const functions = useCatalog('artistic_functions')
 
   const statusOf = useMemo(() => {
     const byStatus = new Map((statuses ?? []).map((s) => [s.id, s]))
@@ -191,7 +192,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const renderLeaves = (leaves: Map<string, Leaf>, prefix: string, tone: Tone) =>
     [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
       <Collapsible key={prefix + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(prefix + leaf.key, leaves.size === 1)} onToggle={() => toggle(prefix + leaf.key, isOpen(prefix + leaf.key, leaves.size === 1))}>
-        {leaf.members.map(memberRow)}
+        <ProgressiveList items={leaf.members} render={memberRow} resetKey={filter.search} />
       </Collapsible>
     ))
 

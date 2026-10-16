@@ -8,6 +8,8 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCycles } from '@/modules/cycles/service'
+import { usePermission } from '@/core/permissions'
+import { CatalogEditor } from '@/modules/structure/CatalogEditor'
 import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow, type FormStatus } from './service'
 
 // Horário de Brasília (sem horário de verão em vigor): abre às 00:00 e encerra às 23:59 do dia escolhido.
@@ -19,6 +21,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const cycles = useCycles()
+  const canStructure = usePermission('structure.manage')
   const [f, setF] = useState({
     title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
     opens: toDate(form.opens_at), closes: toDate(form.closes_at), confirmation: form.confirmation_message, max: form.max_responses?.toString() ?? '',
@@ -86,6 +89,11 @@ export function SettingsTab({ form }: { form: FormRow }) {
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
         <Button type="submit" disabled={!f.title.trim() || !f.slug || save.isPending}>Salvar configurações</Button>
       </form>
+
+      <Card className="space-y-2 p-4">
+        <CatalogEditor table="skill_levels" title="Níveis de habilidade" singular="Nível" canEdit={canStructure}
+          hint="As opções de nível usadas nas perguntas dos formulários e nos vínculos dos integrantes (ex.: Iniciante, Intermediário, Avançado). Valem para todos os formulários." />
+      </Card>
     </div>
   )
 }

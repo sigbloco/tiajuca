@@ -1,14 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { useCatalog } from './CatalogEditor'
-import { saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
+import { invalidateCatalog, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 const byOrder = (a: CatalogItem, b: CatalogItem) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)
 const nextOrder = (items: CatalogItem[]) => items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1
@@ -16,7 +17,7 @@ const nextOrder = (items: CatalogItem[]) => items.reduce((m, i) => Math.max(m, i
 function useStructureMutations(table: CatalogTable) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const refresh = () => qc.invalidateQueries({ queryKey: ['catalog', orgId] })
+  const refresh = () => invalidateCatalog(qc, orgId)
   const onError = (e: unknown) => toast.error(friendlyError(e))
   const save = useMutation({
     mutationFn: (item: Partial<CatalogItem> & { name: string }) => saveCatalogItem(table, orgId, item),
@@ -81,7 +82,9 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const [newSection, setNewSection] = useState('')
   const [newSub, setNewSub] = useState<Record<string, string>>({})
+  const [renaming, setRenaming] = useState<string | null>(null)
   const searching = filter.search.trim() !== ''
+  const ordered = (sections.data ?? []).slice().sort(byOrder)
 
   const view = useMemo(() => {
     const secs = [...(sections.data ?? [])].sort(byOrder)
@@ -104,7 +107,7 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
     onSuccess: (_d, v) => {
       toast.success(v.kind === 'section' ? 'Naipe criado.' : 'Subnaipe criado.')
       if (v.kind === 'section') setNewSection(''); else setNewSub((m) => ({ ...m, [v.sectionId!]: '' }))
-      qc.invalidateQueries({ queryKey: ['catalog', orgId] })
+      invalidateCatalog(qc, orgId)
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -126,8 +129,33 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
         {view.map(({ s, subs, visibleSubs, instrumentCount }) => (
           <Collapsible key={s.id} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)}
             title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={subs.length}
-            right={<span className="hidden text-xs text-muted-foreground sm:inline">{instrumentCount} instrumento(s)</span>}>
-            <ItemRow item={s} siblings={(sections.data ?? []).slice().sort(byOrder)} canEdit={canEdit} mut={secMut} />
+            right={(
+              <div className="flex items-center gap-1">
+                <span className="hidden text-xs text-muted-foreground sm:inline">{instrumentCount} instrumento(s)</span>
+                {canEdit && (
+                  <>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${s.name}`} disabled={ordered.findIndex((x) => x.id === s.id) <= 0}
+                      onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) - 1] })}><ArrowUp className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${s.name}`} disabled={ordered.findIndex((x) => x.id === s.id) === ordered.length - 1}
+                      onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) + 1] })}><ArrowDown className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Renomear ${s.name}`} onClick={() => setRenaming(renaming === s.id ? null : s.id)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="outline" onClick={() => secMut.save.mutate({ id: s.id, name: s.name, is_active: !s.is_active })}>{s.is_active ? 'Desativar' : 'Ativar'}</Button>
+                  </>
+                )}
+              </div>
+            )}>
+            {renaming === s.id && (
+              <form className="flex gap-2" onSubmit={(e) => {
+                e.preventDefault()
+                const v = String(new FormData(e.currentTarget).get('name') ?? '').trim()
+                if (v && v !== s.name) secMut.save.mutate({ id: s.id, name: v })
+                setRenaming(null)
+              }}>
+                <Input name="name" aria-label="Novo nome do naipe" defaultValue={s.name} autoFocus />
+                <Button type="submit" size="sm">Salvar</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(null)}>Cancelar</Button>
+              </form>
+            )}
             <p className="px-1 text-xs font-semibold uppercase text-muted-foreground">Subnaipes</p>
             {visibleSubs.length === 0 && <p className="px-1 text-muted-foreground">Nenhum subnaipe.</p>}
             {visibleSubs.map((x) => <ItemRow key={x.id} item={x} siblings={subs} canEdit={canEdit} mut={subMut} />)}
@@ -182,7 +210,7 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
       name: form.name.trim(), section_id: form.section_id, subsection_id: form.subsection_id || null,
       sort_order: nextOrder(instruments.data ?? []),
     }),
-    onSuccess: () => { toast.success('Instrumento criado.'); setForm({ ...form, name: '' }); qc.invalidateQueries({ queryKey: ['catalog', orgId] }) },
+    onSuccess: () => { toast.success('Instrumento criado.'); setForm({ ...form, name: '' }); invalidateCatalog(qc, orgId) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const extraCount = (sectionFilter ? 1 : 0) + (subFilter ? 1 : 0)
@@ -226,7 +254,7 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
             {subGroups.length === 0 && <p className="text-muted-foreground">Nenhum instrumento neste naipe.</p>}
             {subGroups.map((g) => (
               <Collapsible key={g.key} level={1} open={searching || open.isOpen(g.key)} onToggle={() => open.toggle(g.key)} title={g.label} count={g.items.length}>
-                {g.items.map((i) => (
+                <ProgressiveList items={g.items} resetKey={filter.search} render={(i) => (
                   <ItemRow key={i.id} item={i} siblings={g.items} canEdit={canEdit} mut={mut}
                     extra={
                       <Select className="h-9 w-36" aria-label={`Subnaipe de ${i.name}`} disabled={!canEdit} value={i.subsection_id ?? ''}
@@ -235,7 +263,7 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
                         {subs.filter((x) => x.is_active || x.id === i.subsection_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                       </Select>
                     } />
-                ))}
+                )} />
               </Collapsible>
             ))}
           </Collapsible>
