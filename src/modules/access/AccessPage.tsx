@@ -1,19 +1,15 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Crown, Lock, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Lock } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { Badge, Button, Card, EmptyState, Input, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
-import { listMembers } from '@/modules/members/service'
+import { PeopleTab } from './PeopleTab'
 
-const ROLES = [
-  { key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professor' },
-  { key: 'monitor', label: 'Monitor' }, { key: 'integrante', label: 'Integrante' },
-] as const
 const SCOPE_LABEL: Record<string, string> = { org: 'Toda a organização', group: 'Seu grupo', own: 'Apenas o próprio' }
 const MODULE_LABEL: Record<string, string> = {
   organizacao: 'Organização', configuracoes: 'Configurações', acesso: 'Acesso', membros: 'Integrantes', auditoria: 'Auditoria', estrutura: 'Estrutura',
@@ -58,105 +54,15 @@ function TransferSheet({ onClose }: { onClose: () => void }) {
   )
 }
 
-function PeopleTab() {
-  const orgId = useOrgId()
-  const { membership } = useOrganization()
-  const qc = useQueryClient()
+function PeopleTabContainer() {
   const isTitular = useIsTitular()
   const hasTitular = useOrgHasTitular()
-  const [input, setInput] = useState('')
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(0)
   const [transfer, setTransfer] = useState(false)
-  useEffect(() => { const t = setTimeout(() => { setSearch(input); setPage(0) }, 300); return () => clearTimeout(t) }, [input])
-  const canTouchDirection = isTitular || hasTitular.data === false
-
-  const members = useQuery({
-    queryKey: ['access-members', orgId, search, page],
-    placeholderData: keepPreviousData,
-    queryFn: () => listMembers({ orgId, search, page, pageSize: 15, sort: 'full_name', ascending: true, includeArchived: false }),
-  })
-  const ids = members.data?.rows.map((m) => m.id) ?? []
-  const roles = useQuery({
-    queryKey: ['access-roles', orgId, ids.join(',')],
-    enabled: ids.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('member_access_roles').select('member_id, access_roles(key)').in('member_id', ids).is('revoked_at', null)
-      if (error) throw error
-      const map: Record<string, Set<string>> = {}
-      for (const r of (data ?? []) as unknown as { member_id: string; access_roles: { key: string } | null }[]) (map[r.member_id] ??= new Set()).add(r.access_roles?.key ?? '')
-      return map
-    },
-  })
-  const toggle = useMutation({
-    mutationFn: async ({ member, role, on }: { member: string; role: string; on: boolean }) => {
-      const { error } = await supabase.rpc(on ? 'grant_access_role' : 'revoke_access_role', { p_member: member, p_role_key: role })
-      if (error) throw error
-    },
-    onSuccess: (_d, v) => {
-      toast.success(v.on ? 'Papel concedido.' : 'Papel removido.')
-      qc.invalidateQueries({ queryKey: ['access-roles', orgId] })
-      if (v.member === membership?.member_id) qc.invalidateQueries({ queryKey: ['memberships'] })
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const total = members.data?.total ?? 0
-  const pages = Math.max(1, Math.ceil(total / 15))
-
   return (
-    <div className="space-y-3">
-      {hasTitular.data && (
-        <Card className="flex flex-wrap items-center justify-between gap-2 border-primary/40 bg-primary/5 p-3">
-          <p className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> O bloco tem um <strong>titular</strong>: só ele concede ou remove a Direção.</p>
-          {isTitular && <Button size="sm" variant="outline" onClick={() => setTransfer(true)}>Transferir titularidade</Button>}
-        </Card>
-      )}
-      <p className="text-muted-foreground">Papéis são acumuláveis (ex.: uma pessoa pode ser Professor e Direção). Quem não tem nenhum papel não enxerga nada. Toda mudança fica na auditoria.</p>
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar pessoa" value={input} onChange={(e) => setInput(e.target.value)} />
-      </div>
-      {members.isLoading && <Skeleton className="h-24" />}
-      {members.data?.rows.length === 0 && <EmptyState>Ninguém encontrado.</EmptyState>}
-      <div className="grid gap-2">
-        {members.data?.rows.map((m) => {
-          const mine = roles.data?.[m.id] ?? new Set<string>()
-          return (
-            <Card key={m.id} className="space-y-2 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-1.5 truncate font-semibold">{mine.has('titular') && <Crown className="h-4 w-4 shrink-0 text-primary" aria-label="Titular do bloco" />}{m.display_name ?? m.full_name}</p>
-                <div className="flex gap-1">{mine.has('titular') && <Badge className="bg-primary/15 text-primary">Titular</Badge>}{!m.user_id && <Badge>Sem conta de acesso</Badge>}</div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {ROLES.map((r) => {
-                  const on = mine.has(r.key)
-                  const blocked = r.key === 'direcao' && !canTouchDirection
-                  return (
-                    <Button key={r.key} size="sm" variant={on ? 'default' : 'outline'} disabled={toggle.isPending || blocked} aria-pressed={on}
-                      title={blocked ? 'Somente o titular do bloco concede ou remove a Direção' : undefined}
-                      onClick={() => {
-                        if (on && r.key === 'direcao' && !window.confirm('Remover o papel de Direção desta pessoa?')) return
-                        toggle.mutate({ member: m.id, role: r.key, on: !on })
-                      }}>
-                      {blocked && <Lock className="h-3 w-3" />}{r.label}
-                    </Button>
-                  )
-                })}
-              </div>
-            </Card>
-          )
-        })}
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground">{total} pessoa(s)</p>
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant="outline" aria-label="Página anterior" disabled={page === 0} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <span>{page + 1} / {pages}</span>
-          <Button size="icon" variant="outline" aria-label="Próxima página" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
-      </div>
+    <>
+      <PeopleTab canTouchDirection={isTitular || hasTitular.data === false} hasTitular={Boolean(hasTitular.data)} isTitular={isTitular} onTransfer={() => setTransfer(true)} />
       <Sheet open={transfer} onOpenChange={setTransfer}>{transfer && <TransferSheet onClose={() => setTransfer(false)} />}</Sheet>
-    </div>
+    </>
   )
 }
 
@@ -248,7 +154,7 @@ export function AccessPage() {
             className={cn('rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === k && 'bg-primary text-primary-foreground hover:bg-primary')}>{l}</button>
         ))}
       </div>
-      {tab === 'people' ? <PeopleTab /> : <PermissionsTab />}
+      {tab === 'people' ? <PeopleTabContainer /> : <PermissionsTab />}
     </div>
   )
 }
