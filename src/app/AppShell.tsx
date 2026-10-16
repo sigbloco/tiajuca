@@ -7,7 +7,7 @@ import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
-import { NAV_ITEMS } from './navigation'
+import { NAV_GROUP_LABEL, NAV_GROUP_ORDER, NAV_ITEMS, type NavItem } from './navigation'
 import { ViewAsBar } from './ViewAsBar'
 
 export function AppShell() {
@@ -21,7 +21,19 @@ export function AppShell() {
   const base = `/${membership.slug}`
   const items = NAV_ITEMS.filter((i) => !i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
   const primary = items.filter((i) => i.primary)
-  const more = items.filter((i) => !i.primary)
+  const groups = NAV_GROUP_ORDER.map((g) => ({ g, list: items.filter((i) => i.group === g) })).filter((x) => x.list.length > 0)
+  // Menu agrupado: título pequeno em "Organização" e "Oficina"; o grupo de administração só ganha um traço separador.
+  const renderGroups = (onClick?: () => void) => groups.map(({ g, list }, idx) => (
+    <div key={g ?? 'top'} className={cn('space-y-1', idx > 0 && 'pt-3')}>
+      {g && NAV_GROUP_LABEL[g] && <p className="px-3 pb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{NAV_GROUP_LABEL[g]}</p>}
+      {g === 'admin' && <div className="mx-3 mb-2 border-t border-border" />}
+      {list.map((i: NavItem) => (
+        <NavLink key={i.to} end={i.to === ''} to={`${base}/${i.to}`} className={link} onClick={onClick}>
+          <i.icon className="h-5 w-5" /> {i.label}
+        </NavLink>
+      ))}
+    </div>
+  ))
   const link = ({ isActive }: { isActive: boolean }) =>
     cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive && 'bg-primary text-primary-foreground hover:bg-primary')
 
@@ -30,18 +42,12 @@ export function AppShell() {
     <ViewAsBar />
     <div className="min-h-screen md:flex">
       {/* Desktop: sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-4 md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-card p-4 md:sticky md:top-0 md:flex md:max-h-screen">
         <div className="mb-6 flex items-center gap-3">
           <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-11 w-11 shrink-0" />
           <p className="font-display text-xl font-extrabold leading-tight text-primary">{membership.name}</p>
         </div>
-        <nav className="flex-1 space-y-1">
-          {items.map((i) => (
-            <NavLink key={i.to} end={i.to === ''} to={`${base}/${i.to}`} className={link}>
-              <i.icon className="h-5 w-5" /> {i.label}
-            </NavLink>
-          ))}
-        </nav>
+        <nav className="flex-1">{renderGroups()}</nav>
         <div className="border-t border-border pt-3">
           <p className="truncate px-1 font-semibold">{membership.display_name}</p>
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
@@ -73,13 +79,7 @@ export function AppShell() {
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent title="Mais" description={membership.display_name}>
-          <nav className="space-y-1">
-            {more.map((i) => (
-              <NavLink key={i.to} to={`${base}/${i.to}`} className={link} onClick={() => setMoreOpen(false)}>
-                <i.icon className="h-5 w-5" /> {i.label}
-              </NavLink>
-            ))}
-          </nav>
+          <nav>{renderGroups(() => setMoreOpen(false))}</nav>
           <Button variant="outline" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </SheetContent>
       </Sheet>

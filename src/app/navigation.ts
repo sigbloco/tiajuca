@@ -1,10 +1,19 @@
-import { ShieldCheck, Award, Banknote, BarChart3, CalendarDays, ClipboardList, History, Music2, Truck, FolderOpen, CalendarRange, ClipboardCheck, Hourglass, Home, Settings, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon } from 'lucide-react'
+import {
+  Award, Banknote, BarChart3, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, FolderOpen, History, Home, Music2, Settings,
+  ShieldCheck, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+} from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
+
+/** Grupos do menu: o item sem grupo fica no topo; `admin` fica no fim, sem título. */
+export type NavGroup = 'organizacao' | 'oficina' | 'admin'
+export const NAV_GROUP_LABEL: Record<NavGroup, string | null> = { organizacao: 'Organização', oficina: 'Oficina', admin: null }
+export const NAV_GROUP_ORDER: (NavGroup | undefined)[] = [undefined, 'organizacao', 'oficina', 'admin']
 
 export interface NavItem {
   to: string // relativo a /:orgSlug
   label: string
   icon: LucideIcon
+  group?: NavGroup
   /** Se definido, o item só aparece para quem tem a permissão (a segurança real é o RLS). */
   permission?: PermissionKey
   /** Escopo mínimo para aparecer (padrão: próprio). */
@@ -13,25 +22,27 @@ export interface NavItem {
   primary?: boolean
 }
 
-// Fonte única da navegação. Novos módulos (fases 4+) entram aqui.
+// Fonte única da navegação. A ordem aqui é a ordem no menu.
 export const NAV_ITEMS: NavItem[] = [
   { to: '', label: 'Início', icon: Home, primary: true },
-  { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read', primary: true },
-  { to: 'eventos', label: 'Eventos', icon: CalendarDays, permission: 'events.read', primary: true },
-  { to: 'presenca', label: 'Presença', icon: ClipboardCheck, permission: 'attendance.record', primary: true },
-  { to: 'mensalidades', label: 'Mensalidades', icon: Wallet, permission: 'billing.read', primary: true },
-  { to: 'membros', label: 'Integrantes', icon: Users, permission: 'members.read' },
-  { to: 'bolsas', label: 'Bolsas', icon: Award, permission: 'scholarships.manage' },
-  { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, permission: 'forms.manage' },
-  { to: 'drive', label: 'Pastas do Drive', icon: FolderOpen, permission: 'drive.read' },
-  { to: 'fornecedores', label: 'Fornecedores', icon: Truck, permission: 'suppliers.read' },
-  { to: 'relatorios', label: 'Relatórios', icon: BarChart3, permission: 'attendance.read', minScope: 'group' },
-  { to: 'financeiro', label: 'Financeiro', icon: Banknote, permission: 'finance.read' },
-  { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, permission: 'capacity.read' },
-  { to: 'lista-de-espera', label: 'Lista de espera', icon: Hourglass, permission: 'member_cycles.read' },
-  { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, permission: 'cycles.manage' },
-  { to: 'configuracoes', label: 'Configurações', icon: Settings, permission: 'settings.manage' },
-  { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, permission: 'roles.manage' },
-  { to: 'auditoria', label: 'Auditoria', icon: History, permission: 'audit.read' },
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
+  { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read', primary: true },
+  { to: 'drive', label: 'Pastas do Drive', icon: FolderOpen, permission: 'drive.read' },
+  { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read', primary: true },
+
+  { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage' },
+  { to: 'membros', label: 'Integrantes', icon: Users, group: 'organizacao', permission: 'members.read' },
+  { to: 'mensalidades', label: 'Mensalidades', icon: Wallet, group: 'organizacao', permission: 'billing.read', primary: true },
+  { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'organizacao', permission: 'scholarships.manage' },
+  { to: 'financeiro', label: 'Financeiro', icon: Banknote, group: 'organizacao', permission: 'finance.read' },
+  { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read' },
+
+  { to: 'presenca', label: 'Presença', icon: ClipboardCheck, group: 'oficina', permission: 'attendance.record', primary: true },
+  { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, group: 'oficina', permission: 'capacity.read' },
+  { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage' },
+  { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group' },
+
+  { to: 'configuracoes', label: 'Configurações', icon: Settings, group: 'admin', permission: 'settings.manage' },
+  { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, group: 'admin', permission: 'roles.manage' },
+  { to: 'auditoria', label: 'Auditoria', icon: History, group: 'admin', permission: 'audit.read' },
 ]

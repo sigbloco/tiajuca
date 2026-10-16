@@ -7,6 +7,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { CycleSelect } from '@/modules/cycles/CycleSelect'
+import { VagasTabs } from './VagasTabs'
 
 interface Row {
   instrument_id: string
@@ -86,6 +87,7 @@ export function CapacityPage() {
         <h1>Vagas por instrumento</h1>
         <CycleSelect value={cycleId} onChange={setCycleId} />
       </div>
+      <VagasTabs />
       {cycleId && <p className="text-muted-foreground">{full} {full === 1 ? 'instrumento lotado' : 'instrumentos lotados'}. A contagem considera integrantes ativos no ciclo.</p>}
       {isLoading && <Skeleton className="h-32" />}
       {!cycleId && <EmptyState>Crie um ciclo em “Ciclos” para definir vagas.</EmptyState>}

@@ -8,6 +8,7 @@ import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { VagasTabs } from '@/modules/capacity/VagasTabs'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { CycleSelect } from './CycleSelect'
@@ -81,6 +82,7 @@ export function WaitlistPage() {
         <h1>Lista de espera</h1>
         <CycleSelect value={cycleId} onChange={setCycleId} />
       </div>
+      <VagasTabs />
 
       {canManage && cycleId && (
         <Card className="space-y-3 p-4">
