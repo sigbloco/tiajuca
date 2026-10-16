@@ -220,9 +220,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0)} onToggle={() => toggle(sk0, isOpen(sk0))}>
         {subKeys.map((sk) => {
           const leaves = subs.get(sk)!
-          if (!hasSubs) return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sk0}:`)}</div>
+          // Subnaipe é opcional: quem não tem fica direto no naipe, sem grupo "Sem subnaipe".
+          if (!hasSubs || sk === '') return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sk0}:`)}</div>
           const subCount = new Set([...leaves.values()].flatMap((x) => x.members.map((m) => m.id))).size
-          const subName = sk === '' ? 'Sem subnaipe' : trees.subById.get(sk)?.name ?? 'Subnaipe'
+          const subName = trees.subById.get(sk)?.name ?? 'Subnaipe'
           const k = `${sk0}:sub:${sk}`
           return (
             <Collapsible key={k} level={1} tone={tone} title={subName} count={subCount} open={isOpen(k, subKeys.length === 1)} onToggle={() => toggle(k, isOpen(k, subKeys.length === 1))}>

@@ -269,20 +269,24 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
         {groups.map(({ s, subs, subGroups, total }) => (
           <Collapsible key={s.id} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={s.name} count={total}>
             {subGroups.length === 0 && <p className="text-muted-foreground">Nenhum instrumento neste naipe.</p>}
-            {subGroups.map((g) => (
-              <Collapsible key={g.key} level={1} open={searching || open.isOpen(g.key)} onToggle={() => open.toggle(g.key)} title={g.label} count={g.items.length}>
+            {/* Subnaipe é opcional: instrumentos sem subnaipe ficam direto no naipe, sem um grupo "Sem subnaipe". */}
+            {subGroups.map((g) => {
+              const list = (
                 <ProgressiveList items={g.items} resetKey={filter.search} render={(i) => (
                   <ItemRow key={i.id} item={i} siblings={g.items} canEdit={canEdit} mut={mut}
                     extra={
-                      <OkSelect className="h-9 w-36" aria-label={`Subnaipe de ${i.name}`} disabled={!canEdit} value={i.subsection_id ?? ''}
+                      <OkSelect className="h-9 w-36" aria-label={`Subnaipe de ${i.name} (opcional)`} disabled={!canEdit} value={i.subsection_id ?? ''}
                         onSave={(v) => mut.save.mutateAsync({ id: i.id, name: i.name, subsection_id: v || null })}>
                         <option value="">Sem subnaipe</option>
                         {subs.filter((x) => x.is_active || x.id === i.subsection_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                       </OkSelect>
                     } />
                 )} />
-              </Collapsible>
-            ))}
+              )
+              return g.sub === null
+                ? <div key={g.key} className="space-y-1.5">{list}</div>
+                : <Collapsible key={g.key} level={1} open={searching || open.isOpen(g.key)} onToggle={() => open.toggle(g.key)} title={g.label} count={g.items.length}>{list}</Collapsible>
+            })}
           </Collapsible>
         ))}
       </div>
