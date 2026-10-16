@@ -61,7 +61,7 @@ async function googleToken(sa: ServiceAccount): Promise<string> {
 
 interface DrivePerm { id: string; emailAddress?: string; role: string; type: string }
 
-async function listPermissions(token: string, folderId: string): Promise<{ ok: boolean; status: number; perms: DrivePerm[] }> {
+async function listPermissions(token: string, folderId: string): Promise<{ ok: boolean; status: number; reason: string; perms: DrivePerm[] }> {
   const perms: DrivePerm[] = []
   let page = ''
   for (let i = 0; i < 20; i++) {
@@ -71,13 +71,16 @@ async function listPermissions(token: string, folderId: string): Promise<{ ok: b
     url.searchParams.set('pageSize', '100')
     if (page) url.searchParams.set('pageToken', page)
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    if (!res.ok) return { ok: false, status: res.status, perms }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      return { ok: false, status: res.status, reason: String(err?.error?.errors?.[0]?.reason ?? err?.error?.status ?? ''), perms }
+    }
     const body = await res.json()
     perms.push(...(body.permissions ?? []))
     page = body.nextPageToken ?? ''
     if (!page) break
   }
-  return { ok: true, status: 200, perms }
+  return { ok: true, status: 200, reason: '', perms }
 }
 
 Deno.serve(async (req) => {
@@ -103,7 +106,12 @@ Deno.serve(async (req) => {
 
     const current = await listPermissions(token, driveId)
     if (!current.ok) {
-      return json({ error: `Sem acesso à pasta no Drive. Compartilhe a pasta com ${sa.client_email} como Editor.`, code: 'no_folder_access', service_account: sa.client_email }, 409)
+      const hint = /accessNotConfigured|SERVICE_DISABLED/i.test(current.reason) || current.status === 403 && /api/i.test(current.reason)
+        ? 'A Google Drive API não está ativada no projeto da conta de serviço (Google Cloud → APIs e serviços → Biblioteca → Google Drive API → Ativar).'
+        : current.status === 404
+          ? `A conta de serviço não enxerga esta pasta. Confira o link e compartilhe a pasta com ${sa.client_email} como Editor.`
+          : `A conta de serviço não pode gerenciar esta pasta. Compartilhe com ${sa.client_email} como Editor (Leitor não basta).`
+      return json({ error: `${hint} (Google: ${current.status} ${current.reason})`, code: 'no_folder_access', service_account: sa.client_email }, 409)
     }
 
     const targets: { member_id: string; email: string; name: string }[] = ctx.targets
