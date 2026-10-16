@@ -28,13 +28,16 @@ export async function saveCatalogItem(
   table: CatalogTable,
   orgId: string,
   item: Partial<CatalogItem> & { name: string },
-) {
+): Promise<string | undefined> {
   const { id, ...fields } = item
-  const q = id
-    ? supabase.from(table).update(fields).eq('id', id).eq('organization_id', orgId)
-    : supabase.from(table).insert({ ...fields, organization_id: orgId })
-  const { error } = await q
+  if (id) {
+    const { error } = await supabase.from(table).update(fields).eq('id', id).eq('organization_id', orgId)
+    if (error) throw error
+    return id
+  }
+  const { data, error } = await supabase.from(table).insert({ ...fields, organization_id: orgId }).select('id').single()
   if (error) throw error
+  return (data as { id: string }).id
 }
 
 /** Troca a ordem de dois itens (reordenação simples por setas). */
@@ -51,4 +54,23 @@ export function invalidateCatalog(qc: import('@tanstack/react-query').QueryClien
     qc.invalidateQueries({ queryKey: key })
   }
   void orgId
+}
+
+/** O que mudou, com os valores de ANTES: serve para o "Desfazer" regravar o item como estava. */
+export function previousOf(items: CatalogItem[] | undefined, patch: Partial<CatalogItem> & { name: string }) {
+  const prev = items?.find((i) => i.id === patch.id)
+  if (!prev || !patch.id) return null
+  const out: Record<string, unknown> = { id: prev.id, name: prev.name }
+  for (const k of Object.keys(patch) as (keyof CatalogItem)[]) {
+    if (k !== 'id' && k !== 'name') out[k] = prev[k] === undefined ? null : prev[k]
+  }
+  return out as Partial<CatalogItem> & { name: string }
+}
+
+/** Mensagem curta do que foi feito, a partir do que mudou. */
+export function describeChange(patch: Partial<CatalogItem>, singular: string): string {
+  if (patch.is_active === false) return `${singular} desativado.`
+  if (patch.is_active === true) return `${singular} reativado.`
+  if (patch.sort_order !== undefined) return 'Ordem alterada.'
+  return 'Alteração salva.'
 }

@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toast } from 'sonner'
-import { Card, Select, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { Card, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { maskPhone } from '@/components/ui/masked-inputs'
 import { socialLabel, socialUrl } from '@/core/social'
 import { whatsappUrl } from '@/modules/suppliers/service'
+import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
+import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -33,10 +35,15 @@ function CycleParticipation({ memberId }: { memberId: string }) {
 
   const change = useMutation({
     mutationFn: (v: { cycle: string; status: string; force?: boolean }) => setMemberCycleStatus({ member: memberId, ...v }),
-    onSuccess: () => {
-      toast.success('Status atualizado.')
-      qc.invalidateQueries({ queryKey: ['member-cycles', orgId, memberId] })
-      qc.invalidateQueries({ queryKey: ['capacity', orgId] })
+    onSuccess: (_d, v) => {
+      const before = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === v.cycle)?.status_id)?.key
+      const refresh = () => {
+        qc.invalidateQueries({ queryKey: ['member-cycles', orgId, memberId] })
+        qc.invalidateQueries({ queryKey: ['capacity', orgId] })
+        qc.invalidateQueries({ queryKey: ['members'] })
+      }
+      refresh()
+      notifyChange('Status atualizado.', before ? async () => { await setMemberCycleStatus({ member: memberId, cycle: v.cycle, status: before, force: true }); refresh() } : undefined)
     },
     onError: (e, v) => {
       const msg = friendlyError(e)
@@ -55,16 +62,16 @@ function CycleParticipation({ memberId }: { memberId: string }) {
         return (
           <Card key={c.id} className="flex items-center justify-between gap-2 p-3">
             <p className="font-semibold">{c.name}</p>
-            <Select
+            <OkSelect
               className="w-40"
-              disabled={!canManage || change.isPending}
+              disabled={!canManage}
               value={current?.key ?? ''}
-              onChange={(e) => change.mutate({ cycle: c.id, status: e.target.value })}
+              onSave={(v) => change.mutateAsync({ cycle: c.id, status: v })}
               aria-label={`Status em ${c.name}`}
             >
               {!current && <option value="">Sem registro</option>}
               {statuses?.map((s) => <option key={s.id} value={s.key}>{s.name}</option>)}
-            </Select>
+            </OkSelect>
           </Card>
         )
       })}

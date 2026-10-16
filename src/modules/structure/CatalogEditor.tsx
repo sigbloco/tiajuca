@@ -8,7 +8,9 @@ import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { COLOR_LABEL, type TypeColor } from '@/modules/events/service'
-import { invalidateCatalog, listCatalog, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
+import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
+import { notifyChange } from '@/core/undo'
+import { describeChange, invalidateCatalog, listCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 interface Props {
   table: CatalogTable
@@ -54,21 +56,31 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
         ...(withSection ? { section_id: sectionId } : {}),
         ...(withSubsection && subsectionId ? { subsection_id: subsectionId } : {}),
       }),
-    onSuccess: () => {
+    onSuccess: (id) => {
       setName('')
-      toast.success(`${singular} criado.`)
       refresh()
+      notifyChange(`${singular} criado.`, id ? async () => { await saveCatalogItem(table, orgId, { id, name: name.trim(), is_active: false }); refresh() } : undefined)
     },
     onError,
   })
   const save = useMutation({
-    mutationFn: (item: Partial<CatalogItem> & { name: string }) => saveCatalogItem(table, orgId, item),
-    onSuccess: refresh,
+    mutationFn: async (item: Partial<CatalogItem> & { name: string }) => ({ prev: previousOf(items, item), id: await saveCatalogItem(table, orgId, item) }),
+    onSuccess: ({ prev }, item) => {
+      refresh()
+      notifyChange(item.name !== prev?.name && prev ? 'Nome atualizado.' : describeChange(item, singular),
+        prev ? async () => { await saveCatalogItem(table, orgId, prev); refresh() } : undefined)
+    },
     onError,
   })
   const move = useMutation({
     mutationFn: ({ a, b }: { a: CatalogItem; b: CatalogItem }) => swapOrder(table, orgId, a, b),
-    onSuccess: refresh,
+    onSuccess: (_d, { a, b }) => {
+      refresh()
+      notifyChange('Ordem alterada.', async () => {
+        await swapOrder(table, orgId, { ...a, sort_order: b.sort_order }, { ...b, sort_order: a.sort_order })
+        refresh()
+      })
+    },
     onError,
   })
 
@@ -110,35 +122,27 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === visible.length - 1}
                 onClick={() => move.mutate({ a: item, b: visible[idx + 1] })}><ArrowDown className="h-4 w-4" /></Button>
             </div>
-            <Input
-              className="flex-1 border-transparent bg-transparent font-semibold"
-              defaultValue={item.name}
-              disabled={!canEdit}
-              onBlur={(e) => {
-                const v = e.target.value.trim()
-                if (v && v !== item.name) save.mutate({ id: item.id, name: v })
-                else e.target.value = item.name
-              }}
-            />
+            <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`}
+              onSave={(v) => save.mutateAsync({ id: item.id, name: v })} />
             {withSection && <Badge className="hidden sm:inline-flex">{nameOf(sections.data, item.section_id)}</Badge>}
             {withSubsection && (
-              <Select
+              <OkSelect
                 className="h-9 w-36"
                 aria-label="Subnaipe do instrumento"
                 disabled={!canEdit}
                 value={item.subsection_id ?? ''}
-                onChange={(e) => save.mutate({ id: item.id, name: item.name, subsection_id: e.target.value || null })}
+                onSave={(v) => save.mutateAsync({ id: item.id, name: item.name, subsection_id: v || null })}
               >
                 <option value="">Sem subnaipe</option>
-                {subsections.data?.filter((s) => s.section_id === item.section_id && (s.is_active || s.id === item.subsection_id))
-                  .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </Select>
+                {subsections.data?.filter((x) => x.section_id === item.section_id && (x.is_active || x.id === item.subsection_id))
+                  .map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </OkSelect>
             )}
             {withColor && (
-              <Select className="h-9 w-40" aria-label="Cor" disabled={!canEdit} value={item.color ?? 'primary'}
-                onChange={(e) => save.mutate({ id: item.id, name: item.name, color: e.target.value })}>
+              <OkSelect className="h-9 w-40" aria-label="Cor" disabled={!canEdit} value={item.color ?? 'primary'}
+                onSave={(v) => save.mutateAsync({ id: item.id, name: item.name, color: v })}>
                 {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
-              </Select>
+              </OkSelect>
             )}
             {canEdit && (
               <Button size="sm" variant="outline" onClick={() => save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })}>

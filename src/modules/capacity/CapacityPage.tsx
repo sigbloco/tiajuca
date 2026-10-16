@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
+import { SaveInput } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
+import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -30,31 +32,34 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
         .upsert({ organization_id: orgId, instrument_id: row.instrument_id, cycle_id: cycleId, capacity }, { onConflict: 'instrument_id,cycle_id' })
       if (error) throw error
     },
-    onSuccess: () => {
-      toast.success('Limite atualizado.')
+    onSuccess: (_d, capacity) => {
+      const before = row.capacity
       qc.invalidateQueries({ queryKey: ['capacity', orgId] })
+      notifyChange('Limite atualizado.', before !== null ? async () => {
+        const { error } = await supabase.from('instrument_cycle_capacity')
+          .upsert({ organization_id: orgId, instrument_id: row.instrument_id, cycle_id: cycleId, capacity: before }, { onConflict: 'instrument_id,cycle_id' })
+        if (error) throw error
+        qc.invalidateQueries({ queryKey: ['capacity', orgId] })
+      } : undefined)
+      void capacity
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
-    <Input
-      type="number"
-      min={0}
-      inputMode="numeric"
-      className="h-9 w-24"
+    <SaveInput
+      className="w-44 flex-none"
       aria-label={`Limite de vagas de ${row.instrument_name}`}
-      defaultValue={row.capacity ?? ''}
       placeholder="Sem limite"
-      onBlur={(e) => {
-        const v = e.target.value
-        if (v === '' || Number(v) === row.capacity) return
+      value={row.capacity === null ? '' : String(row.capacity)}
+      onSave={(v) => {
         const n = Number(v)
-        if (!Number.isInteger(n) || n < 0) return toast.error('Informe um número inteiro maior ou igual a zero.')
-        save.mutate(n)
+        if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
+        return save.mutateAsync(n)
       }}
     />
   )
 }
+
 
 export function CapacityPage() {
   const orgId = useOrgId()

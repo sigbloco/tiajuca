@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
+import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -80,7 +81,15 @@ function FolderSheet({ folder, rules, roles, onClose }: { folder: Folder | null;
       const { error } = await supabase.from('drive_folders').update({ is_active: !folder!.is_active }).eq('id', folder!.id)
       if (error) throw error
     },
-    onSuccess: () => { toast.success(folder!.is_active ? 'Pasta desativada.' : 'Pasta reativada.'); qc.invalidateQueries({ queryKey: ['drive-folders', orgId] }); onClose() },
+    onSuccess: () => {
+      const was = folder!.is_active
+      qc.invalidateQueries({ queryKey: ['drive-folders', orgId] }); onClose()
+      notifyChange(was ? 'Pasta desativada.' : 'Pasta reativada.', async () => {
+        const { error } = await supabase.from('drive_folders').update({ is_active: was }).eq('id', folder!.id)
+        if (error) throw error
+        qc.invalidateQueries({ queryKey: ['drive-folders', orgId] })
+      })
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
 

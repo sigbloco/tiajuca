@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Label, Select } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
+import { notifyChange } from '@/core/undo'
 import { formatDate } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -62,15 +63,29 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
     mutationFn: async () => {
       const started = f.started_at || null
       const row = { instrument_id: nn(f.instrument_id), function_id: nn(f.function_id), skill_level_id: nn(f.skill_level_id) }
-      const q = editing === 'new'
-        ? supabase.from('member_artistic_links').insert({
-            organization_id: orgId, member_id: memberId, ...row, ...(started ? { started_at: started } : {}), is_primary: (data?.length ?? 0) === 0,
-          })
-        : supabase.from('member_artistic_links').update({ ...row, ...(started ? { started_at: started } : {}) }).eq('id', editing!)
-      const { error } = await q
+      if (editing === 'new') {
+        const { data: ins, error } = await supabase.from('member_artistic_links').insert({
+          organization_id: orgId, member_id: memberId, ...row, ...(started ? { started_at: started } : {}), is_primary: (data?.length ?? 0) === 0,
+        }).select('id').single()
+        if (error) throw error
+        return { kind: 'new' as const, id: (ins as { id: string }).id, prev: null }
+      }
+      const old = data?.find((l) => l.id === editing)
+      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, started_at: old.started_at } : null
+      const { error } = await supabase.from('member_artistic_links').update({ ...row, ...(started ? { started_at: started } : {}) }).eq('id', editing!)
       if (error) throw error
+      return { kind: 'edit' as const, id: editing, prev }
     },
-    onSuccess: () => { toast.success(editing === 'new' ? 'Vínculo adicionado.' : 'Vínculo atualizado.'); close(); refresh() },
+    onSuccess: (r) => {
+      close(); refresh()
+      notifyChange(r.kind === 'new' ? 'Vínculo adicionado.' : 'Vínculo atualizado.', async () => {
+        const { error } = r.kind === 'new'
+          ? await supabase.from('member_artistic_links').update({ ended_at: new Date().toISOString().slice(0, 10) }).eq('id', r.id!)
+          : await supabase.from('member_artistic_links').update(r.prev!).eq('id', r.id!)
+        if (error) throw error
+        refresh()
+      })
+    },
     onError: (e) => toast.error(/check|violat/i.test(String(e)) ? 'Escolha um instrumento ou uma função.' : friendlyError(e)),
   })
   const end = useMutation({
@@ -78,7 +93,14 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
       const { error } = await supabase.from('member_artistic_links').update({ ended_at: new Date().toISOString().slice(0, 10) }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: refresh,
+    onSuccess: (_d, id) => {
+      refresh()
+      notifyChange('Vínculo encerrado.', async () => {
+        const { error } = await supabase.from('member_artistic_links').update({ ended_at: null }).eq('id', id)
+        if (error) throw error
+        refresh()
+      })
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
 

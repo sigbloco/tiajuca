@@ -9,23 +9,40 @@ import { Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/compone
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { useCatalog } from './CatalogEditor'
-import { invalidateCatalog, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
+import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
+import { notifyChange } from '@/core/undo'
+import { describeChange, invalidateCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 const byOrder = (a: CatalogItem, b: CatalogItem) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)
 const nextOrder = (items: CatalogItem[]) => items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1
 
+const SINGULAR: Partial<Record<CatalogTable, string>> = { sections: 'Naipe', subsections: 'Subnaipe', instruments: 'Instrumento' }
+
 function useStructureMutations(table: CatalogTable) {
   const orgId = useOrgId()
   const qc = useQueryClient()
+  const items = useCatalog(table).data
   const refresh = () => invalidateCatalog(qc, orgId)
   const onError = (e: unknown) => toast.error(friendlyError(e))
   const save = useMutation({
-    mutationFn: (item: Partial<CatalogItem> & { name: string }) => saveCatalogItem(table, orgId, item),
-    onSuccess: refresh, onError,
+    mutationFn: async (item: Partial<CatalogItem> & { name: string }) => ({ prev: previousOf(items, item), id: await saveCatalogItem(table, orgId, item) }),
+    onSuccess: ({ prev }, item) => {
+      refresh()
+      notifyChange(prev && item.name !== prev.name ? 'Nome atualizado.' : describeChange(item, SINGULAR[table] ?? 'Item'),
+        prev ? async () => { await saveCatalogItem(table, orgId, prev); refresh() } : undefined)
+    },
+    onError,
   })
   const move = useMutation({
     mutationFn: ({ a, b }: { a: CatalogItem; b: CatalogItem }) => swapOrder(table, orgId, a, b),
-    onSuccess: refresh, onError,
+    onSuccess: (_d, { a, b }) => {
+      refresh()
+      notifyChange('Ordem alterada.', async () => {
+        await swapOrder(table, orgId, { ...a, sort_order: b.sort_order }, { ...b, sort_order: a.sort_order })
+        refresh()
+      })
+    },
+    onError,
   })
   return { save, move }
 }
@@ -47,12 +64,7 @@ function ItemRow({ item, siblings, canEdit, mut, extra }: {
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1}
           onClick={() => mut.move.mutate({ a: item, b: siblings[idx + 1] })}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>
-      <Input className="h-9 flex-1 border-transparent bg-transparent font-semibold" defaultValue={item.name} disabled={!canEdit}
-        onBlur={(e) => {
-          const v = e.target.value.trim()
-          if (v && v !== item.name) mut.save.mutate({ id: item.id, name: v })
-          else e.target.value = item.name
-        }} />
+      <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`} onSave={(v) => mut.save.mutateAsync({ id: item.id, name: v })} />
       {extra}
       {canEdit && (
         <Button size="sm" variant="outline" onClick={() => mut.save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })}>
@@ -101,11 +113,13 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
   const qc = useQueryClient()
   const add = useMutation({
     mutationFn: async (v: { kind: 'section' | 'sub'; sectionId?: string; name: string }) => {
-      if (v.kind === 'section') await saveCatalogItem('sections', orgId, { name: v.name, sort_order: nextOrder(sections.data ?? []) })
-      else await saveCatalogItem('subsections', orgId, { name: v.name, section_id: v.sectionId, sort_order: nextOrder(subsections.data ?? []) })
+      return v.kind === 'section'
+        ? await saveCatalogItem('sections', orgId, { name: v.name, sort_order: nextOrder(sections.data ?? []) })
+        : await saveCatalogItem('subsections', orgId, { name: v.name, section_id: v.sectionId, sort_order: nextOrder(subsections.data ?? []) })
     },
-    onSuccess: (_d, v) => {
-      toast.success(v.kind === 'section' ? 'Naipe criado.' : 'Subnaipe criado.')
+    onSuccess: (id, v) => {
+      const table = v.kind === 'section' ? 'sections' : 'subsections'
+      notifyChange(v.kind === 'section' ? 'Naipe criado.' : 'Subnaipe criado.', id ? async () => { await saveCatalogItem(table, orgId, { id, name: v.name, is_active: false }); invalidateCatalog(qc, orgId) } : undefined)
       if (v.kind === 'section') setNewSection(''); else setNewSub((m) => ({ ...m, [v.sectionId!]: '' }))
       invalidateCatalog(qc, orgId)
     },
@@ -210,7 +224,11 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
       name: form.name.trim(), section_id: form.section_id, subsection_id: form.subsection_id || null,
       sort_order: nextOrder(instruments.data ?? []),
     }),
-    onSuccess: () => { toast.success('Instrumento criado.'); setForm({ ...form, name: '' }); invalidateCatalog(qc, orgId) },
+    onSuccess: (id) => {
+      const name = form.name.trim()
+      setForm({ ...form, name: '' }); invalidateCatalog(qc, orgId)
+      notifyChange('Instrumento criado.', id ? async () => { await saveCatalogItem('instruments', orgId, { id, name, is_active: false }); invalidateCatalog(qc, orgId) } : undefined)
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const extraCount = (sectionFilter ? 1 : 0) + (subFilter ? 1 : 0)
@@ -257,11 +275,11 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
                 <ProgressiveList items={g.items} resetKey={filter.search} render={(i) => (
                   <ItemRow key={i.id} item={i} siblings={g.items} canEdit={canEdit} mut={mut}
                     extra={
-                      <Select className="h-9 w-36" aria-label={`Subnaipe de ${i.name}`} disabled={!canEdit} value={i.subsection_id ?? ''}
-                        onChange={(e) => mut.save.mutate({ id: i.id, name: i.name, subsection_id: e.target.value || null })}>
+                      <OkSelect className="h-9 w-36" aria-label={`Subnaipe de ${i.name}`} disabled={!canEdit} value={i.subsection_id ?? ''}
+                        onSave={(v) => mut.save.mutateAsync({ id: i.id, name: i.name, subsection_id: v || null })}>
                         <option value="">Sem subnaipe</option>
                         {subs.filter((x) => x.is_active || x.id === i.subsection_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                      </Select>
+                      </OkSelect>
                     } />
                 )} />
               </Collapsible>

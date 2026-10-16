@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, Input, Label, Select } from '@/components/ui/primitives'
+import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
+import { notifyChange } from '@/core/undo'
 import { formatCurrency, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -114,7 +116,16 @@ export function MemberBilling({ memberId }: { memberId: string }) {
       const { error } = await supabase.rpc('assign_fee_category', { p_member: memberId, p_category: category || null, p_from: todayIso(membership?.timezone) })
       if (error) throw error
     },
-    onSuccess: () => { toast.success('Categoria atualizada.'); qc.invalidateQueries({ queryKey: ['fee-assignment', orgId, memberId] }) },
+    onSuccess: (_d, category) => {
+      const before = assignment?.fee_category_id ?? ''
+      const refresh = () => { qc.invalidateQueries({ queryKey: ['fee-assignment', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['members'] }) }
+      refresh()
+      notifyChange(category ? 'Categoria atualizada.' : 'Pessoa sem contribuição.', async () => {
+        const { error } = await supabase.rpc('assign_fee_category', { p_member: memberId, p_category: before || null, p_from: todayIso(membership?.timezone) })
+        if (error) throw error
+        refresh()
+      })
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -124,10 +135,10 @@ export function MemberBilling({ memberId }: { memberId: string }) {
       <h3>Contribuição mensal</h3>
       <Card className="space-y-2 p-3">
         <Label htmlFor="fee-cat">Categoria</Label>
-        <Select id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onChange={(e) => assign.mutate(e.target.value)}>
+<OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
           <option value="">Não contribui</option>
           {categories.data?.filter((c) => c.is_active || c.id === assignment?.fee_category_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </Select>
+        </OkSelect>
         {price.data != null && <p className="text-muted-foreground">Valor atual da categoria: {formatCurrency(price.data)}/mês</p>}
       </Card>
       {canSchol && (

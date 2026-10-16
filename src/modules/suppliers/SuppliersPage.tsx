@@ -8,6 +8,7 @@ import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { friendlyError } from '@/core/errors'
+import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -31,11 +32,24 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
         name: f.name.trim(), category_id: f.category_id, phone: f.phone.replace(/\D/g, '') || null,
         email: f.email.trim() || null, website: site || null, notes: f.notes.trim() || null,
       }
-      const q = sup ? supabase.from('suppliers').update(row).eq('id', sup.id) : supabase.from('suppliers').insert({ ...row, organization_id: orgId })
-      const { error } = await q
+      if (sup) {
+        const { error } = await supabase.from('suppliers').update(row).eq('id', sup.id)
+        if (error) throw error
+        return sup.id
+      }
+      const { data, error } = await supabase.from('suppliers').insert({ ...row, organization_id: orgId }).select('id').single()
       if (error) throw error
+      return (data as { id: string }).id
     },
-    onSuccess: () => { toast.success(sup ? 'Fornecedor atualizado.' : 'Fornecedor cadastrado.'); refresh(); onClose() },
+    onSuccess: (id) => {
+      const before = sup ? { name: sup.name, category_id: sup.category_id, phone: sup.phone, email: sup.email, website: sup.website, notes: sup.notes } : null
+      refresh(); onClose()
+      notifyChange(sup ? 'Fornecedor atualizado.' : 'Fornecedor cadastrado.', async () => {
+        const { error } = await supabase.from('suppliers').update(before ?? { is_active: false }).eq('id', id)
+        if (error) throw error
+        refresh()
+      })
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const toggle = useMutation({
@@ -43,7 +57,15 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
       const { error } = await supabase.from('suppliers').update({ is_active: !sup!.is_active }).eq('id', sup!.id)
       if (error) throw error
     },
-    onSuccess: () => { toast.success(sup!.is_active ? 'Fornecedor desativado.' : 'Fornecedor reativado.'); refresh(); onClose() },
+    onSuccess: () => {
+      const was = sup!.is_active
+      refresh(); onClose()
+      notifyChange(was ? 'Fornecedor desativado.' : 'Fornecedor reativado.', async () => {
+        const { error } = await supabase.from('suppliers').update({ is_active: was }).eq('id', sup!.id)
+        if (error) throw error
+        refresh()
+      })
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
