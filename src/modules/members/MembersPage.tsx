@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link2, Plus } from 'lucide-react'
+import { Link2, Pencil, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
-import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
+import { EMPTY_FILTER, FilterBar, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -76,6 +76,8 @@ interface GroupMember extends MemberRow {
   member_artistic_links: { instrument_id: string | null; function_id: string | null; ended_at: string | null }[]
 }
 interface Leaf { key: string; label: string; members: GroupMember[] }
+interface TreeData { sectionList: { id: string; name: string; sort_order: number; is_active: boolean }[]; map: Map<string, Map<string, Map<string, Leaf>>>; total: number }
+const EMPTY_TREE: TreeData = { sectionList: [], map: new Map(), total: 0 }
 
 /** Integrantes agrupados por naipe → subnaipe → instrumento (grupos fechados por padrão), com filtro em funil. */
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
@@ -130,71 +132,106 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     return new Map((cycleRows.data ?? []).map((r) => [r.member_id, byStatus.get(r.status_id)]))
   }, [statuses, cycleRows.data])
 
-  const tree = useMemo(() => {
+  // Dois conjuntos com a mesma divisão (naipe → subnaipe → instrumento): ativos no topo e um grupo "Inativos" só para quem saiu.
+  const isInactive = (id: string) => { const st = statusOf.get(id); return !st || (!st.counts_as_active && !st.is_waitlist) }
+  const trees = useMemo(() => {
     const secs = sections.data ?? []
     const subById = new Map((subsections.data ?? []).map((s) => [s.id, s]))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
     const fnById = new Map((functions.data ?? []).map((f) => [f.id, f]))
     const searching = filter.search.trim() !== ''
-    // seção → subnaipe (ou '') → folha (instrumento ou função)
-    const map = new Map<string, Map<string, Map<string, Leaf>>>()
-    const seen = new Set<string>()
-    const add = (secId: string, subId: string, leafKey: string, label: string, m: GroupMember) => {
-      const subs = map.get(secId) ?? new Map<string, Map<string, Leaf>>()
-      const leaves = subs.get(subId) ?? new Map<string, Leaf>()
-      const leaf = leaves.get(leafKey) ?? { key: leafKey, label, members: [] }
-      if (!leaf.members.includes(m)) leaf.members.push(m)
-      leaves.set(leafKey, leaf); subs.set(subId, leaves); map.set(secId, subs)
-    }
-    for (const m of members.data ?? []) {
-      const st = statusOf.get(m.id)
-      if (!matchesStatus(!!st?.counts_as_active, filter.status)) continue
-      if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
-      if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
-      let placed = false
-      for (const l of m.member_artistic_links.filter((x) => !x.ended_at)) {
-        const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
-        const fn = l.function_id ? fnById.get(l.function_id) : undefined
-        if (inst?.section_id) {
-          const sub = inst.subsection_id && subById.has(inst.subsection_id) ? inst.subsection_id : ''
-          add(inst.section_id, sub, inst.id, inst.name, m); placed = true
-        } else if (fn?.section_id) {
-          add(fn.section_id, '', `fn:${fn.id}`, fn.name, m); placed = true
-        }
+    const build = (pred: (m: GroupMember) => boolean): TreeData => {
+      // seção → subnaipe (ou '') → folha (instrumento ou função)
+      const map = new Map<string, Map<string, Map<string, Leaf>>>()
+      const seen = new Set<string>()
+      const add = (secId: string, subId: string, leafKey: string, label: string, m: GroupMember) => {
+        const subs = map.get(secId) ?? new Map<string, Map<string, Leaf>>()
+        const leaves = subs.get(subId) ?? new Map<string, Leaf>()
+        const leaf = leaves.get(leafKey) ?? { key: leafKey, label, members: [] }
+        if (!leaf.members.includes(m)) leaf.members.push(m)
+        leaves.set(leafKey, leaf); subs.set(subId, leaves); map.set(secId, subs)
       }
-      if (!placed) add('none', '', 'none', 'Sem instrumento', m)
-      seen.add(m.id)
+      for (const m of members.data ?? []) {
+        if (!pred(m)) continue
+        if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
+        if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
+        let placed = false
+        for (const l of m.member_artistic_links.filter((x) => !x.ended_at)) {
+          const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
+          const fn = l.function_id ? fnById.get(l.function_id) : undefined
+          if (inst?.section_id) {
+            const sub = inst.subsection_id && subById.has(inst.subsection_id) ? inst.subsection_id : ''
+            add(inst.section_id, sub, inst.id, inst.name, m); placed = true
+          } else if (fn?.section_id) {
+            add(fn.section_id, '', `fn:${fn.id}`, fn.name, m); placed = true
+          }
+        }
+        if (!placed) add('none', '', 'none', 'Sem instrumento', m)
+        seen.add(m.id)
+      }
+      const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
+      const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
+      return { sectionList, map, total: seen.size }
     }
-    const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
-    const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
-    return { searching, sectionList, map, subById, total: seen.size }
+    return {
+      searching, subById,
+      active: filter.status === 'inactive' ? EMPTY_TREE : build((m) => !isInactive(m.id)),
+      inactive: filter.status === 'active' ? EMPTY_TREE : build((m) => isInactive(m.id)),
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusOf, filter, sectionFilter, wantedCategory, cats.data])
+  const total = trees.active.total + trees.inactive.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
-  const forceOpen = tree.searching || sectionFilter !== ''
+  const forceOpen = trees.searching || sectionFilter !== ''
   // auto: grupo que é filho único do pai abre sozinho (evita clique redundante), mas o usuário ainda pode fechá-lo.
   const isOpen = (k: string, auto = false) => forceOpen || (open[k] ?? auto)
   const loading = members.isLoading || sections.isLoading || instruments.isLoading
 
-  const memberRow = (m: GroupMember) => {
+  const memberRow = (dim: boolean) => (m: GroupMember) => {
     const st = statusOf.get(m.id)
     return (
-      <div key={m.id} className="flex items-center justify-between gap-3 rounded-md bg-card px-3 py-2">
+      <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
         <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
-          <p className="truncate font-semibold">{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!st && <Badge>Sem ciclo</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
+          <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!st && <Badge>Sem ciclo</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
           <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
         </button>
+        <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${m.display_name ?? m.full_name}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
         <Can permission="members.manage"><InviteButton member={m} /></Can>
       </div>
     )
   }
 
-  const renderLeaves = (leaves: Map<string, Leaf>, prefix: string, tone: Tone) =>
-    [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
-      <Collapsible key={prefix + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(prefix + leaf.key, leaves.size === 1)} onToggle={() => toggle(prefix + leaf.key, isOpen(prefix + leaf.key, leaves.size === 1))}>
-        <ProgressiveList items={leaf.members} render={memberRow} resetKey={filter.search} />
+  const renderSections = (tree: TreeData, prefix: string, dim: boolean) => tree.sectionList.map((sec, idx) => {
+    const tone: Tone = dim ? 'muted' : TONES[idx % TONES.length]
+    const subs = tree.map.get(sec.id)!
+    const count = new Set([...subs.values()].flatMap((l) => [...l.values()].flatMap((x) => x.members.map((m) => m.id)))).size
+    const hasSubs = [...subs.keys()].some((k) => k !== '')
+    const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : (trees.subById.get(a)?.sort_order ?? 0) - (trees.subById.get(b)?.sort_order ?? 0)))
+    const renderLeaves = (leaves: Map<string, Leaf>, p: string) =>
+      [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
+        <Collapsible key={p + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(p + leaf.key, leaves.size === 1)} onToggle={() => toggle(p + leaf.key, isOpen(p + leaf.key, leaves.size === 1))}>
+          <ProgressiveList items={leaf.members} render={memberRow(dim)} resetKey={filter.search} />
+        </Collapsible>
+      ))
+    const sk0 = `${prefix}${sec.id}`
+    return (
+      <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0)} onToggle={() => toggle(sk0, isOpen(sk0))}>
+        {subKeys.map((sk) => {
+          const leaves = subs.get(sk)!
+          if (!hasSubs) return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sk0}:`)}</div>
+          const subCount = new Set([...leaves.values()].flatMap((x) => x.members.map((m) => m.id))).size
+          const subName = sk === '' ? 'Sem subnaipe' : trees.subById.get(sk)?.name ?? 'Subnaipe'
+          const k = `${sk0}:sub:${sk}`
+          return (
+            <Collapsible key={k} level={1} tone={tone} title={subName} count={subCount} open={isOpen(k, subKeys.length === 1)} onToggle={() => toggle(k, isOpen(k, subKeys.length === 1))}>
+              {renderLeaves(leaves, `${k}:`)}
+            </Collapsible>
+          )
+        })}
       </Collapsible>
-    ))
+    )
+  })
 
   return (
     <div className="space-y-4">
@@ -224,36 +261,21 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
       {loading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
 
-      {tree.sectionList.map((sec, idx) => {
-        const tone = TONES[idx % TONES.length]
-        const subs = tree.map.get(sec.id)!
-        const count = new Set([...subs.values()].flatMap((l) => [...l.values()].flatMap((x) => x.members.map((m) => m.id)))).size
-        const hasSubs = [...subs.keys()].some((k) => k !== '')
-        const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : (tree.subById.get(a)?.sort_order ?? 0) - (tree.subById.get(b)?.sort_order ?? 0)))
-        return (
-          <Collapsible key={sec.id} tone={tone} title={sec.name} count={count} open={isOpen(sec.id)} onToggle={() => toggle(sec.id, isOpen(sec.id))}>
-            {subKeys.map((sk) => {
-              const leaves = subs.get(sk)!
-              if (!hasSubs) return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sec.id}:`, tone)}</div>
-              const subCount = new Set([...leaves.values()].flatMap((x) => x.members.map((m) => m.id))).size
-              const subName = sk === '' ? 'Sem subnaipe' : tree.subById.get(sk)?.name ?? 'Subnaipe'
-              const k = `${sec.id}:sub:${sk}`
-              return (
-                <Collapsible key={k} level={1} tone={tone} title={subName} count={subCount} open={isOpen(k, subKeys.length === 1)} onToggle={() => toggle(k, isOpen(k, subKeys.length === 1))}>
-                  {renderLeaves(leaves, `${k}:`, tone)}
-                </Collapsible>
-              )
-            })}
-          </Collapsible>
-        )
-      })}
-      {!loading && tree.sectionList.length === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado.</Card>}
+      {renderSections(trees.active, 'a:', false)}
+
+      {trees.inactive.total > 0 && (
+        <Collapsible tone="muted" title={<span className="text-muted-foreground">Inativos</span>} count={trees.inactive.total}
+          open={isOpen('inativos')} onToggle={() => toggle('inativos', isOpen('inativos'))}>
+          {renderSections(trees.inactive, 'i:', true)}
+        </Collapsible>
+      )}
+      {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado.</Card>}
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         {selected && <MemberDetailSheet member={selected} />}
       </Sheet>
 
-      <p className="text-muted-foreground">{tree.total} {tree.total === 1 ? 'integrante' : 'integrantes'}</p>
+      <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'}{trees.inactive.total > 0 && ` (${trees.inactive.total} ${trees.inactive.total === 1 ? 'inativo' : 'inativos'})`}</p>
     </div>
   )
 }

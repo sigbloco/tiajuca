@@ -2,10 +2,10 @@ import { ChevronRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '@/components/ui/primitives'
 
-export type Tone = 'primary' | 'secondary' | 'info' | 'success' | 'warning'
+export type Tone = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'muted'
 // Classes estáticas (o Tailwind precisa enxergá-las por inteiro).
-const HEAD: Record<Tone, string> = { primary: 'bg-primary/10', secondary: 'bg-secondary/15', info: 'bg-info/10', success: 'bg-success/10', warning: 'bg-warning/15' }
-const BAR: Record<Tone, string> = { primary: 'border-primary/70', secondary: 'border-secondary', info: 'border-info/70', success: 'border-success/70', warning: 'border-warning/80' }
+const HEAD: Record<Tone, string> = { primary: 'bg-primary/10', secondary: 'bg-secondary/15', info: 'bg-info/10', success: 'bg-success/10', warning: 'bg-warning/15', muted: 'bg-muted' }
+const BAR: Record<Tone, string> = { primary: 'border-primary/70', secondary: 'border-secondary', info: 'border-info/70', success: 'border-success/70', warning: 'border-warning/80', muted: 'border-border' }
 export const TONES: Tone[] = ['primary', 'secondary', 'info', 'success', 'warning']
 
 /** Grupo que abre/fecha. Controlado pelo pai (que decide o estado inicial: todos fechados por padrão).

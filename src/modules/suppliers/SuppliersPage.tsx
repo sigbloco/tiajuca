@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, MessageCircle, Phone, Plus, Tags } from 'lucide-react'
+import { ExternalLink, MessageCircle, Pencil, Phone, Plus, Tags } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -148,7 +148,7 @@ function SupplierRow({ s, canManage, onEdit }: { s: Supplier; canManage: boolean
           <p className="font-semibold">{s.name} {!s.is_active && <Badge>Inativo</Badge>}</p>
           {s.notes && <p className="text-muted-foreground">{s.notes}</p>}
         </div>
-        {canManage && <Button size="sm" variant="outline" onClick={onEdit}>Editar</Button>}
+        {canManage && <Button size="icon" variant="ghost" aria-label={`Editar ${s.name}`} onClick={onEdit}><Pencil className="h-4 w-4" /></Button>}
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
         {s.phone && <a className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted" href={`tel:+55${s.phone.replace(/\D/g, '')}`}><Phone className="h-4 w-4" /> {maskPhone(s.phone)}</a>}

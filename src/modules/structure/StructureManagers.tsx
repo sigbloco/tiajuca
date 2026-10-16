@@ -170,7 +170,6 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
                 <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(null)}>Cancelar</Button>
               </form>
             )}
-            <p className="px-1 text-xs font-semibold uppercase text-muted-foreground">Subnaipes</p>
             {visibleSubs.length === 0 && <p className="px-1 text-muted-foreground">Nenhum subnaipe.</p>}
             {visibleSubs.map((x) => <ItemRow key={x.id} item={x} siblings={subs} canEdit={canEdit} mut={subMut} />)}
             {canEdit && (

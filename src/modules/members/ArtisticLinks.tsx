@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { AutoComplete, Chip } from '@/components/shared/AutoComplete'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Label, Select } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -105,6 +106,10 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
   })
 
   const active = <T extends { is_active: boolean }>(items?: T[]) => items?.filter((i) => i.is_active) ?? []
+  const instrumentLabel = (id: string) => {
+    const i = instruments.data?.find((x) => x.id === id)
+    return i ? `${i.name} · ${sections.data?.find((s) => s.id === i.section_id)?.name ?? ''}` : '…'
+  }
   const startEdit = (l: LinkRow) => {
     setEditing(l.id)
     setF({
@@ -115,15 +120,17 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
 
   const form = (
     <Card className="space-y-2 p-3">
+      <div className="space-y-1.5">
+        <Label>Instrumento</Label>
+        {f.instrument_id ? (
+          <div><Chip label={instrumentLabel(f.instrument_id)} onRemove={() => setF({ ...f, instrument_id: '', section_id: '' })} removeLabel="Trocar instrumento" /></div>
+        ) : (
+          <AutoComplete aria-label="Instrumento" placeholder="Escreva o instrumento (ex.: Surdo)…"
+            options={active(instruments.data).map((i) => ({ id: i.id, label: i.name, hint: sections.data?.find((s) => s.id === i.section_id)?.name }))}
+            onPick={(o) => setF({ ...f, instrument_id: o.id, section_id: instruments.data?.find((i) => i.id === o.id)?.section_id ?? '' })} />
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-2">
-        <Select value={f.section_id} aria-label="Naipe" onChange={(e) => setF({ ...f, section_id: e.target.value, instrument_id: '' })}>
-          <option value="">Naipe…</option>
-          {active(sections.data).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </Select>
-        <Select value={f.instrument_id} aria-label="Instrumento" disabled={!f.section_id} onChange={(e) => setF({ ...f, instrument_id: e.target.value })}>
-          <option value="">Instrumento…</option>
-          {active(instruments.data).filter((i) => i.section_id === f.section_id).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-        </Select>
         <Select value={f.function_id} aria-label="Função" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
           <option value="">Função (opcional)</option>
           {active(functions.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
