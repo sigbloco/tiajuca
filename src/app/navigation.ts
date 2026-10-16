@@ -1,5 +1,5 @@
 import {
-  Award, Banknote, BarChart3, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, FolderOpen, History, Home, Music2, Settings,
+  Award, Banknote, GraduationCap, BarChart3, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, FolderOpen, History, Home, Music2, Settings,
   ShieldCheck, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
@@ -37,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'financeiro', label: 'Financeiro', icon: Banknote, group: 'organizacao', permission: 'finance.read' },
   { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read' },
 
+  { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group' },
   { to: 'presenca', label: 'Presença', icon: ClipboardCheck, group: 'oficina', permission: 'attendance.record', primary: true },
   { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, group: 'oficina', permission: 'capacity.read' },
   { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage' },

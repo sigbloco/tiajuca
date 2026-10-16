@@ -87,6 +87,7 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <HomePage /> },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'alunos', element: <MembersPage lockedCategory="Aluno" title="Alunos" /> },
                 { path: 'inscricoes', element: <FormsPage /> },
                 { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                 { path: 'relatorios', element: <ReportsPage /> },

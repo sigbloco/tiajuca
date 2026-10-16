@@ -77,8 +77,20 @@ interface GroupMember extends MemberRow {
 interface Leaf { key: string; label: string; members: GroupMember[] }
 
 /** Integrantes agrupados por naipe → subnaipe → instrumento (grupos fechados por padrão), com filtro em funil. */
-export function MembersPage() {
+export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const cats = useQuery({
+    queryKey: ['members', orgId, 'categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId })
+      if (error) throw error
+      return (data ?? []) as { member_id: string; category_id: string; category_name: string }[]
+    },
+  })
+  const categoryOf = new Map((cats.data ?? []).map((c) => [c.member_id, c]))
+  const categoryNames = [...new Set((cats.data ?? []).map((c) => c.category_name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const wantedCategory = lockedCategory ?? categoryFilter
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const [sectionFilter, setSectionFilter] = useState('')
   const [open, setOpen] = useState<Record<string, boolean>>({})
@@ -136,6 +148,7 @@ export function MembersPage() {
     for (const m of members.data ?? []) {
       const st = statusOf.get(m.id)
       if (!matchesStatus(!!st?.counts_as_active, filter.status)) continue
+      if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
       if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
       let placed = false
       for (const l of m.member_artistic_links.filter((x) => !x.ended_at)) {
@@ -154,7 +167,7 @@ export function MembersPage() {
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, sectionList, map, subById, total: seen.size }
-  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusOf, filter, sectionFilter])
+  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusOf, filter, sectionFilter, wantedCategory, cats.data])
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
   const forceOpen = tree.searching || sectionFilter !== ''
@@ -167,7 +180,7 @@ export function MembersPage() {
     return (
       <div key={m.id} className="flex items-center justify-between gap-3 rounded-md bg-card px-3 py-2">
         <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
-          <p className="truncate font-semibold">{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!st && <Badge>Sem ciclo</Badge>}</p>
+          <p className="truncate font-semibold">{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!st && <Badge>Sem ciclo</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
           <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
         </button>
         <Can permission="members.manage"><InviteButton member={m} /></Can>
@@ -185,7 +198,7 @@ export function MembersPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Integrantes</h1>
+        <h1>{title}</h1>
         <Can permission="members.manage">
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <Button onClick={() => setSheetOpen(true)}><Plus className="h-4 w-4" /> Novo integrante</Button>
@@ -194,11 +207,17 @@ export function MembersPage() {
         </Can>
       </div>
 
-      <FilterBar value={filter} onChange={setFilter} extraCount={sectionFilter ? 1 : 0} onClearExtra={() => setSectionFilter('')}>
+      <FilterBar value={filter} onChange={setFilter} extraCount={(sectionFilter ? 1 : 0) + (categoryFilter && !lockedCategory ? 1 : 0)} onClearExtra={() => { setSectionFilter(''); setCategoryFilter('') }}>
         <Select aria-label="Naipe" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
           <option value="">Todos os naipes</option>
           {(sections.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
+        {!lockedCategory && categoryNames.length > 0 && (
+          <Select aria-label="Categoria" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="">Todas as categorias</option>
+            {categoryNames.map((n) => <option key={n} value={n}>{n}</option>)}
+          </Select>
+        )}
       </FilterBar>
 
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
