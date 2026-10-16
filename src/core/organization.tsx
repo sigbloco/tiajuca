@@ -17,6 +17,8 @@ export interface Membership {
   display_name: string
   roles: string[]
   permissions: GrantedPermission[]
+  /** Inativo no ciclo atual: o servidor já devolve sem papéis e bloqueia os dados. */
+  inactive?: boolean
 }
 
 /** Pessoa que a Direção está "visualizando como". Só muda o que a INTERFACE mostra: o banco continua respondendo ao usuário real. */
