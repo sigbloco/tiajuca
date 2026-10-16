@@ -1,41 +1,57 @@
-import { LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
-import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
-import { NavLink, Outlet } from 'react-router-dom'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
-import { NAV_GROUP_LABEL, NAV_GROUP_ORDER, NAV_ITEMS, type NavItem } from './navigation'
+import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
+import { HUBS, HUB_ORDER, NAV_ITEMS, type NavItem } from './navigation'
 import { ViewAsBar } from './ViewAsBar'
+
+interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; admin?: boolean }
+
+// Itens que ficam na barra inferior do celular; o resto vai em "Mais".
+const MOBILE_PRIMARY = new Set(['', 'repertorio', 'eventos', 'organizacao', 'oficina'])
 
 export function AppShell() {
   const { membership } = useOrganization()
   const { signOut } = useAuth()
+  const { pathname } = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
   const brandLogo = membership?.logo_path ?? null
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
   if (!membership) return null
   const base = `/${membership.slug}`
-  const items = NAV_ITEMS.filter((i) => !i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
-  const primary = items.filter((i) => i.primary)
-  const groups = NAV_GROUP_ORDER.map((g) => ({ g, list: items.filter((i) => i.group === g) })).filter((x) => x.list.length > 0)
-  // Menu agrupado: título pequeno em "Organização" e "Oficina"; o grupo de administração só ganha um traço separador.
-  const renderGroups = (onClick?: () => void) => groups.map(({ g, list }, idx) => (
-    <div key={g ?? 'top'} className={cn('space-y-1', idx > 0 && 'pt-3')}>
-      {g && NAV_GROUP_LABEL[g] && <p className="px-3 pb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{NAV_GROUP_LABEL[g]}</p>}
-      {g === 'admin' && <div className="mx-3 mb-2 border-t border-border" />}
-      {list.map((i: NavItem) => (
-        <NavLink key={i.to} end={i.to === ''} to={`${base}/${i.to}`} className={link} onClick={onClick}>
-          <i.icon className="h-5 w-5" /> {i.label}
-        </NavLink>
-      ))}
+  const visible = (i: NavItem) => !i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own')
+
+  // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
+  const entries: MenuEntry[] = [
+    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon })),
+    ...HUB_ORDER.flatMap((hub) => {
+      const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
+      return children.length === 0 ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), 'lista-de-espera'] }]
+    }),
+    ...NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, admin: true })),
+  ]
+  const isActive = (e: MenuEntry) => {
+    const rest = pathname.slice(base.length).replace(/^\//, '')
+    const first = rest.split('/')[0]
+    return e.to === '' ? rest === '' : first === e.to || (e.also ?? []).includes(first)
+  }
+  const link = (e: MenuEntry) =>
+    cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive(e) && 'bg-primary text-primary-foreground hover:bg-primary')
+  const renderEntries = (list: MenuEntry[], onClick?: () => void) => list.map((e, idx) => (
+    <div key={e.to || 'home'} className={cn(e.admin && !list[idx - 1]?.admin && 'mt-2 border-t border-border pt-3')}>
+      <NavLink to={`${base}/${e.to}`} className={link(e)} onClick={onClick}>
+        <e.icon className="h-5 w-5" /> {e.label}
+      </NavLink>
     </div>
   ))
-  const link = ({ isActive }: { isActive: boolean }) =>
-    cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive && 'bg-primary text-primary-foreground hover:bg-primary')
+  const primary = entries.filter((e) => MOBILE_PRIMARY.has(e.to))
+  const more = entries.filter((e) => !MOBILE_PRIMARY.has(e.to))
 
   return (
     <>
@@ -47,7 +63,7 @@ export function AppShell() {
           <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-11 w-11 shrink-0" />
           <p className="font-display text-xl font-extrabold leading-tight text-primary">{membership.name}</p>
         </div>
-        <nav className="flex-1">{renderGroups()}</nav>
+        <nav className="flex-1 space-y-1">{renderEntries(entries)}</nav>
         <div className="border-t border-border pt-3">
           <p className="truncate px-1 font-semibold">{membership.display_name}</p>
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
@@ -62,14 +78,13 @@ export function AppShell() {
 
       {/* Mobile: barra inferior fixa + "Mais" */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
-        {primary.map((i) => (
+        {primary.map((e) => (
           <NavLink
-            key={i.to}
-            end={i.to === ''}
-            to={`${base}/${i.to}`}
-            className={({ isActive }) => cn('flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground', isActive && 'text-primary')}
+            key={e.to || 'home'}
+            to={`${base}/${e.to}`}
+            className={cn('flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground', isActive(e) && 'text-primary')}
           >
-            <i.icon className="h-5 w-5" /> {i.label}
+            <e.icon className="h-5 w-5" /> {e.label}
           </NavLink>
         ))}
         <button onClick={() => setMoreOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground">
@@ -79,7 +94,7 @@ export function AppShell() {
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent title="Mais" description={membership.display_name}>
-          <nav>{renderGroups(() => setMoreOpen(false))}</nav>
+          <nav className="space-y-1">{renderEntries(more, () => setMoreOpen(false))}</nav>
           <Button variant="outline" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </SheetContent>
       </Sheet>

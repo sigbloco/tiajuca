@@ -27,6 +27,7 @@ import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { AppShell } from './AppShell'
+import { HubHome, HubLayout } from './Hub'
 
 const Loading = () => <div className="p-8"><Skeleton className="h-10 w-64" /></div>
 
@@ -86,27 +87,39 @@ export const router = createBrowserRouter(
               element: <OrgRoute />,
               children: [
                 { index: true, element: <HomePage /> },
-                { path: 'membros', element: <MembersPage /> },
-                { path: 'alunos', element: <MembersPage lockedCategory="Aluno" title="Alunos" /> },
-                { path: 'inscricoes', element: <FormsPage /> },
-                { path: 'inscricoes/:formId', element: <FormEditorPage /> },
-                { path: 'relatorios', element: <ReportsPage /> },
+                { path: 'organizacao', element: <HubLayout hub="organizacao" />, children: [{ index: true, element: <HubHome hub="organizacao" /> }] },
+                { path: 'oficina', element: <HubLayout hub="oficina" />, children: [{ index: true, element: <HubHome hub="oficina" /> }] },
+                {
+                  element: <HubLayout hub="organizacao" />,
+                  children: [
+                    { path: 'ciclos', element: <CyclesPage /> },
+                    { path: 'membros', element: <MembersPage /> },
+                    { path: 'mensalidades', element: <BillingPage /> },
+                    { path: 'bolsas', element: <ScholarshipsPage /> },
+                    { path: 'financeiro', element: <FinancePage /> },
+                    { path: 'fornecedores', element: <SuppliersPage /> },
+                  ],
+                },
+                {
+                  element: <HubLayout hub="oficina" />,
+                  children: [
+                    { path: 'alunos', element: <MembersPage lockedCategory="Aluno" title="Alunos" /> },
+                    { path: 'inscricoes', element: <FormsPage /> },
+                    { path: 'inscricoes/:formId', element: <FormEditorPage /> },
+                    { path: 'relatorios', element: <ReportsPage /> },
+                    { path: 'presenca', element: <AttendanceListPage /> },
+                    { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },
+                    { path: 'vagas', element: <CapacityPage /> },
+                    { path: 'lista-de-espera', element: <WaitlistPage /> },
+                  ],
+                },
                 { path: 'auditoria', element: <AuditPage /> },
                 { path: 'acesso', element: <AccessPage /> },
                 { path: 'repertorio', element: <RepertoirePage /> },
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
-                { path: 'financeiro', element: <FinancePage /> },
-                { path: 'fornecedores', element: <SuppliersPage /> },
                 { path: 'drive', element: <DriveFoldersPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
-                { path: 'mensalidades', element: <BillingPage /> },
-                { path: 'bolsas', element: <ScholarshipsPage /> },
                 { path: 'eventos', element: <EventsPage /> },
-                { path: 'presenca', element: <AttendanceListPage /> },
-                { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },
-                { path: 'vagas', element: <CapacityPage /> },
-                { path: 'lista-de-espera', element: <WaitlistPage /> },
-                { path: 'ciclos', element: <CyclesPage /> },
                 { path: 'configuracoes', element: <SettingsPage /> },
               ],
             },
