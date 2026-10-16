@@ -15,6 +15,7 @@ import { supabase } from '@/core/supabase'
 import { useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
+import { ReactivationRequests } from './Reactivation'
 import { createInvite, createMember, type MemberRow } from './service'
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
@@ -258,6 +259,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         )}
       </FilterBar>
 
+      <ReactivationRequests />
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
       {loading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
 

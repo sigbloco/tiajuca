@@ -61,20 +61,7 @@ function OrgGate() {
   if (loading) return <Loading />
   // Slug inexistente OU organização da qual o usuário não faz parte: mesmo comportamento (sem vazar existência).
   if (!membership) return <Navigate to="/" replace />
-  if (membership.inactive) return <InactiveScreen name={membership.name} person={membership.display_name} />
   return <AppShell />
-}
-
-/** Pessoa inativa no ciclo: entra, mas não vê nada. Reativar na ficha devolve o acesso na hora. */
-function InactiveScreen({ name, person }: { name: string; person: string }) {
-  const { signOut } = useAuth()
-  return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1>Olá, {person}</h1>
-      <p className="text-muted-foreground">Sua participação no {name} está <strong>inativa</strong> neste ciclo, então o acesso está pausado. Fale com a Direção para voltar.</p>
-      <button className="rounded-lg border border-border px-4 py-2 font-semibold hover:bg-muted" onClick={() => signOut()}>Sair</button>
-    </main>
-  )
 }
 
 function ConfigMissing() {

@@ -8,6 +8,7 @@ import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { HUBS, HUB_ORDER, NAV_ITEMS, type NavItem } from './navigation'
+import { InactiveNotice } from '@/modules/members/Reactivation'
 import { ViewAsBar } from './ViewAsBar'
 
 interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; admin?: boolean }
@@ -73,6 +74,7 @@ export function AppShell() {
       </aside>
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
+        <InactiveNotice />
         <Outlet />
       </main>
 
