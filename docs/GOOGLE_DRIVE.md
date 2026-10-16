@@ -24,3 +24,22 @@ Opcional. Sem ela, o repertório continua aceitando **link colado** e **arquivo 
 - A busca é por nome, dentro da pasta aberta (não recursiva). Navegue pelas subpastas.
 - O acesso ao arquivo continua sendo controlado pelo Drive, não pelo SIGBloco.
 - Troque a chave da conta de serviço periodicamente e sempre que alguém com acesso a ela sair da Direção.
+
+## Compartilhar pastas automaticamente (Pastas do Drive → Sincronizar acesso)
+Além da busca de partituras, o app pode **compartilhar uma pasta do Drive com os e-mails de quem tem acesso a ela no app**.
+
+- **Quem entra:** quem tem regra de acesso na pasta (papel, naipe ou instrumento), **e** está ativo no ciclo atual (ou é equipe: Professor/Monitor), tem e-mail e não está arquivado. **Direção e Titular sempre entram.**
+- **O que o app faz:** libera como **leitor** quem falta e remove só quem **o próprio app compartilhou antes** e saiu da regra. Donos e compartilhamentos manuais nunca são tocados. Nenhum e-mail do Google é disparado; quem não tem conta Google aparece em "Não foi possível compartilhar".
+- **Antes de aplicar** o app mostra a prévia (quem ganha e quem perde acesso).
+
+### Configuração (uma vez)
+1. Use a **mesma conta de serviço** da busca (segredo `GOOGLE_SERVICE_ACCOUNT_JSON`). A **Google Drive API** precisa estar ativada.
+2. No Drive, compartilhe cada pasta com o e-mail da conta de serviço como **Editor** (leitor não basta para gerenciar permissões).
+3. Publique a função `drive-sync` (`supabase/functions/drive-sync/index.ts`), com a verificação de JWT ligada.
+4. Aplique a migration `0019_drive_sync.sql`.
+5. Em **Pastas do Drive**, cadastre a pasta com o link `…/folders/ID`, marque quem acessa e clique em **Sincronizar acesso**.
+
+### Limites
+- A sincronização é **manual** (botão). Depois de mudar papéis, naipes ou status de pessoas, sincronize de novo.
+- Pastas dentro de **Drives compartilhados** podem ter regras próprias de quem pode compartilhar.
+- Mudanças de e-mail não removem o e-mail antigo; o app só remove o que registrou.

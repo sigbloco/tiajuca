@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, FolderOpen, Pencil, Plus } from 'lucide-react'
+import { ExternalLink, FolderOpen, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -8,9 +8,12 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { formatDateTime } from '@/core/format'
+import { driveSync } from './sync'
 
 interface Folder {
   id: string; name: string; description: string | null; url: string; drive_folder_id: string | null; is_active: boolean; sort_order: number
+  last_synced_at: string | null; last_sync_summary: { added?: number; removed?: number; failed?: number } | null
 }
 interface Rule { id: string; folder_id: string; access_role_id: string | null; section_id: string | null; instrument_id: string | null }
 interface Role { id: string; key: string; name: string; rank: number }
@@ -132,6 +135,55 @@ function FolderSheet({ folder, rules, roles, onClose }: { folder: Folder | null;
   )
 }
 
+/** Prévia e aplicação do compartilhamento da pasta no Google Drive com quem tem acesso no app. */
+function SyncSheet({ folder, onClose }: { folder: Folder; onClose: () => void }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const preview = useQuery({ queryKey: ['drive-sync-preview', folder.id], queryFn: () => driveSync(folder.id, 'preview'), retry: false, gcTime: 0 })
+  const apply = useMutation({
+    mutationFn: () => driveSync(folder.id, 'apply'),
+    onSuccess: (r) => { toast.success(`Drive sincronizado: ${r.added ?? 0} liberados, ${r.removed ?? 0} removidos.`); qc.invalidateQueries({ queryKey: ['drive-folders', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const d = apply.data ?? preview.data
+  const list = (items: { email: string; name?: string }[]) => (
+    <ul className="max-h-40 space-y-0.5 overflow-auto rounded-md bg-muted p-2 text-sm">
+      {items.map((p) => <li key={p.email}>{p.name ? `${p.name} · ` : ''}<span className="text-muted-foreground">{p.email}</span></li>)}
+    </ul>
+  )
+  return (
+    <SheetContent title={`Sincronizar: ${folder.name}`} description="Compartilha a pasta no Google Drive com os e-mails de quem tem acesso aqui no app.">
+      <div className="space-y-3">
+        {preview.isLoading && <Skeleton className="h-24" />}
+        {preview.isError && <Card className="p-3 text-destructive">{friendlyError(preview.error)}</Card>}
+        {d && !apply.data && (
+          <>
+            <p><strong>{d.already_ok}</strong> já têm acesso. <strong>{d.add.length}</strong> serão liberados e <strong>{d.remove.length}</strong> perderão o acesso (só os que o app tinha compartilhado antes).</p>
+            {d.add.length > 0 && <div><p className="mb-1 font-semibold">Vão ganhar acesso (leitor)</p>{list(d.add)}</div>}
+            {d.remove.length > 0 && <div><p className="mb-1 font-semibold">Vão perder o acesso</p>{list(d.remove)}</div>}
+            <p className="text-xs text-muted-foreground">Ninguém recebe e-mail do Google por esta ação. Donos e compartilhamentos feitos à mão no Drive nunca são alterados. Só entram pessoas com e-mail cadastrado e ativas no ciclo atual (ou equipe).</p>
+            <Button className="w-full" disabled={apply.isPending || (d.add.length === 0 && d.remove.length === 0)} onClick={() => apply.mutate()}>
+              {apply.isPending ? 'Aplicando…' : d.add.length + d.remove.length === 0 ? 'Nada a fazer' : 'Aplicar no Drive'}
+            </Button>
+          </>
+        )}
+        {apply.data && (
+          <>
+            <p><strong>{apply.data.added ?? 0}</strong> liberados · <strong>{apply.data.removed ?? 0}</strong> removidos · <strong>{apply.data.failed ?? 0}</strong> com problema.</p>
+            {(apply.data.failed_list?.length ?? 0) > 0 && (
+              <div><p className="mb-1 font-semibold">Não foi possível compartilhar</p>
+                <ul className="space-y-0.5 rounded-md bg-warning/20 p-2 text-sm">
+                  {apply.data.failed_list!.map((p) => <li key={p.email}>{p.name ? `${p.name} · ` : ''}{p.email}: {p.reason}</li>)}
+                </ul></div>
+            )}
+          </>
+        )}
+        <Button variant="ghost" className="w-full" onClick={onClose}>Fechar</Button>
+      </div>
+    </SheetContent>
+  )
+}
+
 /** Pastas do Drive: cada pessoa vê só as liberadas para o seu perfil; a Direção cadastra e define as regras. */
 export function DriveFoldersPage() {
   const orgId = useOrgId()
@@ -140,6 +192,7 @@ export function DriveFoldersPage() {
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
   const [sheet, setSheet] = useState<{ folder: Folder | null } | null>(null)
+  const [syncing, setSyncing] = useState<Folder | null>(null)
 
   const roles = useQuery({
     queryKey: ['access-roles', orgId],
@@ -194,10 +247,22 @@ export function DriveFoldersPage() {
                   {who.length === 0 ? <Badge className="bg-warning/20">Só a Direção vê</Badge> : who.map((w, i) => <Badge key={i}>{w}</Badge>)}
                 </div>
               )}
-              <a href={f.url} target="_blank" rel="noreferrer noopener"
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 font-semibold text-primary-foreground hover:opacity-90">
-                <ExternalLink className="h-4 w-4" /> Abrir no Drive
-              </a>
+              <div className="flex flex-wrap items-center gap-2">
+                <a href={f.url} target="_blank" rel="noreferrer noopener"
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 font-semibold text-primary-foreground hover:opacity-90">
+                  <ExternalLink className="h-4 w-4" /> Abrir no Drive
+                </a>
+                {canManage && f.is_active && (
+                  <Button variant="outline" onClick={() => setSyncing(f)}><RefreshCw className="h-4 w-4" /> Sincronizar acesso</Button>
+                )}
+              </div>
+              {canManage && (
+                <p className="text-xs text-muted-foreground">
+                  {f.last_synced_at
+                    ? `Sincronizada em ${formatDateTime(f.last_synced_at)} (+${f.last_sync_summary?.added ?? 0} / −${f.last_sync_summary?.removed ?? 0}${f.last_sync_summary?.failed ? `, ${f.last_sync_summary.failed} com problema` : ''})`
+                    : 'Ainda não sincronizada com o Drive.'}
+                </p>
+              )}
             </Card>
           )
         })}
@@ -207,6 +272,9 @@ export function DriveFoldersPage() {
           <FolderSheet key={sheet.folder?.id ?? 'new'} folder={sheet.folder} roles={roles.data ?? []} onClose={() => setSheet(null)}
             rules={sheet.folder ? (rules.data ?? []).filter((r) => r.folder_id === sheet.folder!.id) : []} />
         )}
+      </Sheet>
+      <Sheet open={syncing !== null} onOpenChange={(o) => !o && setSyncing(null)}>
+        {syncing && <SyncSheet key={syncing.id} folder={syncing} onClose={() => setSyncing(null)} />}
       </Sheet>
     </div>
   )
