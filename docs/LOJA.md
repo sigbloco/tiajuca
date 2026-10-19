@@ -122,4 +122,6 @@ para desfazer tudo).
 
 - O formato da resposta da InfinitePay ao criar um link não é documentado; a leitura é tolerante e o botão **Testar conexão** confere de verdade.
 - Não há reembolso automático, cupom nem frete.
-- Preço de integrante vale para quem está **ativo** no ciclo atual (inativo paga o preço público).
+- Preço de integrante vale para **todo integrante ativo com login vinculado**: alunos e demais integrantes com registro ativo no ciclo atual,
+  mais titular, direção, professores e monitores ativos. Inativos, lista de espera e contas sem vínculo pagam o preço público.
+  Para valer, a pessoa precisa **entrar com a conta do app** (o login em popup da loja) e a conta precisa estar vinculada ao cadastro dela.
