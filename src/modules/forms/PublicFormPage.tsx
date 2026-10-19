@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/shared/BackButton'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useRef, useState } from 'react'
@@ -179,6 +180,7 @@ export function PublicFormPage() {
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
+      <BackButton fallback="/site" label="Voltar ao site" />
       <div className="mb-4 space-y-2 text-center">
         {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="mx-auto h-24 w-24 ring-4 ring-secondary" />}
         <p className="font-display text-3xl font-extrabold text-primary">{org?.name ?? ''}</p>

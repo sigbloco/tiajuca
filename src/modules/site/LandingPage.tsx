@@ -1,19 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, LogIn, ShoppingBag } from 'lucide-react'
+import { ArrowLeft, ClipboardList, LogIn, ShoppingBag } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useMemberships } from '@/core/organization'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Skeleton } from '@/components/ui/primitives'
 import { DEFAULT_ORG_SLUG, supabase } from '@/core/supabase'
 import { applyTheme, type OrgTheme } from '@/core/theme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
-import { LINK_KINDS, hrefOf, youtubeId, type SiteLink, type SiteVideo } from './links'
+import { useAuth } from '@/core/auth'
+import { LINK_KINDS, hrefOf, textOn, youtubeId, type SiteLink, type SiteVideo } from './links'
 
 export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; header_color?: string | null; page_color?: string | null
   }
   open_forms: { slug: string; title: string }[]
 }
@@ -35,6 +37,8 @@ const pill = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-ful
 /** Página inicial pública do bloco, no estilo "link na bio": foto, descrição, redes, menu e vídeos. Tudo vem do banco. */
 export function LandingPage() {
   const { data, isLoading, isError } = usePublicSite(DEFAULT_ORG_SLUG)
+  const { session } = useAuth()
+  const { data: mine } = useMemberships()
   useEffect(() => {
     if (!data) return
     applyTheme(data.org.theme, { cache: false })
@@ -52,8 +56,9 @@ export function LandingPage() {
   const photo = site.photo_url || org.logo_path
 
   return (
-    <main className="min-h-screen pb-16">
-      <header className="bg-primary px-4 pb-20 pt-10 text-center text-primary-foreground">
+    <main className="min-h-screen pb-16" style={site.page_color ? { backgroundColor: site.page_color, color: textOn(site.page_color) } : undefined}>
+      <header className={`px-4 pb-20 pt-10 text-center ${site.header_color ? "" : "bg-primary text-primary-foreground"}`} style={site.header_color ? { backgroundColor: site.header_color, color: textOn(site.header_color) } : undefined}>
+        {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
         <OrgLogo name={org.name} logoPath={photo} className="mx-auto h-36 w-36 object-cover ring-4 ring-secondary" />
         <h1 className="mt-4 font-display text-3xl font-extrabold">{site.headline || org.name}</h1>
       </header>

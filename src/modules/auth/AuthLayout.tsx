@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Card, Skeleton } from '@/components/ui/primitives'
 import { DEFAULT_ORG_SLUG, supabase } from '@/core/supabase'
@@ -59,12 +61,13 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
         {org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="mx-auto h-28 w-28 ring-4 ring-secondary" /> : <Skeleton className="mx-auto h-28 w-28 rounded-full" />}
         <p className="mt-3 min-h-9 font-display text-3xl font-extrabold">{org?.name}</p>
       </header>
-      <div className="-mt-10 flex justify-center px-4 pb-10">
+      <div className="-mt-10 flex flex-col items-center px-4 pb-10">
         <Card className="w-full max-w-sm p-6">
           <h1 className="mb-1">{title}</h1>
           {subtitle && <p className="mb-4 text-muted-foreground">{subtitle}</p>}
           {children}
         </Card>
+        <Link to="/site" className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao site</Link>
       </div>
     </main>
   )

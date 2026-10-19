@@ -7,6 +7,7 @@ import { Card, Skeleton } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { applyTheme } from '@/core/theme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
+import { BackButton } from '@/components/shared/BackButton'
 import { LoginDialog } from './LoginDialog'
 import { StoreProvider, fetchStore, useStore } from './StoreContext'
 
@@ -45,6 +46,7 @@ function Shell() {
       <Header />
       <LoginDialog />
       <main className="mx-auto max-w-5xl px-4 py-6">
+        <BackButton fallback="/site" label="Voltar" />
         {notices.length > 0 && (
           <Card role="status" className="mb-4 border-secondary p-3 text-sm">
             <ul className="list-disc space-y-1 pl-5">{notices.map((n) => <li key={n}>{n}</li>)}</ul>

@@ -7,13 +7,14 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { notifyChange } from '@/core/undo'
+import { ColorPick } from './ColorPick'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -38,7 +39,7 @@ export function SiteSettings() {
     const { error } = await supabase.from('site_settings').upsert({
       organization_id: orgId, headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url,
       links: row.links, videos: row.videos, enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label,
-      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop,
+      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, header_color: row.header_color, page_color: row.page_color,
     }, { onConflict: 'organization_id' })
     if (error) throw error
   }
@@ -96,6 +97,13 @@ export function SiteSettings() {
         <div className="space-y-1.5"><Label htmlFor="st-desc">Descrição curta</Label>
           <textarea id="st-desc" rows={4} maxLength={600} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <p className="text-xs text-muted-foreground">{(f.description ?? '').length}/600</p></div>
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <h3>Cores</h3>
+        <ColorPick label="Fundo do cabeçalho" value={f.header_color} onChange={(v) => setF({ ...f, header_color: v })} suggestions={[['Cor principal do bloco', membership?.theme?.primary], ['Cor de destaque do bloco', membership?.theme?.secondary]]} />
+        <ColorPick label="Fundo da página" value={f.page_color} onChange={(v) => setF({ ...f, page_color: v })} suggestions={[['Cor de destaque do bloco', membership?.theme?.secondary], ['Cor principal do bloco', membership?.theme?.primary]]} />
+        <p className="text-xs text-muted-foreground">O texto muda sozinho para branco ou escuro, conforme o fundo, para continuar legível. Sem escolha, usa as cores do bloco.</p>
       </Card>
 
       <Card className="space-y-3 p-4">

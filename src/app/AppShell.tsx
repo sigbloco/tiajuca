@@ -1,6 +1,7 @@
-import { LogOut, Menu, type LucideIcon } from 'lucide-react'
+import { Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { BackButton } from '@/components/shared/BackButton'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
@@ -66,7 +67,8 @@ export function AppShell() {
         </div>
         <nav className="flex-1 space-y-1">{renderEntries(entries)}</nav>
         <div className="border-t border-border pt-3">
-          <p className="truncate px-1 font-semibold">{membership.display_name}</p>
+          <Link to="/site" className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
+          <p className="mt-2 truncate px-1 font-semibold">{membership.display_name}</p>
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
             <LogOut className="h-4 w-4" /> Sair
           </Button>
@@ -75,6 +77,7 @@ export function AppShell() {
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         <InactiveNotice />
+        {pathname.replace(/\/$/, '') !== base && <BackButton fallback={base} />}
         <Outlet />
       </main>
 
@@ -97,6 +100,7 @@ export function AppShell() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent title="Mais" description={membership.display_name}>
           <nav className="space-y-1">{renderEntries(more, () => setMoreOpen(false))}</nav>
+          <Link to="/site" onClick={() => setMoreOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
           <Button variant="outline" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </SheetContent>
       </Sheet>
