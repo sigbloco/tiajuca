@@ -2,20 +2,22 @@ import { useState } from 'react'
 import { Button, Card, cn } from '@/components/ui/primitives'
 import { findPendingFields } from '../config/schema'
 import { getShopConfig } from '../config/shop.config'
+import { OrdersTab } from './OrdersTab'
 import { PaymentsTab } from './PaymentsTab'
 import { PickupPointsTab } from './PickupPointsTab'
 import { ProductsTab } from './ProductsTab'
 
 const TABS = [
+  { key: 'orders', label: 'Pedidos' },
   { key: 'products', label: 'Produtos' },
   { key: 'pickup', label: 'Pontos de retirada' },
   { key: 'payments', label: 'Pagamentos' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
-/** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). Pedidos entram na etapa 6. */
+/** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
-  const [tab, setTab] = useState<TabKey>('products')
+  const [tab, setTab] = useState<TabKey>('orders')
   const pending = findPendingFields(getShopConfig())
   return (
     <div className="space-y-4">
@@ -33,7 +35,7 @@ export function ShopAdminPage() {
           </Button>
         ))}
       </div>
-      {tab === 'products' ? <ProductsTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
+      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
     </div>
   )
 }
