@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PENDING, parseShopConfig } from '../config/schema'
-import { availableMethods, checkoutBlockers, pixInstructions } from './pix'
+import { availableMethods, checkoutBlockers, directorLinks, pixInstructions } from './pix'
 
 const base = {
   orgSlug: 'tiajuca', reservationHours: 48, paymentMethods: ['pix', 'infinitepay'],
@@ -43,5 +43,19 @@ describe('métodos disponíveis e bloqueios de checkout', () => {
     expect(checkoutBlockers(cfg({ pix: { key: PENDING, beneficiary: 'Bloco' } }), 'pix')).toHaveLength(1)
     expect(checkoutBlockers(cfg({ contact: { whatsapp: PENDING, email: PENDING } }), 'pix')).toHaveLength(1)
     expect(checkoutBlockers(cfg({ contact: { whatsapp: PENDING, email: 'a@b.com' } }), 'pix')).toEqual([])
+  })
+})
+
+describe('contato com a Direção', () => {
+  const directors = [{ name: 'Rafael', whatsapp: '5521996134845' }, { name: 'Maira', whatsapp: '5521984843223' }]
+  it('gera um link de WhatsApp por pessoa, citando o pedido', () => {
+    const links = directorLinks(cfg({ contact: { ...base.contact, directors } }), 'HN5XCGA4')
+    expect(links.map((l) => l.name)).toEqual(['Rafael', 'Maira'])
+    expect(links[0].url).toMatch(/^https://wa.me/5521996134845?text=/)
+    expect(decodeURIComponent(links[0].url)).toContain('HN5XCGA4')
+  })
+  it('sem Direção configurada não gera links; número inválido é rejeitado', () => {
+    expect(directorLinks(cfg())).toEqual([])
+    expect(() => cfg({ contact: { ...base.contact, directors: [{ name: 'X', whatsapp: '21 99999' }] } })).toThrow(/directors/)
   })
 })

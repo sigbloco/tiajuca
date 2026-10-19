@@ -14,7 +14,12 @@ export const shopConfigSchema = z.object({
   reservationHours: z.number().int().min(1).max(24 * 30),
   paymentMethods: z.array(z.enum(PAYMENT_METHODS)).min(1).refine((a) => new Set(a).size === a.length, 'Métodos repetidos'),
   pix: z.object({ key: z.string().min(1), beneficiary: z.string().min(1) }),
-  contact: z.object({ whatsapp: z.union([z.literal(PENDING), digits(12, 13)]), email: z.union([z.literal(PENDING), z.email()]) }),
+  contact: z.object({
+    whatsapp: z.union([z.literal(PENDING), digits(12, 13)]),
+    email: z.union([z.literal(PENDING), z.email()]),
+    /** Pessoas da Direção com quem o cliente pode falar direto no WhatsApp. */
+    directors: z.array(z.object({ name: z.string().min(1), whatsapp: digits(12, 13) })).default([]),
+  }),
   mail: z.object({ fromName: z.string().min(1), fromEmail: z.union([z.literal(PENDING), z.email()]) }),
 })
 export type ShopConfig = z.infer<typeof shopConfigSchema>

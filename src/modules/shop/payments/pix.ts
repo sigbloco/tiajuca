@@ -60,3 +60,11 @@ export function checkoutBlockers(config: ShopConfig, method: PaymentMethodKey): 
   if (config.contact.whatsapp === PENDING && config.contact.email === PENDING) out.push('Os contatos da loja (WhatsApp ou e-mail) ainda não foram configurados.')
   return out
 }
+
+export interface DirectorLink { name: string; url: string }
+
+/** Links de WhatsApp para falar direto com alguém da Direção sobre o pedido. */
+export function directorLinks(config: ShopConfig, orderCode?: string): DirectorLink[] {
+  const text = orderCode ? `Olá! Preciso de ajuda com o pedido ${orderCode} da loja.` : 'Olá! Tenho uma dúvida sobre a loja.'
+  return config.contact.directors.map((d) => ({ name: d.name, url: `https://wa.me/${d.whatsapp}?text=${encodeURIComponent(text)}` }))
+}

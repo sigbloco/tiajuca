@@ -7,7 +7,7 @@ import { Badge, Button, Card } from '@/components/ui/primitives'
 import { formatCurrency, formatDateTime } from '@/core/format'
 import { fromCents } from '../catalog'
 import { getShopConfig } from '../config/shop.config'
-import { pixInstructions } from '../payments/pix'
+import { directorLinks, pixInstructions } from '../payments/pix'
 import { invokeShop, loadSnapshot } from './api'
 import { useStore } from './StoreContext'
 
@@ -44,6 +44,7 @@ export function OrderConfirmationPage() {
   }
   const { order, customerName } = snap
   const config = getShopConfig()
+  const directors = directorLinks(config, order.code)
   const pix = order.payment_method === 'pix' ? pixInstructions({ config, orderCode: order.code, totalCents: order.total_cents, customerName }) : null
 
   return (
@@ -98,6 +99,15 @@ export function OrderConfirmationPage() {
         {order.discount_cents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents)}</span></div>}
         <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(order.total_cents)}</span></div>
       </Card>
+      {directors.length > 0 && (
+        <Card className="space-y-2 p-5">
+          <h2 className="text-lg font-bold">Precisa de ajuda?</h2>
+          <p className="text-sm text-muted-foreground">Fale direto com alguém da Direção pelo WhatsApp:</p>
+          <div className="flex flex-wrap gap-2">
+            {directors.map((d) => <a key={d.name} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={d.url} target="_blank" rel="noreferrer noopener">{d.name}</a>)}
+          </div>
+        </Card>
+      )}
       <Link className="block text-center font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
     </div>
   )
