@@ -7,7 +7,8 @@ import { PENDING, parseShopConfig, type ShopConfig } from './schema'
 const raw = {
   orgSlug: 'tiajuca',
   reservationHours: 48,
-  paymentMethods: ['pix', 'infinitepay'],
+  // Para habilitar a InfinitePay: acrescente 'infinitepay' aqui E configure INFINITEPAY_HANDLE e SHOP_PAYMENT_METHODS nos segredos das Edge Functions.
+  paymentMethods: ['pix'],
   pix: { key: 'pix@tiajuca.com.br', beneficiary: 'Rafael Loureiro Braz' },
   contact: {
     whatsapp: '5521990698483',

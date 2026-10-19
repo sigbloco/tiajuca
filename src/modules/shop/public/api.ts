@@ -23,7 +23,7 @@ export interface CreatedOrder {
 }
 
 /** Dados do pedido recém-criado, guardados só nesta aba para a tela de confirmação sobreviver a um F5. */
-export interface OrderSnapshot { order: CreatedOrder; customerName: string; phone: string }
+export interface OrderSnapshot { order: CreatedOrder; customerName: string; phone: string; paymentUrl?: string }
 const key = (code: string) => `shop:order:${code}`
 
 export function saveSnapshot(s: OrderSnapshot) {

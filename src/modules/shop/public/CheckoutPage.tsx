@@ -30,15 +30,16 @@ export function CheckoutPage() {
 
   const submit = useMutation({
     mutationFn: async () => {
-      const res = await invokeShop<{ order: CreatedOrder }>('shop-checkout', {
+      return invokeShop<{ order: CreatedOrder; payment: { url?: string } }>('shop-checkout', {
         org_slug: store.org.slug, name: f.name, phone: f.phone, email: f.email, pickup_point_id: f.pickup, payment_method: f.method,
         items: cart.lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity })),
       })
-      return res.order
     },
-    onSuccess: (order) => {
-      saveSnapshot({ order, customerName: f.name.trim(), phone: f.phone })
+    onSuccess: ({ order, payment }) => {
+      saveSnapshot({ order, customerName: f.name.trim(), phone: f.phone, paymentUrl: payment?.url })
       clear()
+      // InfinitePay: vai direto para a página de pagamento; ao terminar, ela devolve o cliente para esta confirmação.
+      if (payment?.url) { window.location.assign(payment.url); return }
       navigate(`${basePath}/pedido/${order.code}`, { replace: true })
     },
     onError: (e) => toast.error((e as Error).message), // já vem em português do servidor (invokeShop)

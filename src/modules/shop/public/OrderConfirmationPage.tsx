@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Copy } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -26,6 +26,20 @@ export function OrderConfirmationPage() {
   const { basePath } = useStore()
   const snap = loadSnapshot(code)
   const [status, setStatus] = useState(snap?.order.status ?? '')
+
+  // Enquanto o pagamento não for confirmado, confere o status de tempos em tempos (até 30 min nesta tela).
+  const [startedAt] = useState(() => Date.now())
+  const waiting = !!snap && (status === 'awaiting_payment' || status === 'payment_review') && Date.now() - startedAt < 30 * 60_000
+  useQuery({
+    queryKey: ['shop', 'order-status', code],
+    enabled: waiting,
+    refetchInterval: waiting ? 20_000 : false,
+    queryFn: async () => {
+      const r = await invokeShop<{ status: string }>('shop-order-public', { action: 'status', code, phone: snap!.phone })
+      setStatus(r.status)
+      return r.status
+    },
+  })
 
   const report = useMutation({
     mutationFn: () => invokeShop<{ status: string }>('shop-order-public', { action: 'report_payment', code, phone: snap!.phone }),
@@ -57,6 +71,24 @@ export function OrderConfirmationPage() {
         <p className="text-sm text-muted-foreground">Para consultar o pedido você vai precisar do código e do telefone usado na compra.</p>
       </Card>
 
+      {status === 'paid' && (
+        <Card className="space-y-1 border-primary p-5"><h2 className="text-lg font-bold">Pagamento confirmado!</h2>
+          <p>Obrigado! Avisaremos quando o seu pedido estiver pronto para retirada.</p></Card>
+      )}
+      {status === 'cancelled' && (
+        <Card className="space-y-1 p-5"><h2 className="text-lg font-bold">Pedido cancelado</h2>
+          <p>Este pedido foi cancelado. Se você já pagou, fale com a Direção abaixo.</p></Card>
+      )}
+      {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
+        <Card className="space-y-3 p-5">
+          <h2 className="text-lg font-bold">Pague com cartão de crédito ou Pix</h2>
+          <p className="text-sm">O pagamento é feito em uma página segura da InfinitePay. Quando for confirmado, esta tela e o seu pedido são atualizados automaticamente.</p>
+          {snap.paymentUrl
+            ? <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={snap.paymentUrl}>Ir para o pagamento · {money(order.total_cents)}</a>
+            : <p className="text-sm text-muted-foreground">Se a página de pagamento não abriu, fale com a Direção abaixo.</p>}
+          {order.expires_at && <p className="text-sm text-muted-foreground">Seus itens ficam reservados até {formatDateTime(order.expires_at)}.</p>}
+        </Card>
+      )}
       {pix && status === 'awaiting_payment' && (
         <Card className="space-y-3 p-5">
           <h2 className="text-lg font-bold">Pague com Pix</h2>

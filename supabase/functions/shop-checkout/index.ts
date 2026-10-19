@@ -4,9 +4,11 @@
 // POST JSON: { org_slug, name, phone, email, pickup_point_id, payment_method: 'pix' | 'infinitepay', items: [{ variant_id, quantity }] }
 // Se a requisição vier com o token de um usuário logado, o preço de integrante só vale se ele for integrante ATIVO (checado no banco).
 //
-// Segredos/variáveis (opcionais): SHOP_RESERVATION_HOURS (padrão 48), SHOP_PAYMENT_METHODS (padrão "pix").
+// Segredos/variáveis: SHOP_RESERVATION_HOURS (padrão 48), SHOP_PAYMENT_METHODS (padrão "pix"),
+// INFINITEPAY_HANDLE (InfiniteTag; sem ela a InfinitePay fica desligada) e SHOP_PUBLIC_URL (endereço público do site, para o retorno do pagamento).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { LINKS_ENDPOINT, buildLinkPayload, describeShape, extractCheckoutUrl, sumItems, type LinkItemInput } from './infinitepay.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -22,11 +24,39 @@ const sha256 = async (s: string) =>
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // Cada método de pagamento é um provedor com a mesma forma. Pix não cria nada no servidor (pagamento conferido à mão).
-// A InfinitePay entra aqui na etapa seguinte (cria o link de pagamento e devolve a URL).
+// InfinitePay cria um link de pagamento (crédito ou Pix na página deles); a confirmação chega pelo webhook (shop-infinitepay-webhook).
 type Order = Record<string, unknown>
-interface Provider { start(order: Order): Promise<Record<string, unknown>> }
+type Admin = ReturnType<typeof createClient>
+interface Ctx { orgSlug: string; origin: string | null; customer: { name: string; email: string; phone: string } }
+interface Provider { available(): boolean; start(order: Order, ctx: Ctx, admin: Admin): Promise<Record<string, unknown>> }
+
 const providers: Record<string, Provider> = {
-  pix: { start: async () => ({}) },
+  pix: { available: () => true, start: async () => ({}) },
+  infinitepay: {
+    available: () => !!Deno.env.get('INFINITEPAY_HANDLE'),
+    async start(order, ctx, admin) {
+      const handle = Deno.env.get('INFINITEPAY_HANDLE')!
+      const site = (Deno.env.get('SHOP_PUBLIC_URL') ?? ctx.origin ?? '').replace(/\/+$/, '')
+      if (!/^https?:\/\//.test(site)) throw new Error('SHOP_PUBLIC_URL não configurada')
+      const digits = ctx.customer.phone.replace(/\D/g, '')
+      const payload = buildLinkPayload({
+        handle, orderCode: String(order.code), items: order.items as LinkItemInput[],
+        redirectUrl: `${site}/${ctx.orgSlug}/loja/pedido/${order.code}`,
+        webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-infinitepay-webhook`,
+        customer: { name: ctx.customer.name, email: ctx.customer.email, phone: digits.length <= 11 ? `55${digits}` : digits },
+      })
+      if (sumItems(payload) !== order.total_cents) throw new Error('soma dos itens diferente do total do pedido')
+      const res = await fetch(LINKS_ENDPOINT, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10_000),
+      })
+      if (!res.ok) throw new Error(`InfinitePay respondeu ${res.status}`)
+      const data = await res.json().catch(() => null)
+      const url = extractCheckoutUrl(data)
+      if (!url) throw new Error(`resposta sem URL de pagamento (campos: ${describeShape(data)})`)
+      await admin.rpc('shop_set_payment_ref', { p_code: order.code, p_ref: { provider: 'infinitepay', link_url: url } })
+      return { url }
+    },
+  },
 }
 
 Deno.serve(async (req) => {
@@ -40,7 +70,8 @@ Deno.serve(async (req) => {
   const method = String(body.payment_method ?? '')
   const items = body.items
   const enabled = (Deno.env.get('SHOP_PAYMENT_METHODS') ?? 'pix').split(',').map((s) => s.trim()).filter(Boolean)
-  if (!enabled.includes(method) || !providers[method]) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
+  const provider = providers[method]
+  if (!enabled.includes(method) || !provider || !provider.available()) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
   if (!Array.isArray(items) || items.length === 0 || items.length > 30
       || items.some((i) => !UUID.test(String(i?.variant_id)) || !Number.isInteger(i?.quantity))) {
     return json({ error: 'O carrinho está vazio ou inválido.' }, 400)
@@ -80,6 +111,18 @@ Deno.serve(async (req) => {
     return json({ error: 'Não foi possível finalizar o pedido. Tente novamente.' }, 500)
   }
 
-  const payment = await providers[method].start(order as Order)
-  return json({ order, payment })
+  try {
+    const payment = await provider.start(order as Order, {
+      orgSlug, origin: req.headers.get('origin'),
+      customer: { name: String(body.name ?? '').trim(), email: String(body.email ?? '').trim(), phone: String(body.phone ?? '') },
+    }, admin)
+    return json({ order, payment })
+  } catch (e) {
+    // O pedido já reservou estoque: se o pagamento não pôde ser iniciado, cancela e libera a reserva.
+    console.error('provider.start', method, (e as Error).message)
+    const code = (order as Order).code
+    const { data: info } = await admin.rpc('shop_order_for_payment', { p_code: code })
+    if (info?.id) await admin.rpc('shop_cancel_order', { p_order: info.id, p_reason: 'Falha ao iniciar o pagamento', p_actor_member: null, p_actor_label: 'sistema' })
+    return json({ error: 'Não foi possível iniciar o pagamento agora. Tente novamente ou escolha outra forma de pagamento.' }, 502)
+  }
 })

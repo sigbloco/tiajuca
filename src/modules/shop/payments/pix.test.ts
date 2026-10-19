@@ -35,8 +35,9 @@ describe('Pix manual', () => {
 
 describe('métodos disponíveis e bloqueios de checkout', () => {
   it('só oferece o que está habilitado E implementado', () => {
-    expect(availableMethods(cfg())).toEqual(['pix'])
-    expect(availableMethods(cfg({ paymentMethods: ['infinitepay'] }))).toEqual([])
+    expect(availableMethods(cfg())).toEqual(['pix', 'infinitepay'])
+    expect(availableMethods(cfg({ paymentMethods: ['infinitepay'] }))).toEqual(['infinitepay'])
+    expect(availableMethods(cfg({ paymentMethods: ['pix'] }))).toEqual(['pix'])
   })
   it('bloqueia a venda por Pix sem chave ou sem nenhum contato', () => {
     expect(checkoutBlockers(cfg(), 'pix')).toEqual([])

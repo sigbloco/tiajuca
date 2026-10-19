@@ -40,8 +40,8 @@ export function pixInstructions({ config, orderCode, totalCents, customerName }:
   }
 }
 
-/** Métodos que o sistema sabe executar de verdade hoje (a InfinitePay entra na etapa 5). */
-export const IMPLEMENTED_METHODS: readonly PaymentMethodKey[] = ['pix']
+/** Métodos que o sistema sabe executar. A InfinitePay também precisa da InfiniteTag configurada no servidor (segredo INFINITEPAY_HANDLE). */
+export const IMPLEMENTED_METHODS: readonly PaymentMethodKey[] = ['pix', 'infinitepay']
 
 export const METHOD_LABELS: Record<PaymentMethodKey, { label: string; hint: string }> = {
   pix: { label: 'Pix', hint: 'Você paga pelo seu banco e envia o comprovante. Confirmamos manualmente.' },

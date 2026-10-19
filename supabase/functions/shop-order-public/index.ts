@@ -2,6 +2,7 @@
 // Limites contra adivinhação: por IP e por código (janela deslizante no banco). Respostas não distinguem "código errado" de "telefone errado".
 //
 // POST JSON: { action: 'report_payment', code, phone }  → cliente avisa que pagou (Pix): pedido vai para "pagamento em conferência".
+//            { action: 'status', code, phone }          → status atual do pedido (a confirmação atualiza sozinha após o pagamento).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -29,7 +30,12 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
 
   const ip = (req.headers.get('x-forwarded-for') ?? 'desconhecido').split(',')[0].trim()
-  for (const [bucket, max] of [[`order-ip:${await sha256(ip)}`, 30], [`order-code:${code}`, 10]] as const) {
+  // `status` é consultado em intervalos pela tela de confirmação, então tem limites próprios e mais folgados.
+  const polling = body.action === 'status'
+  const limits = polling
+    ? ([[`status-ip:${await sha256(ip)}`, 300], [`status-code:${code}`, 150]] as const)
+    : ([[`order-ip:${await sha256(ip)}`, 30], [`order-code:${code}`, 10]] as const)
+  for (const [bucket, max] of limits) {
     const { data: ok, error } = await admin.rpc('shop_rate_limit', { p_bucket: bucket, p_max: max, p_window: '1 hour' })
     if (error) { console.error('rate_limit', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
     if (!ok) return json({ error: 'Muitas tentativas. Aguarde um pouco e tente de novo.' }, 429)
@@ -38,6 +44,12 @@ Deno.serve(async (req) => {
   if (body.action === 'report_payment') {
     const { data, error } = await admin.rpc('shop_report_payment', { p_code: code, p_phone: phone })
     if (error) { console.error('shop_report_payment', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
+    if (!data?.ok) return json({ error: 'Pedido não encontrado. Confira o código e o telefone.' }, 404)
+    return json({ status: data.status })
+  }
+  if (body.action === 'status') {
+    const { data, error } = await admin.rpc('shop_order_status', { p_code: code, p_phone: phone })
+    if (error) { console.error('shop_order_status', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
     if (!data?.ok) return json({ error: 'Pedido não encontrado. Confira o código e o telefone.' }, 404)
     return json({ status: data.status })
   }
