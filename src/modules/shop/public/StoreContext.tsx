@@ -9,6 +9,10 @@ import { addToCart, indexCatalog, priceCart, reconcileCart, removeLine, setQuant
 export interface PickupPointPublic { id: string; name: string; address: string; opening_hours: string }
 export interface StoreData {
   org: { id: string; name: string; short_name: string; slug: string; logo_path: string | null; theme: OrgTheme }
+  theme_override: { primary: string | null; secondary: string | null } | null
+  intro_text: string | null
+  reservation_hours: number
+  privacy_retention_years: number
   payment_methods: string[]
   pix: PixInfo | null
   contact: ContactInfo

@@ -4,13 +4,12 @@ export const PAYMENT_METHODS = ['pix', 'infinitepay'] as const
 export type PaymentMethodKey = (typeof PAYMENT_METHODS)[number]
 
 /**
- * Configuração ESTÁTICA da loja (arquivo). Nome, logo e cores vêm da organização; Pix, contatos, formas de pagamento e remetente dos
- * e-mails são editáveis no painel (Loja → Pagamentos e contatos) e ficam no banco; credenciais ficam nos segredos das Edge Functions.
+ * Configuração ESTÁTICA da loja (arquivo): só o identificador técnico da organização. TUDO o que o bloco vê e muda no dia a dia
+ * (título, cores, textos, pagamentos, Pix, contatos, pontos de retirada e datas, prazos, remetente) é editado no painel
+ * (Loja → Configurações) e fica no banco. Credenciais ficam nos segredos das Edge Functions.
  */
 export const shopConfigSchema = z.object({
   orgSlug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
-  /** Horas que os itens ficam reservados aguardando o pagamento (o servidor aplica; aqui só para avisar o cliente). */
-  reservationHours: z.number().int().min(1).max(24 * 30),
 })
 export type ShopConfig = z.infer<typeof shopConfigSchema>
 

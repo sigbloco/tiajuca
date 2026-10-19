@@ -9,6 +9,7 @@ import { applyTheme } from '@/core/theme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { useShopLabel } from '@/modules/site/useShopLabel'
 import { BackButton } from '@/components/shared/BackButton'
+import { buildShopTheme } from '../theme'
 import { LoginDialog } from './LoginDialog'
 import { StoreProvider, fetchStore, useStore } from './StoreContext'
 
@@ -39,10 +40,12 @@ function Header() {
 
 function Shell() {
   const { store, notices, dismissNotices, basePath } = useStore()
+  const shopLabel = useShopLabel(store.org.slug)
   useEffect(() => {
-    applyTheme(store.org.theme, { cache: false })
-    applyBrandToDocument({ name: `Loja ${store.org.short_name}`, logo_path: store.org.logo_path })
-  }, [store])
+    // Cores do bloco (Configurações → Site) + cores só da loja, se definidas em Loja → Configurações.
+    applyTheme(buildShopTheme(store.org.theme, store.theme_override), { cache: false })
+    applyBrandToDocument({ name: `${shopLabel} ${store.org.short_name}`, logo_path: store.org.logo_path })
+  }, [store, shopLabel])
   return (
     <div className="min-h-screen bg-background">
       <Header />

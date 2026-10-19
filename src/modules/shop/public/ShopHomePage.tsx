@@ -29,6 +29,7 @@ export function ShopHomePage() {
           <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Entrar</button>
         </Card>
       )}
+      {store.intro_text && <p className="whitespace-pre-line rounded-lg border border-secondary p-3">{store.intro_text}</p>}
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
       <div role="group" aria-label="Filtrar produtos" className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (

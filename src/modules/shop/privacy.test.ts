@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RETENTION_YEARS, buildPrivacyNotice } from './privacy'
+import { buildPrivacyNotice } from './privacy'
 
 const text = (s: ReturnType<typeof buildPrivacyNotice>) => s.flatMap((x) => [x.title, ...x.paragraphs]).join('\n')
 
@@ -10,7 +10,9 @@ describe('aviso de privacidade', () => {
     expect(full).toContain('Supabase')
     expect(full).toContain('InfinitePay')
     expect(full).toContain('Não guardamos dados de cartão')
-    expect(full).toContain(`${RETENTION_YEARS} anos`)
+    expect(full).toContain('por até 5 anos')
+    expect(text(buildPrivacyNotice('Bloco', { whatsapp: null, email: null }, 10))).toContain('por até 10 anos')
+    expect(text(buildPrivacyNotice('Bloco', { whatsapp: null, email: null }, 1))).toContain('por até 1 ano,')
   })
   it('usa o nome do bloco e os canais de atendimento configurados', () => {
     expect(full).toContain('loja do Cordão da Tia Juca')

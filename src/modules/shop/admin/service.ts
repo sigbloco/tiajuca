@@ -1,5 +1,6 @@
 import { supabase } from '@/core/supabase'
 import { slugify, type ProductKind } from '../catalog'
+import type { ScheduleSlot } from './schedule'
 
 export interface ShopVariant { id: string; product_id: string; label: string; stock: number | null; reserved: number; sort_order: number; is_active: boolean }
 export interface ShopImage { id: string; product_id: string; storage_path: string; alt: string; sort_order: number }
@@ -8,7 +9,7 @@ export interface ShopProduct {
   price_cents: number; member_discount_pct: number; lead_time_days: number | null; is_active: boolean; sort_order: number
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
-export interface PickupPoint { id: string; name: string; address: string; opening_hours: string; sort_order: number; is_active: boolean }
+export interface PickupPoint { id: string; name: string; address: string; opening_hours: string; schedule: ScheduleSlot[]; sort_order: number; is_active: boolean }
 
 export const IMAGE_BUCKET = 'shop-images'
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024

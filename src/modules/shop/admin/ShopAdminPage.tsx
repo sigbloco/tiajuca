@@ -14,7 +14,7 @@ const TABS = [
   { key: 'orders', label: 'Pedidos' },
   { key: 'products', label: 'Produtos' },
   { key: 'pickup', label: 'Pontos de retirada' },
-  { key: 'payments', label: 'Pagamentos e contatos' },
+  { key: 'payments', label: 'Configurações' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -31,7 +31,7 @@ export function ShopAdminPage() {
       <h1>{shopLabel}</h1>
       {pending.length > 0 && (
         <Card className="border-secondary p-4">
-          <p className="font-semibold">Falta configurar antes de vender (aba Pagamentos e contatos):</p>
+          <p className="font-semibold">Falta configurar antes de vender (aba Configurações):</p>
           <ul className="mt-2 list-disc pl-5 text-sm">{pending.map((p) => <li key={p}>{p}</li>)}</ul>
         </Card>
       )}

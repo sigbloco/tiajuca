@@ -4,13 +4,12 @@ import { getShopConfig } from './shop.config'
 
 describe('configuração estática da loja', () => {
   it('aceita uma configuração válida', () => {
-    expect(parseShopConfig({ orgSlug: 'tiajuca', reservationHours: 48 })).toEqual({ orgSlug: 'tiajuca', reservationHours: 48 })
+    expect(parseShopConfig({ orgSlug: 'tiajuca' })).toEqual({ orgSlug: 'tiajuca' })
   })
 
-  it('rejeita slug e prazo inválidos, com mensagem que aponta o campo', () => {
-    expect(() => parseShopConfig({ orgSlug: 'Tia Juca', reservationHours: 48 })).toThrow(/orgSlug/)
-    expect(() => parseShopConfig({ orgSlug: 'tiajuca', reservationHours: 0 })).toThrow(/reservationHours/)
-    expect(() => parseShopConfig({ orgSlug: 'tiajuca', reservationHours: 1.5 })).toThrow(/reservationHours/)
+  it('rejeita slug inválido, com mensagem que aponta o campo', () => {
+    expect(() => parseShopConfig({ orgSlug: 'Tia Juca' })).toThrow(/orgSlug/)
+    expect(() => parseShopConfig({})).toThrow(/orgSlug/)
     expect(() => parseShopConfig(null)).toThrow(/inválida/)
   })
 

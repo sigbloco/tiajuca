@@ -1,13 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Input, Label, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrganization, useOrgId } from '@/core/organization'
 import { invokeShop } from '../public/api'
+import { buildShopTheme, isHexColor } from '../theme'
 import { cleanHandle, fromSettings, getSettings, saveSettings, toSettings, validateSettings, type SettingsForm, type ShopSettings } from './settings'
+
+/** Seletor de cor + campo #RRGGBB. Em branco = usa a cor do bloco (`fallback`). */
+function ColorField({ id, label, value, fallback, onChange }: { id: string; label: string; value: string; fallback?: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <input type="color" aria-label={`${label} (seletor)`} className="h-11 w-14 cursor-pointer rounded-lg border border-input bg-card p-1"
+          value={isHexColor(value) ? value : fallback && isHexColor(fallback) ? fallback : '#888888'} onChange={(e) => onChange(e.target.value.toUpperCase())} />
+        <Input id={id} placeholder={fallback ? `${fallback} (do bloco)` : '#RRGGBB'} maxLength={7} value={value} onChange={(e) => onChange(e.target.value.trim())} />
+      </div>
+    </div>
+  )
+}
 
 function SettingsFormView({ initial }: { initial: ShopSettings }) {
   const orgId = useOrgId()
@@ -16,6 +32,8 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
   const [f, setF] = useState<SettingsForm>(() => fromSettings(initial, window.location.origin))
   const [errors, setErrors] = useState<string[]>([])
   const [test, setTest] = useState<{ ok: boolean; message: string } | null>(null)
+  const orgTheme = membership?.theme ?? {}
+  const shopTheme = buildShopTheme(orgTheme, { primary: f.themePrimary, secondary: f.themeSecondary })
   const set = (patch: Partial<SettingsForm>) => setF((cur) => ({ ...cur, ...patch }))
 
   const save = useMutation({
@@ -41,6 +59,37 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-4">
+      <Card className="space-y-3 p-4">
+        <h3 className="font-bold">Aparência da loja</h3>
+        <p className="rounded-lg bg-muted p-3 text-sm">O <strong>nome da loja</strong> (menu, site e vitrine) e as <strong>cores padrão do bloco</strong> são editados em <Link className="font-semibold text-primary hover:underline" to={`/${membership?.slug}/configuracoes`}>Configurações → Site</Link>. Abaixo você pode dar cores só para a loja.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ColorField id="st-c1" label="Cor principal" value={f.themePrimary} fallback={orgTheme.primary} onChange={(v) => set({ themePrimary: v })} />
+          <ColorField id="st-c2" label="Cor secundária" value={f.themeSecondary} fallback={orgTheme.secondary} onChange={(v) => set({ themeSecondary: v })} />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3" aria-label="Prévia das cores">
+          <span className="rounded-lg px-3 py-1.5 text-sm font-bold" style={{ background: shopTheme.primary, color: shopTheme.primaryForeground }}>Botão principal</span>
+          <span className="rounded-lg px-3 py-1.5 text-sm font-bold" style={{ background: shopTheme.secondary, color: shopTheme.secondaryForeground }}>Destaque</span>
+          <Button type="button" size="sm" variant="ghost" disabled={!f.themePrimary && !f.themeSecondary} onClick={() => set({ themePrimary: '', themeSecondary: '' })}>Usar as cores do bloco</Button>
+        </div>
+        <p className="text-sm text-muted-foreground">As cores valem só para a loja. A cor do texto sobre elas é escolhida automaticamente para ficar legível. O logo é o do bloco.</p>
+        <div className="space-y-1.5"><Label htmlFor="st-intro">Texto de abertura da vitrine (opcional)</Label>
+          <textarea id="st-intro" rows={3} maxLength={400} value={f.introText} onChange={(e) => set({ introText: e.target.value })}
+            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <p className="text-sm text-muted-foreground">Mostrado no alto da loja. Ex.: &quot;Camisas do Carnaval 2027! Retire nos ensaios, às segundas.&quot; ({f.introText.length}/400)</p></div>
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <h3 className="font-bold">Reserva e privacidade</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label htmlFor="rs-h">Reserva sem pagamento (horas)</Label>
+            <Input id="rs-h" inputMode="numeric" value={f.reservationHours} onChange={(e) => set({ reservationHours: e.target.value.replace(/\D/g, '') })} />
+            <p className="text-sm text-muted-foreground">Depois desse prazo, pedido que não pagou é cancelado e o estoque volta. Vale para os próximos pedidos.</p></div>
+          <div className="space-y-1.5"><Label htmlFor="rs-y">Guarda dos dados (anos)</Label>
+            <Input id="rs-y" inputMode="numeric" value={f.retentionYears} onChange={(e) => set({ retentionYears: e.target.value.replace(/\D/g, '') })} />
+            <p className="text-sm text-muted-foreground">Informado no aviso de privacidade da loja.</p></div>
+        </div>
+      </Card>
+
       <Card className="space-y-3 p-4">
         <h3 className="font-bold">Pix (confirmação manual)</h3>
         <label className="flex min-h-11 items-center gap-3">

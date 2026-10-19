@@ -5,7 +5,7 @@
 // Se a requisição vier com o token de um usuário logado, o preço de integrante só vale se ele for integrante ATIVO (checado no banco).
 //
 // Métodos de pagamento, InfiniteTag e endereço público do site vêm da tabela `shop_settings` (editável no painel da loja).
-// Variável opcional: SHOP_RESERVATION_HOURS (padrão 48).
+// O prazo de reserva (horas) também vem de shop_settings.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { LINKS_ENDPOINT, buildLinkPayload, describeShape, extractCheckoutUrl, sumItems, type LinkItemInput } from './infinitepay.ts'
@@ -33,7 +33,7 @@ function flushMail() {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-interface Settings { payment_methods: string[]; infinitepay_handle: string | null; public_site_url: string | null; pix_key: string | null; pix_beneficiary: string | null }
+interface Settings { payment_methods: string[]; infinitepay_handle: string | null; public_site_url: string | null; pix_key: string | null; pix_beneficiary: string | null; reservation_hours: number }
 
 // Cada método de pagamento é um provedor com a mesma forma. Pix não cria nada no servidor (pagamento conferido à mão).
 // InfinitePay cria um link de pagamento (crédito ou Pix na página deles); a confirmação chega pelo webhook (shop-infinitepay-webhook).
@@ -112,7 +112,8 @@ Deno.serve(async (req) => {
     userId = data.user?.id ?? null
   }
 
-  const hours = Math.min(24 * 14, Math.max(1, Number(Deno.env.get('SHOP_RESERVATION_HOURS') ?? 48) || 48))
+  // Prazo da reserva: configurado no painel (Loja → Configurações).
+  const hours = Math.min(720, Math.max(1, Number((settings as Settings).reservation_hours) || 48))
   const { data: order, error } = await admin.rpc('shop_create_order', {
     p_org: orgId, p_user: userId, p_name: String(body.name ?? ''), p_phone: String(body.phone ?? ''), p_email: String(body.email ?? ''),
     p_pickup: body.pickup_point_id, p_method: method,

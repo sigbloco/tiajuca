@@ -1,14 +1,12 @@
 /**
  * Aviso de privacidade da loja (LGPD). Texto em blocos para a página e para os testes.
- * Modelo de partida: a Direção deve revisar o texto (prazo de guarda, canal de atendimento) antes de divulgar a loja.
+ * Modelo de partida: a Direção deve revisar o texto antes de divulgar a loja. O prazo de guarda é editável no painel.
  */
 export interface PrivacyContact { whatsapp: string | null; email: string | null }
 export interface PrivacySection { title: string; paragraphs: string[] }
 
-/** Tempo que guardamos os dados do pedido. Ajuste aqui se a Direção decidir outro prazo. */
-export const RETENTION_YEARS = 5
-
-export function buildPrivacyNotice(orgName: string, contact: PrivacyContact): PrivacySection[] {
+/** `retentionYears` vem das configurações da loja (painel). */
+export function buildPrivacyNotice(orgName: string, contact: PrivacyContact, retentionYears = 5): PrivacySection[] {
   const channels = [contact.email && `e-mail ${contact.email}`, contact.whatsapp && `WhatsApp +${contact.whatsapp}`].filter(Boolean).join(' ou ')
   return [
     {
@@ -38,7 +36,7 @@ export function buildPrivacyNotice(orgName: string, contact: PrivacyContact): Pr
     },
     {
       title: 'Por quanto tempo guardamos',
-      paragraphs: [`Guardamos os dados do pedido por até ${RETENTION_YEARS} anos, para controle financeiro do bloco e eventual atendimento posterior. Depois disso eles são apagados ou anonimizados.`],
+      paragraphs: [`Guardamos os dados do pedido por até ${retentionYears} ${retentionYears === 1 ? 'ano' : 'anos'}, para controle financeiro do bloco e eventual atendimento posterior. Depois disso eles são apagados ou anonimizados.`],
     },
     {
       title: 'Seus direitos',

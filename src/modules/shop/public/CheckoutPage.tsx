@@ -7,7 +7,6 @@ import { Button, Card, Input, Label, Select, cn } from '@/components/ui/primitiv
 import { useAuth } from '@/core/auth'
 import { formatCurrency } from '@/core/format'
 import { fromCents } from '../catalog'
-import { getShopConfig } from '../config/shop.config'
 import { METHOD_LABELS, availableMethods, checkoutBlockers } from '../payments/pix'
 import { invokeShop, saveSnapshot, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
@@ -18,7 +17,6 @@ export function CheckoutPage() {
   const { store, cart, basePath, clear, isMember } = useStore()
   const { session } = useAuth()
   const navigate = useNavigate()
-  const config = getShopConfig()
   const methods = availableMethods(store.payment_methods)
   const meta = session?.user.user_metadata as { full_name?: string } | undefined
   const [f, setF] = useState({
@@ -92,7 +90,7 @@ export function CheckoutPage() {
               </button>
             ))}
           </div>
-          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {config.reservationHours} horas aguardando o pagamento.</p>
+          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
         </Card>
 
         <label className="flex items-start gap-3 text-sm">

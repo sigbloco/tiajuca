@@ -6,7 +6,7 @@ import { useStore } from './StoreContext'
 /** Aviso de privacidade da loja (LGPD). */
 export function PrivacyPage() {
   const { store, basePath } = useStore()
-  const sections = buildPrivacyNotice(store.org.name, store.contact)
+  const sections = buildPrivacyNotice(store.org.name, store.contact, store.privacy_retention_years)
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <h1>Aviso de privacidade</h1>

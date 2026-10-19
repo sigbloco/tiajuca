@@ -33,11 +33,14 @@ Dá para voltar um passo (corrigir engano). Toda ação grava **quem fez e quand
 Criar pedido reserva; cancelar/expirar devolve; **retirar** baixa o estoque físico. Pedido "aguardando pagamento" expira em 48 h
 (a cada 15 min o banco cancela os vencidos). **"Em conferência" não expira.**
 
-## Configurar (pelo painel)
+## Configurar (pelo painel — nada disso exige mexer em código)
 
-**Loja → Pagamentos e contatos**: formas de pagamento, chave Pix e favorecido, InfiniteTag (com botão **Testar conexão**), endereço do site,
+**Loja → Configurações**: cores só da loja (opcionais) e texto de abertura da vitrine; prazo de reserva sem pagamento e tempo de guarda dos dados (aviso de privacidade);
+desconto padrão de integrante (já preenche produto novo); formas de pagamento, chave Pix e favorecido, InfiniteTag (com botão **Testar conexão**), endereço do site,
 WhatsApp/e-mail da loja, pessoas da Direção (botões de WhatsApp) e remetente dos e-mails.
-**Pontos de retirada**: nome, endereço e horário (só os ativos aparecem no checkout). **Produtos**: preço público, desconto de integrante, variações e fotos.
+O **nome da loja** e as **cores padrão do bloco** ficam em **Configurações → Site**.
+**Pontos de retirada**: nome, endereço e **agenda** — dias fixos da semana (ex.: ensaios às segundas) e/ou datas únicas (eventos), com horário; datas que passam somem sozinhas
+e um ponto que só tem datas passadas deixa de aparecer no checkout. **Produtos**: preço público, desconto de integrante, variações e fotos. **Pedidos**: pagamento, andamento, cancelar/reativar, arquivar.
 
 Quem pode gerenciar: Titular e Direção. Para dar a outra pessoa, use **Acesso e papéis** e conceda `shop.manage` a um papel.
 
@@ -49,7 +52,6 @@ Quem pode gerenciar: Titular e Direção. Para dar a outra pessoa, use **Acesso 
 | `SMTP_PASS` | **senha de app** do Gmail (16 letras; exige verificação em duas etapas) |
 | `RESEND_API_KEY` | alternativa ao Gmail (e `MAIL_PROVIDER=resend` para forçar) |
 | `MAIL_PROVIDER` | opcional: `smtp`, `resend` ou `log` (teste: só registra, não envia) |
-| `SHOP_RESERVATION_HOURS` | opcional, padrão 48 |
 
 Sem credenciais de e-mail os avisos **esperam na fila** e saem quando o segredo for cadastrado. Nada de senha vai para o código nem para o painel.
 
@@ -57,7 +59,7 @@ Sem credenciais de e-mail os avisos **esperam na fila** e saem quando o segredo 
 
 ```
 src/modules/shop/
-  config/        shop.config.ts: único ponto de leitura da configuração estática (slug, prazo)
+  config/        shop.config.ts: único ponto de leitura da configuração estática (só o slug da organização)
   catalog.ts     preço, desconto, estoque disponível e validação do produto (puro, testado)
   cart.ts        carrinho (puro, testado)
   orders/        transições de status e textos para o cliente (puro, testado)
@@ -66,7 +68,7 @@ src/modules/shop/
   public/        vitrine, produto, carrinho, checkout, confirmação, Meus pedidos, login em popup
   admin/         Pedidos, Produtos, Pontos de retirada, Pagamentos e contatos
 supabase/
-  migrations/20261019000022…32   tabelas, RLS, funções e fila de e-mails
+  migrations/20261019000022…36   tabelas, RLS, funções e fila de e-mails
   functions/     shop-checkout, shop-order-public, shop-infinitepay-webhook, shop-admin, shop-mailer
   tests/rls_shop_smoke.sql
 ```
@@ -81,7 +83,7 @@ Princípios:
 
 ## Colocar no ar (ou recriar do zero)
 
-1. **Banco**: aplique `supabase/migrations/*.sql` em ordem (as da loja são `20261019000022` a `…32`) e depois `supabase/seed/tiajuca_shop.sql`
+1. **Banco**: aplique `supabase/migrations/*.sql` em ordem (as da loja são `20261019000022` a `…36`) e depois `supabase/seed/tiajuca_shop.sql`
    (pontos de retirada de exemplo e configurações). Para um bloco novo, edite os dados do seed (Pix, contatos, Direção).
 2. **Edge Functions**: publique as cinco pastas de `supabase/functions/shop-*`. Todas com verificação de JWT ligada, **exceto**
    `shop-infinitepay-webhook` e `shop-mailer` (que não recebem login). `shop-admin` e `shop-checkout` usam um arquivo `infinitepay.ts`
@@ -95,7 +97,7 @@ Princípios:
 ### Para outro bloco usar a mesma base
 
 Ainda não é um produto multi-instância pronto, mas a estrutura foi pensada para isso: nome, logo e cores vêm da organização (tema do app);
-Pix, contatos e métodos vêm do painel; o que é fixo no código é só `src/modules/shop/config/shop.config.ts` (`orgSlug`, prazo).
+Pix, contatos e métodos vêm do painel; o que é fixo no código é só `src/modules/shop/config/shop.config.ts` (`orgSlug`).
 Passos: criar um projeto Supabase novo → aplicar migrations → criar a organização e o primeiro diretor (README principal) → seed da loja
 com os dados do bloco → trocar `orgSlug` → publicar as funções e cadastrar os segredos → configurar pelo painel.
 
@@ -116,7 +118,7 @@ para desfazer tudo).
 - **Reembolso** é feito fora do sistema; o pedido é só cancelado, com motivo.
 - **E-mail que não saiu**: no banco, `select template, to_email, status, attempts, last_error from shop_email_outbox where status <> 'sent' order by created_at desc;`
 - **Domínio novo**: atualize o **endereço do site** em Pagamentos e contatos (links dos e-mails e retorno da InfinitePay).
-- **Aviso de privacidade**: modelo em `src/modules/shop/privacy.ts` (prazo de guarda de 5 anos); a Direção deve revisar o texto.
+- **Aviso de privacidade**: modelo em `src/modules/shop/privacy.ts` (prazo de guarda editável no painel); a Direção deve revisar o texto.
 
 ## Limites conhecidos
 
