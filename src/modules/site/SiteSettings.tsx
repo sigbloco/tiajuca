@@ -54,9 +54,9 @@ export function SiteSettings() {
   })
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error('Use uma imagem PNG, JPG ou WebP.')
+      if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(file.type)) throw new Error('Use uma imagem SVG, PNG, JPG ou WebP.')
       if (file.size > 5 * 1024 * 1024) throw new Error('A imagem passa de 5 MB.')
-      const ext = file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg'
+      const ext = file.type.includes('svg') ? 'svg' : file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg'
       const path = `${orgId}/foto-${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('site-public').upload(path, file, { contentType: file.type, upsert: false })
       if (error) throw error
@@ -84,11 +84,11 @@ export function SiteSettings() {
         <div className="flex flex-wrap items-center gap-3">
           <img src={f.photo_url || membership?.logo_path || '/brand/tiajuca.png'} alt="Foto da página" className="h-24 w-24 rounded-full object-cover ring-2 ring-border" />
           <div className="space-y-2">
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="Escolher foto"
+            <input ref={fileRef} type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" className="sr-only" aria-label="Escolher foto"
               onChange={(e) => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} />
             <Button type="button" variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {upload.isPending ? 'Enviando…' : 'Trocar foto'}</Button>
             {f.photo_url && <Button type="button" variant="ghost" onClick={() => setF({ ...f, photo_url: null })}>Usar a logo do bloco</Button>}
-            <p className="text-xs text-muted-foreground">PNG, JPG ou WebP, até 5 MB. Aparece em círculo.</p>
+            <p className="text-xs text-muted-foreground">SVG, PNG, JPG ou WebP, até 5 MB. Aparece em círculo.</p>
           </div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="st-head">Título</Label>
