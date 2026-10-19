@@ -3,6 +3,8 @@ export interface OrgTheme {
   primaryForeground?: string
   secondary?: string
   secondaryForeground?: string
+  /** Cores guardadas pela Direção para escolher no painel (não afeta o visual). */
+  palette?: string[]
 }
 
 const CACHE_KEY = 'sigbloco:theme'
@@ -14,7 +16,7 @@ function hexToChannels(hex: string): string | null {
   return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`
 }
 
-const MAP: Record<keyof OrgTheme, string> = {
+const MAP: Record<Exclude<keyof OrgTheme, 'palette'>, string> = {
   primary: '--primary',
   primaryForeground: '--primary-foreground',
   secondary: '--secondary',
@@ -25,7 +27,7 @@ const MAP: Record<keyof OrgTheme, string> = {
 export function applyTheme(theme: OrgTheme | null | undefined, { cache = true } = {}) {
   if (!theme) return
   const root = document.documentElement
-  for (const key of Object.keys(MAP) as (keyof OrgTheme)[]) {
+  for (const key of Object.keys(MAP) as (keyof typeof MAP)[]) {
     const channels = theme[key] ? hexToChannels(theme[key] as string) : null
     if (channels) root.style.setProperty(MAP[key], channels)
   }

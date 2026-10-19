@@ -67,7 +67,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           {subtitle && <p className="mb-4 text-muted-foreground">{subtitle}</p>}
           {children}
         </Card>
-        <Link to="/site" className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao site</Link>
+        <Link to="/site" className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar para a página inicial</Link>
       </div>
     </main>
   )

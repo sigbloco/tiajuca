@@ -104,8 +104,8 @@ export function SiteSettings() {
 
       <Card className="space-y-3 p-4">
         <h3>Cores</h3>
-        <ColorPick label="Fundo do cabeçalho" value={f.header_color} onChange={(v) => setF({ ...f, header_color: v })} suggestions={[['Cor principal do bloco', membership?.theme?.primary], ['Cor de destaque do bloco', membership?.theme?.secondary]]} />
-        <ColorPick label="Fundo da página" value={f.page_color} onChange={(v) => setF({ ...f, page_color: v })} suggestions={[['Cor de destaque do bloco', membership?.theme?.secondary], ['Cor principal do bloco', membership?.theme?.primary]]} />
+        <ColorPick label="Fundo do cabeçalho" value={f.header_color} onChange={(v) => setF({ ...f, header_color: v })} />
+        <ColorPick label="Fundo da página" value={f.page_color} onChange={(v) => setF({ ...f, page_color: v })} />
         <p className="text-xs text-muted-foreground">O texto muda sozinho para branco ou escuro, conforme o fundo, para continuar legível. Sem escolha, usa as cores do bloco.</p>
       </Card>
 

@@ -40,6 +40,13 @@ export function AppShell() {
     }),
     ...NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, admin: true })),
   ]
+  const segs = pathname.slice(base.length).split('/').filter(Boolean)
+  const item = NAV_ITEMS.find((i) => i.to === segs[0])
+  const group = item?.group ?? (segs[0] === 'lista-de-espera' ? 'oficina' : undefined)
+  const parent = segs.length === 0 ? null
+    : segs.length > 1 ? { to: `${base}/${segs[0]}`, name: segs[0] === 'gerenciar-loja' ? shopLabel : item?.label ?? 'a página anterior' }
+    : group ? { to: `${base}/${group}`, name: HUBS[group].label }
+    : { to: base, name: 'a página inicial' }
   const isActive = (e: MenuEntry) => {
     const rest = pathname.slice(base.length).replace(/^\//, '')
     const first = rest.split('/')[0]
@@ -79,7 +86,7 @@ export function AppShell() {
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         <InactiveNotice />
-        {pathname.replace(/\/$/, '') !== base && <BackButton fallback={base} />}
+        {parent && <BackButton to={parent.to} name={parent.name} />}
         <Outlet />
       </main>
 

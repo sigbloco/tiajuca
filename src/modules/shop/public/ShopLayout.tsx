@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ShoppingCart } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, Outlet, useParams } from 'react-router-dom'
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Card, Skeleton } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
@@ -41,6 +41,7 @@ function Header() {
 function Shell() {
   const { store, notices, dismissNotices, basePath } = useStore()
   const shopLabel = useShopLabel(store.org.slug)
+  const { pathname } = useLocation()
   useEffect(() => {
     // Cores do bloco (Configurações → Site) + cores só da loja, se definidas em Loja → Configurações.
     applyTheme(buildShopTheme(store.org.theme, store.theme_override), { cache: false })
@@ -51,7 +52,7 @@ function Shell() {
       <Header />
       <LoginDialog />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <BackButton fallback="/site" label="Voltar" />
+        {pathname.replace(/\/$/, '') === basePath ? <BackButton to="/site" name="a página inicial" /> : <BackButton to={basePath} name={shopLabel} />}
         {notices.length > 0 && (
           <Card role="status" className="mb-4 border-secondary p-3 text-sm">
             <ul className="list-disc space-y-1 pl-5">{notices.map((n) => <li key={n}>{n}</li>)}</ul>
