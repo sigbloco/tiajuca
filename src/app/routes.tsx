@@ -28,6 +28,8 @@ import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
+import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
+import { OrderConfirmationPage } from '@/modules/shop/public/OrderConfirmationPage'
 import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { ShopLayout } from '@/modules/shop/public/ShopLayout'
@@ -90,6 +92,8 @@ export const router = createBrowserRouter(
             { index: true, element: <ShopHomePage /> },
             { path: 'produto/:slug', element: <ProductPage /> },
             { path: 'carrinho', element: <CartPage /> },
+            { path: 'finalizar', element: <CheckoutPage /> },
+            { path: 'pedido/:code', element: <OrderConfirmationPage /> },
           ],
         },
         {

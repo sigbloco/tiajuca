@@ -61,7 +61,7 @@ export function CartPage() {
         <p className="rounded-lg bg-muted p-3 text-sm">Seu pedido tem itens de pronta entrega e itens sob encomenda. Os de pronta entrega ficam prontos primeiro; os sob encomenda seguem o prazo de produção, e cada grupo é retirado separadamente.</p>
       )}
       <p className="text-sm text-muted-foreground">A retirada é combinada e o pagamento é antecipado e integral. Os valores são confirmados na finalização.</p>
-      <Button className="w-full" disabled title="Disponível na próxima etapa">Finalizar compra (em breve)</Button>
+      <Link to={`${basePath}/finalizar`} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90">Finalizar compra</Link>
     </div>
   )
 }
