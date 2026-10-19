@@ -43,6 +43,15 @@ export async function listCharges(p: {
   return { rows: (data ?? []) as unknown as Charge[], total: count ?? 0 }
 }
 
+/** Todas as cobranças do mês (a tela agrupa por naipe e categoria, então não pagina). */
+export async function listAllCharges(orgId: string, competence: string) {
+  const { data, error } = await supabase.from('monthly_charges').select(SELECT)
+    .eq('organization_id', orgId).eq('competence', competence)
+    .order('full_name', { referencedTable: 'members', ascending: true }).limit(2000)
+  if (error) throw error
+  return (data ?? []) as unknown as Charge[]
+}
+
 export async function listMyCharges(memberId: string) {
   const { data, error } = await supabase.from('monthly_charges').select(SELECT)
     .eq('member_id', memberId).order('competence', { ascending: false }).limit(24)

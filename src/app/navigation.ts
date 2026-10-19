@@ -34,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },
   { to: 'drive', label: 'Pastas do Drive', icon: FolderOpen, permission: 'drive.read' },
   { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read' },
+  { to: 'gerenciar-loja', label: 'Loja', icon: Store, permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
 
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage', description: 'Períodos do bloco (ex.: Carnaval 2026/27).' },
   { to: 'membros', label: 'Integrantes', icon: Users, group: 'organizacao', permission: 'members.read', description: 'Todas as pessoas, por naipe e instrumento.' },
@@ -41,7 +42,6 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'organizacao', permission: 'scholarships.manage', description: 'Quem tem bolsa e quanto isso pesa.' },
   { to: 'financeiro', label: 'Financeiro', icon: Banknote, group: 'organizacao', permission: 'finance.read', description: 'Receitas, despesas, distribuição e equipe.' },
   { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
-  { to: 'gerenciar-loja', label: 'Loja', icon: Store, group: 'organizacao', permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
 
   { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group', description: 'Quem está na oficina como aluno.' },
   { to: 'presenca', label: 'Presença', icon: ClipboardCheck, group: 'oficina', permission: 'attendance.record', description: 'Chamada dos ensaios e das aulas.' },

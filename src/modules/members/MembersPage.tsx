@@ -74,13 +74,15 @@ function InviteButton({ member }: { member: MemberRow }) {
 }
 
 interface GroupMember extends MemberRow {
-  member_artistic_links: { instrument_id: string | null; function_id: string | null; ended_at: string | null }[]
+  member_artistic_links: { instrument_id: string | null; function_id: string | null; started_at: string; ended_at: string | null }[]
 }
 interface Leaf { key: string; label: string; members: GroupMember[] }
 interface TreeData { sectionList: { id: string; name: string; sort_order: number; is_active: boolean }[]; map: Map<string, Map<string, Map<string, Leaf>>>; total: number }
-const EMPTY_TREE: TreeData = { sectionList: [], map: new Map(), total: 0 }
 
-/** Integrantes agrupados por naipe → subnaipe → instrumento (grupos fechados por padrão), com filtro em funil. */
+/**
+ * Integrantes agrupados por naipe → subnaipe → instrumento, VISTOS POR CICLO: os botões de ciclo mostram quem participou de cada
+ * Carnaval (com o instrumento que tinha na época); "Também esteve em" cruza ciclos (ex.: ativos hoje que já estavam em 2024/25).
+ */
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -95,32 +97,42 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const categoryOf = new Map((cats.data ?? []).map((c) => [c.member_id, c]))
   const categoryNames = [...new Set((cats.data ?? []).map((c) => c.category_name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const wantedCategory = lockedCategory ?? categoryFilter
-  const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
+  // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
+  const [filter, setFilter] = useState<FilterValue>({ ...EMPTY_FILTER, status: 'active' })
   const [sectionFilter, setSectionFilter] = useState('')
+  const [cycleSel, setCycleSel] = useState('')
+  const [alsoIn, setAlsoIn] = useState<string[]>([])
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [sheetOpen, setSheetOpen] = useState(false)
   const [selected, setSelected] = useState<MemberRow | null>(null)
   const { data: cycles } = useCycles()
   const { data: statuses } = useCycleStatuses()
-  const currentCycle = cycles?.find((c) => c.is_current)?.id
+
+  // Só ciclos com gente (o Junino vazio não vira botão). Mais recente primeiro.
+  const allRows = useQuery({
+    queryKey: ['members', orgId, 'cycle-rows'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('member_cycles').select('member_id, cycle_id, status_id').limit(20000)
+      if (error) throw error
+      return (data ?? []) as { member_id: string; cycle_id: string; status_id: string }[]
+    },
+  })
+  const cycleButtons = useMemo(() => {
+    const withPeople = new Set((allRows.data ?? []).map((r) => r.cycle_id))
+    return (cycles ?? []).filter((c) => c.is_active && (withPeople.has(c.id) || c.is_current)).sort((a, b) => b.starts_on.localeCompare(a.starts_on))
+  }, [cycles, allRows.data])
+  const currentCycle = cycles?.find((c) => c.is_current)
+  const activeCycleId = cycleSel || currentCycle?.id || cycleButtons[0]?.id || ''
+  const activeCycle = cycles?.find((c) => c.id === activeCycleId)
 
   const members = useQuery({
     queryKey: ['members', orgId, 'grouped'],
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
-        .select('id, full_name, display_name, email, phone, social_handle, user_id, archived_at, member_artistic_links(instrument_id, function_id, ended_at)')
+        .select('id, full_name, display_name, email, phone, social_handle, user_id, archived_at, member_artistic_links(instrument_id, function_id, started_at, ended_at)')
         .eq('organization_id', orgId).is('archived_at', null).order('full_name').limit(2000)
       if (error) throw error
       return (data ?? []) as unknown as GroupMember[]
-    },
-  })
-  const cycleRows = useQuery({
-    queryKey: ['members', orgId, 'cycle-status', currentCycle],
-    enabled: !!currentCycle,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('member_cycles').select('member_id, status_id').eq('cycle_id', currentCycle!).limit(5000)
-      if (error) throw error
-      return (data ?? []) as { member_id: string; status_id: string }[]
     },
   })
   const sections = useCatalog('sections')
@@ -128,73 +140,82 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
 
-  const statusOf = useMemo(() => {
+  const statusByCycle = useMemo(() => {
     const byStatus = new Map((statuses ?? []).map((s) => [s.id, s]))
-    return new Map((cycleRows.data ?? []).map((r) => [r.member_id, byStatus.get(r.status_id)]))
-  }, [statuses, cycleRows.data])
+    const out = new Map<string, Map<string, (typeof statuses extends (infer T)[] | undefined ? T : never) | undefined>>()
+    for (const r of allRows.data ?? []) {
+      const m = out.get(r.cycle_id) ?? new Map()
+      m.set(r.member_id, byStatus.get(r.status_id))
+      out.set(r.cycle_id, m)
+    }
+    return out
+  }, [statuses, allRows.data])
+  const statusOf = (memberId: string) => statusByCycle.get(activeCycleId)?.get(memberId)
+  const inCycle = (memberId: string, cycleId: string) => !!statusByCycle.get(cycleId)?.has(memberId)
 
-  // Dois conjuntos com a mesma divisão (naipe → subnaipe → instrumento): ativos no topo e um grupo "Inativos" só para quem saiu.
-  const isInactive = (id: string) => { const st = statusOf.get(id); return !st || (!st.counts_as_active && !st.is_waitlist) }
-  const trees = useMemo(() => {
+  const tree = useMemo(() => {
     const secs = sections.data ?? []
     const subById = new Map((subsections.data ?? []).map((s) => [s.id, s]))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
     const fnById = new Map((functions.data ?? []).map((f) => [f.id, f]))
     const searching = filter.search.trim() !== ''
-    const build = (pred: (m: GroupMember) => boolean): TreeData => {
-      // seção → subnaipe (ou '') → folha (instrumento ou função)
-      const map = new Map<string, Map<string, Map<string, Leaf>>>()
-      const seen = new Set<string>()
-      const add = (secId: string, subId: string, leafKey: string, label: string, m: GroupMember) => {
-        const subs = map.get(secId) ?? new Map<string, Map<string, Leaf>>()
-        const leaves = subs.get(subId) ?? new Map<string, Leaf>()
-        const leaf = leaves.get(leafKey) ?? { key: leafKey, label, members: [] }
-        if (!leaf.members.includes(m)) leaf.members.push(m)
-        leaves.set(leafKey, leaf); subs.set(subId, leaves); map.set(secId, subs)
-      }
-      for (const m of members.data ?? []) {
-        if (!pred(m)) continue
-        if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
-        if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
-        let placed = false
-        for (const l of m.member_artistic_links.filter((x) => !x.ended_at)) {
-          const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
-          const fn = l.function_id ? fnById.get(l.function_id) : undefined
-          if (inst?.section_id) {
-            const sub = inst.subsection_id && subById.has(inst.subsection_id) ? inst.subsection_id : ''
-            add(inst.section_id, sub, inst.id, inst.name, m); placed = true
-          } else if (fn?.section_id) {
-            add(fn.section_id, '', `fn:${fn.id}`, fn.name, m); placed = true
-          }
+    const map = new Map<string, Map<string, Map<string, Leaf>>>()
+    const seen = new Set<string>()
+    const add = (secId: string, subId: string, leafKey: string, label: string, m: GroupMember) => {
+      const subs = map.get(secId) ?? new Map<string, Map<string, Leaf>>()
+      const leaves = subs.get(subId) ?? new Map<string, Leaf>()
+      const leaf = leaves.get(leafKey) ?? { key: leafKey, label, members: [] }
+      if (!leaf.members.includes(m)) leaf.members.push(m)
+      leaves.set(leafKey, leaf); subs.set(subId, leaves); map.set(secId, subs)
+    }
+    const isCurrent = !!activeCycle?.is_current
+    for (const m of members.data ?? []) {
+      if (!inCycle(m.id, activeCycleId)) continue
+      const st = statusOf(m.id)
+      if (filter.status === 'active' && !st?.counts_as_active) continue
+      if (filter.status === 'inactive' && (st?.counts_as_active || st?.is_waitlist)) continue
+      if (alsoIn.some((c) => !inCycle(m.id, c))) continue
+      if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
+      if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
+      // Instrumento NAQUELE ciclo: vínculo vigente no período; sem ele, o mais recente.
+      const mine = m.member_artistic_links
+      const inWindow = isCurrent ? mine.filter((x) => !x.ended_at)
+        : mine.filter((x) => x.started_at <= (activeCycle?.ends_on ?? '9999') && (!x.ended_at || x.ended_at >= (activeCycle?.starts_on ?? '0000')))
+      const links = inWindow.length ? inWindow : [...mine].sort((a, b) => b.started_at.localeCompare(a.started_at)).slice(0, 1)
+      let placed = false
+      for (const l of links) {
+        const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
+        const fn = l.function_id ? fnById.get(l.function_id) : undefined
+        if (inst?.section_id) {
+          const sub = inst.subsection_id && subById.has(inst.subsection_id) ? inst.subsection_id : ''
+          add(inst.section_id, sub, inst.id, inst.name, m); placed = true
+        } else if (fn?.section_id) {
+          add(fn.section_id, '', `fn:${fn.id}`, fn.name, m); placed = true
         }
-        if (!placed) add('none', '', 'none', 'Sem instrumento', m)
-        seen.add(m.id)
       }
-      const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
-      const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
-      return { sectionList, map, total: seen.size }
+      if (!placed) add('none', '', 'none', 'Sem instrumento', m)
+      seen.add(m.id)
     }
-    return {
-      searching, subById,
-      active: filter.status === 'inactive' ? EMPTY_TREE : build((m) => !isInactive(m.id)),
-      inactive: filter.status === 'active' ? EMPTY_TREE : build((m) => isInactive(m.id)),
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusOf, filter, sectionFilter, wantedCategory, cats.data])
-  const total = trees.active.total + trees.inactive.total
+    const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
+    const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
+    return { searching, subById, data: { sectionList, map, total: seen.size } as TreeData }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, alsoIn])
+  const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
-  const forceOpen = trees.searching || sectionFilter !== ''
+  const forceOpen = tree.searching || sectionFilter !== ''
   // auto: grupo que é filho único do pai abre sozinho (evita clique redundante), mas o usuário ainda pode fechá-lo.
   const isOpen = (k: string, auto = false) => forceOpen || (open[k] ?? auto)
-  const loading = members.isLoading || sections.isLoading || instruments.isLoading
+  const loading = members.isLoading || sections.isLoading || instruments.isLoading || allRows.isLoading
 
-  const memberRow = (dim: boolean) => (m: GroupMember) => {
-    const st = statusOf.get(m.id)
+  const memberRow = (m: GroupMember) => {
+    const st = statusOf(m.id)
+    const dim = !st?.counts_as_active && !st?.is_waitlist
     return (
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
         <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
-          <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!st && <Badge>Sem ciclo</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
+          <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
           <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
         </button>
         <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${m.display_name ?? m.full_name}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
@@ -203,19 +224,19 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     )
   }
 
-  const renderSections = (tree: TreeData, prefix: string, dim: boolean) => tree.sectionList.map((sec, idx) => {
-    const tone: Tone = dim ? 'muted' : TONES[idx % TONES.length]
-    const subs = tree.map.get(sec.id)!
+  const renderSections = (t: TreeData) => t.sectionList.map((sec, idx) => {
+    const tone: Tone = TONES[idx % TONES.length]
+    const subs = t.map.get(sec.id)!
     const count = new Set([...subs.values()].flatMap((l) => [...l.values()].flatMap((x) => x.members.map((m) => m.id)))).size
     const hasSubs = [...subs.keys()].some((k) => k !== '')
-    const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : (trees.subById.get(a)?.sort_order ?? 0) - (trees.subById.get(b)?.sort_order ?? 0)))
+    const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : (tree.subById.get(a)?.sort_order ?? 0) - (tree.subById.get(b)?.sort_order ?? 0)))
     const renderLeaves = (leaves: Map<string, Leaf>, p: string) =>
       [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
         <Collapsible key={p + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(p + leaf.key, leaves.size === 1)} onToggle={() => toggle(p + leaf.key, isOpen(p + leaf.key, leaves.size === 1))}>
-          <ProgressiveList items={leaf.members} render={memberRow(dim)} resetKey={filter.search} />
+          <ProgressiveList items={leaf.members} render={memberRow} resetKey={filter.search + activeCycleId} />
         </Collapsible>
       ))
-    const sk0 = `${prefix}${sec.id}`
+    const sk0 = `${activeCycleId}:${sec.id}`
     return (
       <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0)} onToggle={() => toggle(sk0, isOpen(sk0))}>
         {subKeys.map((sk) => {
@@ -223,7 +244,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
           // Subnaipe é opcional: quem não tem fica direto no naipe, sem grupo "Sem subnaipe".
           if (!hasSubs || sk === '') return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sk0}:`)}</div>
           const subCount = new Set([...leaves.values()].flatMap((x) => x.members.map((m) => m.id))).size
-          const subName = trees.subById.get(sk)?.name ?? 'Subnaipe'
+          const subName = tree.subById.get(sk)?.name ?? 'Subnaipe'
           const k = `${sk0}:sub:${sk}`
           return (
             <Collapsible key={k} level={1} tone={tone} title={subName} count={subCount} open={isOpen(k, subKeys.length === 1)} onToggle={() => toggle(k, isOpen(k, subKeys.length === 1))}>
@@ -234,6 +255,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       </Collapsible>
     )
   })
+
+  const chip = (on: boolean) => cn('rounded-full border px-3 py-1.5 text-sm font-semibold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
+  const others = cycleButtons.filter((c) => c.id !== activeCycleId)
 
   return (
     <div className="space-y-4">
@@ -246,6 +270,31 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
           </Sheet>
         </Can>
       </div>
+
+      {cycleButtons.length > 1 && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Ciclo">
+            {cycleButtons.map((c) => (
+              <button key={c.id} role="tab" aria-selected={c.id === activeCycleId} className={chip(c.id === activeCycleId)}
+                onClick={() => { setCycleSel(c.id); setAlsoIn((a) => a.filter((x) => x !== c.id)) }}>
+                {c.name.replace(/^Carnaval\s*/, '')}{c.is_current ? ' · atual' : ''}
+              </button>
+            ))}
+          </div>
+          {others.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Também esteve em:</span>
+              {others.map((c) => (
+                <button key={c.id} aria-pressed={alsoIn.includes(c.id)} className={chip(alsoIn.includes(c.id))}
+                  onClick={() => setAlsoIn((a) => (a.includes(c.id) ? a.filter((x) => x !== c.id) : [...a, c.id]))}>
+                  {c.name.replace(/^Carnaval\s*/, '')}
+                </button>
+              ))}
+              {alsoIn.length > 0 && <Button size="sm" variant="ghost" onClick={() => setAlsoIn([])}>Limpar</Button>}
+            </div>
+          )}
+        </div>
+      )}
 
       <FilterBar value={filter} onChange={setFilter} extraCount={(sectionFilter ? 1 : 0) + (categoryFilter && !lockedCategory ? 1 : 0)} onClearExtra={() => { setSectionFilter(''); setCategoryFilter('') }}>
         <Select aria-label="Naipe" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
@@ -264,21 +313,17 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
       {loading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
 
-      {renderSections(trees.active, 'a:', false)}
-
-      {trees.inactive.total > 0 && (
-        <Collapsible tone="muted" title={<span className="text-muted-foreground">Inativos</span>} count={trees.inactive.total}
-          open={isOpen('inativos')} onToggle={() => toggle('inativos', isOpen('inativos'))}>
-          {renderSections(trees.inactive, 'i:', true)}
-        </Collapsible>
-      )}
-      {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado.</Card>}
+      {renderSections(tree.data)}
+      {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         {selected && <MemberDetailSheet member={selected} />}
       </Sheet>
 
-      <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'}{trees.inactive.total > 0 && ` (${trees.inactive.total} ${trees.inactive.total === 1 ? 'inativo' : 'inativos'})`}</p>
+      <p className="text-muted-foreground">
+        {total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}
+        {alsoIn.length > 0 && ` que também estiveram em ${alsoIn.map((id) => cycles?.find((c) => c.id === id)?.name.replace(/^Carnaval\s*/, '')).join(' e ')}`}
+      </p>
     </div>
   )
 }

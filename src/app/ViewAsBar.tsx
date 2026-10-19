@@ -132,8 +132,8 @@ export function ViewAsBar() {
             setViewAs(p ? { member_id: p.id, display_name: p.name } : null)
           }}
         >
-          <option value="">{realMembership?.roles.includes('titular') ? 'Titular' : 'Eu mesmo'} (eu mesmo: {realMembership?.display_name})</option>
-          {profiles.map((p) => <option key={p.key} value={p.key}>{p.label} · {p.name}</option>)}
+          <option value="">{realMembership?.roles.includes('titular') ? 'Titular' : 'Eu mesmo'} (eu mesmo)</option>
+          {profiles.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
         </Select>
         {viewAs && (
           <Button size="sm" variant="outline" className="h-8 shrink-0 bg-card" onClick={() => setViewAs(null)}>

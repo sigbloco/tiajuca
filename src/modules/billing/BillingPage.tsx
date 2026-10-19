@@ -1,7 +1,9 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, ClipboardCopy, Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { Collapsible, TONES } from '@/components/shared/Collapsible'
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { DateInput, MoneyInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -9,12 +11,15 @@ import { formatCompetence, formatCurrency, formatDate, todayIso } from '@/core/f
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { useCatalog } from '@/modules/structure/CatalogEditor'
 import {
-  CHARGE_STATUS_CLASS, CHARGE_STATUS_LABEL, competenceOf, generateCharges, getSummary, listCharges, listMyCharges, overdueWhatsapp,
+  CHARGE_STATUS_CLASS, CHARGE_STATUS_LABEL, competenceOf, generateCharges, getSummary, listAllCharges, listMyCharges, overdueWhatsapp,
   type Charge, type ChargeStatus,
 } from './service'
 
-const PAGE_SIZE = 20
+// Nome do grupo de cada categoria dentro do naipe.
+const GROUP_LABEL: Record<string, string> = { Aluno: 'Alunos', Senior: 'Seniors', Banda: 'Banda', 'Músico': 'Músicos', Pernalta: 'Pernaltas', 'Isento (equipe)': 'Isentos', Monitor: 'Monitores' }
+const groupOf = (cat?: string | null) => (cat ? GROUP_LABEL[cat] ?? cat : 'Sem categoria')
 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: string }) {
   return (
@@ -113,16 +118,22 @@ function AdminBilling() {
   const [status, setStatus] = useState<ChargeStatus | ''>('')
   const [searchInput, setSearchInput] = useState('')
   const search = useDebounced(searchInput)
-  const [page, setPage] = useState(0)
+  const [naipe, setNaipe] = useState('')
+  const [open, setOpen] = useState<Record<string, boolean>>({})
   const [selected, setSelected] = useState<Charge | null>(null)
   const competence = competenceOf(ym.y, ym.m)
-  useEffect(() => setPage(0), [search, status, competence])
+  const sections = useCatalog('sections')
+  const instruments = useCatalog('instruments')
 
   const summary = useQuery({ queryKey: ['billing', orgId, 'summary', competence], queryFn: () => getSummary(orgId, competence) })
-  const list = useQuery({
-    queryKey: ['billing', orgId, 'list', competence, status, search, page],
-    placeholderData: keepPreviousData,
-    queryFn: () => listCharges({ orgId, competence, status, search, page, pageSize: PAGE_SIZE }),
+  const list = useQuery({ queryKey: ['billing', orgId, 'all', competence], queryFn: () => listAllCharges(orgId, competence) })
+  const links = useQuery({
+    queryKey: ['billing', orgId, 'links'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('member_artistic_links').select('member_id, instrument_id, started_at, ended_at').eq('organization_id', orgId).not('instrument_id', 'is', null).limit(5000)
+      if (error) throw error
+      return (data ?? []) as { member_id: string; instrument_id: string; started_at: string; ended_at: string | null }[]
+    },
   })
   const gen = useMutation({
     mutationFn: () => generateCharges(orgId, competence),
@@ -143,8 +154,35 @@ function AdminBilling() {
   })
   const shift = (d: number) => { const x = new Date(Date.UTC(ym.y, ym.m + d, 1)); setYm({ y: x.getUTCFullYear(), m: x.getUTCMonth() }) }
   const s = summary.data
-  const total = list.data?.total ?? 0
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // Naipe do integrante NAQUELE mês: vínculo vigente na competência; sem ele, o mais recente.
+  const grouped = useMemo(() => {
+    const secName = new Map((sections.data ?? []).map((x) => [x.id, x.name]))
+    const instSec = new Map((instruments.data ?? []).map((i) => [i.id, i.section_id ?? '']))
+    const monthStart = competence, monthEnd = competence.slice(0, 8) + '31'
+    const byMember = new Map<string, NonNullable<typeof links.data>>()
+    for (const l of links.data ?? []) (byMember.get(l.member_id) ?? byMember.set(l.member_id, []).get(l.member_id)!).push(l)
+    const naipeOf = (memberId: string) => {
+      const ls = byMember.get(memberId) ?? []
+      const pick = ls.find((l) => l.started_at <= monthEnd && (!l.ended_at || l.ended_at >= monthStart)) ?? [...ls].sort((a, b) => b.started_at.localeCompare(a.started_at))[0]
+      return pick ? secName.get(instSec.get(pick.instrument_id) ?? '') ?? 'Sem naipe' : 'Sem naipe'
+    }
+    const term = search.trim().toLowerCase()
+    const map = new Map<string, Map<string, Charge[]>>()
+    for (const c of list.data ?? []) {
+      if (status && c.status !== status) continue
+      if (term && !((c.members?.full_name ?? '') + ' ' + (c.members?.display_name ?? '')).toLowerCase().includes(term)) continue
+      const nv = naipeOf(c.member_id)
+      if (naipe && nv !== naipe) continue
+      const g = groupOf(c.fee_categories?.name)
+      const inner = map.get(nv) ?? new Map<string, Charge[]>()
+      ;(inner.get(g) ?? inner.set(g, []).get(g)!).push(c)
+      map.set(nv, inner)
+    }
+    const order = [...(sections.data ?? []).map((x) => x.name), 'Sem naipe']
+    return [...map.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+  }, [list.data, links.data, sections.data, instruments.data, competence, status, search, naipe])
+  const total = grouped.reduce((n, [, g]) => n + [...g.values()].reduce((k, v) => k + v.length, 0), 0)
+  const forceOpen = search.trim() !== '' || naipe !== '' || status !== ''
 
   return (
     <div className="space-y-4">
@@ -178,6 +216,11 @@ function AdminBilling() {
           <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input className="pl-9" placeholder="Buscar pelo nome" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
         </div>
+        <Select className="w-44" aria-label="Naipe" value={naipe} onChange={(e) => setNaipe(e.target.value)}>
+          <option value="">Todos os naipes</option>
+          {(sections.data ?? []).map((x) => <option key={x.id} value={x.name}>{x.name}</option>)}
+          <option value="Sem naipe">Sem naipe</option>
+        </Select>
         <Select className="w-40" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as ChargeStatus | '')}>
           <option value="">Todos</option>
           {Object.entries(CHARGE_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -185,31 +228,40 @@ function AdminBilling() {
       </div>
 
       {list.isLoading && <Skeleton className="h-24" />}
-      {list.data && list.data.rows.length === 0 && <EmptyState>Nenhuma cobrança neste mês. Use “Gerar cobranças”.</EmptyState>}
-      <div className="grid gap-2">
-        {list.data?.rows.map((c) => (
-          <Card key={c.id} className="flex items-center justify-between gap-3 p-3">
-            <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(c)}>
-              <p className="truncate font-semibold">{c.members?.display_name ?? c.members?.full_name}</p>
-              <p className="truncate text-muted-foreground">
-                {c.fee_categories?.name}{c.scholarship_percent > 0 ? ` · bolsa ${c.scholarship_percent}%` : ''} · vence {formatDate(c.due_on)}
-              </p>
-            </button>
-            <div className="flex flex-col items-end gap-1">
-              <span className="font-semibold">{formatCurrency(c.final_amount)}</span>
-              <Badge className={CHARGE_STATUS_CLASS[c.status]}>{CHARGE_STATUS_LABEL[c.status]}</Badge>
-            </div>
-          </Card>
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground">{total} cobrança(s)</p>
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant="outline" aria-label="Página anterior" disabled={page === 0} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <span>{page + 1} / {pages}</span>
-          <Button size="icon" variant="outline" aria-label="Próxima página" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
-      </div>
+      {list.data && total === 0 && <EmptyState>{list.data.length === 0 ? 'Nenhuma cobrança neste mês. Use “Gerar cobranças”.' : 'Nenhuma cobrança com esses filtros.'}</EmptyState>}
+      {grouped.map(([nv, groups], idx) => {
+        const count = [...groups.values()].reduce((n, v) => n + v.length, 0)
+        const sum = [...groups.values()].flat().reduce((n, c) => n + c.final_amount, 0)
+        const tone = TONES[idx % TONES.length]
+        const kNv = 'n:' + nv
+        return (
+          <Collapsible key={nv} tone={tone} title={nv} count={count} right={<span className="text-sm text-muted-foreground">{formatCurrency(sum)}</span>}
+            open={forceOpen || !!open[kNv]} onToggle={() => setOpen((o) => ({ ...o, [kNv]: !o[kNv] }))}>
+            {[...groups.entries()].sort((x, y) => x[0].localeCompare(y[0], 'pt-BR')).map(([g, items]) => {
+              const k = kNv + ':' + g
+              const subtotal = items.reduce((n, c) => n + c.final_amount, 0)
+              return (
+                <Collapsible key={g} level={1} tone={tone} title={g} count={items.length} right={<span className="text-sm text-muted-foreground">{formatCurrency(subtotal)}</span>}
+                  open={forceOpen || (open[k] ?? groups.size === 1)} onToggle={() => setOpen((o) => ({ ...o, [k]: !(forceOpen || (o[k] ?? groups.size === 1)) }))}>
+                  <ProgressiveList items={items} resetKey={competence + search + status} render={(c: Charge) => (
+              <Card key={c.id} className="flex items-center justify-between gap-3 p-3">
+                <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(c)}>
+                  <p className="truncate font-semibold">{c.members?.display_name ?? c.members?.full_name}</p>
+                  <p className="truncate text-muted-foreground">{c.fee_categories?.name}{c.scholarship_percent > 0 ? ' · bolsa ' + c.scholarship_percent + '%' : ''} · vence {formatDate(c.due_on)}</p>
+                </button>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="font-semibold">{formatCurrency(c.final_amount)}</span>
+                  <Badge className={CHARGE_STATUS_CLASS[c.status]}>{CHARGE_STATUS_LABEL[c.status]}</Badge>
+                </div>
+              </Card>
+            )} />
+                </Collapsible>
+              )
+            })}
+          </Collapsible>
+        )
+      })}
+      <p className="text-muted-foreground">{total} cobrança(s)</p>
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         {selected && <ChargeSheet key={selected.id} charge={selected} onClose={() => setSelected(null)} />}

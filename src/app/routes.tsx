@@ -122,7 +122,6 @@ export const router = createBrowserRouter(
                     { path: 'bolsas', element: <ScholarshipsPage /> },
                     { path: 'financeiro', element: <FinancePage /> },
                     { path: 'fornecedores', element: <SuppliersPage /> },
-                    { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                   ],
                 },
                 {
@@ -145,6 +144,7 @@ export const router = createBrowserRouter(
                 { path: 'drive', element: <DriveFoldersPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
+                { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                 { path: 'configuracoes', element: <SettingsPage /> },
               ],
             },
