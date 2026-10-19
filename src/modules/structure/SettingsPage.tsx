@@ -5,6 +5,7 @@ import { ContributionsEditor } from '@/modules/billing/ContributionsEditor'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { IntegrationsSettings } from '@/modules/integrations/IntegrationsSettings'
 import { TemplatesSettings } from '@/modules/checklists/TemplatesSettings'
+import { SiteSettings } from '@/modules/site/SiteSettings'
 import { CatalogEditor } from './CatalogEditor'
 import { StaffAssignments } from './StaffAssignments'
 import { InstrumentsManager, SectionsManager } from './StructureManagers'
@@ -19,6 +20,7 @@ const TABS = [
   { key: 'fees', label: 'Contribuições' },
   { key: 'holidays', label: 'Feriados' },
   { key: 'integrations', label: 'Drive (partituras)' },
+  { key: 'site', label: 'Site' },
 ] as const
 
 export function SettingsPage() {
@@ -51,6 +53,7 @@ export function SettingsPage() {
       {tab === 'fees' && <ContributionsEditor canEdit={canBilling} />}
       {tab === 'holidays' && <HolidaysSettings />}
       {tab === 'integrations' && <IntegrationsSettings />}
+      {tab === 'site' && <SiteSettings />}
     </div>
   )
 }

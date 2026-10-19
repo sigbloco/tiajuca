@@ -35,6 +35,7 @@ import { PrivacyPage } from '@/modules/shop/public/PrivacyPage'
 import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { ShopLayout } from '@/modules/shop/public/ShopLayout'
+import { LandingPage } from '@/modules/site/LandingPage'
 import { AppShell } from './AppShell'
 import { HubHome, HubLayout } from './Hub'
 
@@ -45,7 +46,7 @@ function RootRedirect() {
   const { session, loading } = useAuth()
   const { data, isLoading } = useMemberships()
   if (loading || (session && isLoading)) return <Loading />
-  if (!session) return <Navigate to="/entrar" replace />
+  if (!session) return <LandingPage />
   const back = takePostLoginPath() // ex.: voltou da loja depois do login com Google
   if (back) return <Navigate to={back} replace />
   if (!data?.length) return <NoOrganizationPage />
@@ -102,10 +103,11 @@ export const router = createBrowserRouter(
             { path: 'privacidade', element: <PrivacyPage /> },
           ],
         },
+        { path: '/', element: <RootRedirect /> },
+        { path: '/site', element: <LandingPage /> },
         {
           element: <RequireAuth />,
           children: [
-            { path: '/', element: <RootRedirect /> },
             {
               path: '/:orgSlug',
               element: <OrgRoute />,
