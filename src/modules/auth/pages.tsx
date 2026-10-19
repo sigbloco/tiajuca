@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button, Input, Label } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
@@ -41,7 +41,10 @@ export function LoginPage() {
     mutationFn: () => signIn(email.trim(), password),
     onError: (e) => toast.error(friendlyError(e)),
   })
-  if (session) return <Navigate to="/" replace />
+  const [params] = useSearchParams()
+  // `voltar`: só caminhos internos (evita redirecionar para outro site depois do login).
+  const back = params.get('voltar') ?? ''
+  if (session) return <Navigate to={back.startsWith('/') && !back.startsWith('//') ? back : '/'} replace />
   const submit = (e: FormEvent) => {
     e.preventDefault()
     login.mutate()

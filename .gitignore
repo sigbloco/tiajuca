@@ -9,3 +9,6 @@ supabase/.temp
 # dados pessoais de importacao (nunca versionar)
 data-private/
 !.env.production
+
+# preview local
+.claude/launch.json

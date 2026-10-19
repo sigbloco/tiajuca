@@ -27,7 +27,10 @@ import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
+import { CartPage } from '@/modules/shop/public/CartPage'
+import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
+import { ShopLayout } from '@/modules/shop/public/ShopLayout'
 import { AppShell } from './AppShell'
 import { HubHome, HubLayout } from './Hub'
 
@@ -80,7 +83,15 @@ export const router = createBrowserRouter(
         { path: '/redefinir-senha', element: <ResetPasswordPage /> },
         { path: '/convite/:token', element: <ClaimInvitePage /> },
         { path: '/f/:orgSlug/:formSlug', element: <PublicFormPage /> },
-        { path: '/:orgSlug/loja/*', element: <ShopHomePage /> }, // vitrine pública, fora do guard de login
+        {
+          path: '/:orgSlug/loja', // vitrine pública, fora do guard de login
+          element: <ShopLayout />,
+          children: [
+            { index: true, element: <ShopHomePage /> },
+            { path: 'produto/:slug', element: <ProductPage /> },
+            { path: 'carrinho', element: <CartPage /> },
+          ],
+        },
         {
           element: <RequireAuth />,
           children: [
