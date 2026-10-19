@@ -14,13 +14,13 @@ interface VariantRow { id?: string; label: string; stock: string; reserved: numb
 
 const SIZES = ['P', 'M', 'G', 'GG']
 
-export function ProductSheet({ product, onSaved, onClose }: { product: ShopProduct | null; onSaved: (id: string) => void; onClose: () => void }) {
+export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
     name: product?.name ?? '', description: product?.description ?? '', kind: (product?.kind ?? 'stock') as ProductKind,
     price: product ? fromCents(product.price_cents) : (null as number | null),
-    discount: String(product?.member_discount_pct ?? 0), leadTime: product?.lead_time_days ? String(product.lead_time_days) : '',
+    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ? String(product.lead_time_days) : '',
     is_active: product?.is_active ?? true,
   })
   const [variants, setVariants] = useState<VariantRow[]>(

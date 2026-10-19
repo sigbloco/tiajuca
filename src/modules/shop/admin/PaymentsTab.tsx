@@ -75,6 +75,13 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
       </Card>
 
       <Card className="space-y-3 p-4">
+        <h3 className="font-bold">Desconto de integrante</h3>
+        <div className="space-y-1.5"><Label htmlFor="dd">Desconto padrão para integrantes ativos (%)</Label>
+          <Input id="dd" inputMode="decimal" className="max-w-32" value={f.defaultDiscount} onChange={(e) => set({ defaultDiscount: e.target.value.replace(/[^0-9.,]/g, '') })} />
+          <p className="text-sm text-muted-foreground">Já vem preenchido em todo produto novo, e dá para mudar produto a produto. Não altera os produtos que já existem.</p></div>
+      </Card>
+
+      <Card className="space-y-3 p-4">
         <h3 className="font-bold">Endereço do site</h3>
         <div className="space-y-1.5"><Label htmlFor="site">Endereço da loja</Label>
           <Input id="site" inputMode="url" placeholder="https://" value={f.siteUrl} onChange={(e) => set({ siteUrl: e.target.value })} />

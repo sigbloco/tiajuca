@@ -7,9 +7,10 @@ import { formatCurrency, formatDateTime } from '@/core/format'
 import { useOrganization, useOrgId } from '@/core/organization'
 import { invokeShop } from '../public/api'
 import { useState } from 'react'
+import { Archive, ArchiveRestore } from 'lucide-react'
 import { fromCents } from '../catalog'
-import { KIND_LABEL, ORDER_STATUS_LABEL, fulfillmentLabel, fulfillmentSteps, orderActions, type FulfillmentStatus } from '../orders/transitions'
-import { cancelOrder, listOrderEvents, markPaid, reactivateOrder, setFulfillment, type AdminOrder } from './ordersService'
+import { KIND_LABEL, ORDER_STATUS_LABEL, canArchive, fulfillmentLabel, fulfillmentSteps, orderActions, type FulfillmentStatus } from '../orders/transitions'
+import { archiveOrder, cancelOrder, listOrderEvents, markPaid, reactivateOrder, setFulfillment, type AdminOrder } from './ordersService'
 import type { PickupPoint } from './service'
 
 const money = (c: number) => formatCurrency(fromCents(c))
@@ -100,6 +101,10 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
               onClick={() => window.confirm('Cancelar este pedido? Os itens em estoque voltam para a venda. Reembolsos são feitos por fora do sistema.') && act.mutate(() => cancelOrder(order.id, reason))}>Cancelar pedido</Button>
           </section>
         )}
+
+        {order.archived_at
+          ? <Button variant="outline" className="w-full" disabled={act.isPending} onClick={() => act.mutate(() => archiveOrder(order.id, false))}><ArchiveRestore className="h-4 w-4" /> Desarquivar</Button>
+          : canArchive(order.status, order.shop_fulfillments) && <Button variant="outline" className="w-full" disabled={act.isPending} onClick={() => act.mutate(() => archiveOrder(order.id, true))}><Archive className="h-4 w-4" /> Arquivar pedido</Button>}
 
         <section className="space-y-1">
           <p className="font-semibold">Histórico</p>

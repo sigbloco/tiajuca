@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fulfillmentLabel, fulfillmentSteps, isTransitionAllowed, orderActions, type FulfillmentStatus } from './transitions'
+import { canArchive, fulfillmentLabel, fulfillmentSteps, isTransitionAllowed, orderActions, type FulfillmentStatus } from './transitions'
 
 describe('andamento de itens em estoque', () => {
   it('separando → pronto → retirado, sem passar por "em preparo"', () => {
@@ -46,5 +46,17 @@ describe('ações do pedido por status', () => {
     expect(orderActions('payment_review')).toEqual({ canMarkPaid: true, canCancel: true, canReactivate: false, canProgress: false })
     expect(orderActions('paid')).toEqual({ canMarkPaid: false, canCancel: true, canReactivate: false, canProgress: true })
     expect(orderActions('cancelled')).toEqual({ canMarkPaid: false, canCancel: false, canReactivate: true, canProgress: false })
+  })
+})
+
+describe('arquivar pedidos', () => {
+  it('só cancelado ou totalmente retirado; nunca com reserva de estoque ativa', () => {
+    expect(canArchive('cancelled', [])).toBe(true)
+    expect(canArchive('cancelled', [{ status: 'cancelled' }])).toBe(true)
+    expect(canArchive('paid', [{ status: 'picked_up' }, { status: 'picked_up' }])).toBe(true)
+    expect(canArchive('paid', [{ status: 'picked_up' }, { status: 'ready' }])).toBe(false)
+    expect(canArchive('paid', [])).toBe(false)
+    expect(canArchive('awaiting_payment', [{ status: 'pending' }])).toBe(false)
+    expect(canArchive('payment_review', [{ status: 'pending' }])).toBe(false)
   })
 })

@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Archive } from 'lucide-react'
+import { toast } from 'sonner'
 import { useMemo, useState } from 'react'
-import { Badge, Card, EmptyState, Input, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
+import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDateTime } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents } from '../catalog'
 import { KIND_LABEL, ORDER_STATUSES, ORDER_STATUS_LABEL, fulfillmentLabel } from '../orders/transitions'
 import { OrderSheet } from './OrderSheet'
-import { EMPTY_ORDER_FILTERS, ORDERS_LIMIT, listOrders, matchesOrder, type AdminOrder, type OrderFilters } from './ordersService'
+import { EMPTY_ORDER_FILTERS, ORDERS_LIMIT, archiveFinished, listOrders, matchesOrder, type AdminOrder, type OrderFilters } from './ordersService'
 import { listPickupPoints } from './service'
 
 const STATUS_STYLE: Record<AdminOrder['status'], string> = {
@@ -15,6 +18,7 @@ const STATUS_STYLE: Record<AdminOrder['status'], string> = {
 
 export function OrdersTab() {
   const orgId = useOrgId()
+  const qc = useQueryClient()
   const [filters, setFilters] = useState<OrderFilters>(EMPTY_ORDER_FILTERS)
   const [text, setText] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
@@ -23,6 +27,11 @@ export function OrdersTab() {
   const pointName = useMemo(() => new Map((points.data ?? []).map((p) => [p.id, p])), [points.data])
   const shown = (orders.data ?? []).filter((o) => matchesOrder(o, text))
   const current = openId ? orders.data?.find((o) => o.id === openId) ?? null : null
+  const bulk = useMutation({
+    mutationFn: () => archiveFinished(orgId),
+    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'orders'] }); toast.success(n > 0 ? `${n} pedido(s) arquivado(s).` : 'Nenhum pedido encerrado para arquivar.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const toCheck = (orders.data ?? []).filter((o) => o.status === 'payment_review').length
 
   return (
@@ -30,8 +39,16 @@ export function OrdersTab() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Pedidos</h2>
         {toCheck > 0 && filters.status === 'all' && <Badge className="bg-secondary text-secondary-foreground">{toCheck} pagamento(s) para conferir</Badge>}
+        <Button size="sm" variant="outline" disabled={bulk.isPending} onClick={() => window.confirm('Arquivar todos os pedidos cancelados ou já totalmente retirados? Eles saem desta lista, mas nada é apagado (veja em "Arquivados").') && bulk.mutate()}>
+          <Archive className="h-4 w-4" /> Arquivar encerrados
+        </Button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-5">
+        <Select aria-label="Mostrar pedidos arquivados" value={filters.archive} onChange={(e) => setFilters({ ...filters, archive: e.target.value as OrderFilters['archive'] })}>
+          <option value="active">Pedidos ativos</option>
+          <option value="archived">Arquivados</option>
+          <option value="all">Ativos e arquivados</option>
+        </Select>
         <Input aria-label="Buscar pedido" placeholder="Código, nome, telefone ou e-mail" value={text} onChange={(e) => setText(e.target.value)} />
         <Select aria-label="Filtrar por status" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value as OrderFilters['status'] })}>
           <option value="all">Todos os status</option>
@@ -57,7 +74,7 @@ export function OrdersTab() {
         <button key={o.id} type="button" className="block w-full text-left" onClick={() => setOpenId(o.id)}>
           <Card className="space-y-1 p-3 transition hover:shadow-md">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-bold tracking-wider">{o.code} <span className="font-normal tracking-normal text-muted-foreground">· {o.customer_name}</span></p>
+              <p className="font-bold tracking-wider">{o.code} <span className="font-normal tracking-normal text-muted-foreground">· {o.customer_name}</span> {o.archived_at && <Badge>Arquivado</Badge>}</p>
               <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', STATUS_STYLE[o.status])}>{ORDER_STATUS_LABEL[o.status]}</span>
             </div>
             <p className="text-sm">{formatCurrency(fromCents(o.total_cents))} · {o.payment_method === 'pix' ? 'Pix' : 'InfinitePay'} · {pointName.get(o.pickup_point_id)?.name ?? 'ponto removido'}</p>

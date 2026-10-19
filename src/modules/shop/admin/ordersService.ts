@@ -9,13 +9,13 @@ export interface AdminOrder {
   customer_name: string; customer_phone: string; customer_email: string; member_id: string | null; pickup_point_id: string
   subtotal_cents: number; discount_cents: number; total_cents: number
   created_at: string; expires_at: string | null; paid_at: string | null; paid_via: 'manual' | 'webhook' | null; cancel_reason: string | null
-  payment_ref: Record<string, unknown>
+  payment_ref: Record<string, unknown>; archived_at: string | null
   shop_order_items: OrderItem[]; shop_fulfillments: Fulfillment[]
 }
 export interface OrderEvent { id: string; scope: 'order' | 'fulfillment'; from_status: string | null; to_status: string; actor_label: string; note: string | null; created_at: string }
 
-export interface OrderFilters { status: OrderStatus | 'all'; method: 'pix' | 'infinitepay' | 'all'; pickup: string }
-export const EMPTY_ORDER_FILTERS: OrderFilters = { status: 'all', method: 'all', pickup: 'all' }
+export interface OrderFilters { status: OrderStatus | 'all'; method: 'pix' | 'infinitepay' | 'all'; pickup: string; archive: 'active' | 'archived' | 'all' }
+export const EMPTY_ORDER_FILTERS: OrderFilters = { status: 'all', method: 'all', pickup: 'all', archive: 'active' }
 export const ORDERS_LIMIT = 200
 
 export async function listOrders(orgId: string, f: OrderFilters) {
@@ -24,6 +24,8 @@ export async function listOrders(orgId: string, f: OrderFilters) {
   if (f.status !== 'all') q = q.eq('status', f.status)
   if (f.method !== 'all') q = q.eq('payment_method', f.method)
   if (f.pickup !== 'all') q = q.eq('pickup_point_id', f.pickup)
+  if (f.archive === 'active') q = q.is('archived_at', null)
+  else if (f.archive === 'archived') q = q.not('archived_at', 'is', null)
   const { data, error } = await q
   if (error) throw error
   return data as AdminOrder[]
@@ -45,6 +47,8 @@ export const markPaid = (orderId: string) => rpc('shop_admin_mark_paid', { p_ord
 export const setFulfillment = (orderId: string, kind: ProductKind, status: FulfillmentStatus) =>
   rpc('shop_admin_set_fulfillment', { p_order: orderId, p_kind: kind, p_status: status })
 export const cancelOrder = (orderId: string, reason: string) => rpc('shop_admin_cancel_order', { p_order: orderId, p_reason: reason })
+export const archiveOrder = (orderId: string, archive: boolean) => rpc('shop_admin_archive_order', { p_order: orderId, p_archive: archive })
+export const archiveFinished = (orgId: string) => rpc('shop_admin_archive_finished', { p_org: orgId }) as Promise<number>
 export const reactivateOrder = (orderId: string) => rpc('shop_admin_reactivate_order', { p_order: orderId })
 
 /** Busca livre na lista já carregada: código, nome, telefone (só dígitos) ou e-mail. */

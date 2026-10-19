@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { EMPTY_SETTINGS, fromSettings, missingSetup, toSettings, toWaDigits, validateSettings, type SettingsForm } from './settings'
+import { EMPTY_SETTINGS, fromSettings, missingSetup, parsePercent, toSettings, toWaDigits, validateSettings, type SettingsForm } from './settings'
 
 const ok: SettingsForm = {
   pix: true, pixKey: 'pix@bloco.com', pixBeneficiary: 'Rafael', infinitepay: false, handle: '', siteUrl: '',
-  whatsapp: '(21) 99069-8483', email: 'loja@bloco.com', directors: [{ name: 'Rafael', phone: '(21) 99613-4845' }], mailFromName: 'Bloco', mailFromEmail: 'loja@bloco.com',
+  whatsapp: '(21) 99069-8483', email: 'loja@bloco.com', directors: [{ name: 'Rafael', phone: '(21) 99613-4845' }], mailFromName: 'Bloco', mailFromEmail: 'loja@bloco.com', defaultDiscount: '10',
 }
 
 describe('telefones', () => {
@@ -46,6 +46,24 @@ describe('formulário de pagamentos e contatos', () => {
     expect(fromSettings(s).whatsapp).toBe('(21) 99069-8483')
     expect(fromSettings(s).directors).toEqual([{ name: 'Rafael', phone: '(21) 99613-4845' }])
     expect(toSettings({ ...ok, whatsapp: '', directors: [] }).contact_whatsapp).toBeNull()
+  })
+})
+
+describe('desconto padrão de integrante', () => {
+  it('lê porcentagens com vírgula ou ponto; vazio é zero; lixo é inválido', () => {
+    expect(parsePercent('10')).toBe(10)
+    expect(parsePercent('12,5')).toBe(12.5)
+    expect(parsePercent(' 7.25 ')).toBe(7.25)
+    expect(parsePercent('')).toBe(0)
+    expect(parsePercent('abc')).toBeNull()
+    expect(parsePercent('1,234')).toBeNull()
+  })
+  it('valida a faixa 0–100 e é salvo/carregado sem perder o valor', () => {
+    expect(validateSettings({ ...ok, defaultDiscount: '100' })).toEqual([])
+    expect(validateSettings({ ...ok, defaultDiscount: '101' })).toHaveLength(1)
+    expect(validateSettings({ ...ok, defaultDiscount: 'x' })).toHaveLength(1)
+    expect(toSettings(ok).default_member_discount_pct).toBe(10)
+    expect(fromSettings(toSettings({ ...ok, defaultDiscount: '12,5' })).defaultDiscount).toBe('12,5')
   })
 })
 

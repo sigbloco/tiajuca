@@ -7,6 +7,7 @@ import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, productAvailability } from '../catalog'
 import { ProductSheet } from './ProductSheet'
 import { imageUrl, listProducts, type ShopProduct } from './service'
+import { getSettings } from './settings'
 
 function stockSummary(p: ShopProduct): string {
   if (p.kind === 'made_to_order') return `Sob encomenda · ${p.lead_time_days ?? '?'} dia(s)`
@@ -18,6 +19,8 @@ export function ProductsTab() {
   const orgId = useOrgId()
   const [sheet, setSheet] = useState<'new' | string | null>(null)
   const q = useQuery({ queryKey: ['shop', orgId, 'products'], queryFn: () => listProducts(orgId) })
+  const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
+  const defaultDiscount = settings.data?.default_member_discount_pct ?? 0
   const current = sheet && sheet !== 'new' ? q.data?.find((p) => p.id === sheet) ?? null : null
 
   return (
@@ -46,7 +49,7 @@ export function ProductsTab() {
         </Card>
       ))}
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet === 'new' && <ProductSheet key="new" product={null} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
         {current && <ProductSheet key={current.id} product={current} onSaved={setSheet} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>

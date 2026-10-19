@@ -14,14 +14,16 @@ export interface ShopSettings {
   directors: DirectorSetting[]
   mail_from_name: string | null
   mail_from_email: string | null
+  /** Desconto de integrante (%) que já vem preenchido em produto novo. */
+  default_member_discount_pct: number
 }
 
 export const EMPTY_SETTINGS: ShopSettings = {
   payment_methods: [], infinitepay_handle: null, public_site_url: null, pix_key: null, pix_beneficiary: null,
-  contact_whatsapp: null, contact_email: null, directors: [], mail_from_name: null, mail_from_email: null,
+  contact_whatsapp: null, contact_email: null, directors: [], mail_from_name: null, mail_from_email: null, default_member_discount_pct: 0,
 }
 
-const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email'
+const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct'
 
 export async function getSettings(orgId: string): Promise<ShopSettings> {
   const { data, error } = await supabase.from('shop_settings').select(COLUMNS).eq('organization_id', orgId).maybeSingle()
@@ -41,6 +43,7 @@ export interface SettingsForm {
   infinitepay: boolean; handle: string; siteUrl: string
   whatsapp: string; email: string; directors: DirectorForm[]
   mailFromName: string; mailFromEmail: string
+  defaultDiscount: string
 }
 
 export const cleanHandle = (v: string) => v.trim().replace(/^\$/, '').trim()
@@ -57,6 +60,13 @@ export function toWaDigits(input: string): string | null {
 /** '5521999998888' → '(21) 99999-8888' (para mostrar no campo). */
 export const fromWaDigits = (d: string | null): string => (d ? maskPhone(d.replace(/^55/, '')) : '')
 
+/** '10', '10,5' ou '10.5' → número; vazio vira 0; texto inválido vira null. */
+export function parsePercent(v: string): number | null {
+  const t = v.trim().replace(',', '.')
+  if (t === '') return 0
+  return /^[0-9]+(\.[0-9]{1,2})?$/.test(t) ? Number(t) : null
+}
+
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 export function fromSettings(s: ShopSettings, fallbackSiteUrl = ''): SettingsForm {
@@ -66,6 +76,7 @@ export function fromSettings(s: ShopSettings, fallbackSiteUrl = ''): SettingsFor
     whatsapp: fromWaDigits(s.contact_whatsapp), email: s.contact_email ?? '',
     directors: s.directors.map((d) => ({ name: d.name, phone: fromWaDigits(d.whatsapp) })),
     mailFromName: s.mail_from_name ?? '', mailFromEmail: s.mail_from_email ?? '',
+    defaultDiscount: String(s.default_member_discount_pct ?? 0).replace('.', ','),
   }
 }
 
@@ -91,6 +102,8 @@ export function validateSettings(f: SettingsForm): string[] {
     else if (!toWaDigits(d.phone)) errors.push(`WhatsApp inválido para ${d.name.trim()}. Use DDD + número.`)
   }
   if (f.mailFromEmail.trim() && !EMAIL.test(f.mailFromEmail.trim())) errors.push('E-mail do remetente inválido.')
+  const pct = parsePercent(f.defaultDiscount)
+  if (pct === null || pct < 0 || pct > 100) errors.push('O desconto padrão de integrante deve ficar entre 0% e 100%.')
   return errors
 }
 
@@ -108,6 +121,7 @@ export function toSettings(f: SettingsForm): ShopSettings {
     directors: f.directors.filter((d) => d.name.trim()).map((d) => ({ name: d.name.trim(), whatsapp: toWaDigits(d.phone) as string })),
     mail_from_name: f.mailFromName.trim() || null,
     mail_from_email: f.mailFromEmail.trim() || null,
+    default_member_discount_pct: parsePercent(f.defaultDiscount) ?? 0,
   }
 }
 

@@ -49,3 +49,9 @@ export function orderActions(status: OrderStatus): { canMarkPaid: boolean; canCa
     canProgress: status === 'paid',
   }
 }
+
+/** Pedido encerrado (pode ser arquivado): cancelado, ou pago com TUDO retirado. Espelha `shop_order_is_finished` (SQL). */
+export function canArchive(status: OrderStatus, fulfillments: { status: FulfillmentStatus }[]): boolean {
+  if (status === 'cancelled') return true
+  return status === 'paid' && fulfillments.length > 0 && fulfillments.every((f) => f.status === 'picked_up')
+}
