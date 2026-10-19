@@ -25,7 +25,7 @@ Opcional. Sem ela, o repertório continua aceitando **link colado** e **arquivo 
 - O acesso ao arquivo continua sendo controlado pelo Drive, não pelo SIGBloco.
 - Troque a chave da conta de serviço periodicamente e sempre que alguém com acesso a ela sair da Direção.
 
-## Compartilhar pastas automaticamente (Pastas do Drive → Sincronizar acesso)
+## Compartilhar pastas automaticamente (Google Drive → Sincronizar acesso)
 Além da busca de partituras, o app pode **compartilhar uma pasta do Drive com os e-mails de quem tem acesso a ela no app**.
 
 - **Quem entra:** quem tem regra de acesso na pasta (papel, naipe ou instrumento), **e** está ativo no ciclo atual (ou é equipe: Professor/Monitor), tem e-mail e não está arquivado. **Direção e Titular sempre entram.**
@@ -37,7 +37,7 @@ Além da busca de partituras, o app pode **compartilhar uma pasta do Drive com o
 2. No Drive, compartilhe cada pasta com o e-mail da conta de serviço como **Editor** (leitor não basta para gerenciar permissões).
 3. Publique a função `drive-sync` (`supabase/functions/drive-sync/index.ts`), com a verificação de JWT ligada.
 4. Aplique a migration `0019_drive_sync.sql`.
-5. Em **Pastas do Drive**, cadastre a pasta com o link `…/folders/ID`, marque quem acessa e clique em **Sincronizar acesso**.
+5. Em **Google Drive** (menu), cadastre a pasta com o link `…/folders/ID`, marque quem acessa e clique em **Sincronizar acesso**.
 
 ### Limites
 - A sincronização é **manual** (botão). Depois de mudar papéis, naipes ou status de pessoas, sincronize de novo.

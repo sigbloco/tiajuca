@@ -11,7 +11,8 @@ import { todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { invalidateCatalog, saveCatalogItem, swapOrder, type CatalogItem } from '@/modules/structure/service'
+import { useHoldReorder } from '@/core/holdReorder'
+import { moveItemTo, invalidateCatalog, saveCatalogItem, swapOrder, type CatalogItem } from '@/modules/structure/service'
 
 function useSetPrice() {
   const { membership } = useOrganization()
@@ -60,6 +61,13 @@ function CategoryRow({ item, siblings, current, canEdit }: { item: CatalogItem; 
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const reorder = useMutation({
+    mutationFn: ({ from, to }: { from: string; to: string }) => moveItemTo('fee_categories', orgId, siblings, from, to),
+    onSuccess: () => invalidateCatalog(qc, orgId),
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const drag = useHoldReorder()
+  const onDragMove = (from: string, to: string) => reorder.mutate({ from, to })
   const move = useMutation({
     mutationFn: (other: CatalogItem) => swapOrder('fee_categories', orgId, item, other, siblings),
     onSuccess: () => invalidateCatalog(qc, orgId),
@@ -67,7 +75,8 @@ function CategoryRow({ item, siblings, current, canEdit }: { item: CatalogItem; 
   })
 
   return (
-    <Card className={cn('flex flex-wrap items-center gap-2 p-2', !item.is_active && 'opacity-60')}>
+    <Card {...(canEdit ? drag.row(item.id, onDragMove) : {})} className={cn('flex flex-wrap items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
+      {canEdit && drag.handle(item.id, onDragMove)}
       <div className="flex flex-col">
         <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx <= 0} onClick={() => move.mutate(siblings[idx - 1])}><ArrowUp className="h-4 w-4" /></Button>
         <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1} onClick={() => move.mutate(siblings[idx + 1])}><ArrowDown className="h-4 w-4" /></Button>

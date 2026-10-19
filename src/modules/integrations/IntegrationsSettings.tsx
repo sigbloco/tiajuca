@@ -36,7 +36,7 @@ export function IntegrationsSettings() {
       <h2>Google Drive: busca de partituras</h2>
       <p className="text-muted-foreground">
         Serve só para o <strong>Repertório</strong>: ao cadastrar uma música, a Direção pode buscar o PDF da partitura numa pasta do Drive em vez de colar o link à mão.
-        Para <strong>liberar pastas do Drive para as pessoas</strong>, use a página <strong>Pastas do Drive</strong> do menu.
+        Para <strong>liberar pastas do Drive para as pessoas</strong>, use a página <strong>Google Drive</strong> do menu (lá dá para adicionar quantas pastas quiser).
       </p>
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">

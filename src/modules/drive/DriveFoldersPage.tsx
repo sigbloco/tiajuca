@@ -106,7 +106,7 @@ function FolderSheet({ folder, rules, roles, onClose }: { folder: Folder | null;
   const insts = (instruments.data ?? []).filter((i) => i.is_active)
 
   return (
-    <SheetContent title={folder ? 'Editar pasta' : 'Nova pasta do Drive'} description="Defina o link e quem enxerga esta pasta no app.">
+    <SheetContent title={folder ? 'Editar pasta' : 'Adicionar pasta do Google Drive'} description="Defina o link e quem enxerga esta pasta no app.">
       <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim() && urlOk) save.mutate() }} className="space-y-4">
         <div className="space-y-1.5"><Label htmlFor="df-name">Nome</Label><Input id="df-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="df-url">Link da pasta no Google Drive</Label>
@@ -235,11 +235,14 @@ export function DriveFoldersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h1>Pastas do Drive</h1>
-        {canManage && <Button onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Nova pasta</Button>}
+        <h1>Google Drive</h1>
+        {canManage && <Button onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
       </div>
+      <p className="text-muted-foreground">{canManage
+        ? 'Pastas do Google Drive do bloco: partituras, fotos, documentos, atas… Adicione quantas quiser e escolha quem vê cada uma (por papel, naipe ou instrumento). Use “Sincronizar acesso” para compartilhar a pasta no Drive com essas pessoas.'
+        : 'Pastas do Google Drive liberadas para o seu perfil.'}</p>
       {folders.isLoading && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
-      {folders.data?.length === 0 && <EmptyState>{canManage ? 'Nenhuma pasta ainda. Cadastre a primeira e escolha quem pode vê-la.' : 'Nenhuma pasta liberada para o seu perfil.'}</EmptyState>}
+      {folders.data?.length === 0 && <EmptyState>{canManage ? 'Nenhuma pasta ainda. Use “Adicionar pasta”, cole o link e escolha quem pode vê-la.' : 'Nenhuma pasta liberada para o seu perfil.'}</EmptyState>}
       <div className="grid gap-3 sm:grid-cols-2">
         {folders.data?.map((f) => {
           const who = canManage ? whoSees(f.id) : []

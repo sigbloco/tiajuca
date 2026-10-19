@@ -11,7 +11,8 @@ import { useOrgId } from '@/core/organization'
 import { useCatalog } from './CatalogEditor'
 import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
 import { notifySaved } from '@/core/undo'
-import { describeChange, invalidateCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
+import { useHoldReorder } from '@/core/holdReorder'
+import { describeChange, moveItemTo, invalidateCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 const byOrder = (a: CatalogItem, b: CatalogItem) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)
 const nextOrder = (items: CatalogItem[]) => items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1
@@ -38,7 +39,12 @@ function useStructureMutations(table: CatalogTable) {
     onSuccess: () => refresh(),
     onError,
   })
-  return { save, move }
+  const reorder = useMutation({
+    mutationFn: ({ from, to, list }: { from: string; to: string; list: CatalogItem[] }) => moveItemTo(table, orgId, list, from, to),
+    onSuccess: () => refresh(),
+    onError,
+  })
+  return { save, move, reorder }
 }
 
 /** Linha editável: nome inline, setas de ordem, ativar/desativar e um slot extra. */
@@ -50,8 +56,12 @@ function ItemRow({ item, siblings, canEdit, mut, extra }: {
   extra?: React.ReactNode
 }) {
   const idx = siblings.findIndex((s) => s.id === item.id)
+  const drag = useHoldReorder()
+  const scope = siblings.map((x) => x.id).sort()[0] ?? 'x'
+  const onMove = (from: string, to: string) => mut.reorder.mutate({ from, to, list: siblings })
   return (
-    <div className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !item.is_active && 'opacity-60')}>
+    <div {...(canEdit ? drag.row(item.id, onMove, scope) : {})} className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !item.is_active && 'opacity-60', drag.cls(item.id))}>
+      {canEdit && drag.handle(item.id, onMove, scope)}
       <div className="flex flex-col">
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx <= 0}
           onClick={() => mut.move.mutate({ a: item, b: siblings[idx - 1], list: siblings })}><ArrowUp className="h-3.5 w-3.5" /></Button>
@@ -82,6 +92,7 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
   const sections = useCatalog('sections')
   const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
+  const drag = useHoldReorder()
   const secMut = useStructureMutations('sections')
   const subMut = useStructureMutations('subsections')
   const open = useOpenSet()
@@ -135,13 +146,15 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}
       <div className="space-y-2">
         {view.map(({ s, subs, visibleSubs, instrumentCount }) => (
-          <Collapsible key={s.id} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)}
+          <div key={s.id} {...(canEdit ? drag.row(s.id, (f, t) => secMut.reorder.mutate({ from: f, to: t, list: ordered }), 'sections') : {})} className={drag.cls(s.id)}>
+          <Collapsible open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)}
             title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={subs.length}
             right={(
               <div className="flex items-center gap-1">
                 <span className="hidden text-xs text-muted-foreground sm:inline">{instrumentCount} instrumento(s)</span>
                 {canEdit && (
                   <>
+                    {drag.handle(s.id, (f, t) => secMut.reorder.mutate({ from: f, to: t, list: ordered }), 'sections')}
                     <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${s.name}`} disabled={ordered.findIndex((x) => x.id === s.id) <= 0}
                       onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) - 1], list: ordered })}><ArrowUp className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${s.name}`} disabled={ordered.findIndex((x) => x.id === s.id) === ordered.length - 1}
@@ -174,6 +187,7 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
               </div>
             )}
           </Collapsible>
+          </div>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">Itens desativados somem das novas escolhas, mas o histórico é preservado.</p>

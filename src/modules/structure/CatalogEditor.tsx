@@ -10,7 +10,8 @@ import { useOrgId } from '@/core/organization'
 import { COLOR_LABEL, type TypeColor } from '@/modules/events/service'
 import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
 import { notifySaved } from '@/core/undo'
-import { describeChange, invalidateCatalog, listCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
+import { useHoldReorder } from '@/core/holdReorder'
+import { describeChange, moveItemTo, invalidateCatalog, listCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 interface Props {
   table: CatalogTable
@@ -72,6 +73,13 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
     },
     onError,
   })
+  const reorder = useMutation({
+    mutationFn: ({ from, to }: { from: string; to: string }) => moveItemTo(table, orgId, items ?? [], from, to),
+    onSuccess: () => refresh(),
+    onError,
+  })
+  const drag = useHoldReorder()
+  const onDragMove = (from: string, to: string) => reorder.mutate({ from, to })
   const move = useMutation({
     mutationFn: ({ a, b, list }: { a: CatalogItem; b: CatalogItem; list: CatalogItem[] }) => swapOrder(table, orgId, a, b, list),
     onSuccess: () => refresh(),
@@ -109,7 +117,8 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
       {items && visible.length === 0 && <EmptyState>{items.length === 0 ? 'Nada cadastrado ainda.' : 'Nenhum item encontrado.'}</EmptyState>}
       <div className="grid gap-2">
         {prog.visible.map((item, idx) => (
-          <Card key={item.id} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60')}>
+          <Card key={item.id} {...(canEdit ? drag.row(item.id, onDragMove) : {})} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
+            {canEdit && drag.handle(item.id, onDragMove)}
             <div className="flex flex-col">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx === 0}
                 onClick={() => move.mutate({ a: item, b: visible[idx - 1], list: visible })}><ArrowUp className="h-4 w-4" /></Button>

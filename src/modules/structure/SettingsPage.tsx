@@ -19,7 +19,7 @@ const TABS = [
   { key: 'checklists', label: 'Checklists' },
   { key: 'fees', label: 'Contribuições' },
   { key: 'holidays', label: 'Feriados' },
-  { key: 'integrations', label: 'Drive (partituras)' },
+  { key: 'integrations', label: 'Google Drive' },
   { key: 'site', label: 'Site' },
 ] as const
 

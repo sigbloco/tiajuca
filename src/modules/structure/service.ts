@@ -83,3 +83,14 @@ export function describeChange(patch: Partial<CatalogItem>, singular: string): s
   if (patch.sort_order !== undefined) return 'Ordem alterada.'
   return 'Alteração salva.'
 }
+
+/** Move `fromId` para a posição de `toId` na lista (na ordem exibida) e renumera tudo (1, 2, 3…). */
+export async function moveItemTo(table: CatalogTable, orgId: string, list: CatalogItem[], fromId: string, toId: string) {
+  const ordered = list.slice()
+  const from = ordered.findIndex((x) => x.id === fromId)
+  const to = ordered.findIndex((x) => x.id === toId)
+  if (from < 0 || to < 0 || from === to) return
+  const [it] = ordered.splice(from, 1)
+  ordered.splice(to, 0, it)
+  await Promise.all(ordered.map((x, i) => (x.sort_order === i + 1 ? null : saveCatalogItem(table, orgId, { id: x.id, name: x.name, sort_order: i + 1 }))))
+}
