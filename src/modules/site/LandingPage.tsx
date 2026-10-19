@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ClipboardList, LogIn, ShoppingBag } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMemberships } from '@/core/organization'
 import { OrgLogo } from '@/components/shared/OrgLogo'
@@ -38,6 +38,7 @@ const pill = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-ful
 export function LandingPage() {
   const { data, isLoading, isError } = usePublicSite(DEFAULT_ORG_SLUG)
   const { session } = useAuth()
+  const [shown, setShown] = useState(3)
   const { data: mine } = useMemberships()
   useEffect(() => {
     if (!data) return
@@ -97,15 +98,18 @@ export function LandingPage() {
 
         {videos.length > 0 && (
           <section className="space-y-4" aria-label="Vídeos">
-            {videos.map(({ v, id }) => (
-              <figure key={id} className="space-y-1.5">
-                <div className="aspect-video overflow-hidden rounded-2xl bg-muted shadow-card">
+            {videos.slice(0, shown).map(({ v, id }) => (
+              <figure key={id} className="overflow-hidden rounded-2xl border-2 border-border bg-card shadow-card">
+                <div className="aspect-video bg-muted">
                   <iframe className="h-full w-full" loading="lazy" src={`https://www.youtube-nocookie.com/embed/${id}`} title={v.title || 'Vídeo do YouTube'}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
                 </div>
-                {v.title && <figcaption className="px-1 text-center text-sm font-semibold">{v.title}</figcaption>}
+                {v.title && <figcaption className="border-t-2 border-border px-3 py-2 text-center text-sm font-semibold">{v.title}</figcaption>}
               </figure>
             ))}
+            {videos.length > shown && (
+              <button type="button" onClick={() => setShown((n) => n + 3)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Carregar mais…</button>
+            )}
           </section>
         )}
 
