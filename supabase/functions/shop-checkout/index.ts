@@ -4,8 +4,8 @@
 // POST JSON: { org_slug, name, phone, email, pickup_point_id, payment_method: 'pix' | 'infinitepay', items: [{ variant_id, quantity }] }
 // Se a requisição vier com o token de um usuário logado, o preço de integrante só vale se ele for integrante ATIVO (checado no banco).
 //
-// Segredos/variáveis: SHOP_RESERVATION_HOURS (padrão 48), SHOP_PAYMENT_METHODS (padrão "pix"),
-// INFINITEPAY_HANDLE (InfiniteTag; sem ela a InfinitePay fica desligada) e SHOP_PUBLIC_URL (endereço público do site, para o retorno do pagamento).
+// Métodos de pagamento, InfiniteTag e endereço público do site vêm da tabela `shop_settings` (editável no painel da loja).
+// Variável opcional: SHOP_RESERVATION_HOURS (padrão 48).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { LINKS_ENDPOINT, buildLinkPayload, describeShape, extractCheckoutUrl, sumItems, type LinkItemInput } from './infinitepay.ts'
@@ -23,24 +23,24 @@ const sha256 = async (s: string) =>
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+interface Settings { payment_methods: string[]; infinitepay_handle: string | null; public_site_url: string | null }
+
 // Cada método de pagamento é um provedor com a mesma forma. Pix não cria nada no servidor (pagamento conferido à mão).
 // InfinitePay cria um link de pagamento (crédito ou Pix na página deles); a confirmação chega pelo webhook (shop-infinitepay-webhook).
 type Order = Record<string, unknown>
 type Admin = ReturnType<typeof createClient>
-interface Ctx { orgSlug: string; origin: string | null; customer: { name: string; email: string; phone: string } }
-interface Provider { available(): boolean; start(order: Order, ctx: Ctx, admin: Admin): Promise<Record<string, unknown>> }
+interface Ctx { orgSlug: string; settings: Settings; customer: { name: string; email: string; phone: string } }
+interface Provider { available(s: Settings): boolean; start(order: Order, ctx: Ctx, admin: Admin): Promise<Record<string, unknown>> }
 
 const providers: Record<string, Provider> = {
-  pix: { available: () => true, start: async () => ({}) },
+  pix: { available: (s) => s.payment_methods.includes('pix'), start: async () => ({}) },
   infinitepay: {
-    available: () => !!Deno.env.get('INFINITEPAY_HANDLE'),
+    available: (s) => s.payment_methods.includes('infinitepay') && !!s.infinitepay_handle && !!s.public_site_url,
     async start(order, ctx, admin) {
-      const handle = Deno.env.get('INFINITEPAY_HANDLE')!
-      const site = (Deno.env.get('SHOP_PUBLIC_URL') ?? ctx.origin ?? '').replace(/\/+$/, '')
-      if (!/^https?:\/\//.test(site)) throw new Error('SHOP_PUBLIC_URL não configurada')
+      const site = ctx.settings.public_site_url!.replace(/\/+$/, '')
       const digits = ctx.customer.phone.replace(/\D/g, '')
       const payload = buildLinkPayload({
-        handle, orderCode: String(order.code), items: order.items as LinkItemInput[],
+        handle: ctx.settings.infinitepay_handle!, orderCode: String(order.code), items: order.items as LinkItemInput[],
         redirectUrl: `${site}/${ctx.orgSlug}/loja/pedido/${order.code}`,
         webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-infinitepay-webhook`,
         customer: { name: ctx.customer.name, email: ctx.customer.email, phone: digits.length <= 11 ? `55${digits}` : digits },
@@ -69,9 +69,7 @@ Deno.serve(async (req) => {
   const orgSlug = String(body.org_slug ?? '')
   const method = String(body.payment_method ?? '')
   const items = body.items
-  const enabled = (Deno.env.get('SHOP_PAYMENT_METHODS') ?? 'pix').split(',').map((s) => s.trim()).filter(Boolean)
-  const provider = providers[method]
-  if (!enabled.includes(method) || !provider || !provider.available()) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
+  if (!providers[method]) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
   if (!Array.isArray(items) || items.length === 0 || items.length > 30
       || items.some((i) => !UUID.test(String(i?.variant_id)) || !Number.isInteger(i?.quantity))) {
     return json({ error: 'O carrinho está vazio ou inválido.' }, 400)
@@ -89,6 +87,11 @@ Deno.serve(async (req) => {
   const { data: orgId, error: orgErr } = await admin.rpc('shop_org_id', { p_slug: orgSlug })
   if (orgErr) { console.error('shop_org_id', orgErr.message); return json({ error: 'Não foi possível finalizar agora. Tente novamente.' }, 500) }
   if (!orgId) return json({ error: 'Loja não encontrada.' }, 404)
+
+  const { data: settings, error: setErr } = await admin.rpc('shop_get_settings', { p_org: orgId })
+  if (setErr || !settings) { console.error('shop_get_settings', setErr?.message); return json({ error: 'Não foi possível finalizar agora. Tente novamente.' }, 500) }
+  const provider = providers[method]
+  if (!provider.available(settings as Settings)) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
 
   // Usuário logado (opcional). Token de visitante (chave anon) não resolve usuário e segue como visitante.
   let userId: string | null = null
@@ -113,7 +116,7 @@ Deno.serve(async (req) => {
 
   try {
     const payment = await provider.start(order as Order, {
-      orgSlug, origin: req.headers.get('origin'),
+      orgSlug, settings: settings as Settings,
       customer: { name: String(body.name ?? '').trim(), email: String(body.email ?? '').trim(), phone: String(body.phone ?? '') },
     }, admin)
     return json({ order, payment })

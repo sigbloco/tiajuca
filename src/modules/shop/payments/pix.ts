@@ -48,9 +48,9 @@ export const METHOD_LABELS: Record<PaymentMethodKey, { label: string; hint: stri
   infinitepay: { label: 'Cartão de crédito ou Pix (InfinitePay)', hint: 'Você paga em uma página segura da InfinitePay.' },
 }
 
-/** Habilitados na configuração E implementados no sistema. */
-export function availableMethods(config: ShopConfig): PaymentMethodKey[] {
-  return config.paymentMethods.filter((m) => IMPLEMENTED_METHODS.includes(m))
+/** Dos métodos que a loja habilitou (painel → Pagamentos), os que o sistema sabe executar. */
+export function availableMethods(enabled: readonly string[]): PaymentMethodKey[] {
+  return IMPLEMENTED_METHODS.filter((m) => enabled.includes(m))
 }
 
 /** Motivos para NÃO deixar o cliente finalizar (configuração incompleta). Lista vazia = pode vender. */

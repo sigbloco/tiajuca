@@ -4,7 +4,7 @@
 // O pagamento só é registrado depois de perguntar à própria InfinitePay (`payment_check`) e de o valor bater com o total do pedido.
 // Respostas: 200 = tratado (ou nada a fazer); 400 = falha temporária, a InfinitePay tenta de novo.
 //
-// Variável: INFINITEPAY_HANDLE (InfiniteTag). Sem ela a função responde 503.
+// A InfiniteTag vem das configurações da loja (tabela shop_settings). Sem ela a função responde 503.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { PAYMENT_CHECK_ENDPOINT, isPaymentConfirmed, parseWebhook } from './verify.ts'
@@ -13,9 +13,6 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Método não permitido.' }, 405)
-  const handle = Deno.env.get('INFINITEPAY_HANDLE')
-  if (!handle) return json({ error: 'InfinitePay não configurada.' }, 503)
-
   let raw: unknown
   try { raw = await req.json() } catch { return json({ ignored: 'corpo inválido' }) }
   const hook = parseWebhook(raw)
@@ -27,6 +24,8 @@ Deno.serve(async (req) => {
   if (orderErr) { console.error('shop_order_for_payment', orderErr.message); return json({ error: 'temporário' }, 400) }
   if (!order || order.payment_method !== 'infinitepay') return json({ ignored: 'pedido desconhecido' })
   if (order.status === 'paid') return json({ ok: true, already: true })
+  const handle = order.infinitepay_handle as string | null
+  if (!handle) return json({ error: 'InfinitePay não configurada.' }, 503)
 
   // Pergunta à InfinitePay se o pagamento é real.
   let check: unknown

@@ -3,7 +3,7 @@ import { PENDING, parseShopConfig } from '../config/schema'
 import { availableMethods, checkoutBlockers, directorLinks, pixInstructions } from './pix'
 
 const base = {
-  orgSlug: 'tiajuca', reservationHours: 48, paymentMethods: ['pix', 'infinitepay'],
+  orgSlug: 'tiajuca', reservationHours: 48,
   pix: { key: 'pix@bloco.com', beneficiary: 'Bloco' },
   contact: { whatsapp: '5521999998888', email: 'loja@bloco.com' },
   mail: { fromName: 'Bloco', fromEmail: 'loja@bloco.com' },
@@ -34,10 +34,11 @@ describe('Pix manual', () => {
 })
 
 describe('métodos disponíveis e bloqueios de checkout', () => {
-  it('só oferece o que está habilitado E implementado', () => {
-    expect(availableMethods(cfg())).toEqual(['pix', 'infinitepay'])
-    expect(availableMethods(cfg({ paymentMethods: ['infinitepay'] }))).toEqual(['infinitepay'])
-    expect(availableMethods(cfg({ paymentMethods: ['pix'] }))).toEqual(['pix'])
+  it('só oferece o que a loja habilitou E o sistema implementa', () => {
+    expect(availableMethods(['pix', 'infinitepay'])).toEqual(['pix', 'infinitepay'])
+    expect(availableMethods(['infinitepay'])).toEqual(['infinitepay'])
+    expect(availableMethods(['pix', 'boleto'])).toEqual(['pix'])
+    expect(availableMethods([])).toEqual([])
   })
   it('bloqueia a venda por Pix sem chave ou sem nenhum contato', () => {
     expect(checkoutBlockers(cfg(), 'pix')).toEqual([])

@@ -19,13 +19,13 @@ export function CheckoutPage() {
   const { session } = useAuth()
   const navigate = useNavigate()
   const config = getShopConfig()
-  const methods = availableMethods(config)
+  const methods = availableMethods(store.payment_methods)
   const meta = session?.user.user_metadata as { full_name?: string } | undefined
   const [f, setF] = useState({
     name: meta?.full_name ?? '', phone: '', email: session?.user.email ?? '',
     pickup: store.pickup_points.length === 1 ? store.pickup_points[0].id : '', method: methods[0] ?? '',
   })
-  const blockers = f.method ? checkoutBlockers(config, f.method as 'pix') : []
+  const blockers = f.method ? checkoutBlockers(config, f.method as 'pix') : ['Esta loja ainda não tem forma de pagamento ativa.']
   const noPickup = store.pickup_points.length === 0
 
   const submit = useMutation({

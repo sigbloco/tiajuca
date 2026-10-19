@@ -8,6 +8,7 @@ import { addToCart, indexCatalog, priceCart, reconcileCart, removeLine, setQuant
 export interface PickupPointPublic { id: string; name: string; address: string; opening_hours: string }
 export interface StoreData {
   org: { id: string; name: string; short_name: string; slug: string; logo_path: string | null; theme: OrgTheme }
+  payment_methods: string[]
   products: StoreProduct[]
   pickup_points: PickupPointPublic[]
 }
