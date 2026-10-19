@@ -25,7 +25,7 @@ export function CheckoutPage() {
     name: meta?.full_name ?? '', phone: '', email: session?.user.email ?? '',
     pickup: store.pickup_points.length === 1 ? store.pickup_points[0].id : '', method: methods[0] ?? '',
   })
-  const blockers = f.method ? checkoutBlockers(config, f.method as 'pix') : ['Esta loja ainda não tem forma de pagamento ativa.']
+  const blockers = f.method ? checkoutBlockers(f.method as 'pix', store) : ['Esta loja ainda não tem forma de pagamento ativa.']
   const noPickup = store.pickup_points.length === 0
 
   const submit = useMutation({

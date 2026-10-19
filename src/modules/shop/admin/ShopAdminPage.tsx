@@ -1,31 +1,34 @@
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button, Card, cn } from '@/components/ui/primitives'
-import { findPendingFields } from '../config/schema'
-import { getShopConfig } from '../config/shop.config'
+import { useOrgId } from '@/core/organization'
 import { OrdersTab } from './OrdersTab'
 import { PaymentsTab } from './PaymentsTab'
 import { PickupPointsTab } from './PickupPointsTab'
 import { ProductsTab } from './ProductsTab'
+import { getSettings, missingSetup } from './settings'
 
 const TABS = [
   { key: 'orders', label: 'Pedidos' },
   { key: 'products', label: 'Produtos' },
   { key: 'pickup', label: 'Pontos de retirada' },
-  { key: 'payments', label: 'Pagamentos' },
+  { key: 'payments', label: 'Pagamentos e contatos' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
+  const orgId = useOrgId()
   const [tab, setTab] = useState<TabKey>('orders')
-  const pending = findPendingFields(getShopConfig())
+  const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
+  const pending = settings.data ? missingSetup(settings.data) : []
   return (
     <div className="space-y-4">
       <h1>Loja</h1>
       {pending.length > 0 && (
         <Card className="border-secondary p-4">
-          <p className="font-semibold">Falta preencher em <code>shop.config.ts</code> antes de vender:</p>
-          <ul className="mt-2 list-disc pl-5 text-sm">{pending.map((p) => <li key={p}><code>{p}</code></li>)}</ul>
+          <p className="font-semibold">Falta configurar antes de vender (aba Pagamentos e contatos):</p>
+          <ul className="mt-2 list-disc pl-5 text-sm">{pending.map((p) => <li key={p}>{p}</li>)}</ul>
         </Card>
       )}
       <div role="tablist" className="flex flex-wrap gap-2">

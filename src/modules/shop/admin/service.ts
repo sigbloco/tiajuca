@@ -106,19 +106,3 @@ export async function savePickupPoint(orgId: string, id: string | null, row: Omi
   if (error) throw error
 }
 
-export interface ShopSettings { payment_methods: string[]; infinitepay_handle: string | null; public_site_url: string | null }
-
-export async function getSettings(orgId: string): Promise<ShopSettings> {
-  const { data, error } = await supabase.from('shop_settings').select('payment_methods, infinitepay_handle, public_site_url').eq('organization_id', orgId).maybeSingle()
-  if (error) throw error
-  return (data as ShopSettings | null) ?? { payment_methods: ['pix'], infinitepay_handle: null, public_site_url: null }
-}
-
-export async function saveSettings(orgId: string, s: ShopSettings) {
-  const { error } = await supabase.from('shop_settings').upsert({ organization_id: orgId, ...s }, { onConflict: 'organization_id' })
-  if (error) throw error
-}
-
-/** Normaliza o que a pessoa digita: tira o $ e espaços da InfiniteTag e a barra final do endereço do site. */
-export const cleanHandle = (v: string) => v.trim().replace(/^\$/, '').trim()
-export const cleanSiteUrl = (v: string) => v.trim().replace(/\/+$/, '')

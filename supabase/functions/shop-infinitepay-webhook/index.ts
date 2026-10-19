@@ -11,6 +11,16 @@ import { PAYMENT_CHECK_ENDPOINT, isPaymentConfirmed, parseWebhook } from './veri
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
+
+/** Pede ao shop-mailer para esvaziar a fila agora (o agendamento do banco é só a rede de segurança). Não bloqueia a resposta. */
+function flushMail() {
+  const p = fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-mailer`, {
+    method: 'POST', headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, signal: AbortSignal.timeout(25_000),
+  }).catch(() => {})
+  // deno-lint-ignore no-explicit-any
+  ;(globalThis as any).EdgeRuntime?.waitUntil?.(p)
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Método não permitido.' }, 405)
   let raw: unknown
@@ -55,5 +65,6 @@ Deno.serve(async (req) => {
     },
   })
   if (error) { console.error('shop_mark_paid', error.message); return json({ error: 'temporário' }, 400) }
+  flushMail()
   return json({ ok: true, result })
 })

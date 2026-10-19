@@ -1,6 +1,7 @@
 // Edge Function: ações do PAINEL da loja que precisam de servidor. Exige usuário logado com a permissão `shop.manage`.
 //
-// POST JSON: { action: 'test_infinitepay', org_slug, handle }
+// POST JSON: { action: 'flush_mail', org_slug }  → manda o e-mail do que acabou de mudar (o painel chama depois de cada ação)
+//            { action: 'test_infinitepay', org_slug, handle }
 //   Cria um link de R$ 1,00 na InfinitePay só para conferir se a InfiniteTag funciona e qual é o formato da resposta.
 //   Ninguém é cobrado (o link só gera cobrança se alguém pagar) e nenhum pedido é criado nem webhook é registrado.
 
@@ -14,6 +15,16 @@ const cors = {
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
+
+/** Pede ao shop-mailer para esvaziar a fila agora (o agendamento do banco é só a rede de segurança). Não bloqueia a resposta. */
+function flushMail() {
+  const p = fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-mailer`, {
+    method: 'POST', headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, signal: AbortSignal.timeout(25_000),
+  }).catch(() => {})
+  // deno-lint-ignore no-explicit-any
+  ;(globalThis as any).EdgeRuntime?.waitUntil?.(p)
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -35,6 +46,11 @@ Deno.serve(async (req) => {
   if (!orgId) return json({ error: 'Loja não encontrada.' }, 404)
   const { data: allowed } = await asUser.rpc('has_permission', { p_org: orgId, p_perm: 'shop.manage' })
   if (allowed !== true) return json({ error: 'Você não tem permissão para gerenciar a loja.' }, 403)
+
+  if (body.action === 'flush_mail') {
+    flushMail()
+    return json({ ok: true })
+  }
 
   if (body.action === 'test_infinitepay') {
     const handle = String(body.handle ?? '').trim().replace(/^\$/, '')

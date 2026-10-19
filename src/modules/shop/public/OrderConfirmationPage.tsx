@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Badge, Button, Card } from '@/components/ui/primitives'
 import { formatCurrency, formatDateTime } from '@/core/format'
 import { fromCents } from '../catalog'
-import { getShopConfig } from '../config/shop.config'
 import { directorLinks, pixInstructions } from '../payments/pix'
 import { invokeShop, loadSnapshot } from './api'
 import { useStore } from './StoreContext'
@@ -23,7 +22,7 @@ async function copy(text: string, what: string) {
 /** Confirmação logo depois da compra: código do pedido e instruções do método escolhido. */
 export function OrderConfirmationPage() {
   const { code = '' } = useParams()
-  const { basePath } = useStore()
+  const { basePath, store } = useStore()
   const snap = loadSnapshot(code)
   const [status, setStatus] = useState(snap?.order.status ?? '')
 
@@ -57,9 +56,10 @@ export function OrderConfirmationPage() {
     )
   }
   const { order, customerName } = snap
-  const config = getShopConfig()
-  const directors = directorLinks(config, order.code)
-  const pix = order.payment_method === 'pix' ? pixInstructions({ config, orderCode: order.code, totalCents: order.total_cents, customerName }) : null
+  const directors = directorLinks(store.contact, order.code)
+  const pix = order.payment_method === 'pix' && store.pix
+    ? pixInstructions({ pix: store.pix, contact: store.contact, orderCode: order.code, totalCents: order.total_cents, customerName })
+    : null
 
   return (
     <div className="mx-auto max-w-xl space-y-4">

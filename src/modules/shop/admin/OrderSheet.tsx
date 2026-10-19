@@ -4,7 +4,8 @@ import { toast } from 'sonner'
 import { Badge, Button, Input, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDateTime } from '@/core/format'
-import { useOrgId } from '@/core/organization'
+import { useOrganization, useOrgId } from '@/core/organization'
+import { invokeShop } from '../public/api'
 import { useState } from 'react'
 import { fromCents } from '../catalog'
 import { KIND_LABEL, ORDER_STATUS_LABEL, fulfillmentLabel, fulfillmentSteps, orderActions, type FulfillmentStatus } from '../orders/transitions'
@@ -16,13 +17,18 @@ const STATUS_ANY: Record<string, string> = { ...ORDER_STATUS_LABEL, pending: 'Pe
 
 export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: PickupPoint | undefined }) {
   const orgId = useOrgId()
+  const { membership } = useOrganization()
   const qc = useQueryClient()
   const [reason, setReason] = useState('')
   const events = useQuery({ queryKey: ['shop', orgId, 'order-events', order.id, order.status, order.shop_fulfillments.map((f) => f.status).join()], queryFn: () => listOrderEvents(order.id) })
   const refresh = () => qc.invalidateQueries({ queryKey: ['shop', orgId] })
   const act = useMutation({
     mutationFn: (fn: () => Promise<unknown>) => fn(),
-    onSuccess: () => { refresh(); toast.success('Pedido atualizado.') },
+    onSuccess: () => {
+      refresh(); toast.success('Pedido atualizado.')
+      // Pede o envio imediato do aviso por e-mail ao cliente (o agendamento do banco é a rede de segurança).
+      invokeShop('shop-admin', { action: 'flush_mail', org_slug: membership?.slug }).catch(() => {})
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const a = orderActions(order.status)

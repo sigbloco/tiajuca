@@ -17,6 +17,16 @@ const json = (body: unknown, status = 200) =>
 const sha256 = async (s: string) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, '0')).join('')
 
+
+/** Pede ao shop-mailer para esvaziar a fila agora (o agendamento do banco é só a rede de segurança). Não bloqueia a resposta. */
+function flushMail() {
+  const p = fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-mailer`, {
+    method: 'POST', headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, signal: AbortSignal.timeout(25_000),
+  }).catch(() => {})
+  // deno-lint-ignore no-explicit-any
+  ;(globalThis as any).EdgeRuntime?.waitUntil?.(p)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Método não permitido.' }, 405)
@@ -45,6 +55,7 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.rpc('shop_report_payment', { p_code: code, p_phone: phone })
     if (error) { console.error('shop_report_payment', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
     if (!data?.ok) return json({ error: 'Pedido não encontrado. Confira o código e o telefone.' }, 404)
+    flushMail()
     return json({ status: data.status })
   }
   if (body.action === 'status') {

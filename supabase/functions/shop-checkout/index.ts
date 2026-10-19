@@ -21,9 +21,19 @@ const json = (body: unknown, status = 200) =>
 const sha256 = async (s: string) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, '0')).join('')
 
+
+/** Pede ao shop-mailer para esvaziar a fila agora (o agendamento do banco é só a rede de segurança). Não bloqueia a resposta. */
+function flushMail() {
+  const p = fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-mailer`, {
+    method: 'POST', headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, signal: AbortSignal.timeout(25_000),
+  }).catch(() => {})
+  // deno-lint-ignore no-explicit-any
+  ;(globalThis as any).EdgeRuntime?.waitUntil?.(p)
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-interface Settings { payment_methods: string[]; infinitepay_handle: string | null; public_site_url: string | null }
+interface Settings { payment_methods: string[]; infinitepay_handle: string | null; public_site_url: string | null; pix_key: string | null; pix_beneficiary: string | null }
 
 // Cada método de pagamento é um provedor com a mesma forma. Pix não cria nada no servidor (pagamento conferido à mão).
 // InfinitePay cria um link de pagamento (crédito ou Pix na página deles); a confirmação chega pelo webhook (shop-infinitepay-webhook).
@@ -33,7 +43,7 @@ interface Ctx { orgSlug: string; settings: Settings; customer: { name: string; e
 interface Provider { available(s: Settings): boolean; start(order: Order, ctx: Ctx, admin: Admin): Promise<Record<string, unknown>> }
 
 const providers: Record<string, Provider> = {
-  pix: { available: (s) => s.payment_methods.includes('pix'), start: async () => ({}) },
+  pix: { available: (s) => s.payment_methods.includes('pix') && !!s.pix_key && !!s.pix_beneficiary, start: async () => ({}) },
   infinitepay: {
     available: (s) => s.payment_methods.includes('infinitepay') && !!s.infinitepay_handle && !!s.public_site_url,
     async start(order, ctx, admin) {
@@ -119,6 +129,7 @@ Deno.serve(async (req) => {
       orgSlug, settings: settings as Settings,
       customer: { name: String(body.name ?? '').trim(), email: String(body.email ?? '').trim(), phone: String(body.phone ?? '') },
     }, admin)
+    flushMail()
     return json({ order, payment })
   } catch (e) {
     // O pedido já reservou estoque: se o pagamento não pôde ser iniciado, cancela e libera a reserva.

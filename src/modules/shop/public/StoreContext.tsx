@@ -3,12 +3,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useAuth } from '@/core/auth'
 import { supabase } from '@/core/supabase'
 import type { OrgTheme } from '@/core/theme'
+import type { ContactInfo, PixInfo } from '../payments/pix'
 import { addToCart, indexCatalog, priceCart, reconcileCart, removeLine, setQuantity, type CartLine, type CatalogIndex, type PricedCart, type StoreProduct } from '../cart'
 
 export interface PickupPointPublic { id: string; name: string; address: string; opening_hours: string }
 export interface StoreData {
   org: { id: string; name: string; short_name: string; slug: string; logo_path: string | null; theme: OrgTheme }
   payment_methods: string[]
+  pix: PixInfo | null
+  contact: ContactInfo
   products: StoreProduct[]
   pickup_points: PickupPointPublic[]
 }
