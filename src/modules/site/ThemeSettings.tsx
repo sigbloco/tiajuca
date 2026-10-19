@@ -7,7 +7,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { applyTheme, type OrgTheme } from '@/core/theme'
-import { notifyChange } from '@/core/undo'
+import { notifySaved } from '@/core/undo'
 import { ColorPick } from './ColorPick'
 import { textOn } from './links'
 
@@ -32,7 +32,7 @@ export function ThemeSettings() {
   }
   const save = useMutation({
     mutationFn: () => write(c),
-    onSuccess: () => { const before = saved; notifyChange('Cores do bloco salvas.', async () => { await write(before); setC(before) }) },
+    onSuccess: () => { const before = saved; notifySaved('Cores do bloco salvas.', async () => { await write(before); setC(before) }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   if (!can) return null

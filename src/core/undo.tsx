@@ -23,3 +23,9 @@ export function notifyChange(message: string, undo?: () => Promise<unknown> | un
     </div>
   ), { duration: UNDO_MS, position: 'bottom-center' })
 }
+
+/** Aviso simples de "salvo", sem Desfazer: para telas de configuração, onde cada alteração já é confirmada com OK/Salvar. */
+export function notifySaved(message: string, _undo?: unknown) {
+  void _undo
+  toast.success(message)
+}

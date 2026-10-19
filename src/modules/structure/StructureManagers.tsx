@@ -10,7 +10,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { useCatalog } from './CatalogEditor'
 import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
-import { notifyChange } from '@/core/undo'
+import { notifySaved } from '@/core/undo'
 import { describeChange, invalidateCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 const byOrder = (a: CatalogItem, b: CatalogItem) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)
@@ -28,20 +28,14 @@ function useStructureMutations(table: CatalogTable) {
     mutationFn: async (item: Partial<CatalogItem> & { name: string }) => ({ prev: previousOf(items, item), id: await saveCatalogItem(table, orgId, item) }),
     onSuccess: ({ prev }, item) => {
       refresh()
-      notifyChange(prev && item.name !== prev.name ? 'Nome atualizado.' : describeChange(item, SINGULAR[table] ?? 'Item'),
+      notifySaved(prev && item.name !== prev.name ? 'Nome atualizado.' : describeChange(item, SINGULAR[table] ?? 'Item'),
         prev ? async () => { await saveCatalogItem(table, orgId, prev); refresh() } : undefined)
     },
     onError,
   })
   const move = useMutation({
-    mutationFn: ({ a, b }: { a: CatalogItem; b: CatalogItem }) => swapOrder(table, orgId, a, b),
-    onSuccess: (_d, { a, b }) => {
-      refresh()
-      notifyChange('Ordem alterada.', async () => {
-        await swapOrder(table, orgId, { ...a, sort_order: b.sort_order }, { ...b, sort_order: a.sort_order })
-        refresh()
-      })
-    },
+    mutationFn: ({ a, b, list }: { a: CatalogItem; b: CatalogItem; list: CatalogItem[] }) => swapOrder(table, orgId, a, b, list),
+    onSuccess: () => refresh(),
     onError,
   })
   return { save, move }
@@ -60,9 +54,9 @@ function ItemRow({ item, siblings, canEdit, mut, extra }: {
     <div className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !item.is_active && 'opacity-60')}>
       <div className="flex flex-col">
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx <= 0}
-          onClick={() => mut.move.mutate({ a: item, b: siblings[idx - 1] })}><ArrowUp className="h-3.5 w-3.5" /></Button>
+          onClick={() => mut.move.mutate({ a: item, b: siblings[idx - 1], list: siblings })}><ArrowUp className="h-3.5 w-3.5" /></Button>
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1}
-          onClick={() => mut.move.mutate({ a: item, b: siblings[idx + 1] })}><ArrowDown className="h-3.5 w-3.5" /></Button>
+          onClick={() => mut.move.mutate({ a: item, b: siblings[idx + 1], list: siblings })}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>
       <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`} onSave={(v) => mut.save.mutateAsync({ id: item.id, name: v })} />
       {extra}
@@ -119,7 +113,7 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
     },
     onSuccess: (id, v) => {
       const table = v.kind === 'section' ? 'sections' : 'subsections'
-      notifyChange(v.kind === 'section' ? 'Naipe criado.' : 'Subnaipe criado.', id ? async () => { await saveCatalogItem(table, orgId, { id, name: v.name, is_active: false }); invalidateCatalog(qc, orgId) } : undefined)
+      notifySaved(v.kind === 'section' ? 'Naipe criado.' : 'Subnaipe criado.', id ? async () => { await saveCatalogItem(table, orgId, { id, name: v.name, is_active: false }); invalidateCatalog(qc, orgId) } : undefined)
       if (v.kind === 'section') setNewSection(''); else setNewSub((m) => ({ ...m, [v.sectionId!]: '' }))
       invalidateCatalog(qc, orgId)
     },
@@ -149,9 +143,9 @@ export function SectionsManager({ canEdit }: { canEdit: boolean }) {
                 {canEdit && (
                   <>
                     <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${s.name}`} disabled={ordered.findIndex((x) => x.id === s.id) <= 0}
-                      onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) - 1] })}><ArrowUp className="h-4 w-4" /></Button>
+                      onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) - 1], list: ordered })}><ArrowUp className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${s.name}`} disabled={ordered.findIndex((x) => x.id === s.id) === ordered.length - 1}
-                      onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) + 1] })}><ArrowDown className="h-4 w-4" /></Button>
+                      onClick={() => secMut.move.mutate({ a: s, b: ordered[ordered.findIndex((x) => x.id === s.id) + 1], list: ordered })}><ArrowDown className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Renomear ${s.name}`} onClick={() => setRenaming(renaming === s.id ? null : s.id)}><Pencil className="h-4 w-4" /></Button>
                     <Button size="sm" variant="outline" onClick={() => secMut.save.mutate({ id: s.id, name: s.name, is_active: !s.is_active })}>{s.is_active ? 'Desativar' : 'Ativar'}</Button>
                   </>
@@ -226,7 +220,7 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
     onSuccess: (id) => {
       const name = form.name.trim()
       setForm({ ...form, name: '' }); invalidateCatalog(qc, orgId)
-      notifyChange('Instrumento criado.', id ? async () => { await saveCatalogItem('instruments', orgId, { id, name, is_active: false }); invalidateCatalog(qc, orgId) } : undefined)
+      notifySaved('Instrumento criado.', id ? async () => { await saveCatalogItem('instruments', orgId, { id, name, is_active: false }); invalidateCatalog(qc, orgId) } : undefined)
     },
     onError: (e) => toast.error(friendlyError(e)),
   })

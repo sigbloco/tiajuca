@@ -9,7 +9,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { COLOR_LABEL, type TypeColor } from '@/modules/events/service'
 import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
-import { notifyChange } from '@/core/undo'
+import { notifySaved } from '@/core/undo'
 import { describeChange, invalidateCatalog, listCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 interface Props {
@@ -59,7 +59,7 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
     onSuccess: (id) => {
       setName('')
       refresh()
-      notifyChange(`${singular} criado.`, id ? async () => { await saveCatalogItem(table, orgId, { id, name: name.trim(), is_active: false }); refresh() } : undefined)
+      notifySaved(`${singular} criado.`, id ? async () => { await saveCatalogItem(table, orgId, { id, name: name.trim(), is_active: false }); refresh() } : undefined)
     },
     onError,
   })
@@ -67,20 +67,14 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
     mutationFn: async (item: Partial<CatalogItem> & { name: string }) => ({ prev: previousOf(items, item), id: await saveCatalogItem(table, orgId, item) }),
     onSuccess: ({ prev }, item) => {
       refresh()
-      notifyChange(item.name !== prev?.name && prev ? 'Nome atualizado.' : describeChange(item, singular),
+      notifySaved(item.name !== prev?.name && prev ? 'Nome atualizado.' : describeChange(item, singular),
         prev ? async () => { await saveCatalogItem(table, orgId, prev); refresh() } : undefined)
     },
     onError,
   })
   const move = useMutation({
-    mutationFn: ({ a, b }: { a: CatalogItem; b: CatalogItem }) => swapOrder(table, orgId, a, b),
-    onSuccess: (_d, { a, b }) => {
-      refresh()
-      notifyChange('Ordem alterada.', async () => {
-        await swapOrder(table, orgId, { ...a, sort_order: b.sort_order }, { ...b, sort_order: a.sort_order })
-        refresh()
-      })
-    },
+    mutationFn: ({ a, b, list }: { a: CatalogItem; b: CatalogItem; list: CatalogItem[] }) => swapOrder(table, orgId, a, b, list),
+    onSuccess: () => refresh(),
     onError,
   })
 
@@ -118,9 +112,9 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
           <Card key={item.id} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60')}>
             <div className="flex flex-col">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx === 0}
-                onClick={() => move.mutate({ a: item, b: visible[idx - 1] })}><ArrowUp className="h-4 w-4" /></Button>
+                onClick={() => move.mutate({ a: item, b: visible[idx - 1], list: visible })}><ArrowUp className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === visible.length - 1}
-                onClick={() => move.mutate({ a: item, b: visible[idx + 1] })}><ArrowDown className="h-4 w-4" /></Button>
+                onClick={() => move.mutate({ a: item, b: visible[idx + 1], list: visible })}><ArrowDown className="h-4 w-4" /></Button>
             </div>
             <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`}
               onSave={(v) => save.mutateAsync({ id: item.id, name: v })} />

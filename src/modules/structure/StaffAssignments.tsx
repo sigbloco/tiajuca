@@ -8,7 +8,7 @@ import { Badge, Button, Card, EmptyState, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { notifyChange } from '@/core/undo'
+import { notifySaved } from '@/core/undo'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { useCatalog } from './CatalogEditor'
@@ -77,7 +77,7 @@ export function StaffAssignments() {
     onSuccess: (id, v) => {
       refresh()
       setDrafts((d) => ({ ...d, [v.kind]: d[v.kind].filter((m) => m !== v.member) }))
-      notifyChange('Atribuição criada.', async () => {
+      notifySaved('Atribuição criada.', async () => {
         const { error } = await supabase.from('staff_assignments').update({ valid_to: new Date().toISOString().slice(0, 10) }).eq('id', id)
         if (error) throw error
         refresh()
@@ -92,7 +92,7 @@ export function StaffAssignments() {
     },
     onSuccess: (_d, id) => {
       refresh()
-      notifyChange('Atribuição encerrada.', async () => {
+      notifySaved('Atribuição encerrada.', async () => {
         const { error } = await supabase.from('staff_assignments').update({ valid_to: null }).eq('id', id)
         if (error) throw error
         refresh()

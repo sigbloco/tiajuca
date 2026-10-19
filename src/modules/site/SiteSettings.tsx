@@ -6,7 +6,7 @@ import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/pr
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { notifyChange } from '@/core/undo'
+import { notifySaved } from '@/core/undo'
 import { ThemeSettings } from './ThemeSettings'
 import { ColorPick } from './ColorPick'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
@@ -50,7 +50,7 @@ export function SiteSettings() {
     onSuccess: () => {
       const before = saved
       refresh()
-      notifyChange('Página inicial salva.', async () => { await write(before); refresh() })
+      notifySaved('Página inicial salva.', async () => { await write(before); refresh() })
     },
     onError: (e) => toast.error(friendlyError(e)),
   })

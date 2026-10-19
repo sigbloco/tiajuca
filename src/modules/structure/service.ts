@@ -40,12 +40,21 @@ export async function saveCatalogItem(
   return (data as { id: string }).id
 }
 
-/** Troca a ordem de dois itens (reordenação simples por setas). */
-export async function swapOrder(table: CatalogTable, orgId: string, a: CatalogItem, b: CatalogItem) {
-  await Promise.all([
-    saveCatalogItem(table, orgId, { id: a.id, name: a.name, sort_order: b.sort_order }),
-    saveCatalogItem(table, orgId, { id: b.id, name: b.name, sort_order: a.sort_order }),
-  ])
+/** Troca a posição de dois itens. Com a lista na ordem exibida, renumera tudo (1, 2, 3…), então funciona mesmo com ordens repetidas. */
+export async function swapOrder(table: CatalogTable, orgId: string, a: CatalogItem, b: CatalogItem, list?: CatalogItem[]) {
+  if (!list) {
+    await Promise.all([
+      saveCatalogItem(table, orgId, { id: a.id, name: a.name, sort_order: b.sort_order }),
+      saveCatalogItem(table, orgId, { id: b.id, name: b.name, sort_order: a.sort_order }),
+    ])
+    return
+  }
+  const ordered = list.slice()
+  const ia = ordered.findIndex((x) => x.id === a.id)
+  const ib = ordered.findIndex((x) => x.id === b.id)
+  if (ia < 0 || ib < 0) return
+  ;[ordered[ia], ordered[ib]] = [ordered[ib], ordered[ia]]
+  await Promise.all(ordered.map((it, i) => (it.sort_order === i + 1 ? null : saveCatalogItem(table, orgId, { id: it.id, name: it.name, sort_order: i + 1 }))))
 }
 
 /** Depois de mexer em qualquer catálogo (categorias, instrumentos, naipes…), tudo que mostra esses nomes se atualiza sozinho. */

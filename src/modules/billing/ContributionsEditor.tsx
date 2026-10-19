@@ -6,7 +6,7 @@ import { ProgressiveList } from '@/components/shared/LoadMore'
 import { MoneyInput } from '@/components/ui/masked-inputs'
 import { Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { notifyChange } from '@/core/undo'
+import { notifySaved } from '@/core/undo'
 import { todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
@@ -41,7 +41,7 @@ function CategoryRow({ item, siblings, current, canEdit }: { item: CatalogItem; 
     onSuccess: () => {
       const oldName = item.name, oldPrice = current, priceChanged = value !== null && value !== current
       invalidateCatalog(qc, orgId)
-      notifyChange('Categoria atualizada. Cobranças já geradas não mudam.', async () => {
+      notifySaved('Categoria atualizada. Cobranças já geradas não mudam.', async () => {
         await saveCatalogItem('fee_categories', orgId, { id: item.id, name: oldName })
         if (priceChanged && oldPrice !== null) await setPrice(item.id, oldPrice)
         invalidateCatalog(qc, orgId)
@@ -54,20 +54,15 @@ function CategoryRow({ item, siblings, current, canEdit }: { item: CatalogItem; 
     onSuccess: () => {
       const was = item.is_active
       invalidateCatalog(qc, orgId)
-      notifyChange(was ? 'Categoria desativada.' : 'Categoria reativada.', async () => {
+      notifySaved(was ? 'Categoria desativada.' : 'Categoria reativada.', async () => {
         await saveCatalogItem('fee_categories', orgId, { id: item.id, name: item.name, is_active: was }); invalidateCatalog(qc, orgId)
       })
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const move = useMutation({
-    mutationFn: (other: CatalogItem) => swapOrder('fee_categories', orgId, item, other),
-    onSuccess: (_d, other) => {
-      invalidateCatalog(qc, orgId)
-      notifyChange('Ordem alterada.', async () => {
-        await swapOrder('fee_categories', orgId, { ...item, sort_order: other.sort_order }, { ...other, sort_order: item.sort_order }); invalidateCatalog(qc, orgId)
-      })
-    },
+    mutationFn: (other: CatalogItem) => swapOrder('fee_categories', orgId, item, other, siblings),
+    onSuccess: () => invalidateCatalog(qc, orgId),
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -118,7 +113,7 @@ export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
     onSuccess: (id) => {
       const created = name.trim()
       setName(''); setAmount(null); invalidateCatalog(qc, orgId)
-      notifyChange('Categoria criada.', async () => { await saveCatalogItem('fee_categories', orgId, { id, name: created, is_active: false }); invalidateCatalog(qc, orgId) })
+      notifySaved('Categoria criada.', async () => { await saveCatalogItem('fee_categories', orgId, { id, name: created, is_active: false }); invalidateCatalog(qc, orgId) })
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
