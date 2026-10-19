@@ -133,7 +133,7 @@ export function SiteSettings() {
         <h3>Menu</h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1.5"><Label htmlFor="st-enr">Botão das inscrições</Label><Input id="st-enr" value={f.enrollment_label} onChange={(e) => setF({ ...f, enrollment_label: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="st-shop">Botão da loja</Label><Input id="st-shop" value={f.shop_label} onChange={(e) => setF({ ...f, shop_label: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="st-shop">Nome da loja (menu, site e vitrine)</Label><Input id="st-shop" value={f.shop_label} onChange={(e) => setF({ ...f, shop_label: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="st-login">Botão de acesso</Label><Input id="st-login" value={f.login_label} onChange={(e) => setF({ ...f, login_label: e.target.value })} /></div>
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.show_shop} onChange={(e) => setF({ ...f, show_shop: e.target.checked })} /> Mostrar o botão da loja</label>

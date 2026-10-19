@@ -1,6 +1,7 @@
 import { Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useShopLabel } from '@/modules/site/useShopLabel'
 import { BackButton } from '@/components/shared/BackButton'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -22,6 +23,7 @@ export function AppShell() {
   const { signOut } = useAuth()
   const { pathname } = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
+  const shopLabel = useShopLabel(membership?.slug ?? '')
   const brandName = membership?.name
   const brandLogo = membership?.logo_path ?? null
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
@@ -31,7 +33,7 @@ export function AppShell() {
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   const entries: MenuEntry[] = [
-    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon })),
+    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.to === 'gerenciar-loja' ? shopLabel : i.label, icon: i.icon })),
     ...HUB_ORDER.flatMap((hub) => {
       const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
       return children.length === 0 ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), 'lista-de-espera'] }]

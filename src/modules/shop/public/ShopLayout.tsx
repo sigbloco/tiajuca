@@ -7,6 +7,7 @@ import { Card, Skeleton } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { applyTheme } from '@/core/theme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
+import { useShopLabel } from '@/modules/site/useShopLabel'
 import { BackButton } from '@/components/shared/BackButton'
 import { LoginDialog } from './LoginDialog'
 import { StoreProvider, fetchStore, useStore } from './StoreContext'
@@ -14,12 +15,13 @@ import { StoreProvider, fetchStore, useStore } from './StoreContext'
 function Header() {
   const { store, cart, isMember, basePath, setLoginOpen } = useStore()
   const { session } = useAuth()
+  const shopLabel = useShopLabel(store.org.slug)
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-card">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link to={basePath} className="flex min-w-0 items-center gap-2">
           <OrgLogo name={store.org.name} logoPath={store.org.logo_path} className="h-10 w-10 shrink-0" />
-          <span className="truncate font-display text-lg font-extrabold">Loja {store.org.short_name}</span>
+          <span className="truncate font-display text-lg font-extrabold">{shopLabel}</span>
         </Link>
         <nav className="flex items-center gap-3 text-sm">
           {isMember && <span className="hidden rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-secondary-foreground sm:inline">Preço de integrante</span>}

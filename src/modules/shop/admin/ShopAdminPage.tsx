@@ -1,3 +1,5 @@
+import { useOrganization } from '@/core/organization'
+import { useShopLabel } from '@/modules/site/useShopLabel'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button, Card, cn } from '@/components/ui/primitives'
@@ -19,12 +21,14 @@ type TabKey = (typeof TABS)[number]['key']
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
   const orgId = useOrgId()
+  const { membership } = useOrganization()
+  const shopLabel = useShopLabel(membership?.slug ?? '')
   const [tab, setTab] = useState<TabKey>('orders')
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const pending = settings.data ? missingSetup(settings.data) : []
   return (
     <div className="space-y-4">
-      <h1>Loja</h1>
+      <h1>{shopLabel}</h1>
       {pending.length > 0 && (
         <Card className="border-secondary p-4">
           <p className="font-semibold">Falta configurar antes de vender (aba Pagamentos e contatos):</p>
