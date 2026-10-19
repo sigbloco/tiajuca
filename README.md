@@ -1,5 +1,7 @@
 # SIGBloco — instância Cordão da Tia Juca
 
+Loja virtual do bloco: veja [docs/LOJA.md](docs/LOJA.md).
+
 Veja a proposta em [docs/PROPOSTA_TECNICA.md](docs/PROPOSTA_TECNICA.md) e as políticas em [docs/RLS.md](docs/RLS.md).
 
 ## Rodando

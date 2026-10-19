@@ -25,13 +25,14 @@ export function CheckoutPage() {
     name: meta?.full_name ?? '', phone: '', email: session?.user.email ?? '',
     pickup: store.pickup_points.length === 1 ? store.pickup_points[0].id : '', method: methods[0] ?? '',
   })
+  const [accepted, setAccepted] = useState(false)
   const blockers = f.method ? checkoutBlockers(f.method as 'pix', store) : ['Esta loja ainda não tem forma de pagamento ativa.']
   const noPickup = store.pickup_points.length === 0
 
   const submit = useMutation({
     mutationFn: async () => {
       return invokeShop<{ order: CreatedOrder; payment: { url?: string } }>('shop-checkout', {
-        org_slug: store.org.slug, name: f.name, phone: f.phone, email: f.email, pickup_point_id: f.pickup, payment_method: f.method,
+        org_slug: store.org.slug, name: f.name, phone: f.phone, email: f.email, pickup_point_id: f.pickup, payment_method: f.method, accept_privacy: accepted,
         items: cart.lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity })),
       })
     },
@@ -46,7 +47,7 @@ export function CheckoutPage() {
   })
 
   if (cart.lines.length === 0) return <Navigate to={`${basePath}/carrinho`} replace />
-  const disabled = submit.isPending || blockers.length > 0 || noPickup || !f.method || !f.pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
+  const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || !f.pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_20rem]">
@@ -94,6 +95,10 @@ export function CheckoutPage() {
           <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {config.reservationHours} horas aguardando o pagamento.</p>
         </Card>
 
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
+          <span>Li e concordo com o <Link className="font-semibold text-primary hover:underline" to={`${basePath}/privacidade`} target="_blank">aviso de privacidade</Link>: usaremos seu nome, telefone e e-mail só para este pedido.</span>
+        </label>
         {blockers.map((b) => <p key={b} role="alert" className="text-sm text-destructive">{b}</p>)}
         <Button type="submit" className="w-full" disabled={disabled}>{submit.isPending ? 'Enviando…' : `Confirmar pedido · ${money(cart.totalCents)}`}</Button>
       </form>

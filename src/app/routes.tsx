@@ -31,6 +31,7 @@ import { CartPage } from '@/modules/shop/public/CartPage'
 import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
 import { OrderConfirmationPage } from '@/modules/shop/public/OrderConfirmationPage'
 import { OrderLookupPage } from '@/modules/shop/public/OrderLookupPage'
+import { PrivacyPage } from '@/modules/shop/public/PrivacyPage'
 import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { ShopLayout } from '@/modules/shop/public/ShopLayout'
@@ -98,6 +99,7 @@ export const router = createBrowserRouter(
             { path: 'finalizar', element: <CheckoutPage /> },
             { path: 'pedido/:code', element: <OrderConfirmationPage /> },
             { path: 'consultar', element: <OrderLookupPage /> },
+            { path: 'privacidade', element: <PrivacyPage /> },
           ],
         },
         {

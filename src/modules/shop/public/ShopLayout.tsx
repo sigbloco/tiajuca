@@ -35,7 +35,7 @@ function Header() {
 }
 
 function Shell() {
-  const { store, notices, dismissNotices } = useStore()
+  const { store, notices, dismissNotices, basePath } = useStore()
   useEffect(() => {
     applyTheme(store.org.theme, { cache: false })
     applyBrandToDocument({ name: `Loja ${store.org.short_name}`, logo_path: store.org.logo_path })
@@ -53,6 +53,9 @@ function Shell() {
         )}
         <Outlet />
       </main>
+      <footer className="mx-auto max-w-5xl px-4 pb-8 text-center text-sm text-muted-foreground">
+        <Link className="hover:underline" to={`${basePath}/privacidade`}>Aviso de privacidade</Link>
+      </footer>
     </div>
   )
 }

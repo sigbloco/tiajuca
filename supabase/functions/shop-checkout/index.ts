@@ -85,6 +85,7 @@ Deno.serve(async (req) => {
     return json({ error: 'O carrinho está vazio ou inválido.' }, 400)
   }
   if (!UUID.test(String(body.pickup_point_id))) return json({ error: 'Escolha um ponto de retirada.' }, 400)
+  if (body.accept_privacy !== true) return json({ error: 'Para continuar, leia e aceite o aviso de privacidade.' }, 400)
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
 
