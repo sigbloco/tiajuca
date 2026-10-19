@@ -1,18 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import { ShoppingCart } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
+import { Link, Outlet, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Card, Skeleton } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { applyTheme } from '@/core/theme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
+import { LoginDialog } from './LoginDialog'
 import { StoreProvider, fetchStore, useStore } from './StoreContext'
 
 function Header() {
-  const { store, cart, isMember, basePath } = useStore()
+  const { store, cart, isMember, basePath, setLoginOpen } = useStore()
   const { session } = useAuth()
-  const { pathname } = useLocation()
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-card">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
@@ -22,7 +22,8 @@ function Header() {
         </Link>
         <nav className="flex items-center gap-3 text-sm">
           {isMember && <span className="hidden rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-secondary-foreground sm:inline">Preço de integrante</span>}
-          {!session && <Link className="font-semibold text-primary hover:underline" to={`/entrar?voltar=${encodeURIComponent(pathname)}`}>Sou integrante</Link>}
+          {!session && <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Sou integrante</button>}
+          <Link to={`${basePath}/consultar`} className="font-semibold text-primary hover:underline">Meus pedidos</Link>
           <Link to={`${basePath}/carrinho`} className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border px-3 hover:bg-muted" aria-label={`Carrinho, ${cart.itemCount} item(ns)`}>
             <ShoppingCart className="h-5 w-5" />
             {cart.itemCount > 0 && <span className="ml-1 font-bold">{cart.itemCount}</span>}
@@ -42,6 +43,7 @@ function Shell() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <LoginDialog />
       <main className="mx-auto max-w-5xl px-4 py-6">
         {notices.length > 0 && (
           <Card role="status" className="mb-4 border-secondary p-3 text-sm">

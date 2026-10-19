@@ -1,6 +1,6 @@
 import { Navigate, Outlet, createBrowserRouter, useParams } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/primitives'
-import { useAuth } from '@/core/auth'
+import { takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
 import { ClaimInvitePage, ForgotPasswordPage, LoginPage, NoOrganizationPage, ResetPasswordPage, SignupPage, VerifyEmailPage } from '@/modules/auth/pages'
@@ -30,6 +30,7 @@ import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
 import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
 import { OrderConfirmationPage } from '@/modules/shop/public/OrderConfirmationPage'
+import { OrderLookupPage } from '@/modules/shop/public/OrderLookupPage'
 import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { ShopLayout } from '@/modules/shop/public/ShopLayout'
@@ -44,6 +45,8 @@ function RootRedirect() {
   const { data, isLoading } = useMemberships()
   if (loading || (session && isLoading)) return <Loading />
   if (!session) return <Navigate to="/entrar" replace />
+  const back = takePostLoginPath() // ex.: voltou da loja depois do login com Google
+  if (back) return <Navigate to={back} replace />
   if (!data?.length) return <NoOrganizationPage />
   return <Navigate to={`/${data[0].slug}`} replace />
 }
@@ -94,6 +97,7 @@ export const router = createBrowserRouter(
             { path: 'carrinho', element: <CartPage /> },
             { path: 'finalizar', element: <CheckoutPage /> },
             { path: 'pedido/:code', element: <OrderConfirmationPage /> },
+            { path: 'consultar', element: <OrderLookupPage /> },
           ],
         },
         {

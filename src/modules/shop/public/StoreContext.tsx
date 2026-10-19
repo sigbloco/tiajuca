@@ -28,6 +28,8 @@ interface StoreContextValue {
   remove: (variantId: string) => void
   clear: () => void
   basePath: string
+  loginOpen: boolean
+  setLoginOpen: (open: boolean) => void
 }
 
 const Ctx = createContext<StoreContextValue | null>(null)
@@ -62,6 +64,7 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
   const index = useMemo(() => indexCatalog(store.products), [store.products])
   const [lines, setLines] = useState<CartLine[]>(() => readCart(slug))
   const [notices, setNotices] = useState<string[]>([])
+  const [loginOpen, setLoginOpen] = useState(false)
 
   // Integrante ATIVO logado? (o servidor volta a conferir isso no checkout; aqui só decide o que exibir)
   const member = useQuery({
@@ -88,14 +91,14 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
   }, [slug])
 
   const value = useMemo<StoreContextValue>(() => ({
-    store, index, isMember, basePath, notices,
+    store, index, isMember, basePath, notices, loginOpen, setLoginOpen,
     cart: priceCart(lines, index, isMember),
     dismissNotices: () => setNotices([]),
     add: (id, qty) => update((l) => addToCart(l, id, qty, index)),
     setQty: (id, qty) => update((l) => setQuantity(l, id, qty, index)),
     remove: (id) => update((l) => removeLine(l, id)),
     clear: () => update(() => []),
-  }), [store, index, isMember, basePath, notices, lines, update])
+  }), [store, index, isMember, basePath, notices, loginOpen, lines, update])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -140,6 +140,7 @@ export function OrderConfirmationPage() {
           </div>
         </Card>
       )}
+      <Link className="block text-center font-semibold text-primary hover:underline" to={`${basePath}/consultar`} state={{ code: order.code, phone: snap.phone }}>Acompanhar meu pedido</Link>
       <Link className="block text-center font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
     </div>
   )

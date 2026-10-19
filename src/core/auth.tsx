@@ -7,7 +7,8 @@ interface AuthContextValue {
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName: string) => Promise<{ needsVerification: boolean }>
-  signInWithGoogle: () => Promise<void>
+  /** `next`: caminho interno para voltar depois do login com Google (ex.: a loja). */
+  signInWithGoogle: (next?: string) => Promise<void>
   signOut: () => Promise<void>
   requestPasswordReset: (email: string) => Promise<void>
   updatePassword: (password: string) => Promise<void>
@@ -16,6 +17,16 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 const origin = () => window.location.origin
+
+const POST_LOGIN_KEY = 'sigbloco:post-login'
+/** Caminho interno guardado antes do login com Google (uso único). Só aceita caminhos do próprio site. */
+export function takePostLoginPath(): string | null {
+  try {
+    const v = sessionStorage.getItem(POST_LOGIN_KEY)
+    sessionStorage.removeItem(POST_LOGIN_KEY)
+    return v && v.startsWith('/') && !v.startsWith('//') ? v : null
+  } catch { return null }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -47,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error
         return { needsVerification: !data.session }
       },
-      async signInWithGoogle() {
+      async signInWithGoogle(next) {
+        if (next) try { sessionStorage.setItem(POST_LOGIN_KEY, next) } catch { /* sem armazenamento: volta para o início */ }
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: { redirectTo: `${origin()}/` },

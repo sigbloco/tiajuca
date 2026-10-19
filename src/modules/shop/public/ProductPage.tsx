@@ -10,17 +10,19 @@ import { useStore } from './StoreContext'
 
 export function ProductPage() {
   const { slug = '' } = useParams()
-  const { store, isMember, basePath, add, cart } = useStore()
+  const { store, isMember, basePath, add, cart, setLoginOpen } = useStore()
   const { session } = useAuth()
   const navigate = useNavigate()
   const product = store.products.find((p) => p.slug === slug)
-  const [variantId, setVariantId] = useState<string>('')
+  const [picked, setPicked] = useState<string>('')
   const [qty, setQty] = useState(1)
   const [photo, setPhoto] = useState(0)
 
   if (!product) {
     return <Card className="p-6">Produto não encontrado. <Link className="font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link></Card>
   }
+  // Com uma única variação disponível ela já vem escolhida.
+  const variantId = picked || (product.variants.length === 1 && product.variants[0].available !== 0 ? product.variants[0].id : '')
   const variant = product.variants.find((v) => v.id === variantId)
   const inCart = cart.lines.find((l) => l.variantId === variantId)?.quantity ?? 0
   const room = variant ? maxQuantity({ product, variant }) - inCart : 0
@@ -49,7 +51,7 @@ export function ProductPage() {
           <h1>{product.name}</h1>
           <Price product={product} isMember={isMember} />
           {!isMember && !session && product.member_discount_pct > 0 && (
-            <p className="text-sm text-muted-foreground">Integrante do bloco? <Link className="font-semibold text-primary hover:underline" to={`/entrar?voltar=${encodeURIComponent(`${basePath}/produto/${product.slug}`)}`}>Entre</Link> para ver o seu preço.</p>
+            <p className="text-sm text-muted-foreground">Integrante do bloco? <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Entre</button> para ver o seu preço.</p>
           )}
           <div className="flex flex-wrap gap-2">
             {product.kind === 'made_to_order'
@@ -67,7 +69,7 @@ export function ProductPage() {
                     const out = v.available === 0
                     return (
                       <button key={v.id} type="button" role="radio" aria-checked={variantId === v.id} disabled={out}
-                        onClick={() => { setVariantId(v.id); setQty(1) }}
+                        onClick={() => { setPicked(v.id); setQty(1) }}
                         className={cn('min-h-11 min-w-11 rounded-lg border px-3 font-semibold disabled:cursor-not-allowed disabled:line-through disabled:opacity-50',
                           variantId === v.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>
                         {v.label}
