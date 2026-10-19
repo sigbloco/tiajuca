@@ -7,6 +7,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { notifyChange } from '@/core/undo'
+import { ThemeSettings } from './ThemeSettings'
 import { ColorPick } from './ColorPick'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
 
@@ -79,6 +80,8 @@ export function SiteSettings() {
         <a className="inline-flex items-center gap-1 font-semibold text-primary underline" href="/site" target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Ver a página</a>
       </div>
       <p className="text-muted-foreground">É a página que as pessoas veem ao abrir o endereço do site (antes de entrar): foto, descrição, redes e contatos, menu e vídeos.</p>
+
+      <ThemeSettings />
 
       <Card className="space-y-3 p-4">
         <h3>Cabeçalho</h3>
