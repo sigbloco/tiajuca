@@ -51,7 +51,7 @@ describe('contato com a Direção', () => {
   it('gera um link de WhatsApp por pessoa, citando o pedido', () => {
     const links = directorLinks(cfg({ contact: { ...base.contact, directors } }), 'HN5XCGA4')
     expect(links.map((l) => l.name)).toEqual(['Rafael', 'Maira'])
-    expect(links[0].url).toMatch(/^https://wa.me/5521996134845?text=/)
+    expect(links[0].url.startsWith('https://wa.me/5521996134845?text=')).toBe(true)
     expect(decodeURIComponent(links[0].url)).toContain('HN5XCGA4')
   })
   it('sem Direção configurada não gera links; número inválido é rejeitado', () => {
