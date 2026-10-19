@@ -9,7 +9,7 @@ import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
 interface Row {
-  id: string; full_name: string; display_name: string | null
+  id: string; full_name: string; display_name: string | null; user_id: string | null
   member_access_roles: { revoked_at: string | null; access_roles: { key: string } | null }[]
   member_artistic_links: { instrument_id: string | null; ended_at: string | null }[]
 }
@@ -31,7 +31,7 @@ export function ViewAsBar() {
     enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
-        .select('id, full_name, display_name, member_access_roles(revoked_at, access_roles(key)), member_artistic_links(instrument_id, ended_at)')
+        .select('id, full_name, display_name, user_id, member_access_roles(revoked_at, access_roles(key)), member_artistic_links(instrument_id, ended_at)')
         .eq('organization_id', orgId!).is('archived_at', null).order('full_name').limit(2000)
       if (error) throw error
       return (data ?? []) as unknown as Row[]
@@ -53,6 +53,16 @@ export function ViewAsBar() {
       const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId! })
       if (error) throw error
       return (data ?? []) as Cat[]
+    },
+  })
+
+  const scholars = useQuery({
+    queryKey: ['view-as-scholarships', orgId],
+    enabled: allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('scholarships').select('member_id').eq('organization_id', orgId!).is('valid_to', null).gt('percent', 0)
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.member_id as string))
     },
   })
 
@@ -89,10 +99,22 @@ export function ViewAsBar() {
       const r = pick(rows.filter((x) => aluno.has(x.id) && active(x) && !rolesOf(x).has('monitor') && !rolesOf(x).has('professor') && sectionOfLinks(x).includes(sec.id)))
       add(`aluno:${sec.id}`, `Aluno (${sec.name})`, r)
     }
+    // Categorias de contribuição (a tela de mensalidades muda para cada uma).
+    for (const cat of ['Senior', 'Banda', 'Músico', 'Pernalta']) {
+      const ids = new Set((cats.data ?? []).filter((c) => c.category_name === cat).map((c) => c.member_id))
+      add(`cat:${cat}`, cat, pick(rows.filter((x) => ids.has(x.id) && active(x) && !rolesOf(x).has('monitor') && !rolesOf(x).has('professor') && !rolesOf(x).has('direcao'))))
+    }
+    // Pernalta também pode ser só o instrumento do naipe Performance, sem categoria própria.
+    const pernaltaInst = (instruments.data ?? []).find((i) => /pernalta/i.test(i.name))?.id
+    if (pernaltaInst && !out.some((o) => o.key === 'cat:Pernalta')) {
+      add('pernalta', 'Pernalta', pick(rows.filter((x) => active(x) && x.member_artistic_links.some((l) => !l.ended_at && l.instrument_id === pernaltaInst))))
+    }
+    add('bolsa', 'Aluno com bolsa', pick(rows.filter((x) => (scholars.data ?? new Set<string>()).has(x.id) && active(x) && !rolesOf(x).has('monitor') && !rolesOf(x).has('professor'))))
+    add('sem-conta', 'Pessoa sem conta de acesso', pick(rows.filter((x) => !x.user_id && active(x) && rolesOf(x).size <= 1)))
     const ina = pick(rows.filter((x) => isInactive(x.id) && !rolesOf(x).has('direcao') && !rolesOf(x).has('titular')))
     add('inativo', 'Inativo (acesso limitado)', ina)
     return out
-  }, [people.data, staff.data, cats.data, sections.data, subsections.data, instruments.data, isInactive, realMembership?.member_id])
+  }, [people.data, staff.data, cats.data, scholars.data, sections.data, subsections.data, instruments.data, isInactive, realMembership?.member_id])
 
   if (!allowed) return null
   const selected = profiles.find((p) => p.id === viewAs?.member_id)

@@ -26,6 +26,8 @@ import { FormsPage } from '@/modules/forms/FormsPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
+import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
+import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { AppShell } from './AppShell'
 import { HubHome, HubLayout } from './Hub'
 
@@ -78,6 +80,7 @@ export const router = createBrowserRouter(
         { path: '/redefinir-senha', element: <ResetPasswordPage /> },
         { path: '/convite/:token', element: <ClaimInvitePage /> },
         { path: '/f/:orgSlug/:formSlug', element: <PublicFormPage /> },
+        { path: '/:orgSlug/loja/*', element: <ShopHomePage /> }, // vitrine pública, fora do guard de login
         {
           element: <RequireAuth />,
           children: [
@@ -98,6 +101,7 @@ export const router = createBrowserRouter(
                     { path: 'bolsas', element: <ScholarshipsPage /> },
                     { path: 'financeiro', element: <FinancePage /> },
                     { path: 'fornecedores', element: <SuppliersPage /> },
+                    { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                   ],
                 },
                 {

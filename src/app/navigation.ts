@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
-  Home, Music2, Settings, ShieldCheck, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Home, Music2, Settings, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -41,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'organizacao', permission: 'scholarships.manage', description: 'Quem tem bolsa e quanto isso pesa.' },
   { to: 'financeiro', label: 'Financeiro', icon: Banknote, group: 'organizacao', permission: 'finance.read', description: 'Receitas, despesas, distribuição e equipe.' },
   { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
+  { to: 'gerenciar-loja', label: 'Loja', icon: Store, group: 'organizacao', permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
 
   { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group', description: 'Quem está na oficina como aluno.' },
   { to: 'presenca', label: 'Presença', icon: ClipboardCheck, group: 'oficina', permission: 'attendance.record', description: 'Chamada dos ensaios e das aulas.' },
