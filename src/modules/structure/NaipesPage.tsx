@@ -113,7 +113,7 @@ export function Actions({ item, label, idx, total, handle, onUp, onDown, onEdit,
       {handle}
       <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${item.name}`} disabled={idx <= 0} onClick={onUp}><ArrowUp className="h-4 w-4" /></Button>
       <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${item.name}`} disabled={idx >= total - 1} onClick={onDown}><ArrowDown className="h-4 w-4" /></Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Renomear ${item.name}`} onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
+      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar ${item.name}`} title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
       <Button size="icon" variant="ghost" className={cn('h-8 w-8', !item.is_active && 'text-success')} aria-label={`${item.is_active ? 'Desativar' : 'Reativar'} ${label} ${item.name}`} title={item.is_active ? 'Desativar' : 'Reativar'} onClick={onToggle}>
         {item.is_active ? <Ban className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
       </Button>
@@ -150,7 +150,10 @@ export function NaipesPage() {
   const drag = useHoldReorder()
   const open = useOpenSet()
   const filter: FilterValue = EMPTY_FILTER
-  const [renaming, setRenaming] = useState<string | null>(null)
+  // Modo edição por item (lápis): só nele aparecem renomear, afinação, botões de equipe e campos de criar.
+  const [editing, setEditing] = useState<Set<string>>(new Set())
+  const isEditing = (id: string) => editing.has(id)
+  const toggleEdit = (id: string) => setEditing((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const searching = false
   const secMut = useStructureMutations('sections')
   const [creating, setCreating] = useState(false)
@@ -205,15 +208,15 @@ export function NaipesPage() {
           right={canEdit && (
             <Actions item={i} label="instrumento" idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
               onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
-              onEdit={() => { setRenaming(renaming === i.id ? null : i.id); if (!open.isOpen(i.id)) open.toggle(i.id) }}
+              onEdit={() => { toggleEdit(i.id); if (!open.isOpen(i.id) && !isEditing(i.id)) open.toggle(i.id) }}
               onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, 'o instrumento')} />
           )}>
-          {renaming === i.id && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => setRenaming(null)} />}
-          <div className="flex flex-wrap items-center gap-1.5">
+          {isEditing(i.id) && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => toggleEdit(i.id)} />}
+          {isEditing(i.id) && <div className="flex flex-wrap items-center gap-1.5">
             <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
             <TuningChips value={i.tuning ?? null} disabled={!canEdit} onChange={(v) => instMut.save.mutate({ id: i.id, name: i.name, tuning: v })} />
-          </div>
-          <StaffBlock scope="instrument" id={i.id} canEdit={canEdit}  />
+          </div>}
+          <StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />
         </Collapsible>
       </div>
     )
@@ -247,17 +250,17 @@ export function NaipesPage() {
                 right={canEdit && (
                   <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMoveSec, 'sections')}
                     onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
-                    onEdit={() => { setRenaming(renaming === s.id ? null : s.id); if (!open.isOpen(s.id)) open.toggle(s.id) }}
+                    onEdit={() => { toggleEdit(s.id); if (!open.isOpen(s.id) && !isEditing(s.id)) open.toggle(s.id) }}
                     onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
-                {renaming === s.id && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => setRenaming(null)} />}
-                <StaffBlock scope="section" id={s.id} canEdit={canEdit}  />
+                {isEditing(s.id) && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => toggleEdit(s.id)} />}
+                <StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />
 
                 {(subs.length === 0 || noSub.length > 0) && (
                 <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
                   <p className="text-xs font-semibold uppercase text-muted-foreground">{subs.length > 0 ? 'Sem subnaipe (arraste cada um para um subnaipe)' : 'Instrumentos do naipe'}</p>
                   {noSub.filter(okI).map((i) => instNode(i, noSub, insts))}
-                  {canEdit && subs.length === 0 && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
+                  {canEdit && isEditing(s.id) && subs.length === 0 && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
                     onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
                 )}
@@ -272,14 +275,14 @@ export function NaipesPage() {
                           right={canEdit && (
                             <Actions item={sub} label="subnaipe" idx={si} total={subs.length} handle={drag.handle(sub.id, onMoveSub, `sub:${s.id}`)}
                               onUp={() => subMut.move.mutate({ a: sub, b: subs[si - 1], list: subs })} onDown={() => subMut.move.mutate({ a: sub, b: subs[si + 1], list: subs })}
-                              onEdit={() => { setRenaming(renaming === sub.id ? null : sub.id); if (!open.isOpen(sub.id)) open.toggle(sub.id) }}
+                              onEdit={() => { toggleEdit(sub.id); if (!open.isOpen(sub.id) && !isEditing(sub.id)) open.toggle(sub.id) }}
                               onToggle={() => toggle(subMut, sub)} onDelete={() => confirmDelete('subsections', sub, 'o subnaipe')} />
                           )}>
-                          {renaming === sub.id && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => setRenaming(null)} />}
-                          <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit}  />
+                          {isEditing(sub.id) && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => toggleEdit(sub.id)} />}
+                          <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit && isEditing(sub.id)} />
                           <div className="space-y-1.5">
                             {list.filter(okI).map((i) => instNode(i, list, insts))}
-                            {canEdit && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
+                            {canEdit && isEditing(sub.id) && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
                               onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                           </div>
                         </Collapsible>
@@ -287,7 +290,7 @@ export function NaipesPage() {
                     </div>
                   )
                 })}
-                {canEdit && <AddInline placeholder={`Novo subnaipe de ${s.name}`} label="Subnaipe" pending={addNode.isPending}
+                {canEdit && isEditing(s.id) && <AddInline placeholder={`Novo subnaipe de ${s.name}`} label="Subnaipe" pending={addNode.isPending}
                   onAdd={(name) => addNode.mutate({ table: 'subsections', name, section_id: s.id, sort_order: nextOrder(subsections.data ?? []) })} />}
               </Collapsible>
             </div>
