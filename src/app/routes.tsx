@@ -28,8 +28,8 @@ import { MembersPage } from '@/modules/members/MembersPage'
 import { NaipesPage } from '@/modules/structure/NaipesPage'
 import { SiteSettings } from '@/modules/site/SiteSettings'
 import { Organogram } from '@/modules/structure/Organogram'
-import { ChecklistsPage } from '@/modules/structure/OrgPages'
-import { FunctionsPage, NaipesSettingsHome, SectionNamesPage } from '@/modules/structure/NaipesSettings'
+import { ChecklistsPage, FunctionsPage } from '@/modules/structure/OrgPages'
+import { NaipesSettingsHome, SectionNamesPage } from '@/modules/structure/NaipesSettings'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
 import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
@@ -128,13 +128,13 @@ export const router = createBrowserRouter(
                 { path: 'naipes/organograma', element: <Organogram /> },
                 { path: 'naipes/configuracoes', element: <NaipesSettingsHome /> },
                 { path: 'naipes/configuracoes/nomes', element: <SectionNamesPage /> },
-                { path: 'naipes/configuracoes/funcoes', element: <FunctionsPage /> },
                 {
                   element: <HubLayout hub="organizacao" />,
                   children: [
                     { path: 'ciclos', element: <CyclesPage /> },
                     { path: 'fornecedores', element: <SuppliersPage /> },
                     { path: 'checklists', element: <ChecklistsPage /> },
+                    { path: 'funcoes', element: <FunctionsPage /> },
                     { path: 'drive', element: <DriveFoldersPage /> },
                       ],
                 },

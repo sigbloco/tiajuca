@@ -11,7 +11,7 @@ import { COLOR_LABEL, type TypeColor } from '@/modules/events/service'
 import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
 import { notifySaved } from '@/core/undo'
 import { useHoldReorder } from '@/core/holdReorder'
-import { describeChange, moveItemTo, invalidateCatalog, listCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
+import { mirrorFunctionToFees, describeChange, moveItemTo, invalidateCatalog, listCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
 interface Props {
   table: CatalogTable
@@ -27,6 +27,10 @@ interface Props {
   canEdit: boolean
   /** Ordem alfabética fixa (sem setas nem arrastar): para listas que só alimentam menus de escolha. */
   alphabetical?: boolean
+  /** Sem busca nem filtro de situação. */
+  noFilter?: boolean
+  /** O que for criado/renomeado/ativado aqui se reflete em Contribuições (categorias de mensalidade). */
+  mirrorFees?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -35,7 +39,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withSubsection, withColor, hint, canEdit, alphabetical }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withSubsection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -61,6 +65,7 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
         ...(withSubsection && subsectionId ? { subsection_id: subsectionId } : {}),
       }),
     onSuccess: (id) => {
+      if (mirrorFees) void mirrorFunctionToFees(orgId, { created: name.trim() }).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
       setName('')
       refresh()
       notifySaved(`${singular} criado.`, id ? async () => { await saveCatalogItem(table, orgId, { id, name: name.trim(), is_active: false }); refresh() } : undefined)
@@ -70,6 +75,10 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
   const save = useMutation({
     mutationFn: async (item: Partial<CatalogItem> & { name: string }) => ({ prev: previousOf(items, item), id: await saveCatalogItem(table, orgId, item) }),
     onSuccess: ({ prev }, item) => {
+      if (mirrorFees && prev) {
+        if (item.name !== prev.name) void mirrorFunctionToFees(orgId, { renamed: { from: prev.name, to: item.name } })
+        if (item.is_active !== undefined && item.is_active !== prev.is_active) void mirrorFunctionToFees(orgId, { active: { name: item.name, value: item.is_active } })
+      }
       refresh()
       notifySaved(item.name !== prev?.name && prev ? 'Nome atualizado.' : describeChange(item, singular),
         prev ? async () => { await saveCatalogItem(table, orgId, prev); refresh() } : undefined)
@@ -115,7 +124,7 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
         </Card>
       )}
 
-      <FilterBar value={filter} onChange={setFilter} />
+      {!noFilter && <FilterBar value={filter} onChange={setFilter} />}
       {isLoading && <Skeleton className="h-24" />}
       {items && visible.length === 0 && <EmptyState>{items.length === 0 ? 'Nada cadastrado ainda.' : 'Nenhum item encontrado.'}</EmptyState>}
       <div className="grid gap-2">
