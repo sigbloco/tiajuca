@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Pencil, Plus, UserPlus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, CircleCheck, Pencil, Plus, Trash2, UserPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { OkSelect } from '@/components/shared/ConfirmField'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -17,23 +16,28 @@ import { notifySaved } from '@/core/undo'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { TUNINGS } from '@/modules/repertoire/service'
 import { useCatalog } from './CatalogEditor'
-import { invalidateCatalog, saveCatalogItem, type CatalogItem } from './service'
-import { ItemRow, byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
+import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
+import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
 
 type Kind = 'professor' | 'monitor'
-interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; members: { full_name: string; display_name: string | null } | null }
+type Scope = 'section' | 'subsection' | 'instrument'
+interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+type Mut = ReturnType<typeof useStructureMutations>
 
-/** Professores e monitores de um naipe ou subnaipe, em chips. "+ Professor" / "+ Monitor" abre a busca de pessoas. */
-function StaffBlock({ scope, id, canEdit }: { scope: 'section' | 'subsection'; id: string; canEdit: boolean }) {
+const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsection_id', instrument: 'instrument_id' }
+const noTuning = (sectionName: string) => /percuss|perform/i.test(sectionName)
+
+/** Professores e monitores de um naipe, subnaipe ou instrumento, em chips. Instrumentos só têm monitores. */
+function StaffBlock({ scope, id, canEdit, kinds }: { scope: Scope; id: string; canEdit: boolean; kinds: Kind[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [adding, setAdding] = useState<Kind | null>(null)
-  const col = scope === 'section' ? 'section_id' : 'subsection_id'
+  const col = COL[scope] as 'section_id' | 'subsection_id' | 'instrument_id'
   const { data } = useQuery({
     queryKey: ['staff-assignments', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, members(full_name, display_name)')
-        .eq('organization_id', orgId).is('valid_to', null).limit(2000)
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name)')
+        .eq('organization_id', orgId).is('valid_to', null).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]
     },
@@ -58,7 +62,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: 'section' | 'subsection'; i
   })
   return (
     <div className="space-y-2 rounded-lg bg-muted/40 p-2">
-      {(['professor', 'monitor'] as const).map((kind) => {
+      {kinds.map((kind) => {
         const list = mine.filter((a) => a.staff_kind === kind)
         return (
           <div key={kind} className="flex flex-wrap items-center gap-1.5">
@@ -83,27 +87,52 @@ function StaffBlock({ scope, id, canEdit }: { scope: 'section' | 'subsection'; i
   )
 }
 
-/** Cria um instrumento direto no naipe (ou no subnaipe). */
-function AddInstrument({ sectionId, subsectionId, canEdit }: { sectionId: string; subsectionId?: string; canEdit: boolean }) {
-  const orgId = useOrgId()
-  const qc = useQueryClient()
-  const instruments = useCatalog('instruments')
+/** Campo para criar um item (instrumento ou subnaipe) dentro de um naipe/subnaipe. */
+function AddInline({ placeholder, label, onAdd, pending }: { placeholder: string; label: string; onAdd: (name: string) => void; pending: boolean }) {
   const [name, setName] = useState('')
-  const add = useMutation({
-    mutationFn: () => saveCatalogItem('instruments', orgId, { name: name.trim(), section_id: sectionId, subsection_id: subsectionId ?? null, sort_order: nextOrder(instruments.data ?? []) }),
-    onSuccess: () => { setName(''); invalidateCatalog(qc, orgId); notifySaved('Instrumento criado.') },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  if (!canEdit) return null
   return (
-    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (name.trim()) add.mutate() }}>
-      <Input aria-label="Novo instrumento" placeholder={subsectionId ? 'Novo instrumento deste subnaipe' : 'Novo instrumento do naipe'} value={name} onChange={(e) => setName(e.target.value)} />
-      <Button type="submit" size="sm" disabled={!name.trim() || add.isPending}><Plus className="h-4 w-4" /> Instrumento</Button>
+    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { onAdd(name.trim()); setName('') } }}>
+      <Input aria-label={placeholder} placeholder={placeholder} value={name} onChange={(e) => setName(e.target.value)} />
+      <Button type="submit" size="sm" disabled={!name.trim() || pending}><Plus className="h-4 w-4" /> {label}</Button>
     </form>
   )
 }
 
-/** Naipes, subnaipes e instrumentos numa página só. Cada naipe/subnaipe tem sua equipe (professores e monitores). */
+/** Mesmo padrão em todos os itens: alça (6 bolinhas), seta pra cima, seta pra baixo, lápis, "proibido" (desativar) e lixeira. */
+function Actions({ item, label, idx, total, handle, onUp, onDown, onEdit, onToggle, onDelete }: {
+  item: CatalogItem; label: string; idx: number; total: number; handle: React.ReactNode
+  onUp: () => void; onDown: () => void; onEdit: () => void; onToggle: () => void; onDelete: () => void
+}) {
+  return (
+    <div className="flex items-center">
+      {handle}
+      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${item.name}`} disabled={idx <= 0} onClick={onUp}><ArrowUp className="h-4 w-4" /></Button>
+      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${item.name}`} disabled={idx >= total - 1} onClick={onDown}><ArrowDown className="h-4 w-4" /></Button>
+      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Renomear ${item.name}`} onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
+      <Button size="icon" variant="ghost" className={cn('h-8 w-8', !item.is_active && 'text-success')} aria-label={`${item.is_active ? 'Desativar' : 'Reativar'} ${label} ${item.name}`} title={item.is_active ? 'Desativar' : 'Reativar'} onClick={onToggle}>
+        {item.is_active ? <Ban className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
+      </Button>
+      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${label} ${item.name}`} title="Excluir" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+    </div>
+  )
+}
+
+function RenameForm({ name, label, onSave, onCancel }: { name: string; label: string; onSave: (v: string) => void; onCancel: () => void }) {
+  return (
+    <form className="flex gap-2" onSubmit={(e) => {
+      e.preventDefault()
+      const v = String(new FormData(e.currentTarget).get('name') ?? '').trim()
+      if (v && v !== name) onSave(v)
+      onCancel()
+    }}>
+      <Input name="name" aria-label={`Novo nome do ${label}`} defaultValue={name} autoFocus />
+      <Button type="submit" size="sm">Salvar</Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
+    </form>
+  )
+}
+
+/** Naipes, subnaipes e instrumentos numa página só, todos com o mesmo padrão. Arraste um instrumento para outro subnaipe para mudá-lo de lugar. */
 export function NaipesPage() {
   const canEdit = usePermission('structure.manage')
   const orgId = useOrgId()
@@ -117,8 +146,6 @@ export function NaipesPage() {
   const drag = useHoldReorder()
   const open = useOpenSet()
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
-  const [newSection, setNewSection] = useState('')
-  const [newSub, setNewSub] = useState<Record<string, string>>({})
   const [renaming, setRenaming] = useState<string | null>(null)
   const searching = filter.search.trim() !== ''
   const ordered = (sections.data ?? []).slice().sort(byOrder)
@@ -132,48 +159,76 @@ export function NaipesPage() {
   }).filter((g) => g.show), [sections.data, subsections.data, instruments.data, filter])
 
   const addNode = useMutation({
-    mutationFn: async (v: { kind: 'section' | 'sub'; sectionId?: string; name: string }) => v.kind === 'section'
-      ? saveCatalogItem('sections', orgId, { name: v.name, sort_order: nextOrder(sections.data ?? []) })
-      : saveCatalogItem('subsections', orgId, { name: v.name, section_id: v.sectionId, sort_order: nextOrder(subsections.data ?? []) }),
-    onSuccess: (_id, v) => {
-      notifySaved(v.kind === 'section' ? 'Naipe criado.' : 'Subnaipe criado.')
-      if (v.kind === 'section') setNewSection(''); else setNewSub((m) => ({ ...m, [v.sectionId!]: '' }))
-      invalidateCatalog(qc, orgId)
-    },
+    mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; subsection_id?: string | null; sort_order: number }) =>
+      saveCatalogItem(v.table, orgId, { name: v.name, sort_order: v.sort_order, ...(v.section_id ? { section_id: v.section_id } : {}), ...(v.subsection_id ? { subsection_id: v.subsection_id } : {}) }),
+    onSuccess: () => { notifySaved('Criado.'); invalidateCatalog(qc, orgId) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const del = useMutation({
+    mutationFn: async (v: { table: CatalogTable; id: string }) => {
+      const { error } = await supabase.from(v.table).delete().eq('id', v.id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { notifySaved('Excluído.'); invalidateCatalog(qc, orgId) },
+    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Não dá para excluir: há itens dentro ou pessoas, vagas e músicas ligadas a ele. Desative em vez de excluir.' : friendlyError(e)),
+  })
+  const confirmDelete = (table: CatalogTable, item: CatalogItem, what: string) => {
+    if (window.confirm(`Excluir ${what} “${item.name}”? Isso não pode ser desfeito. Se ele já foi usado, prefira desativar.`)) del.mutate({ table, id: item.id })
+  }
+  const toggle = (mut: Mut, item: CatalogItem) => mut.save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })
 
-  const instRow = (i: CatalogItem, list: CatalogItem[], subs: CatalogItem[]) => (
-    <ItemRow key={i.id} item={i} siblings={list} canEdit={canEdit} mut={instMut}
-      extra={(
-        <>
-          <OkSelect className="h-9 w-24" aria-label={`Afinação de ${i.name} (opcional)`} disabled={!canEdit} value={i.tuning ?? ''}
-            onSave={(v) => instMut.save.mutateAsync({ id: i.id, name: i.name, tuning: v || null })}>
-            <option value="">Afinação</option>
-            {TUNINGS.map((t) => <option key={t} value={t}>{t}</option>)}
-          </OkSelect>
-          {subs.length > 0 && (
-            <OkSelect className="h-9 w-36" aria-label={`Subnaipe de ${i.name} (opcional)`} disabled={!canEdit} value={i.subsection_id ?? ''}
-              onSave={(v) => instMut.save.mutateAsync({ id: i.id, name: i.name, subsection_id: v || null })}>
-              <option value="">Sem subnaipe</option>
-              {subs.filter((x) => x.is_active || x.id === i.subsection_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </OkSelect>
+  /** Arrastar um instrumento: sobre outro instrumento do mesmo grupo reordena; sobre um subnaipe (ou "do naipe") muda de grupo. */
+  const moveInstrument = (secInsts: CatalogItem[]) => (fromId: string, toId: string) => {
+    const from = secInsts.find((i) => i.id === fromId)
+    if (!from) return
+    if (toId.startsWith('sub:')) { instMut.save.mutate({ id: from.id, name: from.name, subsection_id: toId.slice(4) }); return }
+    if (toId.startsWith('nosub:')) { instMut.save.mutate({ id: from.id, name: from.name, subsection_id: null }); return }
+    const to = secInsts.find((i) => i.id === toId)
+    if (!to) return
+    if ((from.subsection_id ?? null) === (to.subsection_id ?? null)) instMut.reorder.mutate({ from: fromId, to: toId, list: secInsts.filter((i) => (i.subsection_id ?? null) === (from.subsection_id ?? null)) })
+    else instMut.save.mutate({ id: from.id, name: from.name, subsection_id: to.subsection_id ?? null })
+  }
+
+  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[], sectionName: string) => {
+    const idx = group.findIndex((x) => x.id === i.id)
+    const onMove = moveInstrument(secInsts)
+    const scope = `inst:${i.section_id}`
+    return (
+      <div key={i.id} {...(canEdit ? drag.row(i.id, onMove, scope) : {})} className={drag.cls(i.id)}>
+        <Collapsible level={1} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{i.tuning ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
+          right={canEdit && (
+            <Actions item={i} label="instrumento" idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
+              onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
+              onEdit={() => { setRenaming(renaming === i.id ? null : i.id); if (!open.isOpen(i.id)) open.toggle(i.id) }}
+              onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, 'o instrumento')} />
+          )}>
+          {renaming === i.id && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => setRenaming(null)} />}
+          {!noTuning(sectionName) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
+              {TUNINGS.map((t) => (
+                <button key={t} type="button" aria-pressed={i.tuning === t} disabled={!canEdit}
+                  onClick={() => instMut.save.mutate({ id: i.id, name: i.name, tuning: i.tuning === t ? null : t })}
+                  className={cn('min-h-9 rounded-full border px-3 text-sm font-semibold', i.tuning === t ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>{t}</button>
+              ))}
+            </div>
           )}
-        </>
-      )} />
-  )
+          <StaffBlock scope="instrument" id={i.id} canEdit={canEdit} kinds={['monitor']} />
+        </Collapsible>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">
       <h1>Naipes e instrumentos</h1>
       <p className="text-muted-foreground">
-        Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados a um naipe ou subnaipe acompanham todos os instrumentos dele.
-        Segure a alça e arraste para mudar a ordem. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
+        Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
+        mude a ordem ou leve um instrumento para outro subnaipe. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
       </p>
       {canEdit && (
-        <Card className="flex gap-2 p-3">
-          <Input placeholder="Novo naipe" value={newSection} onChange={(e) => setNewSection(e.target.value)} />
-          <Button disabled={!newSection.trim() || addNode.isPending} onClick={() => addNode.mutate({ kind: 'section', name: newSection.trim() })}><Plus className="h-4 w-4" /> Naipe</Button>
+        <Card className="p-3">
+          <AddInline placeholder="Novo naipe" label="Naipe" pending={addNode.isPending} onAdd={(name) => addNode.mutate({ table: 'sections', name, sort_order: nextOrder(sections.data ?? []) })} />
         </Card>
       )}
       <FilterBar value={filter} onChange={setFilter} />
@@ -188,59 +243,55 @@ export function NaipesPage() {
             <div key={s.id} {...(canEdit ? drag.row(s.id, onMove, 'sections') : {})} className={drag.cls(s.id)}>
               <Collapsible open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
                 right={canEdit && (
-                  <div className="flex items-center gap-1">
-                    {drag.handle(s.id, onMove, 'sections')}
-                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${s.name}`} disabled={idx <= 0} onClick={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })}><ArrowUp className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${s.name}`} disabled={idx === ordered.length - 1} onClick={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}><ArrowDown className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Renomear ${s.name}`} onClick={() => setRenaming(renaming === s.id ? null : s.id)}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="sm" variant="outline" onClick={() => secMut.save.mutate({ id: s.id, name: s.name, is_active: !s.is_active })}>{s.is_active ? 'Desativar' : 'Ativar'}</Button>
-                  </div>
+                  <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMove, 'sections')}
+                    onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
+                    onEdit={() => { setRenaming(renaming === s.id ? null : s.id); if (!open.isOpen(s.id)) open.toggle(s.id) }}
+                    onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
-                {renaming === s.id && (
-                  <form className="flex gap-2" onSubmit={(e) => {
-                    e.preventDefault()
-                    const v = String(new FormData(e.currentTarget).get('name') ?? '').trim()
-                    if (v && v !== s.name) secMut.save.mutate({ id: s.id, name: v })
-                    setRenaming(null)
-                  }}>
-                    <Input name="name" aria-label="Novo nome do naipe" defaultValue={s.name} autoFocus />
-                    <Button type="submit" size="sm">Salvar</Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(null)}>Cancelar</Button>
-                  </form>
-                )}
-                <StaffBlock scope="section" id={s.id} canEdit={canEdit} />
+                {renaming === s.id && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => setRenaming(null)} />}
+                <StaffBlock scope="section" id={s.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
 
-                <div className="space-y-1.5">
-                  {noSub.length > 0 && <p className="text-xs font-semibold uppercase text-muted-foreground">Instrumentos do naipe</p>}
-                  {noSub.filter(okI).map((i) => instRow(i, noSub, subs))}
-                  <AddInstrument sectionId={s.id} canEdit={canEdit} />
+                <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Instrumentos do naipe</p>
+                  {noSub.length === 0 && <p className="text-sm text-muted-foreground">Nenhum instrumento solto no naipe.</p>}
+                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s.name))}
+                  {canEdit && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
+                    onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
 
-                {subs.filter((x) => matchesStatus(x.is_active, filter.status)).map((sub) => {
+                {subs.filter((x) => matchesStatus(x.is_active, filter.status)).map((sub, si) => {
                   const list = insts.filter((i) => i.subsection_id === sub.id)
+                  const onMoveSub = (f: string, t: string) => subMut.reorder.mutate({ from: f, to: t, list: subs })
                   return (
-                    <Collapsible key={sub.id} level={1} open={searching || open.isOpen(sub.id)} onToggle={() => open.toggle(sub.id)} title={<span className={cn(!sub.is_active && 'opacity-60')}>{sub.name}</span>} count={list.length}>
-                      <ItemRow item={sub} siblings={subs} canEdit={canEdit} mut={subMut} />
-                      <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit} />
-                      <div className="space-y-1.5">
-                        {list.filter(okI).map((i) => instRow(i, list, subs))}
-                        <AddInstrument sectionId={s.id} subsectionId={sub.id} canEdit={canEdit} />
+                    <div key={sub.id} data-sortid={`sub:${sub.id}`} data-sortscope={`inst:${s.id}`} className={cn('rounded-lg', drag.cls(`sub:${sub.id}`))}>
+                      <div {...(canEdit ? drag.row(sub.id, onMoveSub, `sub:${s.id}`) : {})} className={drag.cls(sub.id)}>
+                        <Collapsible level={1} open={searching || open.isOpen(sub.id)} onToggle={() => open.toggle(sub.id)} title={<span className={cn(!sub.is_active && 'opacity-60')}>{sub.name}</span>} count={list.length}
+                          right={canEdit && (
+                            <Actions item={sub} label="subnaipe" idx={si} total={subs.length} handle={drag.handle(sub.id, onMoveSub, `sub:${s.id}`)}
+                              onUp={() => subMut.move.mutate({ a: sub, b: subs[si - 1], list: subs })} onDown={() => subMut.move.mutate({ a: sub, b: subs[si + 1], list: subs })}
+                              onEdit={() => { setRenaming(renaming === sub.id ? null : sub.id); if (!open.isOpen(sub.id)) open.toggle(sub.id) }}
+                              onToggle={() => toggle(subMut, sub)} onDelete={() => confirmDelete('subsections', sub, 'o subnaipe')} />
+                          )}>
+                          {renaming === sub.id && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => setRenaming(null)} />}
+                          <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
+                          <div className="space-y-1.5">
+                            {list.filter(okI).map((i) => instNode(i, list, insts, s.name))}
+                            {canEdit && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
+                              onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, sort_order: nextOrder(instruments.data ?? []) })} />}
+                          </div>
+                        </Collapsible>
                       </div>
-                    </Collapsible>
+                    </div>
                   )
                 })}
-                {canEdit && (
-                  <div className="flex gap-2">
-                    <Input placeholder={`Novo subnaipe de ${s.name}`} value={newSub[s.id] ?? ''} onChange={(e) => setNewSub({ ...newSub, [s.id]: e.target.value })} />
-                    <Button size="sm" disabled={!(newSub[s.id] ?? '').trim() || addNode.isPending} onClick={() => addNode.mutate({ kind: 'sub', sectionId: s.id, name: (newSub[s.id] ?? '').trim() })}><Plus className="h-4 w-4" /> Subnaipe</Button>
-                  </div>
-                )}
+                {canEdit && <AddInline placeholder={`Novo subnaipe de ${s.name}`} label="Subnaipe" pending={addNode.isPending}
+                  onAdd={(name) => addNode.mutate({ table: 'subsections', name, section_id: s.id, sort_order: nextOrder(subsections.data ?? []) })} />}
               </Collapsible>
             </div>
           )
         })}
       </div>
-      <p className="text-xs text-muted-foreground">Itens desativados somem das novas escolhas, mas o histórico é preservado.</p>
+      <p className="text-xs text-muted-foreground">Itens desativados somem das novas escolhas, mas o histórico é preservado. Só dá para excluir o que nunca foi usado.</p>
     </div>
   )
 }

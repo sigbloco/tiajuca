@@ -28,9 +28,14 @@ export function useHoldReorder() {
     let over: string | null = null
     let lastY = y0
     let raf = 0
+    // Sobe pelos ancestrais até achar um alvo do mesmo escopo (listas e zonas de soltar podem estar aninhadas).
     const targetAt = (x: number, y: number) => {
-      const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-sortid]')
-      return el && el.dataset.sortscope === scope ? el.dataset.sortid ?? null : null
+      let el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-sortid]') ?? null
+      while (el) {
+        if (el.dataset.sortscope === scope) return el.dataset.sortid ?? null
+        el = el.parentElement?.closest<HTMLElement>('[data-sortid]') ?? null
+      }
+      return null
     }
     const activate = () => {
       active = true

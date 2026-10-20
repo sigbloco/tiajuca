@@ -66,10 +66,11 @@ export function AppShell() {
   const more = entries.filter((e) => !MOBILE_PRIMARY.has(e.to))
 
   return (
-    <>
+    <div className="min-h-screen bg-muted">
     <GlobalUnsavedGuard />
+    <div className="mx-auto min-h-screen max-w-5xl border-x border-border bg-background shadow-card">
     <ViewAsBar />
-    <div className="mx-auto min-h-screen max-w-5xl md:flex">
+    <div className="min-h-screen md:flex">
       {/* Desktop: sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-header p-4 text-header-foreground md:sticky md:top-0 md:flex md:max-h-screen">
         <div className="mb-6 flex items-center gap-3">
@@ -119,6 +120,7 @@ export function AppShell() {
         </SheetContent>
       </Sheet>
     </div>
-    </>
+    </div>
+    </div>
   )
 }
