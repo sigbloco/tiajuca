@@ -18,7 +18,7 @@ import { usePersonLabeler } from '@/modules/members/personLabel'
 import { hasTuning } from '@/modules/repertoire/service'
 import { TuningChips } from './TuningChips'
 import { useCatalog } from './CatalogEditor'
-import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
+import { itemPlural, invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
 import { NewSectionSheet } from './NewSectionWizard'
 import { Sheet } from '@/components/ui/primitives'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
@@ -198,7 +198,8 @@ export function NaipesPage() {
     else instMut.save.mutate({ id: from.id, name: from.name, subsection_id: to.subsection_id ?? null })
   }
 
-  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[]) => {
+  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[], sec: CatalogItem) => {
+    const lbl = (sec.item_label ?? 'Instrumento').toLowerCase()
     const idx = group.findIndex((x) => x.id === i.id)
     const onMove = moveInstrument(secInsts)
     const scope = `inst:${i.section_id}`
@@ -206,13 +207,13 @@ export function NaipesPage() {
       <div key={i.id} {...(canEdit ? drag.row(i.id, onMove, scope) : {})} className={drag.cls(i.id)}>
         <Collapsible below={<StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />} level={1} expandable={isEditing(i.id)} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
           right={canEdit && (
-            <Actions item={i} label="instrumento" idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
+            <Actions item={i} label={lbl} idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
               onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
               onEdit={() => { toggleEdit(i.id); if (!open.isOpen(i.id) && !isEditing(i.id)) open.toggle(i.id) }}
-              onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, 'o instrumento')} />
+              onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, `o item (${lbl})`)} />
           )}>
-          {isEditing(i.id) && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => toggleEdit(i.id)} />}
-          {isEditing(i.id) && <div className="flex flex-wrap items-center gap-1.5">
+          {isEditing(i.id) && <RenameForm name={i.name} label={lbl} onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => toggleEdit(i.id)} />}
+          {isEditing(i.id) && sec.has_tuning !== false && <div className="flex flex-wrap items-center gap-1.5">
             <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
             <TuningChips value={i.tuning ?? null} disabled={!canEdit} onChange={(v) => instMut.save.mutate({ id: i.id, name: i.name, tuning: v })} />
           </div>}
@@ -256,9 +257,9 @@ export function NaipesPage() {
 
                 {(subs.length === 0 || noSub.length > 0) && (
                 <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">{subs.length > 0 ? 'Sem subnaipe (arraste cada um para um subnaipe)' : 'Instrumentos do naipe'}</p>
-                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts))}
-                  {canEdit && isEditing(s.id) && subs.length === 0 && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">{subs.length > 0 ? 'Sem subnaipe (arraste cada um para um subnaipe)' : `${itemPlural(s.item_label ?? 'Instrumento')} do naipe`}</p>
+                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s))}
+                  {canEdit && isEditing(s.id) && subs.length === 0 && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} do naipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
                     onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
                 )}
@@ -278,8 +279,8 @@ export function NaipesPage() {
                           )}>
                           {isEditing(sub.id) && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => toggleEdit(sub.id)} />}
                           <div className="space-y-1.5">
-                            {list.filter(okI).map((i) => instNode(i, list, insts))}
-                            {canEdit && isEditing(sub.id) && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
+                            {list.filter(okI).map((i) => instNode(i, list, insts, s))}
+                            {canEdit && isEditing(sub.id) && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} deste subnaipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
                               onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                           </div>
                         </Collapsible>

@@ -13,7 +13,12 @@ export interface CatalogItem {
   subsection_id?: string | null
   tuning?: string | null
   has_tuning?: boolean
+  /** Como se chamam os itens do naipe: Instrumento, Atividade ou Voz. */
+  item_label?: string
 }
+
+export const ITEM_LABELS = ['Instrumento', 'Atividade', 'Voz'] as const
+export const itemPlural = (label: string) => (label === 'Voz' ? 'Vozes' : `${label}s`)
 
 export async function listCatalog(table: CatalogTable, orgId: string): Promise<CatalogItem[]> {
   const { data, error } = await supabase
