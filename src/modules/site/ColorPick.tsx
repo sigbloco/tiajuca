@@ -33,30 +33,32 @@ export function usePalette() {
 /** Escolha de cor a partir da paleta. Cada cor: clique escolhe, a bolinha do canto edita, o X remove; "+" cria outra. */
 export function ColorPick({ label, value, onChange, hideDefault }: { label: string; value: string | null; onChange: (v: string | null) => void; hideDefault?: boolean }) {
   const [palette, setPalette] = usePalette()
+  const selectedIdx = palette.findIndex((c) => same(value, c))
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {!hideDefault && (
           <button type="button" onClick={() => onChange(null)} aria-pressed={value === null}
-            className={`min-h-11 rounded-lg border px-3 text-sm font-semibold ${value === null ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>Padrão do bloco</button>
+            className={`min-h-8 rounded-lg border px-2.5 text-sm font-semibold ${value === null ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>Padrão do bloco</button>
         )}
         {palette.map((hex, i) => (
-          <span key={i} className="relative inline-block">
-            <button type="button" aria-label={`Escolher ${hex}`} aria-pressed={same(value, hex)} onClick={() => onChange(hex)}
-              className={`h-11 w-11 rounded-full border ${same(value, hex) ? 'border-primary ring-2 ring-primary' : 'border-border'}`} style={{ backgroundColor: hex }} />
-            <input type="color" aria-label={`Editar a cor ${hex}`} title="Editar esta cor" value={hex} className="absolute -bottom-1 -right-1 h-5 w-5 cursor-pointer rounded-full border border-border bg-card p-0"
-              onChange={(e) => { const v = e.target.value.toUpperCase(); if (same(value, hex)) onChange(v); setPalette(palette.map((c, k) => (k === i ? v : c))) }} />
-            {palette.length > 1 && (
-              <button type="button" aria-label={`Remover ${hex}`} title="Remover" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card"
-                onClick={() => setPalette(palette.filter((_, k) => k !== i))}><X className="h-3 w-3" /></button>
-            )}
-          </span>
+          <button key={i} type="button" aria-label={`Escolher ${hex}`} title={hex} aria-pressed={same(value, hex)} onClick={() => onChange(hex)}
+            className={`h-7 w-7 rounded-full border ${same(value, hex) ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'}`} style={{ backgroundColor: hex }} />
         ))}
         <button type="button" aria-label="Adicionar cor" title="Adicionar cor" disabled={palette.length >= 24}
           onClick={() => { const n = '#888888'; setPalette([...palette, n]); onChange(n) }}
-          className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-border hover:bg-muted"><Plus className="h-5 w-5" /></button>
+          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-border hover:bg-muted"><Plus className="h-4 w-4" /></button>
       </div>
+      {selectedIdx >= 0 && (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <label className="inline-flex items-center gap-2 font-semibold">Trocar esta cor
+            <input type="color" aria-label={`Trocar a cor ${palette[selectedIdx]}`} value={palette[selectedIdx]} className="h-7 w-9 cursor-pointer rounded border border-border bg-transparent p-0"
+              onChange={(e) => { const v = e.target.value.toUpperCase(); onChange(v); setPalette(palette.map((c, k) => (k === selectedIdx ? v : c))) }} />
+          </label>
+          {palette.length > 1 && <button type="button" className="inline-flex items-center gap-1 font-semibold text-destructive hover:underline" onClick={() => setPalette(palette.filter((_, k) => k !== selectedIdx))}><X className="h-3.5 w-3.5" /> Tirar da paleta</button>}
+        </div>
+      )}
     </div>
   )
 }

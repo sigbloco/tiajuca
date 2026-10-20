@@ -16,9 +16,9 @@ import { useSearchParams } from 'react-router-dom'
 import { ColorPick } from '@/modules/site/ColorPick'
 
 const AREAS: { key: ThemeArea; label: string; intro: string }[] = [
-  { key: 'general', label: 'Geral', intro: 'Define as cores do sistema inteiro: menu e painel do admin, inscrições e telas de entrada. É também o ponto de partida do Site e da Loja.' },
-  { key: 'site', label: 'Site', intro: 'Só a página inicial pública. Onde estiver em "Padrão do bloco", vale a cor definida em Geral.' },
-  { key: 'shop', label: 'Loja', intro: 'Só a vitrine pública da loja (nome, produtos, carrinho). Onde estiver em "Padrão do bloco", vale a cor definida em Geral.' },
+  { key: 'general', label: 'Geral', intro: 'Cores do sistema inteiro. São o ponto de partida do Site e da Loja.' },
+  { key: 'site', label: 'Site', intro: 'Só a página inicial pública. Onde estiver “Padrão do bloco”, vale o Geral.' },
+  { key: 'shop', label: 'Loja', intro: 'Só a vitrine da loja. Onde estiver “Padrão do bloco”, vale o Geral.' },
 ]
 
 const EMPTY_THEME: ThemeJson = {}
@@ -84,13 +84,11 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
       <Card className="space-y-4 p-4">
         <p className="text-sm text-muted-foreground">{intro}</p>
         {COLOR_SLOTS.map((s) => (
-          <div key={s.key} className="space-y-1">
+          <div key={s.key} className="space-y-1" title={s.hint}>
             <ColorPick label={s.label} value={colors[s.key] ?? null} hideDefault={area === 'general' && (s.key === 'primary' || s.key === 'secondary')}
               onChange={(v) => setColors((c) => ({ ...c, [s.key]: v }))} />
-            <p className="text-xs text-muted-foreground">{s.hint}</p>
           </div>
         ))}
-        <p className="text-xs text-muted-foreground">O texto sobre cada cor muda sozinho (claro ou escuro) para continuar legível.</p>
         <div className="flex flex-wrap gap-2">
           <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Salvando…' : 'Salvar cores'}</Button>
           {dirty && <Button variant="ghost" onClick={() => setColors(saved)}>Descartar</Button>}

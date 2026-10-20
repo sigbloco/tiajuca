@@ -16,7 +16,7 @@ import { useMemberStatus } from '@/modules/members/useMemberStatus'
 // "Integrante" não aparece: todo mundo é integrante. Aqui só se vê (e se concede) o que vai além disso.
 const GRANTABLE = [{ key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professor' }, { key: 'monitor', label: 'Monitor' }] as const
 const GROUPS = [
-  { key: 'titular', label: 'Titular do bloco' }, { key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professores' }, { key: 'monitor', label: 'Monitores' },
+  { key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professores' }, { key: 'monitor', label: 'Monitores' },
 ] as const
 const RANK: Record<string, number> = { titular: 50, direcao: 40, professor: 30, monitor: 20 }
 
@@ -31,7 +31,7 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
   const qc = useQueryClient()
   const { isInactive } = useMemberStatus()
   const [extra, setExtra] = useState<string[]>([]) // pessoas buscadas para receber um papel
-  const [open, setOpen] = useState<Record<string, boolean>>({ titular: true, direcao: true })
+  const [open, setOpen] = useState<Record<string, boolean>>({})
 
   const staff = useQuery({
     queryKey: ['access-roles', orgId, 'staff'],
@@ -97,14 +97,21 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
 
   const card = (p: Person) => {
     const inactive = isInactive(p.id)
+    // O titular é a conta-mãe do bloco: só a coroa. Sem grupo, sem etiquetas e sem papéis para marcar.
+    if (p.roles.has('titular')) {
+      return (
+        <Card key={p.id} className="p-3">
+          <p className="flex items-center gap-1.5 font-semibold"><Crown className="h-4 w-4 shrink-0 text-primary" aria-label="Titular do bloco" />{p.name}</p>
+        </Card>
+      )
+    }
     return (
       <Card key={p.id} className={cn('space-y-2 p-3', inactive && 'bg-muted/60 opacity-80')}>
         <div className="flex items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-1.5 truncate font-semibold">
-            {p.roles.has('titular') && <Crown className="h-4 w-4 shrink-0 text-primary" aria-label="Titular do bloco" />}{p.name}
+            {p.name}
           </p>
           <div className="flex shrink-0 gap-1">
-            {p.roles.has('titular') && <Badge className="bg-primary/15 text-primary">Titular</Badge>}
             {inactive && <Badge>Inativo</Badge>}
             {!(p.user_id ?? userIdOf.data?.get(p.id)) && <Badge>Sem conta de acesso</Badge>}
           </div>
@@ -147,8 +154,9 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
         {people.filter((p) => top(p) === 'novo').map(card)}
       </Card>
 
+      {people.filter((p) => p.roles.has('titular')).map(card)}
       {staff.isLoading && <Skeleton className="h-24" />}
-      {staff.data && people.every((p) => top(p) === 'novo') && <EmptyState>Ninguém com papel de equipe ainda.</EmptyState>}
+      {staff.data && people.every((p) => top(p) === 'novo' || p.roles.has('titular')) && <EmptyState>Ninguém com papel de equipe ainda.</EmptyState>}
       {GROUPS.map((g) => {
         const list = people.filter((p) => top(p) === g.key).sort((a, b) => Number(isInactive(a.id)) - Number(isInactive(b.id)) || a.name.localeCompare(b.name, 'pt-BR'))
         if (list.length === 0) return null

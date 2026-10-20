@@ -3,7 +3,7 @@ import { Lock } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { Badge, Button, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
@@ -108,13 +108,13 @@ function PermissionsTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground">Defina o que cada papel pode fazer e com qual alcance. <strong>Direção e Titular</strong> sempre têm tudo. Permissões marcadas com cadeado (financeiro, dados sensíveis, papéis, auditoria, inscrições…) são exclusivas da Direção. O banco impõe estas regras mesmo que a tela esconda algo.</p>
+      <p className="text-muted-foreground">Defina o que cada papel pode fazer e com qual alcance. A <strong>Direção</strong> sempre tem tudo. Permissões marcadas com cadeado (financeiro, dados sensíveis, papéis, auditoria, inscrições…) são exclusivas da Direção. O banco impõe estas regras mesmo que a tela esconda algo.</p>
       {isLoading && <Skeleton className="h-24" />}
-      {data?.roles.map((role) => {
-        const fixed = role.key === 'direcao' || role.key === 'titular'
+      {data?.roles.filter((r) => r.key !== 'titular').map((role) => {
+        const fixed = role.key === 'direcao'
         return (
           <Collapsible key={role.key} open={open === role.key} onToggle={() => setOpen(open === role.key ? null : role.key)} title={role.name} count={Object.keys(role.scopes).length}
-            right={fixed ? <Badge><Lock className="mr-1 h-3 w-3" />Fixo</Badge> : undefined}>
+            >
             {fixed && <p className="text-muted-foreground">Este papel sempre possui todas as permissões em toda a organização e não pode ser alterado.</p>}
             {Object.entries(byModule).map(([mod, list]) => (
               <div key={mod} className="space-y-1">
