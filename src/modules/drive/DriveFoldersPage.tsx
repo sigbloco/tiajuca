@@ -11,6 +11,7 @@ import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { formatDateTime } from '@/core/format'
 import { driveSync } from './sync'
+import { IntegrationsSettings } from '@/modules/integrations/IntegrationsSettings'
 
 interface Folder {
   id: string; name: string; description: string | null; url: string; drive_folder_id: string | null; is_active: boolean; sort_order: number
@@ -277,6 +278,12 @@ export function DriveFoldersPage() {
             rules={sheet.folder ? (rules.data ?? []).filter((r) => r.folder_id === sheet.folder!.id) : []} />
         )}
       </Sheet>
+      {canManage && (
+        <details className="rounded-lg border border-border bg-card p-3">
+          <summary className="cursor-pointer font-semibold">Busca de partituras (Repertório)</summary>
+          <div className="mt-3"><IntegrationsSettings /></div>
+        </details>
+      )}
       <Sheet open={syncing !== null} onOpenChange={(o) => !o && setSyncing(null)}>
         {syncing && <SyncSheet key={syncing.id} folder={syncing} onClose={() => setSyncing(null)} />}
       </Sheet>

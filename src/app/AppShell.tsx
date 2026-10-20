@@ -2,21 +2,21 @@ import { Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
-import { BackButton } from '@/components/shared/BackButton'
+import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
-import { HUBS, HUB_ORDER, NAV_ITEMS, type NavItem } from './navigation'
+import { HUBS, HUB_ORDER, NAV_ITEMS, crumbsFor, type NavItem } from './navigation'
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { ViewAsBar } from './ViewAsBar'
 
 interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; admin?: boolean }
 
 // Itens que ficam na barra inferior do celular; o resto vai em "Mais".
-const MOBILE_PRIMARY = new Set(['', 'repertorio', 'eventos', 'organizacao', 'oficina'])
+const MOBILE_PRIMARY = new Set(['', 'membros', 'repertorio', 'eventos', 'oficina'])
 
 export function AppShell() {
   const { membership } = useOrganization()
@@ -33,21 +33,16 @@ export function AppShell() {
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   const entries: MenuEntry[] = [
-    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, also: i.to === 'repertorio' ? ['drive'] : undefined })),
+    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon})),
     ...HUB_ORDER.flatMap((hub) => {
       const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
-      return children.length === 0 ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), 'lista-de-espera'] }]
+      const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
+      return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), ...(hub === 'oficina' ? ['lista-de-espera'] : [])] }]
     }),
     ...NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, admin: true })),
   ]
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
-  const item = NAV_ITEMS.find((i) => i.to === segs[0])
-  const group = item?.group ?? (segs[0] === 'lista-de-espera' ? 'oficina' : undefined)
-  const parent = segs.length === 0 ? null
-    : segs[0] === 'drive' ? { to: `${base}/repertorio`, name: 'Repertório' }
-    : segs.length > 1 ? { to: `${base}/${segs[0]}`, name: item?.label ?? 'a página anterior' }
-    : group ? { to: `${base}/${group}`, name: HUBS[group].label }
-    : { to: base, name: 'a página inicial' }
+  const crumbs = crumbsFor(segs, base)
   const isActive = (e: MenuEntry) => {
     const rest = pathname.slice(base.length).replace(/^\//, '')
     const first = rest.split('/')[0]
@@ -88,10 +83,10 @@ export function AppShell() {
       </aside>
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
+        <Breadcrumbs crumbs={crumbs} home={base} />
         <div id="edit-slot" />
         <div className="page-body">
           <InactiveNotice />
-          {parent && <BackButton to={parent.to} name={parent.name} />}
           <Outlet />
         </div>
       </main>

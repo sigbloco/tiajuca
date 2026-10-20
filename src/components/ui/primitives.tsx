@@ -5,6 +5,7 @@ import { clsx, type ClassValue } from 'clsx'
 import { X } from 'lucide-react'
 import { forwardRef, useEffect, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { twMerge } from 'tailwind-merge'
 
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
@@ -94,6 +95,7 @@ export function SheetContent({ title, description, children, className }: {
     return () => window.scrollTo(0, y)
   }, [slot])
   const inline = Boolean(slot)
+  useRegisterCrumb(title, () => closeRef.current?.click(), inline)
   const content = (
       <DialogPrimitive.Content
         ref={contentRef}

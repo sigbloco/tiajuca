@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
-import { Button, Card, Input, Label, cn } from '@/components/ui/primitives'
+import { Button, Input, Label, Select, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { shortName } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -79,12 +79,12 @@ function InstrumentsPick({ value, onChange }: { value: Inst[]; onChange: (v: Ins
 }
 
 /** Criar um naipe de uma vez: nome, afinação, equipe e subnaipes (cada um com sua equipe). */
-export function NewSectionWizard() {
+export function NewSectionSheet({ onClose }: { onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
   const subsections = useCatalog('subsections')
-  const [open, setOpen] = useState(false)
+  const names = useCatalog('section_names')
   const [name, setName] = useState('')
   const [insts, setInsts] = useState<Inst[]>([])
   const [staff, setStaff] = useState<Staff>(EMPTY_STAFF)
@@ -92,7 +92,7 @@ export function NewSectionWizard() {
   const [subs, setSubs] = useState<{ name: string; staff: Staff; insts: Inst[] }[]>([{ name: '', staff: EMPTY_STAFF, insts: [] }])
   const instruments = useCatalog('instruments')
 
-  const reset = () => { setName(''); setInsts([]); setStaff(EMPTY_STAFF); setWithSubs(false); setSubs([{ name: '', staff: EMPTY_STAFF, insts: [] }]); setOpen(false) }
+  const reset = () => onClose()
   const assign = async (member: string, kind: 'professor' | 'monitor', col: 'section_id' | 'subsection_id', id: string) => {
     const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: member, staff_kind: kind, [col]: id })
     if (error) throw error
@@ -123,12 +123,17 @@ export function NewSectionWizard() {
     onError: (e) => { toast.error(friendlyError(e)); invalidateCatalog(qc, orgId) },
   })
 
-  if (!open) return <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>
+  const taken = new Set((sections.data ?? []).filter((s) => s.is_active).map((s) => s.name.toLowerCase()))
+  const available = (names.data ?? []).filter((n) => n.is_active && !taken.has(n.name.toLowerCase()))
   return (
-    <Card className="space-y-4 p-4">
+    <SheetContent title="Novo naipe" description="Escolha o naipe e, se quiser, já cadastre equipe, subnaipes e instrumentos.">
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate() }}>
-        <h2>Novo naipe</h2>
-        <div className="space-y-1.5"><Label htmlFor="ns-name">Nome do naipe</Label><Input id="ns-name" required value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="ns-name">Nome do naipe</Label>
+          <Select id="ns-name" required value={name} onChange={(e) => setName(e.target.value)}>
+            <option value="">Selecione…</option>
+            {available.map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+          </Select>
+          {available.length === 0 && <p className="text-sm text-muted-foreground">Todos os nomes já têm naipe. Cadastre mais nomes em Organização → Nomes de naipes.</p>}</div>
         <div className="space-y-1.5"><p className="font-semibold">Equipe do naipe</p><StaffPick value={staff} onChange={setStaff} /></div>
         <div className="space-y-1.5"><p className="font-semibold">Instrumentos do naipe</p><InstrumentsPick value={insts} onChange={setInsts} /></div>
         <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={withSubs} onChange={(e) => setWithSubs(e.target.checked)} /> Este naipe tem subnaipes</label>
@@ -154,6 +159,6 @@ export function NewSectionWizard() {
           <Button type="button" variant="ghost" onClick={reset}>Cancelar</Button>
         </div>
       </form>
-    </Card>
+    </SheetContent>
   )
 }

@@ -12,7 +12,6 @@ import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/A
 import { EventsPage } from '@/modules/events/EventsPage'
 import { BillingPage } from '@/modules/billing/BillingPage'
 import { ScholarshipsPage } from '@/modules/billing/ScholarshipsPage'
-import { FinancePage } from '@/modules/finance/FinancePage'
 import { ProfilePage } from '@/modules/profile/ProfilePage'
 import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
 import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
@@ -28,7 +27,7 @@ import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { NaipesPage } from '@/modules/structure/NaipesPage'
 import { SiteSettings } from '@/modules/site/SiteSettings'
-import { SettingsPage } from '@/modules/structure/SettingsPage'
+import { ChecklistsPage, FunctionsPage, SectionNamesPage } from '@/modules/structure/OrgPages'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
 import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
@@ -40,7 +39,7 @@ import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { ShopLayout } from '@/modules/shop/public/ShopLayout'
 import { LandingPage } from '@/modules/site/LandingPage'
 import { AppShell } from './AppShell'
-import { HubHome, HubLayout } from './Hub'
+import { FinanceHome, HubHome, HubLayout } from './Hub'
 
 const Loading = () => <div className="p-8"><Skeleton className="h-10 w-64" /></div>
 
@@ -121,16 +120,25 @@ export const router = createBrowserRouter(
                 { index: true, element: <HomePage /> },
                 { path: 'organizacao', element: <HubLayout hub="organizacao" />, children: [{ index: true, element: <HubHome hub="organizacao" /> }] },
                 { path: 'oficina', element: <HubLayout hub="oficina" />, children: [{ index: true, element: <HubHome hub="oficina" /> }] },
+                { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
+                { path: 'membros', element: <MembersPage /> },
+                { path: 'naipes', element: <NaipesPage /> },
                 {
                   element: <HubLayout hub="organizacao" />,
                   children: [
                     { path: 'ciclos', element: <CyclesPage /> },
-                    { path: 'membros', element: <MembersPage /> },
-                    { path: 'naipes', element: <NaipesPage /> },
+                    { path: 'fornecedores', element: <SuppliersPage /> },
+                    { path: 'checklists', element: <ChecklistsPage /> },
+                    { path: 'funcoes', element: <FunctionsPage /> },
+                    { path: 'nomes-de-naipes', element: <SectionNamesPage /> },
+                    { path: 'drive', element: <DriveFoldersPage /> },
+                      ],
+                },
+                {
+                  element: <HubLayout hub="financeiro" />,
+                  children: [
                     { path: 'mensalidades', element: <BillingPage /> },
                     { path: 'bolsas', element: <ScholarshipsPage /> },
-                    { path: 'financeiro', element: <FinancePage /> },
-                    { path: 'fornecedores', element: <SuppliersPage /> },
                   ],
                 },
                 {
@@ -150,13 +158,12 @@ export const router = createBrowserRouter(
                 { path: 'acesso', element: <AccessPage /> },
                 { path: 'repertorio', element: <RepertoirePage /> },
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
-                { path: 'drive', element: <DriveFoldersPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                 { path: 'site', element: <SiteSettings /> },
                 { path: 'interface', element: <InterfacePage /> },
-                { path: 'configuracoes', element: <SettingsPage /> },
+                { path: 'configuracoes', element: <Navigate to="../organizacao" replace /> },
               ],
             },
           ],

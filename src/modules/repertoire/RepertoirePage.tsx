@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, FolderOpen, Music2, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Music2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -56,7 +56,6 @@ export function RepertoirePage() {
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const canManage = usePermission('repertoire.manage')
-  const canDrive = usePermission('drive.read')
   const [sheet, setSheet] = useState<{ rep: Repertoire | null } | null>(null)
   const { data, isLoading } = useQuery({ queryKey: ['repertoires', orgId], queryFn: () => listRepertoires(orgId) })
 
@@ -80,7 +79,6 @@ export function RepertoirePage() {
       <div className="flex items-center justify-between">
         <h1>Repertório</h1>
         <div className="flex flex-wrap gap-2">
-          {canDrive && <Button asChild variant="outline"><Link to={`/${membership?.slug}/drive`}><FolderOpen className="h-4 w-4" /> Google Drive</Link></Button>}
           {canManage && <Button onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
         </div>
       </div>

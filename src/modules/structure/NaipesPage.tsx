@@ -17,6 +17,8 @@ import { MemberPicker } from '@/modules/members/MemberPicker'
 import { TUNINGS } from '@/modules/repertoire/service'
 import { useCatalog } from './CatalogEditor'
 import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
+import { NewSectionSheet } from './NewSectionWizard'
+import { Sheet } from '@/components/ui/primitives'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
 
 type Kind = 'professor' | 'monitor'
@@ -146,6 +148,9 @@ export function NaipesPage() {
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const [renaming, setRenaming] = useState<string | null>(null)
   const searching = filter.search.trim() !== ''
+  const secMut = useStructureMutations('sections')
+  const [creating, setCreating] = useState(false)
+  const ordered = (sections.data ?? []).slice().sort(byOrder)
 
   const view = useMemo(() => (sections.data ?? []).slice().sort(byOrder).map((s) => {
     const subs = (subsections.data ?? []).filter((x) => x.section_id === s.id).sort(byOrder)
@@ -218,9 +223,13 @@ export function NaipesPage() {
 
   return (
     <div className="space-y-3">
-      <h1>Naipes e instrumentos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1>Naipes e instrumentos</h1>
+        {canEdit && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>}
+      </div>
+      <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
       <p className="text-muted-foreground">
-        Os naipes são fixos (Sopro, Cordas, Percussão, Performance e Canto); para criar ou mudar naipes, vá em Configurações → Naipes. Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
+        Os nomes de naipe disponíveis ficam em Organização → Nomes de naipes. Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
         mude a ordem ou leve um instrumento para outro subnaipe. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
       </p>
       <FilterBar value={filter} onChange={setFilter} />
@@ -229,10 +238,18 @@ export function NaipesPage() {
       <div className="space-y-2">
         {view.map(({ s, subs, insts, okI }) => {
           const noSub = insts.filter((i) => !i.subsection_id)
+          const onMoveSec = (f: string, t: string) => secMut.reorder.mutate({ from: f, to: t, list: ordered })
+          const idx = ordered.findIndex((x) => x.id === s.id)
           return (
-            <div key={s.id}>
+            <div key={s.id} {...(canEdit ? drag.row(s.id, onMoveSec, 'sections') : {})} className={drag.cls(s.id)}>
               <Collapsible open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
-                >
+                right={canEdit && (
+                  <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMoveSec, 'sections')}
+                    onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
+                    onEdit={() => { setRenaming(renaming === s.id ? null : s.id); if (!open.isOpen(s.id)) open.toggle(s.id) }}
+                    onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
+                )}>
+                {renaming === s.id && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => setRenaming(null)} />}
                 <StaffBlock scope="section" id={s.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
 
                 <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
