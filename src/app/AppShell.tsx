@@ -85,9 +85,11 @@ export function AppShell() {
       </aside>
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
-        <InactiveNotice />
-        {parent && <BackButton to={parent.to} name={parent.name} />}
-        <Outlet />
+        <div className="mx-auto w-full max-w-5xl">
+          <InactiveNotice />
+          {parent && <BackButton to={parent.to} name={parent.name} />}
+          <Outlet />
+        </div>
       </main>
 
       {/* Mobile: barra inferior fixa + "Mais" */}
