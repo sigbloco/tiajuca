@@ -99,6 +99,11 @@ export async function listPickupPoints(orgId: string) {
   return data as PickupPoint[]
 }
 
+export async function deletePickupPoint(id: string) {
+  const { error } = await supabase.from('shop_pickup_points').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function savePickupPoint(orgId: string, id: string | null, row: Omit<PickupPoint, 'id' | 'sort_order'> & { sort_order?: number }) {
   const q = id
     ? supabase.from('shop_pickup_points').update(row).eq('id', id)

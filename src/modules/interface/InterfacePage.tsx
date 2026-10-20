@@ -11,6 +11,8 @@ import { supabase } from '@/core/supabase'
 import { applyTheme, varsForArea } from '@/core/theme'
 import { COLOR_SLOTS, areaOverrides, withAreaColors, type ThemeArea, type ThemeColors, type ThemeJson } from '@/core/themeModel'
 import { notifySaved } from '@/core/undo'
+import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
+import { useSearchParams } from 'react-router-dom'
 import { ColorPick } from '@/modules/site/ColorPick'
 
 const AREAS: { key: ThemeArea; label: string; intro: string }[] = [
@@ -81,6 +83,7 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <UnsavedGuard dirty={dirty} onSave={() => save.mutateAsync()} />
       <Card className="space-y-4 p-4">
         <p className="text-sm text-muted-foreground">{intro}</p>
         {COLOR_SLOTS.map((s) => (
@@ -109,7 +112,8 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
 /** Interface: cores do sistema (Geral), da página inicial (Site) e da loja (Loja). */
 export function InterfacePage() {
   const can = usePermission('org.manage')
-  const [tab, setTab] = useState<ThemeArea>('general')
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<ThemeArea>(() => (['site', 'shop'].includes(params.get('area') ?? '') ? (params.get('area') as ThemeArea) : 'general'))
   if (!can) return <Card className="p-6">Você não tem permissão para mudar a interface.</Card>
   const current = AREAS.find((a) => a.key === tab)!
   return (

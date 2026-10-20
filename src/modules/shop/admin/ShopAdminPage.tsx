@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Palette } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button, Card, cn } from '@/components/ui/primitives'
-import { useOrgId } from '@/core/organization'
+import { useOrgId, useOrganization } from '@/core/organization'
+import { usePermission } from '@/core/permissions'
 import { OrdersTab } from './OrdersTab'
 import { PaymentsTab } from './PaymentsTab'
 import { PickupPointsTab } from './PickupPointsTab'
@@ -19,6 +22,8 @@ type TabKey = (typeof TABS)[number]['key']
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
   const orgId = useOrgId()
+  const { membership } = useOrganization()
+  const canTheme = usePermission('org.manage')
   const [tab, setTab] = useState<TabKey>('orders')
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const pending = settings.data ? missingSetup(settings.data) : []
@@ -37,6 +42,7 @@ export function ShopAdminPage() {
             {t.label}
           </Button>
         ))}
+        {canTheme && <Button asChild variant="outline" className="min-h-11"><Link to={`/${membership?.slug}/interface?area=shop`}><Palette className="h-4 w-4" /> Interface</Link></Button>}
       </div>
       {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
     </div>

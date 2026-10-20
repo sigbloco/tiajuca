@@ -8,7 +8,7 @@ import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { WEEKDAYS_PLURAL, cleanSchedule, hasFutureSlot, scheduleText, validateSchedule, type ScheduleSlot } from './schedule'
-import { listPickupPoints, savePickupPoint, type PickupPoint } from './service'
+import { deletePickupPoint, listPickupPoints, savePickupPoint, type PickupPoint } from './service'
 
 function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: () => void }) {
   const orgId = useOrgId()
@@ -98,6 +98,12 @@ export function PickupPointsTab() {
   const [sheet, setSheet] = useState<{ point: PickupPoint | null } | null>(null)
   const q = useQuery({ queryKey: ['shop', orgId, 'pickup'], queryFn: () => listPickupPoints(orgId) })
   const today = todayIso()
+  const qc = useQueryClient()
+  const del = useMutation({
+    mutationFn: (p: PickupPoint) => deletePickupPoint(p.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'pickup'] }); toast.success('Ponto de retirada excluído.') },
+    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Já existem pedidos com este ponto. Desative-o (Editar) em vez de excluir.' : friendlyError(e)),
+  })
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -117,7 +123,10 @@ export function PickupPointsTab() {
               <p className="text-sm">{p.address}</p>
               <p className="text-sm text-muted-foreground">{when || 'Horário não informado'}</p>
             </div>
-            <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet({ point: p })}><Pencil className="h-4 w-4" /></Button>
+            <div className="flex shrink-0">
+              <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet({ point: p })}><Pencil className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${p.name}`} onClick={() => { if (window.confirm(`Excluir o ponto “${p.name}”? Isso não pode ser desfeito.`)) del.mutate(p) }}><Trash2 className="h-4 w-4" /></Button>
+            </div>
           </Card>
         )
       })}

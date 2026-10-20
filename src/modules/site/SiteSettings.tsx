@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2, Upload } from 'lucide-r
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -78,6 +79,7 @@ export function SiteSettings() {
         <h2>Página inicial do site</h2>
         <a className="inline-flex items-center gap-1 font-semibold text-primary underline" href="/site" target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Ver a página</a>
       </div>
+      <UnsavedGuard dirty={dirty} onSave={() => save.mutateAsync()} />
       <p className="text-muted-foreground">É a página que as pessoas veem ao abrir o endereço do site (antes de entrar): foto, descrição, redes e contatos, menu e vídeos.</p>
 
       <Card className="p-4 text-sm">As <strong>cores</strong> do sistema, da página inicial e da loja (cabeçalho, fundo, botões…) agora ficam em <Link className="font-semibold text-primary underline" to={`/${membership?.slug}/interface`}>Interface</Link>.</Card>
