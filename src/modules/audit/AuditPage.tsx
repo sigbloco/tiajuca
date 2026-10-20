@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { EMPTY_FILTER, FilterBar, type FilterValue } from '@/components/shared/FilterBar'
@@ -83,7 +84,7 @@ export function AuditPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from('members').select('id, full_name, display_name').in('id', actorIds)
       if (error) throw error
-      return Object.fromEntries((data ?? []).map((m) => [m.id as string, (m.display_name ?? m.full_name) as string]))
+      return Object.fromEntries((data ?? []).map((m) => [m.id as string, (shortName(m?.full_name, m?.display_name)) as string]))
     },
   })
 

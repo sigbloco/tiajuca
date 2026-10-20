@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -73,7 +74,7 @@ function PaySheet({ payment, onClose }: { payment: StaffPayment; onClose: () => 
       if (error) throw error
     }, onSuccess: () => done('Pagamento cancelado.'), onError: (e) => toast.error(friendlyError(e)),
   })
-  const name = payment.members?.display_name ?? payment.members?.full_name ?? ''
+  const name = shortName(payment.members?.full_name, payment.members?.display_name) ?? ''
   const copyPix = async () => { if (pix.data) { try { await navigator.clipboard.writeText(pix.data.key_value); toast.success('Chave PIX copiada.') } catch { toast.error('Não foi possível copiar.') } } }
   return (
     <SheetContent title={name} description={`${formatCurrency(Number(payment.amount))} · ${payment.distribution_destinations?.name ?? 'Equipe'}`}>
@@ -137,7 +138,7 @@ export function StaffTab({ competence }: { competence: string }) {
         {data?.map((p) => (
           <Card key={p.id} className="flex items-center justify-between gap-3 p-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(p)}>
-              <p className="truncate font-semibold">{p.members?.display_name ?? p.members?.full_name}</p>
+              <p className="truncate font-semibold">{shortName(p.members?.full_name, p.members?.display_name)}</p>
               <p className="truncate text-muted-foreground">{p.distribution_destinations?.name ?? 'Equipe'}{p.due_on ? ` · previsto ${formatDate(p.due_on)}` : ''}</p>
             </button>
             <div className="flex flex-col items-end gap-1">

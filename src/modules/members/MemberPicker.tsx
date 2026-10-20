@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button, Input, cn } from '@/components/ui/primitives'
@@ -23,7 +24,7 @@ export function MemberPicker({ value, onChange }: { value: string; onChange: (id
       return (data ?? []) as Person[]
     },
   })
-  const label = (p: Person) => p.display_name ? `${p.display_name} (${p.full_name})` : p.full_name
+  const label = (p: Person) => shortName(p.full_name, p.display_name)
   const selected = (data ?? []).find((p) => p.id === value)
   const matches = useMemo(() => {
     const q = norm(text.trim())
@@ -50,7 +51,7 @@ export function MemberPicker({ value, onChange }: { value: string; onChange: (id
             <li key={p.id} role="option" aria-selected={false}>
               <button type="button" className={cn('w-full px-3 py-2 text-left hover:bg-muted')}
                 onClick={() => { onChange(p.id); setOpen(false); setText('') }}>
-                <span className="font-semibold">{p.display_name ?? p.full_name}</span>
+                <span className="font-semibold">{shortName(p.full_name, p.display_name)}</span>
                 {p.display_name && <span className="text-muted-foreground"> · {p.full_name}</span>}
               </button>
             </li>

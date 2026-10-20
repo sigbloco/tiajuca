@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { Eye, X } from 'lucide-react'
 import { useMemo } from 'react'
 import { Button, Select, cn } from '@/components/ui/primitives'
@@ -61,7 +62,7 @@ export function ViewAsBar() {
     const out: { key: string; label: string; id: string; name: string; disabled?: boolean }[] = []
     const rows = people.data ?? []
     const byId = new Map(rows.map((r) => [r.id, r]))
-    const nameOf = (r: Row) => r.display_name ?? r.full_name
+    const nameOf = (r: Row) => shortName(r?.full_name, r?.display_name)
     const rolesOf = (r: Row) => new Set(r.member_access_roles.filter((x) => !x.revoked_at && x.access_roles).map((x) => x.access_roles!.key))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
     const subById = new Map((subsections.data ?? []).map((s) => [s.id, s]))

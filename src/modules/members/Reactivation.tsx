@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card } from '@/components/ui/primitives'
@@ -101,7 +102,7 @@ export function ReactivationRequests() {
       {pending.map((r) => (
         <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card p-3">
           <div className="min-w-0">
-            <p className="truncate font-semibold">{r.members?.display_name ?? r.members?.full_name}</p>
+            <p className="truncate font-semibold">{shortName(r.members?.full_name, r.members?.display_name)}</p>
             <p className="text-muted-foreground">{r.message || 'Sem recado.'} · {formatDate(r.created_at.slice(0, 10))}</p>
           </div>
           <div className="flex gap-1.5">

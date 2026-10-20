@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { Crown, Lock } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -63,14 +64,14 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
   const people = useMemo(() => {
     const map = new Map<string, Person>()
     for (const r of staff.data ?? []) {
-      const p = map.get(r.member_id) ?? { id: r.member_id, name: r.members.display_name ?? r.members.full_name, user_id: r.members.user_id, roles: new Set<string>() }
+      const p = map.get(r.member_id) ?? { id: r.member_id, name: shortName(r.members?.full_name, r.members?.display_name), user_id: r.members.user_id, roles: new Set<string>() }
       p.roles.add(r.access_roles.key)
       map.set(r.member_id, p)
     }
     for (const id of extra) {
       if (map.has(id)) continue
       const m = everyone.data?.find((x) => x.id === id)
-      map.set(id, { id, name: m ? (m.display_name ?? m.full_name) : '…', user_id: userIdOf.data?.get(id) ?? null, roles: new Set() })
+      map.set(id, { id, name: m ? (shortName(m?.full_name, m?.display_name)) : '…', user_id: userIdOf.data?.get(id) ?? null, roles: new Set() })
     }
     return [...map.values()]
   }, [staff.data, extra, everyone.data, userIdOf.data])

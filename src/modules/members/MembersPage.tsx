@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { Link2, Pencil, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -213,10 +214,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     return (
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
         <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
-          <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name ?? m.full_name} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
+          <p className={cn('truncate font-semibold', dim && 'font-medium')}>{shortName(m?.full_name, m?.display_name)} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
           <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
         </button>
-        <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${m.display_name ?? m.full_name}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${shortName(m?.full_name, m?.display_name)}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
         <Can permission="members.manage"><InviteButton member={m} /></Can>
       </div>
     )

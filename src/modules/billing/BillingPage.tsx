@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { ChevronLeft, ChevronRight, ClipboardCopy, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -50,7 +51,7 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
     mutationFn: (s: 'cancelled' | 'pending') => rpc('change_charge_status', { p_charge: charge.id, p_status: s, p_notes: null })(),
     onSuccess: (_d, s) => done(s === 'cancelled' ? 'Cobrança cancelada.' : 'Cobrança reaberta.'), onError: (e) => toast.error(friendlyError(e)),
   })
-  const name = charge.members?.display_name ?? charge.members?.full_name ?? ''
+  const name = shortName(charge.members?.full_name, charge.members?.display_name) ?? ''
   const editable = charge.status === 'pending' || charge.status === 'exempt'
 
   return (
@@ -246,7 +247,7 @@ function AdminBilling() {
                   <ProgressiveList items={items} resetKey={competence + search + status} render={(c: Charge) => (
               <Card key={c.id} className="flex items-center justify-between gap-3 p-3">
                 <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(c)}>
-                  <p className="truncate font-semibold">{c.members?.display_name ?? c.members?.full_name}</p>
+                  <p className="truncate font-semibold">{shortName(c.members?.full_name, c.members?.display_name)}</p>
                   <p className="truncate text-muted-foreground">{c.fee_categories?.name}{c.scholarship_percent > 0 ? ' · bolsa ' + c.scholarship_percent + '%' : ''} · vence {formatDate(c.due_on)}</p>
                 </button>
                 <div className="flex flex-col items-end gap-1">

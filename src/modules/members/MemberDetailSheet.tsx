@@ -1,3 +1,4 @@
+import { shortName } from '@/core/format'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toast } from 'sonner'
@@ -95,7 +96,7 @@ function ContactLinks({ member }: { member: MemberRow }) {
 
 export function MemberDetailSheet({ member }: { member: MemberRow }) {
   return (
-    <SheetContent title={member.display_name ?? member.full_name} description={member.display_name ? member.full_name : (member.email ?? '')}>
+    <SheetContent title={shortName(member.full_name, member.display_name)} description={member.full_name}>
       <ContactLinks member={member} />
       <CycleParticipation memberId={member.id} />
       <ArtisticLinks memberId={member.id} />

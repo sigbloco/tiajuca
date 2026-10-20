@@ -1,4 +1,5 @@
 import { supabase } from '@/core/supabase'
+import { shortName } from '@/core/format'
 import { formatCompetence, formatCurrency, formatDate } from '@/core/format'
 
 export type ChargeStatus = 'pending' | 'paid' | 'exempt' | 'cancelled'
@@ -91,6 +92,6 @@ export async function overdueWhatsapp(orgId: string, competence: string, today: 
   const rows = (data ?? []) as unknown as { final_amount: number; due_on: string; members: { full_name: string; display_name: string | null } }[]
   if (rows.length === 0) return ''
   const total = rows.reduce((s, r) => s + Number(r.final_amount), 0)
-  const lines = rows.map((r) => `• ${r.members.display_name ?? r.members.full_name} — ${formatCurrency(Number(r.final_amount))} (venc. ${formatDate(r.due_on)})`)
+  const lines = rows.map((r) => `• ${shortName(r.members?.full_name, r.members?.display_name)} — ${formatCurrency(Number(r.final_amount))} (venc. ${formatDate(r.due_on)})`)
   return [`*Mensalidades em atraso — ${formatCompetence(competence)}*`, '', ...lines, '', `Total: ${formatCurrency(total)} (${rows.length} ${rows.length === 1 ? 'pessoa' : 'pessoas'})`].join('\n')
 }

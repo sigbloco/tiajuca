@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { ArrowDown, ArrowUp, CheckCircle2, Circle, CircleDot, MessageSquare, Trash2, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -67,7 +68,7 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
 
       {list.map((i, idx) => {
         const Icon = STATUS_ICON[i.status]
-        const assigneeName = i.members ? (i.members.display_name ?? i.members.full_name) : null
+        const assigneeName = i.members ? (shortName(i.members?.full_name, i.members?.display_name)) : null
         return (
           <Card key={i.id} className="space-y-1.5 p-2.5">
             <div className="flex items-start gap-2">

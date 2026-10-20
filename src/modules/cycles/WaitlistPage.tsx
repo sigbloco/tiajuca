@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { ArrowUpCircle } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -105,7 +106,7 @@ export function WaitlistPage() {
         {data?.map((r, i) => (
           <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
-              <p className="truncate font-semibold">{i + 1}. {r.members?.display_name ?? r.members?.full_name}</p>
+              <p className="truncate font-semibold">{i + 1}. {shortName(r.members?.full_name, r.members?.display_name)}</p>
               <p className="text-muted-foreground">
                 {r.instruments?.name ?? 'Instrumento não informado'} · desde {formatDateTime(r.waitlisted_at, membership?.timezone)}
               </p>

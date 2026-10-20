@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { shortName } from '@/core/format'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -71,7 +72,7 @@ export function ScholarshipsPage() {
       {list.data?.length === 0 && <EmptyState>Nenhuma bolsa ativa.</EmptyState>}
       <div className="grid gap-2">
         {list.data?.map((r) => {
-          const name = r.members?.display_name ?? r.members?.full_name ?? ''
+          const name = shortName(r.members?.full_name, r.members?.display_name) ?? ''
           return (
             <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
               <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ memberId: r.member_id, name })}>
