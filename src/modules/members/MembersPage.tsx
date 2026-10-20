@@ -6,13 +6,14 @@ import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
-import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
+import { DateInput, PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { Can } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { hrefOf, LINK_KINDS } from '@/modules/site/links'
 import { useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
@@ -239,12 +240,22 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const memberRow = (m: GroupMember) => {
     const st = statusOf(m.id)
     const dim = !st?.counts_as_active && !st?.is_waitlist
+    const wa = m.phone ? hrefOf({ kind: 'whatsapp', label: '', value: m.phone }) : null
     return (
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
-        <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(m)}>
-          <p className={cn('truncate font-semibold', dim && 'font-medium')}>{shortName(m?.full_name, m?.display_name)} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
-          <p className="truncate text-muted-foreground">{m.display_name ? `${m.full_name} · ` : ''}{m.email ?? 'sem e-mail'}</p>
-        </button>
+        <div className="min-w-0 flex-1">
+          <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
+            <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name?.trim() || m.full_name.trim().split(/s+/)[0]} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
+          </button>
+          <p className="flex flex-wrap items-center gap-x-3 text-muted-foreground">
+            <span className="truncate">{m.full_name}</span>
+            {wa && (
+              <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 font-semibold text-success hover:underline" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
+                {LINK_KINDS.whatsapp.icon('h-4 w-4')} {maskPhone(m.phone ?? '')}
+              </a>
+            )}
+          </p>
+        </div>
         <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${shortName(m?.full_name, m?.display_name)}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
         <Can permission="members.manage"><InviteButton member={m} /></Can>
       </div>
