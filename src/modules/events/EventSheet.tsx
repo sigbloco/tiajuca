@@ -12,9 +12,10 @@ import { usePermission } from '@/core/permissions'
 import { ChecklistSection } from '@/modules/checklists/ChecklistSection'
 import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { saveCatalogItem } from '@/modules/structure/service'
 import type { CatalogTable } from '@/modules/structure/service'
 import {
-  COLOR_BADGE, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
+  COLOR_BADGE, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
   type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -53,6 +54,19 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
   const [steps, setSteps] = useState<ItineraryStep[]>(() => (activity?.itinerary ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label })))
   const addStep = (label = '') => setSteps((s) => [...s, { time: '', label }])
   const setStep = (i: number, p: Partial<ItineraryStep>) => setSteps((s) => s.map((x, k) => (k === i ? { ...x, ...p } : x)))
+  // Ciclo sempre definido: o que contém a data ou, na falta, o ciclo atual.
+  useEffect(() => {
+    if (f.cycle_id || !cycles.data) return
+    const byDate = cycles.data.find((c) => c.is_active && c.starts_on <= f.activity_date && (!c.ends_on || f.activity_date <= c.ends_on))
+    const pick = byDate ?? cycles.data.find((c) => c.is_current) ?? cycles.data.find((c) => c.is_active)
+    if (pick) setF((x) => ({ ...x, cycle_id: pick.id }))
+  }, [cycles.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [newType, setNewType] = useState<{ name: string; color: TypeColor } | null>(null)
+  const addType = useMutation({
+    mutationFn: async () => saveCatalogItem('activity_types', orgId, { name: newType!.name.trim(), color: newType!.color, sort_order: (types.data?.reduce((m, t) => Math.max(m, t.sort_order), 0) ?? 0) + 1 }),
+    onSuccess: (id) => { qc.invalidateQueries({ queryKey: ['catalog'] }); if (id) setF((x) => ({ ...x, activity_type_id: id })); setNewType(null); toast.success('Tipo criado.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const [aKind, setAKind] = useState<AudienceKind | ''>('')
   const [aRef, setARef] = useState('')
   const audienceOptions = useCatalog(aKind ? AUDIENCE_TABLE[aKind] : 'sections')
@@ -95,7 +109,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const valid = f.title.trim() && f.activity_type_id && f.activity_date
+  const valid = f.title.trim() && f.activity_type_id && f.activity_date && f.cycle_id
   const time = activity ? [formatTime(activity.start_time), formatTime(activity.end_time)].filter(Boolean).join(' – ') : ''
 
   if (!editing && activity) {
@@ -148,10 +162,22 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
         <div className="space-y-1.5"><Label htmlFor="ev-title">Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5">
           <Label htmlFor="ev-type">Tipo</Label>
-          <Select id="ev-type" required value={f.activity_type_id} onChange={(e) => setF({ ...f, activity_type_id: e.target.value })}>
-            <option value="">Selecione…</option>
-            {types.data?.filter((t) => t.is_active || t.id === f.activity_type_id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </Select>
+          <div className="flex gap-2">
+            <Select id="ev-type" required value={f.activity_type_id} onChange={(e) => setF({ ...f, activity_type_id: e.target.value })}>
+              <option value="">Selecione…</option>
+              {types.data?.filter((t) => t.is_active || t.id === f.activity_type_id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+            <Button type="button" size="icon" variant="outline" aria-label="Novo tipo" title="Novo tipo" onClick={() => setNewType(newType ? null : { name: '', color: 'primary' })}><Plus className="h-4 w-4" /></Button>
+          </div>
+          {newType && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
+              <Input aria-label="Nome do novo tipo" className="min-w-32 flex-1" placeholder="Nome do tipo" value={newType.name} onChange={(e) => setNewType({ ...newType, name: e.target.value })} />
+              <Select aria-label="Cor do tipo" className="w-36" value={newType.color} onChange={(e) => setNewType({ ...newType, color: e.target.value as TypeColor })}>
+                {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
+              </Select>
+              <Button type="button" size="sm" disabled={!newType.name.trim() || addType.isPending} onClick={() => addType.mutate()}>Criar</Button>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1.5"><Label htmlFor="ev-date">Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
@@ -165,13 +191,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
             value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
         </div>
         <div className="space-y-2">
-          <Label>Roteiro (opcional)</Label>
-          <p className="text-xs text-muted-foreground">Etapas com horário, como chegada, concentração e passagem de som. Toque numa sugestão para adicionar.</p>
-          <div className="flex flex-wrap gap-1.5">
-            {['Chegada', 'Concentração', 'Passagem de som', 'Apresentação', 'Encerramento'].map((l) => (
-              <button key={l} type="button" onClick={() => addStep(l)} className="rounded-full border border-border bg-card px-3 py-1 text-sm font-semibold hover:bg-muted">+ {l}</button>
-            ))}
-          </div>
+          <Label>Roteiro</Label>
           {steps.map((x, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className="w-24 shrink-0"><TimeInput aria-label={`Horário da etapa ${i + 1}`} value={x.time} onChange={(v) => setStep(i, { time: v })} /></div>
@@ -180,12 +200,12 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => addStep()}><Plus className="h-4 w-4" /> Etapa</Button>
+          <p className="text-xs text-muted-foreground/80">Exemplos: chegada, concentração, passagem de som…</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">
             <Label htmlFor="ev-cycle">Ciclo</Label>
-            <Select id="ev-cycle" value={f.cycle_id} onChange={(e) => setF({ ...f, cycle_id: e.target.value })}>
-              <option value="">Automático (pela data)</option>
+            <Select id="ev-cycle" required value={f.cycle_id} onChange={(e) => setF({ ...f, cycle_id: e.target.value })}>
               {cycles.data?.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </div>

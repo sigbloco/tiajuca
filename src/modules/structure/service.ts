@@ -12,6 +12,7 @@ export interface CatalogItem {
   color?: string
   subsection_id?: string | null
   tuning?: string | null
+  has_tuning?: boolean
 }
 
 export async function listCatalog(table: CatalogTable, orgId: string): Promise<CatalogItem[]> {

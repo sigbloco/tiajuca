@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
-import { Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { shortName } from '@/core/format'
 import { useHoldReorder } from '@/core/holdReorder'
@@ -17,6 +17,7 @@ import { MemberPicker } from '@/modules/members/MemberPicker'
 import { TUNINGS } from '@/modules/repertoire/service'
 import { useCatalog } from './CatalogEditor'
 import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
+import { NewSectionWizard } from './NewSectionWizard'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
 
 type Kind = 'professor' | 'monitor'
@@ -25,7 +26,6 @@ interface Assignment { id: string; member_id: string; staff_kind: Kind; section_
 type Mut = ReturnType<typeof useStructureMutations>
 
 const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsection_id', instrument: 'instrument_id' }
-const noTuning = (sectionName: string) => /percuss|perform/i.test(sectionName)
 
 /** Professores e monitores de um naipe, subnaipe ou instrumento, em chips. Instrumentos só têm monitores. */
 function StaffBlock({ scope, id, canEdit, kinds }: { scope: Scope; id: string; canEdit: boolean; kinds: Kind[] }) {
@@ -189,7 +189,7 @@ export function NaipesPage() {
     else instMut.save.mutate({ id: from.id, name: from.name, subsection_id: to.subsection_id ?? null })
   }
 
-  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[], sectionName: string) => {
+  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[], hasTuning: boolean) => {
     const idx = group.findIndex((x) => x.id === i.id)
     const onMove = moveInstrument(secInsts)
     const scope = `inst:${i.section_id}`
@@ -203,7 +203,7 @@ export function NaipesPage() {
               onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, 'o instrumento')} />
           )}>
           {renaming === i.id && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => setRenaming(null)} />}
-          {!noTuning(sectionName) && (
+          {hasTuning && (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
               {TUNINGS.map((t) => (
@@ -227,9 +227,7 @@ export function NaipesPage() {
         mude a ordem ou leve um instrumento para outro subnaipe. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
       </p>
       {canEdit && (
-        <Card className="p-3">
-          <AddInline placeholder="Novo naipe" label="Naipe" pending={addNode.isPending} onAdd={(name) => addNode.mutate({ table: 'sections', name, sort_order: nextOrder(sections.data ?? []) })} />
-        </Card>
+        <NewSectionWizard />
       )}
       <FilterBar value={filter} onChange={setFilter} />
       {sections.isLoading && <Skeleton className="h-24" />}
@@ -249,12 +247,13 @@ export function NaipesPage() {
                     onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
                 {renaming === s.id && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => setRenaming(null)} />}
+                <label className="flex min-h-9 items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" disabled={!canEdit} checked={s.has_tuning !== false} onChange={(e) => secMut.save.mutate({ id: s.id, name: s.name, has_tuning: e.target.checked })} /> Os instrumentos deste naipe têm afinação</label>
                 <StaffBlock scope="section" id={s.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
 
                 <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
                   <p className="text-xs font-semibold uppercase text-muted-foreground">Instrumentos do naipe</p>
                   {noSub.length === 0 && <p className="text-sm text-muted-foreground">Nenhum instrumento solto no naipe.</p>}
-                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s.name))}
+                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s.has_tuning !== false))}
                   {canEdit && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
                     onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
@@ -275,7 +274,7 @@ export function NaipesPage() {
                           {renaming === sub.id && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => setRenaming(null)} />}
                           <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
                           <div className="space-y-1.5">
-                            {list.filter(okI).map((i) => instNode(i, list, insts, s.name))}
+                            {list.filter(okI).map((i) => instNode(i, list, insts, s.has_tuning !== false))}
                             {canEdit && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
                               onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                           </div>
