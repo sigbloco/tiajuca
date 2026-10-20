@@ -162,7 +162,7 @@ export function HomePage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1>Olá, {membership.display_name}!</h1>
+        <h1>Olá, {membership.display_name.trim().split(/s+/)[0]}!</h1>
         <p className="text-muted-foreground">{membership.roles.length ? membership.roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') : 'Sem papel de acesso atribuído.'} em {membership.name}</p>
       </div>
       <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} />

@@ -1,3 +1,4 @@
+import { useUnsaved } from '@/core/unsaved'
 import { socialLabel, socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock } from 'lucide-react'
@@ -50,6 +51,8 @@ export function MyData({ memberId }: { memberId: string }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const baseline = me.data ? JSON.stringify({ display_name: me.data.display_name ?? '', phone: me.data.phone ? maskPhone(me.data.phone) : '', social_handle: me.data.social_handle ?? '', affective_relation: me.data.affective_relation ?? '', played_other_blocks: me.data.played_other_blocks, other_blocks: me.data.other_blocks ?? '' }) : ''
+  useUnsaved(!!me.data && JSON.stringify(f) !== baseline, () => save.mutateAsync())
   if (me.isLoading || !me.data) return <Skeleton className="h-40" />
   const d = me.data
   const phoneDigits = f.phone.replace(/\D/g, '')

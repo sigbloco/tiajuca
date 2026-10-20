@@ -1,5 +1,6 @@
 import { Check, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { useUnsaved } from '@/core/unsaved'
 import { Button, Input, Select, cn } from '@/components/ui/primitives'
 
 /** Botões que só aparecem quando há algo a confirmar. */
@@ -30,6 +31,7 @@ export function SaveInput({ value, onSave, disabled, className, 'aria-label': ar
     setBusy(true)
     try { await onSave(text.trim()) } finally { setBusy(false) }
   }
+  useUnsaved(dirty, commit)
   return (
     <span className={cn('flex min-w-0 flex-1 items-center gap-1.5', className)}>
       <Input className="min-w-0 flex-1 font-semibold" value={text} disabled={disabled || busy} aria-label={ariaLabel} placeholder={placeholder}
@@ -58,6 +60,7 @@ export function OkSelect({ value, onSave, disabled, className, children, 'aria-l
     setBusy(true)
     try { await onSave(v) } finally { setBusy(false) }
   }
+  useUnsaved(dirty, commit)
   return (
     <span className="inline-flex items-center gap-1.5">
       <Select id={id} className={className} value={v} disabled={disabled || busy} aria-label={ariaLabel} onChange={(e) => setV(e.target.value)}>{children}</Select>

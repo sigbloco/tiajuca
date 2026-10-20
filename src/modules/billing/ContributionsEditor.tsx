@@ -1,3 +1,4 @@
+import { useUnsaved } from '@/core/unsaved'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -33,6 +34,7 @@ function CategoryRow({ item, siblings, current, canEdit }: { item: CatalogItem; 
   useEffect(() => setValue(current), [current])
   const idx = siblings.findIndex((s) => s.id === item.id)
   const dirty = name.trim() !== item.name || (value !== null && value !== current)
+  useUnsaved(dirty, () => save.mutateAsync())
 
   const save = useMutation({
     mutationFn: async () => {

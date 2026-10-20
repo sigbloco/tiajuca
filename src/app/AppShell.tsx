@@ -1,6 +1,7 @@
 import { Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { BackButton } from '@/components/shared/BackButton'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -66,6 +67,7 @@ export function AppShell() {
 
   return (
     <>
+    <GlobalUnsavedGuard />
     <ViewAsBar />
     <div className="mx-auto min-h-screen max-w-5xl md:flex">
       {/* Desktop: sidebar */}

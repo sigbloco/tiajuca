@@ -3,7 +3,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { clsx, type ClassValue } from 'clsx'
 import { X } from 'lucide-react'
-import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes } from 'react'
+import { forwardRef, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes } from 'react'
 import { twMerge } from 'tailwind-merge'
 
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
@@ -74,10 +74,24 @@ export function SheetContent({ title, description, children, className }: {
   children: React.ReactNode
   className?: string
 }) {
+  // Regra geral: se o formulário foi mexido e a pessoa tenta fechar sem salvar, pergunta antes.
+  const [dirty, setDirty] = useState(false)
+  const [asking, setAsking] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const guard = (e: { preventDefault: () => void }) => { if (dirty) { e.preventDefault(); setAsking(true) } }
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
+        ref={contentRef}
+        onEscapeKeyDown={guard}
+        onInteractOutside={guard}
+        onInputCapture={(e) => {
+          const t = e.target as HTMLInputElement
+          if (t.closest?.('form') && !t.closest('[data-noguard]') && t.type !== 'search') setDirty(true)
+        }}
+        onSubmitCapture={() => setDirty(false)}
         className={cn(
           'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-4 overflow-y-auto bg-card p-6 shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right',
           className,
@@ -88,11 +102,26 @@ export function SheetContent({ title, description, children, className }: {
             <DialogPrimitive.Title className="font-display text-xl font-bold">{title}</DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-muted-foreground">{description ?? ''}</DialogPrimitive.Description>
           </div>
-          <DialogPrimitive.Close className="rounded-md p-1 hover:bg-muted" aria-label="Fechar">
+          <DialogPrimitive.Close ref={closeRef} onClick={guard} className="rounded-md p-1 hover:bg-muted" aria-label="Fechar">
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         </div>
         {children}
+        {asking && (
+          <div role="alertdialog" aria-label="Salvar as alterações?" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-[min(92vw,22rem)] space-y-4 rounded-2xl bg-card p-6 shadow-xl">
+              <div>
+                <p className="font-display text-xl font-bold">Salvar as alterações?</p>
+                <p className="text-sm text-muted-foreground">Você mudou algo aqui e ainda não salvou.</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button type="button" onClick={() => { setAsking(false); contentRef.current?.querySelector('form')?.requestSubmit() }}>Salvar</Button>
+                <Button type="button" variant="outline" onClick={() => { setDirty(false); setAsking(false); setTimeout(() => closeRef.current?.click(), 0) }}>Descartar e fechar</Button>
+                <Button type="button" variant="ghost" onClick={() => setAsking(false)}>Continuar editando</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   )

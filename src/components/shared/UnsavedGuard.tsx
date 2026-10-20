@@ -2,12 +2,21 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { Button } from '@/components/ui/primitives'
+import { saveAllUnsaved, useUnsaved, useUnsavedCount } from '@/core/unsaved'
+
+/** Declara que a tela tem alterações não salvas. O aviso de saída é um só, global (veja `GlobalUnsavedGuard`). */
+export function UnsavedGuard({ dirty, onSave }: { dirty: boolean; onSave: () => Promise<unknown> | unknown }) {
+  useUnsaved(dirty, onSave)
+  return null
+}
 
 /**
- * Regra geral: se a pessoa alterou algo e tenta sair da página sem salvar, o site pergunta o que fazer.
- * Use `<UnsavedGuard dirty={...} onSave={() => salvar()} />` dentro da tela com formulário. `onSave` deve lançar erro se falhar.
+ * Regra geral do site: se há alteração não salva (em qualquer tela ou campo) e a pessoa tenta sair da página,
+ * pergunta se quer salvar. Fica uma vez só, dentro do AppShell.
  */
-export function UnsavedGuard({ dirty, onSave }: { dirty: boolean; onSave: () => Promise<unknown> | unknown }) {
+export function GlobalUnsavedGuard() {
+  const count = useUnsavedCount()
+  const dirty = count > 0
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
   const [saving, setSaving] = useState(false)
 
@@ -31,7 +40,7 @@ export function UnsavedGuard({ dirty, onSave }: { dirty: boolean; onSave: () => 
           <div className="flex flex-col gap-2">
             <Button disabled={saving} onClick={async () => {
               setSaving(true)
-              try { await onSave(); blocker.proceed() } catch { blocker.reset() } finally { setSaving(false) }
+              try { await saveAllUnsaved(); blocker.proceed() } catch { blocker.reset() } finally { setSaving(false) }
             }}>{saving ? 'Salvando…' : 'Salvar e sair'}</Button>
             <Button variant="outline" onClick={() => blocker.proceed()}>Sair sem salvar</Button>
             <Button variant="ghost" onClick={() => blocker.reset()}>Continuar editando</Button>

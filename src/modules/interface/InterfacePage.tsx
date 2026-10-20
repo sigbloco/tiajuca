@@ -23,9 +23,6 @@ const AREAS: { key: ThemeArea; label: string; intro: string }[] = [
 
 const EMPTY_THEME: ThemeJson = {}
 
-/** Cores de fábrica do bloco: o "Restaurar" da aba Geral volta para elas. */
-const BRAND_DEFAULTS: ThemeColors = { primary: '#E93D2B', secondary: '#DEE33B' }
-
 /** Miniatura: cabeçalho, fundo, cartão com botão e destaque, já com as cores escolhidas (variáveis CSS só dentro da miniatura). */
 function Preview({ vars, title }: { vars: Record<string, string>; title: string }) {
   const { membership } = useOrganization()
@@ -79,7 +76,7 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
     onSuccess: () => notifySaved('Cores salvas.'),
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const restore = () => setColors(area === 'general' ? { ...BRAND_DEFAULTS } : {})
+  const restore = () => setColors({})
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
@@ -97,7 +94,7 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
         <div className="flex flex-wrap gap-2">
           <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Salvando…' : 'Salvar cores'}</Button>
           {dirty && <Button variant="ghost" onClick={() => setColors(saved)}>Descartar</Button>}
-          <Button variant="outline" onClick={restore}>{area === 'general' ? 'Restaurar cores de fábrica' : 'Usar as cores gerais'}</Button>
+          {area !== 'general' && <Button variant="outline" onClick={restore}>Restaurar cores de fábrica</Button>}
         </div>
       </Card>
       <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
