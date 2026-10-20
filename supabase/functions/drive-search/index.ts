@@ -6,7 +6,8 @@
 //  • A credencial é uma CONTA DE SERVIÇO da organização, guardada como segredo GOOGLE_SERVICE_ACCOUNT_JSON.
 //    Escopo somente-leitura. Nenhuma credencial é devolvida ao navegador.
 //
-// Ações (POST JSON): { organization_id, action: 'status' | 'list', q?, folder_id? }
+// Ações (POST JSON): { organization_id, action: 'status' | 'list', q?, folder_id?, root_id?, folders_only? }
+// `root_id` (opcional) escolhe uma das pastas cadastradas em Google Drive (drive_folders) como raiz da navegação; sem ele vale a pasta de partituras configurada.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -99,13 +100,21 @@ Deno.serve(async (req) => {
     })
     const { data: cfg, error: cfgErr } = await supabase.rpc('drive_integration_config', { p_org: orgId })
     if (cfgErr) return json({ error: 'Você não tem permissão para buscar no Drive.' }, 403)
-    if (!cfg?.configured) return json({ error: 'A pasta do Google Drive ainda não foi configurada.', code: 'not_configured' }, 409)
-    if (action === 'list' && !cfg.active) return json({ error: 'A integração com o Google Drive está desativada.', code: 'inactive' }, 409)
+    // Raízes permitidas: a pasta de partituras configurada e as pastas cadastradas (ativas) em Google Drive.
+    const reqRoot = body.root_id ? String(body.root_id) : null
+    const { data: regRows } = await supabase.from('drive_folders').select('drive_folder_id').eq('organization_id', orgId).eq('is_active', true)
+    const registered = (regRows ?? []).map((r: { drive_folder_id: string | null }) => r.drive_folder_id).filter(Boolean) as string[]
+    if (reqRoot) {
+      if (!/^[A-Za-z0-9_-]{10,}$/.test(reqRoot) || (!registered.includes(reqRoot) && reqRoot !== cfg?.folder_id)) return json({ error: 'Pasta raiz não permitida.' }, 403)
+    } else {
+      if (!cfg?.configured) return json({ error: 'A pasta do Google Drive ainda não foi configurada.', code: 'not_configured' }, 409)
+      if (action === 'list' && !cfg.active) return json({ error: 'A integração com o Google Drive está desativada.', code: 'inactive' }, 409)
+    }
 
     const sa = loadServiceAccount()
     if (!sa) return json({ error: 'A conta de serviço do Google ainda não foi cadastrada no servidor.', code: 'no_credentials' }, 503)
     const token = await googleToken(sa)
-    const root: string = cfg.folder_id
+    const root: string = reqRoot ?? cfg.folder_id
 
     if (action === 'status') {
       const r = await drive(token, `files/${encodeURIComponent(root)}`, { fields: 'id,name,mimeType' })
@@ -118,9 +127,9 @@ Deno.serve(async (req) => {
     if (folder !== root && !(await isInside(token, folder, root))) return json({ error: 'Pasta fora da área permitida.' }, 403)
 
     const qText = String(body.q ?? '').trim().slice(0, 80).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-    const q = [`'${folder}' in parents`, 'trashed = false', qText ? `name contains '${qText}'` : null].filter(Boolean).join(' and ')
+    const q = [`'${folder}' in parents`, 'trashed = false', body.folders_only ? `mimeType = '${FOLDER}'` : null, qText ? `name contains '${qText}'` : null].filter(Boolean).join(' and ')
     const r = await drive(token, 'files', {
-      q, pageSize: '40', orderBy: 'folder,name', includeItemsFromAllDrives: 'true',
+      q, pageSize: '100', orderBy: 'folder,name', includeItemsFromAllDrives: 'true',
       fields: 'files(id,name,mimeType,webViewLink,modifiedTime,size),nextPageToken',
       ...(body.page_token ? { pageToken: String(body.page_token) } : {}),
     })

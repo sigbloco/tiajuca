@@ -9,6 +9,7 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { DrivePicker } from './DrivePicker'
+import { DriveFolderTree } from './DriveFolderTree'
 import { getDriveConfig, type DriveFile } from './drive'
 import { KIND_LABEL, TUNINGS, hasTuning, guessTarget, listAttachments, openAttachment, uploadSongFile, type Attachment, type AttachmentKind, type Song } from './service'
 
@@ -169,11 +170,16 @@ function DriveFolderField({ value, onChange }: { value: string; onChange: (v: st
   const registered = useQuery({
     queryKey: ['drive-folders', orgId, 'for-songs'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('drive_folders').select('id, name, url').eq('organization_id', orgId).eq('is_active', true).order('name')
+      const { data, error } = await supabase.from('drive_folders').select('id, name, url, drive_folder_id').eq('organization_id', orgId).eq('is_active', true).order('name')
       if (error) throw error
-      return (data ?? []) as { id: string; name: string; url: string }[]
+      return (data ?? []) as { id: string; name: string; url: string; drive_folder_id: string | null }[]
     },
   })
+  // Raízes da árvore: as pastas cadastradas em Google Drive (com o identificador) e, se houver, a pasta de partituras da busca.
+  const treeRoots = [
+    ...(registered.data ?? []).filter((r) => r.drive_folder_id).map((r) => ({ id: r.drive_folder_id!, name: r.name })),
+    ...(cfg.data?.active && cfg.data.folder_id && !(registered.data ?? []).some((r) => r.drive_folder_id === cfg.data!.folder_id) ? [{ id: cfg.data.folder_id, name: 'Pasta de partituras' }] : []),
+  ]
   return (
     <div className="space-y-1.5">
       <Label htmlFor="s-drive">Pasta da música no Drive (opcional)</Label>
@@ -185,7 +191,7 @@ function DriveFolderField({ value, onChange }: { value: string; onChange: (v: st
         </div>
       )}
       <div className="flex flex-wrap gap-2">
-        {cfg.data?.active && <Button type="button" size="sm" variant="outline" onClick={() => setBrowse(!browse)}>{browse ? 'Fechar navegação' : 'Navegar pelas pastas do Drive'}</Button>}
+        {treeRoots.length > 0 && <Button type="button" size="sm" variant="outline" onClick={() => setBrowse(!browse)}>{browse ? 'Fechar árvore de pastas' : 'Escolher na árvore de pastas'}</Button>}
         {(registered.data ?? []).length > 0 && (
           <Select aria-label="Pastas cadastradas" className="w-56" value="" onChange={(e) => { const r = registered.data?.find((x) => x.id === e.target.value); if (r) { onChange(r.url); setPicked(r.name) } }}>
             <option value="">Pastas cadastradas…</option>
@@ -193,7 +199,7 @@ function DriveFolderField({ value, onChange }: { value: string; onChange: (v: st
           </Select>
         )}
       </div>
-      {browse && <DrivePicker onPickFolder={(fo) => { onChange(fo.url); setPicked(fo.name); setBrowse(false) }} />}
+      {browse && <DriveFolderTree roots={treeRoots} onPick={(fo) => { onChange(fo.url); setPicked(fo.name); setBrowse(false) }} />}
       <Input id="s-drive" type="url" placeholder="ou cole o link: https://drive.google.com/drive/folders/…" value={value} onChange={(e) => { onChange(e.target.value); setPicked('') }} />
     </div>
   )
