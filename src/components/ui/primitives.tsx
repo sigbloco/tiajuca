@@ -74,11 +74,19 @@ export function Sheet(props: DialogPrimitive.DialogProps) {
 export const SheetTrigger = DialogPrimitive.Trigger
 export const SheetClose = DialogPrimitive.Close
 
-export function SheetContent({ title, description, children, className }: {
+/** Registra o título do painel no breadcrumb enquanto ele está aberto (este componente só existe dentro do conteúdo aberto). */
+function CrumbRegistrar({ title, close }: { title: string; close: () => void }) {
+  useRegisterCrumb(title, close)
+  return null
+}
+
+export function SheetContent({ title, description, children, className, drawer }: {
   title: string
   description?: string
   children: React.ReactNode
   className?: string
+  /** Força a gaveta lateral (menus), em vez de abrir no lugar da página. */
+  drawer?: boolean
 }) {
   // Regra geral: se o formulário foi mexido e a pessoa tenta fechar sem salvar, pergunta antes.
   const [dirty, setDirty] = useState(false)
@@ -86,7 +94,7 @@ export function SheetContent({ title, description, children, className }: {
   const contentRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const guard = (e: { preventDefault: () => void }) => { if (dirty) { e.preventDefault(); setAsking(true) } }
-  const slot = typeof document === 'undefined' ? null : document.getElementById('edit-slot')
+  const slot = typeof document === 'undefined' || drawer ? null : document.getElementById('edit-slot')
   // Ao abrir na página, sobe ao topo; ao fechar, volta para onde a pessoa estava.
   useEffect(() => {
     if (!slot) return
@@ -95,7 +103,6 @@ export function SheetContent({ title, description, children, className }: {
     return () => window.scrollTo(0, y)
   }, [slot])
   const inline = Boolean(slot)
-  useRegisterCrumb(title, () => closeRef.current?.click(), inline)
   const content = (
       <DialogPrimitive.Content
         ref={contentRef}
@@ -122,6 +129,7 @@ export function SheetContent({ title, description, children, className }: {
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         </div>
+        {inline && <CrumbRegistrar title={title} close={() => closeRef.current?.click()} />}
         {children}
         {asking && (
           <div role="alertdialog" aria-label="Salvar as alterações?" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">

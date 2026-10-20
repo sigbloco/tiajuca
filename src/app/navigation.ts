@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
-  Globe, Home, Layers, ListChecks, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Globe, Home, ListChecks, Music2, Palette, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -9,7 +9,7 @@ export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
 export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
   oficina: { label: 'Oficina', icon: Drum, description: 'Alunos, presença, vagas e novas inscrições.' },
   financeiro: { label: 'Financeiro', icon: Banknote, description: 'Receitas, despesas, mensalidades e bolsas.', homePermission: 'finance.read' },
-  organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, checklists, funções e Google Drive.' },
+  organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, checklists e Google Drive.' },
 }
 export const HUB_ORDER: HubKey[] = ['oficina', 'financeiro', 'organizacao']
 
@@ -51,8 +51,6 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage', description: 'Períodos do bloco (ex.: Carnaval 2026/27).' },
   { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
   { to: 'checklists', label: 'Checklists', icon: ListChecks, group: 'organizacao', permission: 'events.manage', description: 'Modelos de checklist para os eventos.' },
-  { to: 'nomes-de-naipes', label: 'Nomes de naipes', icon: Layers, group: 'organizacao', permission: 'structure.manage', description: 'Os nomes que “Novo naipe” oferece (Sopro, Cordas…).' },
-  { to: 'funcoes', label: 'Funções', icon: Tags, group: 'organizacao', permission: 'structure.manage', description: 'Papéis que não são instrumentos (Produção, Apoio…).' },
   { to: 'drive', label: 'Google Drive', icon: FolderOpen, group: 'organizacao', permission: 'drive.read', description: 'Pastas do Drive e quem pode vê-las.' },
 
   { to: 'site', label: 'Site', icon: Globe, admin: true, permission: 'settings.manage' },
@@ -61,6 +59,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, admin: true, permission: 'roles.manage' },
   { to: 'auditoria', label: 'Auditoria', icon: History, admin: true, permission: 'audit.read' },
 ]
+
+const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', nomes: 'Nomes de naipes', funcoes: 'Funções' }
 
 /** Caminho de navegação (breadcrumb) a partir das partes da URL depois do slug. O último item é a página atual (sem link). */
 export function crumbsFor(segs: string[], base: string): { label: string; to?: string }[] {
@@ -75,6 +75,13 @@ export function crumbsFor(segs: string[], base: string): { label: string; to?: s
     if (item.group) out.push({ label: HUBS[item.group].label, to: `${base}/${item.group}` })
     out.push({ label: item.crumb ?? item.label, to: segs.length > 1 ? `${base}/${first}` : undefined })
   }
-  if (segs.length > 1 && !hubKey) out.push({ label: 'Detalhe' })
+  if (segs.length > 1 && !hubKey) {
+    let path = `${base}/${first}`
+    segs.slice(1).forEach((seg, i, rest) => {
+      path += `/${seg}`
+      const last = i === rest.length - 1
+      out.push({ label: SUB_LABEL[seg] ?? 'Detalhe', to: last ? undefined : path })
+    })
+  }
   return out
 }

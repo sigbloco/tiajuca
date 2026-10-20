@@ -108,7 +108,7 @@ export function AppShell() {
       </nav>
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent title="Mais" description={membership.display_name}>
+        <SheetContent drawer title="Mais" description={membership.display_name}>
           <nav className="space-y-1">{renderEntries(more, () => setMoreOpen(false))}</nav>
           <Link to="/site" onClick={() => setMoreOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
           <Button variant="outline" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>

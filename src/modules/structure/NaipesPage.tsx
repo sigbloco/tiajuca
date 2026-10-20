@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Ban, CircleCheck, Pencil, Plus, Trash2, UserPlus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, CircleCheck, Pencil, Plus, Settings, Trash2, UserPlus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
@@ -21,15 +22,17 @@ import { NewSectionSheet } from './NewSectionWizard'
 import { Sheet } from '@/components/ui/primitives'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
 
-type Kind = 'professor' | 'monitor'
+type Kind = 'professor' | 'monitor' | 'regente'
 type Scope = 'section' | 'subsection' | 'instrument'
 interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
 type Mut = ReturnType<typeof useStructureMutations>
 
 const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsection_id', instrument: 'instrument_id' }
 
-/** Professores e monitores de um naipe, subnaipe ou instrumento, em chips. Instrumentos só têm monitores. */
-function StaffBlock({ scope, id, canEdit, kinds }: { scope: Scope; id: string; canEdit: boolean; kinds: Kind[] }) {
+const KIND_LABEL: Record<Kind, string> = { professor: 'Professor', monitor: 'Monitor', regente: 'Regente' }
+
+/** Equipe de um naipe, subnaipe ou instrumento: chips de quem já está designado e botões para acrescentar (+Professor, +Monitor, +Regente). */
+function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit: boolean; kinds?: Kind[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [adding, setAdding] = useState<Kind | null>(null)
@@ -61,29 +64,22 @@ function StaffBlock({ scope, id, canEdit, kinds }: { scope: Scope; id: string; c
     onSuccess: () => { refresh(); toast.success('Designação encerrada.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  if (mine.length === 0 && !canEdit) return null
   return (
-    <div className="space-y-2 rounded-lg bg-muted/40 p-2">
-      {kinds.map((kind) => {
-        const list = mine.filter((a) => a.staff_kind === kind)
-        return (
-          <div key={kind} className="flex flex-wrap items-center gap-1.5">
-            <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">{kind === 'professor' ? 'Professores' : 'Monitores'}</span>
-            {list.map((a) => (
-              <Chip key={a.id} label={shortName(a.members?.full_name, a.members?.display_name)} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
-            ))}
-            {list.length === 0 && <span className="text-sm text-muted-foreground">ninguém</span>}
-            {canEdit && adding !== kind && (
-              <Button size="sm" variant="outline" onClick={() => setAdding(kind)}><UserPlus className="h-4 w-4" /> {kind === 'professor' ? 'Professor' : 'Monitor'}</Button>
-            )}
-            {adding === kind && (
-              <div className="w-full max-w-sm">
-                <MemberPicker value="" onChange={(m) => { if (m) add.mutate({ member: m, kind }) }} />
-                <Button size="sm" variant="ghost" onClick={() => setAdding(null)}>Cancelar</Button>
-              </div>
-            )}
-          </div>
-        )
-      })}
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {mine.map((a) => (
+          <Chip key={a.id} label={`${shortName(a.members?.full_name, a.members?.display_name)} · ${KIND_LABEL[a.staff_kind]}`} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
+        ))}
+        {canEdit && (['professor', 'monitor', 'regente'] as const).map((kind) => (
+          <Button key={kind} type="button" size="sm" variant={adding === kind ? 'default' : 'outline'} onClick={() => setAdding(adding === kind ? null : kind)}><UserPlus className="h-4 w-4" /> {KIND_LABEL[kind]}</Button>
+        ))}
+      </div>
+      {adding && (
+        <div className="max-w-sm">
+          <MemberPicker value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -215,7 +211,7 @@ export function NaipesPage() {
               ))}
             </div>
           )}
-          <StaffBlock scope="instrument" id={i.id} canEdit={canEdit} kinds={['monitor']} />
+          <StaffBlock scope="instrument" id={i.id} canEdit={canEdit}  />
         </Collapsible>
       </div>
     )
@@ -225,7 +221,10 @@ export function NaipesPage() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Naipes e instrumentos</h1>
-        {canEdit && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>}
+        <div className="flex flex-wrap gap-2">
+          {canEdit && <Button asChild variant="outline"><Link to="configuracoes"><Settings className="h-4 w-4" /> Configurações</Link></Button>}
+          {canEdit && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>}
+        </div>
       </div>
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
       <p className="text-muted-foreground">
@@ -250,15 +249,16 @@ export function NaipesPage() {
                     onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
                 {renaming === s.id && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => setRenaming(null)} />}
-                <StaffBlock scope="section" id={s.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
+                <StaffBlock scope="section" id={s.id} canEdit={canEdit}  />
 
+                {(subs.length === 0 || noSub.length > 0) && (
                 <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Instrumentos do naipe</p>
-                  {noSub.length === 0 && <p className="text-sm text-muted-foreground">Nenhum instrumento solto no naipe.</p>}
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">{subs.length > 0 ? 'Sem subnaipe (arraste cada um para um subnaipe)' : 'Instrumentos do naipe'}</p>
                   {noSub.filter(okI).map((i) => instNode(i, noSub, insts))}
-                  {canEdit && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
+                  {canEdit && subs.length === 0 && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
                     onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
+                )}
 
                 {subs.filter((x) => matchesStatus(x.is_active, filter.status)).map((sub, si) => {
                   const list = insts.filter((i) => i.subsection_id === sub.id)
@@ -274,7 +274,7 @@ export function NaipesPage() {
                               onToggle={() => toggle(subMut, sub)} onDelete={() => confirmDelete('subsections', sub, 'o subnaipe')} />
                           )}>
                           {renaming === sub.id && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => setRenaming(null)} />}
-                          <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
+                          <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit}  />
                           <div className="space-y-1.5">
                             {list.filter(okI).map((i) => instNode(i, list, insts))}
                             {canEdit && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
