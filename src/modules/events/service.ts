@@ -14,6 +14,7 @@ export const COLOR_LABEL: Record<TypeColor, string> = {
   primary: 'Vermelho (marca)', secondary: 'Amarelo (marca)', info: 'Azul', success: 'Verde', warning: 'Laranja', muted: 'Cinza',
 }
 
+export interface ItineraryStep { time: string; label: string }
 export interface Activity {
   id: string
   activity_type_id: string
@@ -27,13 +28,14 @@ export interface Activity {
   status: 'scheduled' | 'done' | 'cancelled'
   visibility: 'members' | 'staff'
   recurrence_rule_id: string | null
+  itinerary: ItineraryStep[] | null
   activity_types: { name: string; color: TypeColor } | null
 }
 
 export const STATUS_LABEL: Record<Activity['status'], string> = { scheduled: 'Agendado', done: 'Realizado', cancelled: 'Cancelado' }
 export const VISIBILITY_LABEL: Record<Activity['visibility'], string> = { members: 'Todos os integrantes', staff: 'Somente equipe' }
 
-const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, activity_types(name, color)'
+const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, activity_types(name, color)'
 
 export async function listActivities(p: { orgId: string; from: string; to: string; cycleId?: string; typeId?: string }) {
   let q = supabase
@@ -61,6 +63,7 @@ export interface ActivityInput {
   description: string | null
   cycle_id: string | null
   visibility: Activity['visibility']
+  itinerary: ItineraryStep[] | null
 }
 
 export type AudienceKind = 'section' | 'subsection' | 'instrument'

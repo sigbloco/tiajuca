@@ -27,7 +27,8 @@ export function AppShell() {
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
   if (!membership) return null
   const base = `/${membership.slug}`
-  const visible = (i: NavItem) => !i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own')
+  const isTitular = membership.roles.includes('titular') // usuário institucional do bloco: não é uma pessoa, então não tem perfil
+  const visible = (i: NavItem) => !(i.to === 'perfil' && isTitular) && (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   const entries: MenuEntry[] = [
@@ -66,7 +67,7 @@ export function AppShell() {
   return (
     <>
     <ViewAsBar />
-    <div className="min-h-screen md:flex">
+    <div className="mx-auto min-h-screen max-w-5xl md:flex">
       {/* Desktop: sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-header p-4 text-header-foreground md:sticky md:top-0 md:flex md:max-h-screen">
         <div className="mb-6 flex items-center gap-3">
@@ -84,11 +85,9 @@ export function AppShell() {
       </aside>
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
-        <div className="mx-auto w-full max-w-5xl">
-          <InactiveNotice />
-          {parent && <BackButton to={parent.to} name={parent.name} />}
-          <Outlet />
-        </div>
+        <InactiveNotice />
+        {parent && <BackButton to={parent.to} name={parent.name} />}
+        <Outlet />
       </main>
 
       {/* Mobile: barra inferior fixa + "Mais" */}

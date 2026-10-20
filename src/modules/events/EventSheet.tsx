@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck } from 'lucide-react'
+import { ClipboardCheck, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DateInput, TimeInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Input, Label, Select, SheetContent } from '@/components/ui/primitives'
+import { Badge, Button, Input, Label, Select, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDayLong, formatTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -15,7 +15,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogTable } from '@/modules/structure/service'
 import {
   COLOR_BADGE, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
-  type Activity, type AudienceKind, type TypeColor,
+  type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
 const AUDIENCE_TABLE: Record<AudienceKind, CatalogTable> = { section: 'sections', subsection: 'subsections', instrument: 'instruments' }
@@ -50,6 +50,9 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
     cycle_id: activity?.cycle_id ?? '',
     visibility: activity?.visibility ?? ('members' as Activity['visibility']),
   })
+  const [steps, setSteps] = useState<ItineraryStep[]>(() => (activity?.itinerary ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label })))
+  const addStep = (label = '') => setSteps((s) => [...s, { time: '', label }])
+  const setStep = (i: number, p: Partial<ItineraryStep>) => setSteps((s) => s.map((x, k) => (k === i ? { ...x, ...p } : x)))
   const [aKind, setAKind] = useState<AudienceKind | ''>('')
   const [aRef, setARef] = useState('')
   const audienceOptions = useCatalog(aKind ? AUDIENCE_TABLE[aKind] : 'sections')
@@ -76,6 +79,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
         description: f.description.trim() || null,
         cycle_id: f.cycle_id || null,
         visibility: f.visibility,
+        itinerary: steps.filter((x) => x.time && x.label.trim()).map((x) => ({ time: x.time, label: x.label.trim() })).sort((a, b) => a.time.localeCompare(b.time)) || null,
       }, aKind && aRef ? { kind: aKind, ref_id: aRef } : null),
     onSuccess: () => {
       toast.success(isNew ? 'Evento criado.' : 'Evento atualizado.')
@@ -108,6 +112,16 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           {activity.location && <div><dt className="text-muted-foreground">Local</dt><dd className="font-semibold">{activity.location}</dd></div>}
           {activity.description && <div><dt className="text-muted-foreground">Descrição</dt><dd className="whitespace-pre-wrap">{activity.description}</dd></div>}
         </dl>
+        {activity.itinerary && activity.itinerary.length > 0 && (
+          <section className="space-y-1">
+            <h3>Roteiro</h3>
+            <ol className="divide-y divide-border rounded-lg border border-border">
+              {[...activity.itinerary].sort((a, b) => a.time.localeCompare(b.time)).map((x, i) => (
+                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span className="w-12 shrink-0 font-display font-bold">{x.time.slice(0, 5)}</span><span>{x.label}</span></li>
+              ))}
+            </ol>
+          </section>
+        )}
         <ChecklistSection activityId={activity.id} />
         <div className="mt-auto flex flex-col gap-2">
           {canRecord && activity.status !== 'cancelled' && (
@@ -149,6 +163,23 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           <Label htmlFor="ev-desc">Descrição</Label>
           <textarea id="ev-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Roteiro (opcional)</Label>
+          <p className="text-xs text-muted-foreground">Etapas com horário, como chegada, concentração e passagem de som. Toque numa sugestão para adicionar.</p>
+          <div className="flex flex-wrap gap-1.5">
+            {['Chegada', 'Concentração', 'Passagem de som', 'Apresentação', 'Encerramento'].map((l) => (
+              <button key={l} type="button" onClick={() => addStep(l)} className="rounded-full border border-border bg-card px-3 py-1 text-sm font-semibold hover:bg-muted">+ {l}</button>
+            ))}
+          </div>
+          {steps.map((x, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="w-24 shrink-0"><TimeInput aria-label={`Horário da etapa ${i + 1}`} value={x.time} onChange={(v) => setStep(i, { time: v })} /></div>
+              <Input aria-label={`Nome da etapa ${i + 1}`} placeholder="Etapa" value={x.label} onChange={(e) => setStep(i, { label: e.target.value })} />
+              <Button type="button" size="icon" variant="ghost" aria-label="Remover etapa" onClick={() => setSteps((s) => s.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => addStep()}><Plus className="h-4 w-4" /> Etapa</Button>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">

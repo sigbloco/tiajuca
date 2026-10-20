@@ -104,7 +104,7 @@ export function EventsPage() {
           {WEEK_HEAD.map((d, i) => <div key={i} className="py-1">{d}</div>)}
         </div>
         <div className="grid grid-cols-7 gap-1">
-          {days.map((d) => {
+          {days.map((d, di) => {
             const list = byDay[d.iso] ?? []
             return (
               <button
@@ -112,6 +112,7 @@ export function EventsPage() {
                 onClick={() => setSelectedDay(selectedDay === d.iso ? null : d.iso)}
                 className={cn(
                   'flex h-14 flex-col items-center rounded-lg p-1 hover:bg-muted',
+                  Math.floor(di / 7) % 2 === 1 ? 'bg-muted/60' : 'bg-card',
                   !d.inMonth && 'opacity-40',
                   d.iso === today && 'ring-2 ring-primary',
                   selectedDay === d.iso && 'bg-muted',
@@ -136,11 +137,11 @@ export function EventsPage() {
         {listDays.map((day) => (
           <section key={day} className="space-y-2">
             <h3 className="capitalize">{formatDayLong(day)}</h3>
-            {byDay[day].map((a) => {
+            {byDay[day].map((a, ai) => {
               const t = a.activity_types
               const time = [formatTime(a.start_time), formatTime(a.end_time)].filter(Boolean).join(' – ')
               return (
-                <Card key={a.id} className={cn('flex items-center gap-3 p-3', a.status === 'cancelled' && 'opacity-60')}>
+                <Card key={a.id} className={cn('flex items-center gap-3 p-3', ai % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60')}>
                   <span className={cn('h-10 w-1.5 shrink-0 rounded-full', COLOR_DOT[t?.color ?? 'muted'])} />
                   <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ activity: a })}>
                     <p className={cn('truncate font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>

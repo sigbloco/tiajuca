@@ -3,12 +3,12 @@ import { ArrowDown, ArrowUp, FolderOpen, Music2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { COLOR_DOT, COLOR_LABEL, type TypeColor } from '@/modules/events/service'
+import { COLOR_DOT, type TypeColor } from '@/modules/events/service'
 import { listRepertoires, type Repertoire } from './service'
 
 export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onClose: () => void }) {
@@ -39,13 +39,6 @@ export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onCl
       <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim()) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="rp-name">Nome</Label><Input id="rp-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="rp-desc">Descrição</Label><Input id="rp-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="rp-color">Cor</Label>
-          <div className="flex items-center gap-2">
-            <span className={cn('h-8 w-8 shrink-0 rounded-full', COLOR_DOT[f.color])} />
-            <Select id="rp-color" value={f.color} onChange={(e) => setF({ ...f, color: e.target.value as TypeColor })}>
-              {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
-            </Select>
-          </div></div>
         <Button type="submit" className="w-full" disabled={!f.name.trim() || save.isPending}>Salvar</Button>
         {rep && (
           <Button type="button" variant="ghost" className={rep.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
@@ -105,7 +98,8 @@ export function RepertoirePage() {
               <div className="flex items-center justify-between">
                 <Badge>{r.songs[0]?.count ?? 0} {(r.songs[0]?.count ?? 0) === 1 ? 'música' : 'músicas'}</Badge>
                 {canManage && (
-                  <div className="flex items-center">
+                  <div className="flex flex-wrap items-center justify-end">
+                    <Button asChild size="sm"><Link to={`/${membership?.slug}/repertorio/${r.id}?nova=1`}><Plus className="h-4 w-4" /> Música</Link></Button>
                     <Button size="icon" variant="ghost" aria-label="Subir" disabled={i === 0} onClick={() => swap.mutate({ from: i, to: i - 1 })}><ArrowUp className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" aria-label="Descer" disabled={i === data.length - 1} onClick={() => swap.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-4 w-4" /></Button>
                     <Button size="sm" variant="outline" onClick={() => setSheet({ rep: r })}>Editar</Button>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Plus, Share2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
@@ -20,7 +20,8 @@ export function RepertoireDetailPage() {
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const canManage = usePermission('repertoire.manage')
-  const [song, setSong] = useState<{ song: Song | null } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [song, setSong] = useState<{ song: Song | null } | null>(() => (searchParams.get('nova') ? { song: null } : null))
   const [editRep, setEditRep] = useState(false)
   const [filter, setFilter] = useState<FilterValue>({ ...EMPTY_FILTER, status: 'active' })
 
@@ -60,7 +61,7 @@ export function RepertoireDetailPage() {
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" disabled={!text} onClick={copy}><Share2 className="h-4 w-4" /> Copiar lista</Button>
         <Button variant="outline" disabled={!text} onClick={whatsapp}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
-        {canManage && <Button onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Nova música</Button>}
+        {canManage && <Button onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
       </div>
 
       <FilterBar value={filter} onChange={setFilter} />
@@ -85,7 +86,7 @@ export function RepertoireDetailPage() {
         ))}
       </div>
 
-      <Sheet open={song !== null} onOpenChange={(o) => !o && setSong(null)}>
+      <Sheet open={song !== null} onOpenChange={(o) => { if (!o) { setSong(null); if (searchParams.has('nova')) { searchParams.delete('nova'); setSearchParams(searchParams, { replace: true }) } } }}>
         {song && <SongSheet key={song.song?.id ?? 'new'} repertoireId={repertoireId} song={song.song} onClose={() => setSong(null)} />}
       </Sheet>
       <Sheet open={editRep} onOpenChange={setEditRep}>{editRep && rep && <RepertoireSheet rep={rep} onClose={() => setEditRep(false)} />}</Sheet>
