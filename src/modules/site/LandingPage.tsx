@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ClipboardList, LogIn, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { LoginPopup } from '@/modules/auth/LoginPopup'
 import { useMemberships } from '@/core/organization'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Skeleton } from '@/components/ui/primitives'
@@ -32,6 +33,7 @@ export function usePublicSite(slug: string) {
   })
 }
 
+const safeBack = (b: string | null) => (b && b.startsWith('/') && !b.startsWith('//') ? b : '/')
 const pill = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-center font-display text-lg font-bold shadow-card transition hover:-translate-y-0.5 hover:shadow-lg'
 
 /** Página inicial pública do bloco, no estilo "link na bio": foto, descrição, redes, menu e vídeos. Tudo vem do banco. */
@@ -39,6 +41,10 @@ export function LandingPage() {
   const { data, isLoading, isError } = usePublicSite(DEFAULT_ORG_SLUG)
   const { session } = useAuth()
   const [shown, setShown] = useState(3)
+  const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [loginOpen, setLoginOpen] = useState(params.has('entrar'))
+  const closeLogin = (o: boolean) => { setLoginOpen(o); if (!o && params.has('entrar')) { params.delete('entrar'); params.delete('voltar'); setParams(params, { replace: true }) } }
   const { data: mine } = useMemberships()
   useEffect(() => {
     if (!data) return
@@ -48,7 +54,7 @@ export function LandingPage() {
 
   if (isLoading) return <main className="mx-auto max-w-md space-y-4 px-4 py-10"><Skeleton className="mx-auto h-32 w-32 rounded-full" /><Skeleton className="h-8" /><Skeleton className="h-24" /></main>
   if (isError || !data) {
-    return <main className="mx-auto max-w-md px-4 py-16 text-center"><Link to="/entrar" className="font-semibold text-primary underline">Entrar</Link></main>
+    return <main className="mx-auto max-w-md px-4 py-16 text-center"><button type="button" onClick={() => setLoginOpen(true)} className="font-semibold text-primary underline">Entrar</button><LoginPopup open={loginOpen} onOpenChange={closeLogin} /></main>
   }
   const { org, site } = data
   const slug = org.slug
@@ -93,7 +99,7 @@ export function LandingPage() {
           {site.show_shop !== false && (
             <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
           )}
-          <Link to="/entrar" className={`${pill} bg-card text-foreground`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</Link>
+          <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>
         </nav>
 
         {videos.length > 0 && (
@@ -115,6 +121,7 @@ export function LandingPage() {
 
         <footer className="pt-4 text-center text-xs text-muted-foreground">{org.name}</footer>
       </div>
+      <LoginPopup open={loginOpen} onOpenChange={closeLogin} onSignedIn={() => navigate(safeBack(params.get('voltar')), { replace: true })} />
     </main>
   )
 }

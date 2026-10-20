@@ -1,9 +1,9 @@
-import { Navigate, Outlet, createBrowserRouter, useParams } from 'react-router-dom'
+import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/primitives'
 import { takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
-import { ClaimInvitePage, ForgotPasswordPage, LoginPage, NoOrganizationPage, ResetPasswordPage, SignupPage, VerifyEmailPage } from '@/modules/auth/pages'
+import { ClaimInvitePage, ForgotPasswordPage, NoOrganizationPage, ResetPasswordPage, SignupPage, VerifyEmailPage } from '@/modules/auth/pages'
 import { HomePage } from '@/modules/dashboard/HomePage'
 import { CapacityPage } from '@/modules/capacity/CapacityPage'
 import { CyclesPage } from '@/modules/cycles/CyclesPage'
@@ -47,6 +47,8 @@ function RootRedirect() {
   const { data, isLoading } = useMemberships()
   if (loading || (session && isLoading)) return <Loading />
   if (!session) return <LandingPage />
+  const wanted = new URLSearchParams(window.location.search).get('voltar')
+  if (wanted && wanted.startsWith('/') && !wanted.startsWith('//')) return <Navigate to={wanted} replace />
   const back = takePostLoginPath() // ex.: voltou da loja depois do login com Google
   if (back) return <Navigate to={back} replace />
   if (!data?.length) return <NoOrganizationPage />
@@ -56,7 +58,8 @@ function RootRedirect() {
 function RequireAuth() {
   const { session, loading } = useAuth()
   if (loading) return <Loading />
-  return session ? <Outlet /> : <Navigate to="/entrar" replace />
+  const { pathname, search } = useLocation()
+  return session ? <Outlet /> : <Navigate to={`/?entrar=1&voltar=${encodeURIComponent(pathname + search)}`} replace />
 }
 
 function OrgRoute() {
@@ -83,7 +86,7 @@ function ConfigMissing() {
 export const router = createBrowserRouter(
   isSupabaseConfigured
     ? [
-        { path: '/entrar', element: <LoginPage /> },
+        { path: '/entrar', element: <Navigate to="/?entrar=1" replace /> },
         { path: '/cadastro', element: <SignupPage /> },
         { path: '/verifique-seu-email', element: <VerifyEmailPage /> },
         { path: '/recuperar-senha', element: <ForgotPasswordPage /> },
