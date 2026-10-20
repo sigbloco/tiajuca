@@ -44,7 +44,7 @@ export function ShopHomePage() {
           return (
             <li key={p.id}>
               <Link to={`${basePath}/produto/${p.slug}`} className="block h-full">
-                <Card className={cn('h-full overflow-hidden transition hover:shadow-md', soldOut && 'opacity-70')}>
+                <Card className={cn('h-full overflow-hidden transition hover:shadow-md', soldOut && 'opacity-70 grayscale')}>
                   {p.images[0]
                     ? <img src={imageUrl(p.images[0])} alt={p.name} loading="lazy" className="aspect-square w-full object-cover" />
                     : <div aria-hidden className="aspect-square w-full bg-muted" />}

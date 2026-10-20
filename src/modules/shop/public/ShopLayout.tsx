@@ -45,7 +45,7 @@ function Shell() {
   useEffect(() => {
     // Cores do bloco (Configurações → Site) + cores só da loja, se definidas em Loja → Configurações.
     applyTheme(buildShopTheme(store.org.theme, store.theme_override), { cache: false })
-    applyBrandToDocument({ name: `${shopLabel} ${store.org.short_name}`, logo_path: store.org.logo_path })
+    applyBrandToDocument({ name: shopLabel, logo_path: store.org.logo_path })
   }, [store, shopLabel])
   return (
     <div className="min-h-screen bg-background">
