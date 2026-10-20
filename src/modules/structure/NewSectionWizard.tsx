@@ -3,18 +3,20 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
-import { Button, Card, Input, Label } from '@/components/ui/primitives'
+import { Button, Card, Input, Label, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { shortName } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from './CatalogEditor'
+import { TUNINGS } from '@/modules/repertoire/service'
 import { invalidateCatalog, saveCatalogItem } from './service'
 import { nextOrder } from './StructureManagers'
 
 type Staff = { professors: string[]; monitors: string[] }
 const EMPTY_STAFF: Staff = { professors: [], monitors: [] }
+type Inst = { name: string; tuning: string | null }
 interface Person { id: string; full_name: string; display_name: string | null }
 
 function usePeople() {
@@ -55,6 +57,27 @@ function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => 
   )
 }
 
+/** Instrumentos a criar junto: nome e, se tiver, a afinação (chips). */
+function InstrumentsPick({ value, onChange }: { value: Inst[]; onChange: (v: Inst[]) => void }) {
+  return (
+    <div className="space-y-2">
+      {value.map((it, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <Input className="min-w-40 flex-1" aria-label={`Nome do instrumento ${i + 1}`} placeholder="Nome do instrumento" value={it.name} onChange={(e) => onChange(value.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} />
+          <div className="flex gap-1" role="group" aria-label="Afinação">
+            {TUNINGS.map((t) => (
+              <button key={t} type="button" aria-pressed={it.tuning === t} onClick={() => onChange(value.map((x, k) => (k === i ? { ...x, tuning: x.tuning === t ? null : t } : x)))}
+                className={cn('min-h-9 rounded-full border px-3 text-sm font-semibold', it.tuning === t ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>{t}</button>
+            ))}
+          </div>
+          <Button type="button" size="icon" variant="ghost" aria-label="Remover instrumento" onClick={() => onChange(value.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button type="button" size="sm" variant="outline" onClick={() => onChange([...value, { name: '', tuning: null }])}><Plus className="h-4 w-4" /> Instrumento</Button>
+    </div>
+  )
+}
+
 /** Criar um naipe de uma vez: nome, afinação, equipe e subnaipes (cada um com sua equipe). */
 export function NewSectionWizard() {
   const orgId = useOrgId()
@@ -63,22 +86,28 @@ export function NewSectionWizard() {
   const subsections = useCatalog('subsections')
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [hasTuning, setHasTuning] = useState(true)
+  const [insts, setInsts] = useState<Inst[]>([])
   const [staff, setStaff] = useState<Staff>(EMPTY_STAFF)
   const [withSubs, setWithSubs] = useState(false)
-  const [subs, setSubs] = useState<{ name: string; staff: Staff }[]>([{ name: '', staff: EMPTY_STAFF }])
+  const [subs, setSubs] = useState<{ name: string; staff: Staff; insts: Inst[] }[]>([{ name: '', staff: EMPTY_STAFF, insts: [] }])
+  const instruments = useCatalog('instruments')
 
-  const reset = () => { setName(''); setHasTuning(true); setStaff(EMPTY_STAFF); setWithSubs(false); setSubs([{ name: '', staff: EMPTY_STAFF }]); setOpen(false) }
+  const reset = () => { setName(''); setInsts([]); setStaff(EMPTY_STAFF); setWithSubs(false); setSubs([{ name: '', staff: EMPTY_STAFF, insts: [] }]); setOpen(false) }
   const assign = async (member: string, kind: 'professor' | 'monitor', col: 'section_id' | 'subsection_id', id: string) => {
     const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: member, staff_kind: kind, [col]: id })
     if (error) throw error
   }
   const create = useMutation({
     mutationFn: async () => {
-      const secId = await saveCatalogItem('sections', orgId, { name: name.trim(), sort_order: nextOrder(sections.data ?? []), has_tuning: hasTuning })
+      const secId = await saveCatalogItem('sections', orgId, { name: name.trim(), sort_order: nextOrder(sections.data ?? []) })
       if (!secId) throw new Error('Não foi possível criar o naipe.')
       for (const m of staff.professors) await assign(m, 'professor', 'section_id', secId)
       for (const m of staff.monitors) await assign(m, 'monitor', 'section_id', secId)
+      let instOrder = nextOrder(instruments.data ?? [])
+      const makeInsts = async (list: Inst[], subId: string | null) => {
+        for (const it of list.filter((x) => x.name.trim())) await saveCatalogItem('instruments', orgId, { name: it.name.trim(), section_id: secId, subsection_id: subId, tuning: it.tuning, sort_order: instOrder++ })
+      }
+      await makeInsts(insts, null)
       if (withSubs) {
         let order = nextOrder(subsections.data ?? [])
         for (const s of subs.filter((x) => x.name.trim())) {
@@ -86,6 +115,7 @@ export function NewSectionWizard() {
           if (!subId) continue
           for (const m of s.staff.professors) await assign(m, 'professor', 'subsection_id', subId)
           for (const m of s.staff.monitors) await assign(m, 'monitor', 'subsection_id', subId)
+          await makeInsts(s.insts, subId)
         }
       }
     },
@@ -99,8 +129,8 @@ export function NewSectionWizard() {
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate() }}>
         <h2>Novo naipe</h2>
         <div className="space-y-1.5"><Label htmlFor="ns-name">Nome do naipe</Label><Input id="ns-name" required value={name} onChange={(e) => setName(e.target.value)} /></div>
-        <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={hasTuning} onChange={(e) => setHasTuning(e.target.checked)} /> Os instrumentos deste naipe têm afinação (Bb, Eb, F, C)</label>
         <div className="space-y-1.5"><p className="font-semibold">Equipe do naipe</p><StaffPick value={staff} onChange={setStaff} /></div>
+        <div className="space-y-1.5"><p className="font-semibold">Instrumentos do naipe</p><InstrumentsPick value={insts} onChange={setInsts} /></div>
         <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={withSubs} onChange={(e) => setWithSubs(e.target.checked)} /> Este naipe tem subnaipes</label>
         {withSubs && (
           <div className="space-y-3">
@@ -111,12 +141,14 @@ export function NewSectionWizard() {
                   <Button type="button" size="icon" variant="ghost" aria-label="Remover subnaipe" disabled={subs.length === 1} onClick={() => setSubs(subs.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
                 </div>
                 <StaffPick value={s.staff} onChange={(v) => setSubs(subs.map((x, k) => (k === i ? { ...x, staff: v } : x)))} />
+                <p className="text-sm font-semibold">Instrumentos deste subnaipe</p>
+                <InstrumentsPick value={s.insts} onChange={(v) => setSubs(subs.map((x, k) => (k === i ? { ...x, insts: v } : x)))} />
               </div>
             ))}
-            <Button type="button" size="sm" variant="outline" onClick={() => setSubs([...subs, { name: '', staff: EMPTY_STAFF }])}><Plus className="h-4 w-4" /> Subnaipe</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setSubs([...subs, { name: '', staff: EMPTY_STAFF, insts: [] }])}><Plus className="h-4 w-4" /> Subnaipe</Button>
           </div>
         )}
-        <p className="text-sm text-muted-foreground">Os instrumentos você cria depois, dentro do naipe ou de cada subnaipe.</p>
+        <p className="text-sm text-muted-foreground">A afinação é do instrumento (opcional). Dá para acrescentar mais instrumentos e subnaipes depois, na página Naipes.</p>
         <div className="flex gap-2">
           <Button type="submit" disabled={!name.trim() || create.isPending}>{create.isPending ? 'Criando…' : 'Criar naipe'}</Button>
           <Button type="button" variant="ghost" onClick={reset}>Cancelar</Button>

@@ -17,7 +17,6 @@ import { MemberPicker } from '@/modules/members/MemberPicker'
 import { TUNINGS } from '@/modules/repertoire/service'
 import { useCatalog } from './CatalogEditor'
 import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
-import { NewSectionWizard } from './NewSectionWizard'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
 
 type Kind = 'professor' | 'monitor'
@@ -99,7 +98,7 @@ function AddInline({ placeholder, label, onAdd, pending }: { placeholder: string
 }
 
 /** Mesmo padrão em todos os itens: alça (6 bolinhas), seta pra cima, seta pra baixo, lápis, "proibido" (desativar) e lixeira. */
-function Actions({ item, label, idx, total, handle, onUp, onDown, onEdit, onToggle, onDelete }: {
+export function Actions({ item, label, idx, total, handle, onUp, onDown, onEdit, onToggle, onDelete }: {
   item: CatalogItem; label: string; idx: number; total: number; handle: React.ReactNode
   onUp: () => void; onDown: () => void; onEdit: () => void; onToggle: () => void; onDelete: () => void
 }) {
@@ -140,7 +139,6 @@ export function NaipesPage() {
   const sections = useCatalog('sections')
   const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
-  const secMut = useStructureMutations('sections')
   const subMut = useStructureMutations('subsections')
   const instMut = useStructureMutations('instruments')
   const drag = useHoldReorder()
@@ -148,7 +146,6 @@ export function NaipesPage() {
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const [renaming, setRenaming] = useState<string | null>(null)
   const searching = filter.search.trim() !== ''
-  const ordered = (sections.data ?? []).slice().sort(byOrder)
 
   const view = useMemo(() => (sections.data ?? []).slice().sort(byOrder).map((s) => {
     const subs = (subsections.data ?? []).filter((x) => x.section_id === s.id).sort(byOrder)
@@ -189,7 +186,7 @@ export function NaipesPage() {
     else instMut.save.mutate({ id: from.id, name: from.name, subsection_id: to.subsection_id ?? null })
   }
 
-  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[], hasTuning: boolean) => {
+  const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[]) => {
     const idx = group.findIndex((x) => x.id === i.id)
     const onMove = moveInstrument(secInsts)
     const scope = `inst:${i.section_id}`
@@ -203,7 +200,7 @@ export function NaipesPage() {
               onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, 'o instrumento')} />
           )}>
           {renaming === i.id && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => setRenaming(null)} />}
-          {hasTuning && (
+          {(
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
               {TUNINGS.map((t) => (
@@ -223,37 +220,25 @@ export function NaipesPage() {
     <div className="space-y-3">
       <h1>Naipes e instrumentos</h1>
       <p className="text-muted-foreground">
-        Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
+        Os naipes são fixos (Sopro, Cordas, Percussão, Performance e Canto); para criar ou mudar naipes, vá em Configurações → Naipes. Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
         mude a ordem ou leve um instrumento para outro subnaipe. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
       </p>
-      {canEdit && (
-        <NewSectionWizard />
-      )}
       <FilterBar value={filter} onChange={setFilter} />
       {sections.isLoading && <Skeleton className="h-24" />}
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}
       <div className="space-y-2">
         {view.map(({ s, subs, insts, okI }) => {
-          const onMove = (f: string, t: string) => secMut.reorder.mutate({ from: f, to: t, list: ordered })
-          const idx = ordered.findIndex((x) => x.id === s.id)
           const noSub = insts.filter((i) => !i.subsection_id)
           return (
-            <div key={s.id} {...(canEdit ? drag.row(s.id, onMove, 'sections') : {})} className={drag.cls(s.id)}>
+            <div key={s.id}>
               <Collapsible open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
-                right={canEdit && (
-                  <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMove, 'sections')}
-                    onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
-                    onEdit={() => { setRenaming(renaming === s.id ? null : s.id); if (!open.isOpen(s.id)) open.toggle(s.id) }}
-                    onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
-                )}>
-                {renaming === s.id && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => setRenaming(null)} />}
-                <label className="flex min-h-9 items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" disabled={!canEdit} checked={s.has_tuning !== false} onChange={(e) => secMut.save.mutate({ id: s.id, name: s.name, has_tuning: e.target.checked })} /> Os instrumentos deste naipe têm afinação</label>
+                >
                 <StaffBlock scope="section" id={s.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
 
                 <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
                   <p className="text-xs font-semibold uppercase text-muted-foreground">Instrumentos do naipe</p>
                   {noSub.length === 0 && <p className="text-sm text-muted-foreground">Nenhum instrumento solto no naipe.</p>}
-                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s.has_tuning !== false))}
+                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts))}
                   {canEdit && <AddInline placeholder="Novo instrumento do naipe" label="Instrumento" pending={addNode.isPending}
                     onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
@@ -274,7 +259,7 @@ export function NaipesPage() {
                           {renaming === sub.id && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => setRenaming(null)} />}
                           <StaffBlock scope="subsection" id={sub.id} canEdit={canEdit} kinds={['professor', 'monitor']} />
                           <div className="space-y-1.5">
-                            {list.filter(okI).map((i) => instNode(i, list, insts, s.has_tuning !== false))}
+                            {list.filter(okI).map((i) => instNode(i, list, insts))}
                             {canEdit && <AddInline placeholder="Novo instrumento deste subnaipe" label="Instrumento" pending={addNode.isPending}
                               onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, sort_order: nextOrder(instruments.data ?? []) })} />}
                           </div>

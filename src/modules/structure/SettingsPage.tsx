@@ -4,18 +4,20 @@ import { usePermission } from '@/core/permissions'
 import { IntegrationsSettings } from '@/modules/integrations/IntegrationsSettings'
 import { TemplatesSettings } from '@/modules/checklists/TemplatesSettings'
 import { CatalogEditor } from './CatalogEditor'
+import { SectionsSettings } from './SectionsSettings'
 
 const TABS = [
+  { key: 'sections', label: 'Naipes' },
   { key: 'functions', label: 'Funções' },
   { key: 'checklists', label: 'Checklists' },
   { key: 'integrations', label: 'Google Drive' },
 ] as const
 
-/** Configurações gerais. Naipes, instrumentos e equipe ficam em Organização > Naipes; contribuições em Financeiro; tipos de evento e feriados em Calendário. */
+/** Configurações gerais. Subnaipes, instrumentos e equipe ficam em Organização > Naipes; contribuições em Financeiro; tipos de evento e feriados em Calendário. */
 export function SettingsPage() {
   const canEdit = usePermission('structure.manage')
   const canEvents = usePermission('events.manage')
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('functions')
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sections')
   return (
     <div className="space-y-4">
       <h1>Configurações</h1>
@@ -32,6 +34,7 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
+      {tab === 'sections' && <SectionsSettings />}
       {tab === 'functions' && <CatalogEditor table="artistic_functions" title="Funções" singular="Função" hint="Papéis que não são instrumentos (ex.: Produção, Apoio). Aparecem em ordem alfabética." canEdit={canEdit} alphabetical />}
       {tab === 'checklists' && <TemplatesSettings canEdit={canEvents} />}
       {tab === 'integrations' && <IntegrationsSettings />}
