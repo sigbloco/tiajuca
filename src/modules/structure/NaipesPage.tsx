@@ -15,7 +15,7 @@ import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { usePersonLabeler } from '@/modules/members/personLabel'
-import { hasTuning } from '@/modules/repertoire/service'
+import { NO_PITCH, hasTuning } from '@/modules/repertoire/service'
 import { TuningChips } from './TuningChips'
 import { useCatalog } from './CatalogEditor'
 import { itemPlural, invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
@@ -168,8 +168,8 @@ export function NaipesPage() {
   }).filter((g) => g.show), [sections.data, subsections.data, instruments.data, filter])
 
   const addNode = useMutation({
-    mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; subsection_id?: string | null; sort_order: number }) =>
-      saveCatalogItem(v.table, orgId, { name: v.name, sort_order: v.sort_order, ...(v.section_id ? { section_id: v.section_id } : {}), ...(v.subsection_id ? { subsection_id: v.subsection_id } : {}) }),
+    mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; subsection_id?: string | null; sort_order: number; tuning?: string | null }) =>
+      saveCatalogItem(v.table, orgId, { name: v.name, sort_order: v.sort_order, ...(v.tuning ? { tuning: v.tuning } : {}), ...(v.section_id ? { section_id: v.section_id } : {}), ...(v.subsection_id ? { subsection_id: v.subsection_id } : {}) }),
     onSuccess: () => { notifySaved('Criado.'); invalidateCatalog(qc, orgId) },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -260,7 +260,7 @@ export function NaipesPage() {
                   <p className="text-xs font-semibold uppercase text-muted-foreground">{subs.length > 0 ? 'Sem subnaipe (arraste cada um para um subnaipe)' : `${itemPlural(s.item_label ?? 'Instrumento')} do naipe`}</p>
                   {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s))}
                   {canEdit && isEditing(s.id) && subs.length === 0 && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} do naipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
-                    onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, sort_order: nextOrder(instruments.data ?? []) })} />}
+                    onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, tuning: s.pitch_mode === 'undefined' ? NO_PITCH : null, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
                 )}
 
@@ -281,7 +281,7 @@ export function NaipesPage() {
                           <div className="space-y-1.5">
                             {list.filter(okI).map((i) => instNode(i, list, insts, s))}
                             {canEdit && isEditing(sub.id) && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} deste subnaipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
-                              onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, sort_order: nextOrder(instruments.data ?? []) })} />}
+                              onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, tuning: s.pitch_mode === 'undefined' ? NO_PITCH : null, sort_order: nextOrder(instruments.data ?? []) })} />}
                           </div>
                         </Collapsible>
                       </div>

@@ -10,6 +10,7 @@ import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from './CatalogEditor'
+import { NO_PITCH } from '@/modules/repertoire/service'
 import { TuningChips } from './TuningChips'
 import { invalidateCatalog, itemPlural, saveCatalogItem } from './service'
 import { nextOrder } from './StructureManagers'
@@ -94,13 +95,13 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
   }
   const create = useMutation({
     mutationFn: async () => {
-      const secId = await saveCatalogItem('sections', orgId, { name: name.trim(), sort_order: nextOrder(sections.data ?? []), has_tuning: tuned, item_label: label })
+      const secId = await saveCatalogItem('sections', orgId, { name: name.trim(), sort_order: nextOrder(sections.data ?? []), has_tuning: tuned, pitch_mode: mode, item_label: label })
       if (!secId) throw new Error('Não foi possível criar o naipe.')
       for (const m of staff.professors) await assign(m, 'professor', 'section_id', secId)
       for (const m of staff.monitors) await assign(m, 'monitor', 'section_id', secId)
       let instOrder = nextOrder(instruments.data ?? [])
       const makeInsts = async (list: Inst[], subId: string | null) => {
-        for (const it of list.filter((x) => x.name.trim())) await saveCatalogItem('instruments', orgId, { name: it.name.trim(), section_id: secId, subsection_id: subId, tuning: tuned ? it.tuning : null, sort_order: instOrder++ })
+        for (const it of list.filter((x) => x.name.trim())) await saveCatalogItem('instruments', orgId, { name: it.name.trim(), section_id: secId, subsection_id: subId, tuning: tuned ? it.tuning : mode === 'undefined' ? NO_PITCH : null, sort_order: instOrder++ })
       }
       await makeInsts(insts, null)
       if (withSubs) {
@@ -120,7 +121,8 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
 
   const cfg = (names.data ?? []).find((n) => n.name === name)
   const label = cfg?.item_label ?? 'Instrumento'
-  const tuned = cfg?.has_tuning !== false
+  const mode = cfg?.pitch_mode ?? (cfg?.has_tuning === false ? 'undefined' : 'defined')
+  const tuned = mode === 'defined'
   const taken = new Set((sections.data ?? []).filter((s) => s.is_active).map((s) => s.name.toLowerCase()))
   const available = (names.data ?? []).filter((n) => n.is_active && !taken.has(n.name.toLowerCase()))
   return (

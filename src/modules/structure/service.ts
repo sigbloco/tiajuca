@@ -15,9 +15,12 @@ export interface CatalogItem {
   has_tuning?: boolean
   /** Como se chamam os itens do naipe: Instrumento, Atividade ou Voz. */
   item_label?: string
+  /** Altura do naipe: definida (tem afinação), indefinida ou não se aplica. */
+  pitch_mode?: 'defined' | 'undefined' | 'na'
 }
 
-export const ITEM_LABELS = ['Instrumento', 'Atividade', 'Voz'] as const
+export const PITCH_LABEL = { defined: 'Altura definida', undefined: 'Altura indefinida', na: 'Não se aplica' } as const
+export type PitchMode = keyof typeof PITCH_LABEL
 export const itemPlural = (label: string) => (label === 'Voz' ? 'Vozes' : `${label}s`)
 
 export async function listCatalog(table: CatalogTable, orgId: string): Promise<CatalogItem[]> {
