@@ -1,19 +1,17 @@
-import { useUnsaved } from '@/core/unsaved'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ProgressiveList } from '@/components/shared/LoadMore'
 import { MoneyInput } from '@/components/ui/masked-inputs'
-import { Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, Card, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { notifySaved } from '@/core/undo'
 import { todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
+import { notifySaved } from '@/core/undo'
+import { useUnsaved } from '@/core/unsaved'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { useHoldReorder } from '@/core/holdReorder'
-import { moveItemTo, invalidateCatalog, saveCatalogItem, swapOrder, type CatalogItem } from '@/modules/structure/service'
+import { invalidateCatalog, mirrorFunctionToFees, type CatalogItem } from '@/modules/structure/service'
 
 function useSetPrice() {
   const { membership } = useOrganization()
@@ -23,85 +21,39 @@ function useSetPrice() {
   }
 }
 
-/** Uma categoria por linha: nome e valor no mesmo box (o valor é versionado: vale daqui para frente). */
-function CategoryRow({ item, siblings, current, canEdit }: { item: CatalogItem; siblings: CatalogItem[]; current: number | null; canEdit: boolean }) {
+/** Categoria que reflete uma função: o nome não se edita; só o valor mensal (versionado: vale daqui para frente). */
+function CategoryRow({ item, current, canEdit }: { item: CatalogItem; current: number | null; canEdit: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const setPrice = useSetPrice()
-  const [name, setName] = useState(item.name)
   const [value, setValue] = useState<number | null>(current)
-  useEffect(() => setName(item.name), [item.name])
   useEffect(() => setValue(current), [current])
-  const idx = siblings.findIndex((s) => s.id === item.id)
-  const dirty = name.trim() !== item.name || (value !== null && value !== current)
+  const dirty = value !== null && value !== current
   useUnsaved(dirty, () => save.mutateAsync())
-
   const save = useMutation({
-    mutationFn: async () => {
-      if (name.trim() && name.trim() !== item.name) await saveCatalogItem('fee_categories', orgId, { id: item.id, name: name.trim() })
-      if (value !== null && value !== current) await setPrice(item.id, value)
-    },
-    onSuccess: () => {
-      const oldName = item.name, oldPrice = current, priceChanged = value !== null && value !== current
-      invalidateCatalog(qc, orgId)
-      notifySaved('Categoria atualizada. Cobranças já geradas não mudam.', async () => {
-        await saveCatalogItem('fee_categories', orgId, { id: item.id, name: oldName })
-        if (priceChanged && oldPrice !== null) await setPrice(item.id, oldPrice)
-        invalidateCatalog(qc, orgId)
-      })
-    },
+    mutationFn: async () => { if (value !== null) await setPrice(item.id, value) },
+    onSuccess: () => { invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['fee-prices', orgId] }); notifySaved('Valor atualizado. Cobranças já geradas não mudam.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const toggle = useMutation({
-    mutationFn: () => saveCatalogItem('fee_categories', orgId, { id: item.id, name: item.name, is_active: !item.is_active }),
-    onSuccess: () => {
-      const was = item.is_active
-      invalidateCatalog(qc, orgId)
-      notifySaved(was ? 'Categoria desativada.' : 'Categoria reativada.', async () => {
-        await saveCatalogItem('fee_categories', orgId, { id: item.id, name: item.name, is_active: was }); invalidateCatalog(qc, orgId)
-      })
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const reorder = useMutation({
-    mutationFn: ({ from, to }: { from: string; to: string }) => moveItemTo('fee_categories', orgId, siblings, from, to),
-    onSuccess: () => invalidateCatalog(qc, orgId),
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const drag = useHoldReorder()
-  const onDragMove = (from: string, to: string) => reorder.mutate({ from, to })
-  const move = useMutation({
-    mutationFn: (other: CatalogItem) => swapOrder('fee_categories', orgId, item, other, siblings),
-    onSuccess: () => invalidateCatalog(qc, orgId),
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-
   return (
-    <Card {...(canEdit ? drag.row(item.id, onDragMove) : {})} className={cn('flex flex-wrap items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
-      {canEdit && drag.handle(item.id, onDragMove)}
-      <div className="flex flex-col">
-        <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx <= 0} onClick={() => move.mutate(siblings[idx - 1])}><ArrowUp className="h-4 w-4" /></Button>
-        <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1} onClick={() => move.mutate(siblings[idx + 1])}><ArrowDown className="h-4 w-4" /></Button>
-      </div>
-      <Input className="min-w-36 flex-1 font-semibold" aria-label="Nome da categoria" value={name} disabled={!canEdit} onChange={(e) => setName(e.target.value)} />
+    <Card className="flex flex-wrap items-center gap-2 p-2 pl-3">
+      <span className="min-w-36 flex-1 font-semibold">{item.name}</span>
       <div className="w-32"><MoneyInput value={value} onChange={setValue} /></div>
       <span className="text-muted-foreground">/mês</span>
-      {canEdit && (
-        <>
-          <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>Salvar</Button>
-          <Button size="sm" variant="outline" onClick={() => toggle.mutate()}>{item.is_active ? 'Desativar' : 'Ativar'}</Button>
-        </>
-      )}
+      {canEdit && <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>Salvar</Button>}
     </Card>
   )
 }
 
-/** Categorias de contribuição com o valor mensal na mesma linha. */
+/**
+ * Contribuições: as categorias refletem as funções. "Isento" vem primeiro e não se edita (Direção, Professor, Monitor e as funções marcadas como isentas).
+ * Cada função não isenta tem uma categoria com o valor mensal; o nome vem da função.
+ */
 export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const setPrice = useSetPrice()
   const cats = useCatalog('fee_categories')
+  const funcs = useCatalog('artistic_functions')
   const prices = useQuery({
     queryKey: ['fee-prices', orgId],
     queryFn: async () => {
@@ -110,44 +62,38 @@ export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
       return Object.fromEntries((data ?? []).map((p) => [p.fee_category_id as string, Number(p.amount)]))
     },
   })
-  const [name, setName] = useState('')
-  const [amount, setAmount] = useState<number | null>(null)
-  const add = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.from('fee_categories')
-        .insert({ organization_id: orgId, name: name.trim(), sort_order: (cats.data?.reduce((m, i) => Math.max(m, i.sort_order), 0) ?? 0) + 1 })
-        .select('id').single()
-      if (error) throw error
-      if (amount !== null) await setPrice(data.id as string, amount)
-      return data.id as string
-    },
-    onSuccess: (id) => {
-      const created = name.trim()
-      setName(''); setAmount(null); invalidateCatalog(qc, orgId)
-      notifySaved('Categoria criada.', async () => { await saveCatalogItem('fee_categories', orgId, { id, name: created, is_active: false }); invalidateCatalog(qc, orgId) })
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const items = (cats.data ?? []).slice().sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+  const functions = (funcs.data ?? []).filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order)
+  const isExempt = (f: CatalogItem) => !!f.is_exempt || !!f.exempt_locked
+  const exemptNames = functions.filter(isExempt).map((f) => f.name)
+  const payers = functions.filter((f) => !isExempt(f))
+  const byName = new Map((cats.data ?? []).map((c) => [c.name.toLowerCase(), c]))
+
+  // Função que paga e ainda não tem categoria: cria (só quem pode mexer em contribuições consegue).
+  const missingKey = payers.filter((f) => !byName.has(f.name.toLowerCase())).map((f) => f.name).join('|')
+  useEffect(() => {
+    if (!canEdit || !missingKey || !cats.data) return
+    void Promise.all(missingKey.split('|').map((n) => mirrorFunctionToFees(orgId, { created: n }))).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
+  }, [missingKey, canEdit, cats.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-3">
-      <h2>Categorias de contribuição</h2>
+      <h2>Contribuições</h2>
       <p className="text-muted-foreground">
-        Quem paga mensalidade tem uma categoria (ex.: Aluno, Senior, Banda, Pernalta). O valor muda daqui para frente; cobranças já geradas não mudam.
+        As categorias refletem as funções (Organização → Funções) e não se editam aqui; só o valor mensal. O valor muda daqui para frente; cobranças já geradas não mudam.
         Defina a categoria de cada pessoa na ficha do integrante.
       </p>
-      {canEdit && (
-        <Card className="flex flex-wrap items-center gap-2 p-3">
-          <Input className="min-w-36 flex-1" placeholder="Nova categoria" value={name} onChange={(e) => setName(e.target.value)} />
-          <div className="w-32"><MoneyInput value={amount} onChange={setAmount} /></div>
-          <Button disabled={!name.trim() || add.isPending} onClick={() => add.mutate()}><Plus className="h-4 w-4" /> Adicionar</Button>
-        </Card>
-      )}
-      {cats.isLoading && <Skeleton className="h-24" />}
-      {cats.data && items.length === 0 && <EmptyState>Nenhuma categoria ainda.</EmptyState>}
+      {(cats.isLoading || funcs.isLoading) && <Skeleton className="h-24" />}
       <div className="grid gap-2">
-        <ProgressiveList items={items} render={(c) => <CategoryRow key={c.id} item={c} siblings={items} current={prices.data?.[c.id] ?? null} canEdit={canEdit} />} />
+        <Card className="space-y-1 border-primary/30 bg-primary/5 p-3">
+          <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-muted-foreground" aria-hidden /> Isento <span className="font-normal text-muted-foreground">· R$ 0,00 /mês</span></p>
+          <p className="text-sm text-muted-foreground">Quem tem uma função isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. Não é editável.</p>
+        </Card>
+        {payers.map((f) => {
+          const c = byName.get(f.name.toLowerCase())
+          return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={canEdit} /> : (
+            <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria…</Card>
+          )
+        })}
       </div>
     </div>
   )

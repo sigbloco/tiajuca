@@ -15,6 +15,10 @@ export interface CatalogItem {
   has_tuning?: boolean
   /** Como se chamam os itens do naipe: Instrumento, Atividade ou Voz. */
   item_label?: string
+  /** Funções: fixa (não exclui nem desativa), isenta e isenção fixa. */
+  is_fixed?: boolean
+  is_exempt?: boolean
+  exempt_locked?: boolean
   /** Altura do naipe: definida (tem afinação), indefinida ou não se aplica. */
   pitch_mode?: 'defined' | 'undefined' | 'na'
 }
