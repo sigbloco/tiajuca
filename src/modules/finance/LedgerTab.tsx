@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { ReceiptsByGroup } from './ReceiptsByGroup'
 import { monthRange, useFinCategories, type LedgerRow, type MonthSummary } from './service'
 
 const SOURCE_LABEL = { lancamento: 'Lançamento', mensalidade: 'Mensalidade', equipe: 'Equipe' } as const
@@ -85,7 +86,9 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
   })
   const s = summary.data
   const num = (v?: number) => formatCurrency(Number(v ?? 0))
-  const total = (ledger.data ?? []).reduce((n, r) => n + Number(r.amount), 0)
+  // Nas receitas, as mensalidades aparecem agrupadas por naipe (acima); a lista abaixo traz só as outras receitas.
+  const rows = (ledger.data ?? []).filter((r) => kind !== 'income' || r.source !== 'mensalidade')
+  const total = rows.reduce((n, r) => n + Number(r.amount), 0)
 
   return (
     <div className="space-y-3">
@@ -105,15 +108,17 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
           <p className={cn('font-display text-xl font-bold', Number(s?.saldo ?? 0) < 0 ? 'text-destructive' : 'text-success')}>{num(s?.saldo)}</p></Card>
       </div>
 
+      {kind === 'income' && <ReceiptsByGroup competence={competence} />}
+
       <div className="flex items-center justify-between">
-        <h2>{kind === 'income' ? 'Receitas' : 'Despesas'} <span className="text-base font-normal text-muted-foreground">· {formatCurrency(total)}</span></h2>
+        <h2>{kind === 'income' ? 'Outras receitas' : 'Despesas'} <span className="text-base font-normal text-muted-foreground">· {formatCurrency(total)}</span></h2>
         {canManage && <Button onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> {kind === 'income' ? 'Nova receita' : 'Nova despesa'}</Button>}
       </div>
 
       {ledger.isLoading && <Skeleton className="h-24" />}
-      {ledger.data?.length === 0 && <EmptyState>Nada registrado neste mês.</EmptyState>}
+      {ledger.data && rows.length === 0 && <EmptyState>Nada registrado neste mês.</EmptyState>}
       <div className="grid gap-2">
-        {ledger.data?.map((r) => (
+        {rows.map((r) => (
           <Card key={r.ref} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
               <p className="truncate font-semibold">{r.description}</p>
