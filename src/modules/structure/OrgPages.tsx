@@ -19,8 +19,7 @@ export function ChecklistsPage() {
 }
 
 /**
- * Funções: as fixas (Direção, Professor, Monitor, Regência, Músico) não saem nem desativam; "Isento" garante a isenção de quem tem a função
- * (em Direção, Professor e Monitor ela é fixa). As categorias de Financeiro → Contribuições refletem estas funções.
+ * Funções: tudo é editável. "Isento" garante a isenção de quem tem a função. As categorias de Financeiro → Contribuições refletem estas funções.
  */
 export function FunctionsPage() {
   const canEdit = usePermission('structure.manage')
@@ -64,8 +63,8 @@ export function FunctionsPage() {
     <div className="space-y-3">
       <h2>Funções</h2>
       <p className="text-muted-foreground">
-        Integrantes podem acumular funções (por exemplo, Direção e Regência). Funções <strong>fixas</strong> não podem ser excluídas nem desativadas. Marque <strong>Isento</strong> para garantir
-        a isenção de quem tem a função. As categorias de Financeiro → Contribuições refletem estas funções.
+        Integrantes podem acumular funções (por exemplo, Direção e Regência). Marque <strong>Isento</strong> para garantir a isenção de quem tem a função.
+        As categorias de Financeiro → Contribuições refletem estas funções.
       </p>
       {canEdit && (
         <Card className="flex flex-wrap items-center gap-3 p-3">

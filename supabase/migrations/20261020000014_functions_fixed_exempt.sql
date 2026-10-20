@@ -26,3 +26,6 @@ update public.fee_categories set is_active = false where name in ('Banda', 'Pern
 insert into public.fee_categories (organization_id, name, sort_order)
 select o.id, v.name, v.ord from public.organizations o, (values ('Regência', 20), ('Redes sociais', 21), ('Apoio', 22), ('Produção', 23)) v(name, ord)
 where not exists (select 1 from public.fee_categories c where c.organization_id = o.id and lower(c.name) = lower(v.name));
+
+-- Decisão posterior: nada é fixo; tudo é editável. Direção, Professor e Monitor continuam isentos por padrão (a caixa Isento pode ser desmarcada).
+update public.artistic_functions set is_fixed = false, exempt_locked = false;
