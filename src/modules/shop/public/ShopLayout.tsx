@@ -13,21 +13,33 @@ import { buildShopTheme } from '../theme'
 import { LoginDialog } from './LoginDialog'
 import { StoreProvider, fetchStore, useStore } from './StoreContext'
 
-function Header() {
-  const { store, cart, isMember, basePath, setLoginOpen } = useStore()
+/** Aviso de preço de integrante, logo abaixo do "Voltar": quem entrou vê que o preço dele está valendo; quem não entrou, o convite. */
+function MemberNotice() {
+  const { store, isMember, setLoginOpen } = useStore()
   const { session } = useAuth()
+  const hasDiscount = store.products.some((p) => p.member_discount_pct > 0)
+  if (isMember) return <p role="status" className="mb-4 inline-block rounded-full bg-secondary px-3 py-1 text-sm font-bold text-secondary-foreground">Preço de integrante ativo</p>
+  if (session || !hasDiscount) return null
+  return (
+    <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 border-secondary p-3 text-sm">
+      <span>É integrante do bloco? Entre com a sua conta para ver os preços de integrante.</span>
+      <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Entrar</button>
+    </Card>
+  )
+}
+
+function Header() {
+  const { store, cart, basePath } = useStore()
   const shopLabel = useShopLabel(store.org.slug)
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-card">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-        <Link to={basePath} className="flex min-w-0 items-center gap-2">
+        <Link to={basePath} className="flex min-w-0 flex-1 items-center gap-2">
           <OrgLogo name={store.org.name} logoPath={store.org.logo_path} className="h-10 w-10 shrink-0" />
-          <span className="truncate font-display text-lg font-extrabold">{shopLabel}</span>
+          <span className="min-w-0 text-balance font-display text-lg font-extrabold leading-tight">{shopLabel}</span>
         </Link>
-        <nav className="flex items-center gap-3 text-sm">
-          {isMember && <span className="hidden rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-secondary-foreground sm:inline">Preço de integrante</span>}
-          {!session && <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Sou integrante</button>}
-          <Link to={`${basePath}/consultar`} className="font-semibold text-primary hover:underline">Meus pedidos</Link>
+        <nav className="flex shrink-0 items-center gap-3 text-sm">
+          <Link to={`${basePath}/consultar`} className="font-semibold text-primary hover:underline">Pedidos</Link>
           <Link to={`${basePath}/carrinho`} className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border px-3 hover:bg-muted" aria-label={`Carrinho, ${cart.itemCount} item(ns)`}>
             <ShoppingCart className="h-5 w-5" />
             {cart.itemCount > 0 && <span className="ml-1 font-bold">{cart.itemCount}</span>}
@@ -53,6 +65,7 @@ function Shell() {
       <LoginDialog />
       <main className="mx-auto max-w-5xl px-4 py-6">
         {pathname.replace(/\/$/, '') === basePath ? <BackButton to="/site" name="a página inicial" /> : <BackButton to={basePath} name={shopLabel} />}
+        <MemberNotice />
         {notices.length > 0 && (
           <Card role="status" className="mb-4 border-secondary p-3 text-sm">
             <ul className="list-disc space-y-1 pl-5">{notices.map((n) => <li key={n}>{n}</li>)}</ul>

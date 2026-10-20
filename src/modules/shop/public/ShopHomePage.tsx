@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, EmptyState, cn } from '@/components/ui/primitives'
-import { useAuth } from '@/core/auth'
 import { productAvailability, type ProductKind } from '../catalog'
 import { imageUrl } from '../admin/service'
 import { Price } from './Price'
@@ -15,20 +14,12 @@ const FILTERS: { key: 'all' | ProductKind; label: string }[] = [
 
 /** Vitrine pública: lista de produtos com filtro por tipo (estoque / encomenda). */
 export function ShopHomePage() {
-  const { store, isMember, basePath, setLoginOpen } = useStore()
-  const { session } = useAuth()
+  const { store, isMember, basePath } = useStore()
   const [filter, setFilter] = useState<'all' | ProductKind>('all')
   const products = store.products.filter((p) => filter === 'all' || p.kind === filter)
-  const hasDiscount = store.products.some((p) => p.member_discount_pct > 0)
 
   return (
     <div className="space-y-4">
-      {!session && hasDiscount && (
-        <Card className="flex flex-wrap items-center justify-between gap-2 border-secondary p-3 text-sm">
-          <span>É integrante do bloco? Entre com a sua conta para ver os preços de integrante.</span>
-          <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Entrar</button>
-        </Card>
-      )}
       {store.intro_text && <p className="whitespace-pre-line rounded-lg border border-secondary p-3">{store.intro_text}</p>}
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
       <div role="group" aria-label="Filtrar produtos" className="flex flex-wrap gap-2">
