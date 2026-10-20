@@ -12,7 +12,7 @@ import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { setMemberCycleStatus, useCycleStatuses, useCycles } from '@/modules/cycles/service'
+import { isPastCycle, setMemberCycleStatus, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { MemberBilling } from '@/modules/billing/MemberBilling'
 import { ArtisticLinks } from './ArtisticLinks'
 import type { MemberRow } from './service'
@@ -60,6 +60,10 @@ function CycleParticipation({ memberId }: { memberId: string }) {
       {isLoading && <Skeleton className="h-16" />}
       {cycles?.filter((c) => c.is_active).map((c) => {
         const current = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === c.id)?.status_id)
+        const past = isPastCycle(c)
+        // Ciclo que já passou: "Participou" / "Não participou"; Ativo/Inativo é só do ciclo atual.
+        const optionsFor = past ? (statuses ?? []).filter((s) => !s.is_waitlist) : (statuses ?? [])
+        const labelOf = (s: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !s.is_waitlist ? (s.counts_as_active ? 'Participou' : 'Não participou') : s.name)
         return (
           <Card key={c.id} className="flex items-center justify-between gap-2 p-3">
             <p className="font-semibold">{c.name}</p>
@@ -71,7 +75,8 @@ function CycleParticipation({ memberId }: { memberId: string }) {
               aria-label={`Status em ${c.name}`}
             >
               {!current && <option value="">Sem registro</option>}
-              {statuses?.map((s) => <option key={s.id} value={s.key}>{s.name}</option>)}
+              {current && past && current.is_waitlist && <option value={current.key}>{current.name}</option>}
+              {optionsFor.map((s) => <option key={s.id} value={s.key}>{labelOf(s)}</option>)}
             </OkSelect>
           </Card>
         )

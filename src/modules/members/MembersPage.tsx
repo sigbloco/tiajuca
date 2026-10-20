@@ -14,7 +14,7 @@ import { useOrgId } from '@/core/organization'
 import { Can } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { hrefOf, LINK_KINDS } from '@/modules/site/links'
-import { useCycleStatuses, useCycles } from '@/modules/cycles/service'
+import { isPastCycle, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
 import { ReactivationRequests } from './Reactivation'
@@ -147,6 +147,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const currentCycle = cycles?.find((c) => c.is_current)
   const activeCycleId = cycleSel || currentCycle?.id || cycleButtons[0]?.id || ''
   const activeCycle = cycles?.find((c) => c.id === activeCycleId)
+  const pastCycle = !!activeCycle && isPastCycle(activeCycle)
 
   const members = useQuery({
     queryKey: ['members', orgId, 'grouped'],
@@ -245,7 +246,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
-            <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name?.trim() || m.full_name.trim().split(/s+/)[0]} {st && !st.counts_as_active && <Badge>{st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
+            <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name?.trim() || m.full_name.trim().split(/s+/)[0]} {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
           </button>
           <p className="flex flex-wrap items-center gap-x-3 text-muted-foreground">
             <span className="truncate">{m.full_name}</span>
@@ -320,9 +321,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Situação no ciclo">
-        <button type="button" aria-pressed={showActive} className={chip(showActive)} onClick={() => setShowActive(!showActive)}>Ativos</button>
-        <button type="button" aria-pressed={showInactive} className={chip(showInactive)} onClick={() => setShowInactive(!showInactive)}>Inativos</button>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={pastCycle ? 'Participação no ciclo' : 'Situação no ciclo'}>
+        <button type="button" aria-pressed={showActive} className={chip(showActive)} onClick={() => setShowActive(!showActive)}>{pastCycle ? 'Participou' : 'Ativos'}</button>
+        <button type="button" aria-pressed={showInactive} className={chip(showInactive)} onClick={() => setShowInactive(!showInactive)}>{pastCycle ? 'Não participou' : 'Inativos'}</button>
       </div>
       {!lockedCategory && (
         <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo de integrante">
