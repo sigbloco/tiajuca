@@ -160,6 +160,45 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
   )
 }
 
+/** Pasta da música no Drive: navegar pelas pastas do Drive do bloco, escolher uma das pastas cadastradas ou colar o link. */
+function DriveFolderField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const orgId = useOrgId()
+  const [browse, setBrowse] = useState(false)
+  const [picked, setPicked] = useState('')
+  const cfg = useQuery({ queryKey: ['drive-config', orgId], retry: false, queryFn: () => getDriveConfig(orgId) })
+  const registered = useQuery({
+    queryKey: ['drive-folders', orgId, 'for-songs'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('drive_folders').select('id, name, url').eq('organization_id', orgId).eq('is_active', true).order('name')
+      if (error) throw error
+      return (data ?? []) as { id: string; name: string; url: string }[]
+    },
+  })
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="s-drive">Pasta da música no Drive (opcional)</Label>
+      {value && (
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-sm">{picked || value}</span>
+          <Button asChild size="sm" variant="outline"><a href={value} target="_blank" rel="noreferrer noopener">Abrir</a></Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => { onChange(''); setPicked('') }}>Tirar</Button>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {cfg.data?.active && <Button type="button" size="sm" variant="outline" onClick={() => setBrowse(!browse)}>{browse ? 'Fechar navegação' : 'Navegar pelas pastas do Drive'}</Button>}
+        {(registered.data ?? []).length > 0 && (
+          <Select aria-label="Pastas cadastradas" className="w-56" value="" onChange={(e) => { const r = registered.data?.find((x) => x.id === e.target.value); if (r) { onChange(r.url); setPicked(r.name) } }}>
+            <option value="">Pastas cadastradas…</option>
+            {registered.data!.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </Select>
+        )}
+      </div>
+      {browse && <DrivePicker onPickFolder={(fo) => { onChange(fo.url); setPicked(fo.name); setBrowse(false) }} />}
+      <Input id="s-drive" type="url" placeholder="ou cole o link: https://drive.google.com/drive/folders/…" value={value} onChange={(e) => { onChange(e.target.value); setPicked('') }} />
+    </div>
+  )
+}
+
 /** Música (criar/editar) + anexos por instrumento/naipe, tudo em um drawer. */
 export function SongSheet({ repertoireId, song, onClose }: { repertoireId: string; song: Song | null; onClose: () => void }) {
   const orgId = useOrgId()
@@ -196,7 +235,7 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
           <div className="space-y-1.5"><Label htmlFor="s-title">Título</Label><Input id="s-title" required value={f.title} onChange={set('title')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-artist">Artista</Label><Input id="s-artist" required value={f.artist} onChange={set('artist')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-guide">Link do guia (opcional)</Label><Input id="s-guide" type="url" placeholder="https://…" value={f.guide_url} onChange={set('guide_url')} /></div>
-          <div className="space-y-1.5"><Label htmlFor="s-drive">Link da pasta da música no Drive (opcional)</Label><Input id="s-drive" type="url" placeholder="https://drive.google.com/drive/folders/…" value={f.drive_folder_url} onChange={set('drive_folder_url')} /></div>
+          <DriveFolderField value={f.drive_folder_url} onChange={(v) => setF({ ...f, drive_folder_url: v })} />
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5"><Label htmlFor="s-genre">Gênero</Label><Input id="s-genre" value={f.genre} onChange={set('genre')} /></div>
             <div className="space-y-1.5"><Label htmlFor="s-key">Tom</Label><Input id="s-key" placeholder="Ex.: Dó maior" value={f.musical_key} onChange={set('musical_key')} /></div>
