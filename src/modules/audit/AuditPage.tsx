@@ -50,7 +50,7 @@ function Diff({ log }: { log: Log }) {
 }
 
 /** Auditoria (somente Direção): quem fez o quê e quando, com filtros e paginação no banco. */
-export function AuditPage() {
+export function AuditLogTab() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
@@ -92,7 +92,7 @@ export function AuditPage() {
   const pages = Math.max(1, Math.ceil(total / PAGE))
   return (
     <div className="space-y-4">
-      <h1>Auditoria</h1>
+      <h2>Registro de alterações</h2>
       <FilterBar value={filter} onChange={setFilter} extraCount={(entity ? 1 : 0) + (action ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0)}
         onClearExtra={() => { setEntity(''); setAction(''); setFrom(''); setTo('') }}>
         <Select aria-label="Tipo de registro" value={entity} onChange={(e) => setEntity(e.target.value)}>

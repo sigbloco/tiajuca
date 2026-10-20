@@ -3,7 +3,7 @@ import { useOrganization } from './organization'
 
 // Espelha o catálogo `permissions` do banco. O BANCO decide (RLS); aqui só controlamos a interface.
 export type PermissionKey =
-  | 'org.manage' | 'settings.manage' | 'roles.manage'
+  | 'org.manage' | 'settings.manage' | 'roles.manage' | 'backups.manage'
   | 'members.read' | 'members.manage' | 'members.sensitive.read' | 'members.sensitive.manage'
   | 'audit.read' | 'structure.manage' | 'cycles.manage'
   | 'member_cycles.read' | 'member_cycles.manage' | 'capacity.read' | 'capacity.manage'

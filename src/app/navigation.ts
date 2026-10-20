@@ -58,7 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'gerenciar-loja', label: 'Loja', icon: Store, admin: true, permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
   { to: 'interface', label: 'Interface', icon: Palette, admin: true, permission: 'org.manage' },
   { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, admin: true, permission: 'roles.manage' },
-  { to: 'auditoria', label: 'Auditoria', icon: History, admin: true, permission: 'audit.read' },
+  { to: 'auditoria', label: 'Auditoria e backups', icon: History, admin: true, permission: 'audit.read' },
 ]
 
 const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Funções' }

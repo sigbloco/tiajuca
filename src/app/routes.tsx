@@ -17,7 +17,7 @@ import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
 import { SuppliersPage } from '@/modules/suppliers/SuppliersPage'
 import { DriveFoldersPage } from '@/modules/drive/DriveFoldersPage'
 import { AccessPage } from '@/modules/access/AccessPage'
-import { AuditPage } from '@/modules/audit/AuditPage'
+import { AuditBackupsPage } from '@/modules/audit/AuditBackupsPage'
 import { ReportsPage } from '@/modules/reports/ReportsPage'
 import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
@@ -156,7 +156,7 @@ export const router = createBrowserRouter(
                     { path: 'lista-de-espera', element: <WaitlistPage /> },
                   ],
                 },
-                { path: 'auditoria', element: <AuditPage /> },
+                { path: 'auditoria', element: <AuditBackupsPage /> },
                 { path: 'acesso', element: <AccessPage /> },
                 { path: 'repertorio', element: <RepertoirePage /> },
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
