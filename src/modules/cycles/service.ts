@@ -13,8 +13,8 @@ export interface Cycle {
   is_active: boolean
   is_current: boolean
 }
-/** Ciclo que já terminou: lá não se fala em ativo/inativo, e sim em quem participou. */
-export const isPastCycle = (c: { is_current: boolean; status: string; ends_on: string }, today = new Date().toISOString().slice(0, 10)) => !c.is_current && (c.status === 'closed' || c.ends_on < today)
+/** Ciclo que já terminou (pela data, sem status manual): lá não se fala em ativo/inativo, e sim em quem participou. */
+export const isPastCycle = (c: { ends_on: string }, today = new Date().toISOString().slice(0, 10)) => c.ends_on < today
 
 export interface CycleStatus {
   id: string

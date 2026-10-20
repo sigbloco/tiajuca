@@ -5,6 +5,8 @@ import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/core/supabase'
 import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
@@ -25,6 +27,13 @@ export function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
   const brandLogo = membership?.logo_path ?? null
+  // O ciclo atual segue as datas: ao abrir o sistema, o banco confere qual ciclo está em andamento.
+  const orgIdForCycles = membership?.organization_id
+  const qcShell = useQueryClient()
+  useEffect(() => {
+    if (!orgIdForCycles) return
+    void supabase.rpc('refresh_current_cycle', { p_org: orgIdForCycles }).then(() => qcShell.invalidateQueries({ queryKey: ['cycles'] }))
+  }, [orgIdForCycles]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
   if (!membership) return null
   const base = `/${membership.slug}`
