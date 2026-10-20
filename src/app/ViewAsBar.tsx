@@ -56,19 +56,9 @@ export function ViewAsBar() {
     },
   })
 
-  const scholars = useQuery({
-    queryKey: ['view-as-scholarships', orgId],
-    enabled: allowed,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('scholarships').select('member_id').eq('organization_id', orgId!).is('valid_to', null).gt('percent', 0)
-      if (error) throw error
-      return new Set((data ?? []).map((r) => r.member_id as string))
-    },
-  })
-
   // Um exemplo de cada perfil: Direção, Professor e Monitor por naipe, Aluno por naipe e um Inativo.
   const profiles = useMemo(() => {
-    const out: { key: string; label: string; id: string; name: string }[] = []
+    const out: { key: string; label: string; id: string; name: string; disabled?: boolean }[] = []
     const rows = people.data ?? []
     const byId = new Map(rows.map((r) => [r.id, r]))
     const nameOf = (r: Row) => r.display_name ?? r.full_name
@@ -78,43 +68,39 @@ export function ViewAsBar() {
     const secList = (sections.data ?? []).filter((s) => s.is_active)
     const sectionOfStaff = (a: Staff) => a.section_id ?? (a.subsection_id ? subById.get(a.subsection_id)?.section_id : null) ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id : null) ?? null
     const sectionOfLinks = (r: Row) => r.member_artistic_links.filter((l) => !l.ended_at).map((l) => (l.instrument_id ? instById.get(l.instrument_id)?.section_id : null)).filter(Boolean) as string[]
-    const add = (key: string, label: string, r: Row | undefined) => { if (r && r.id !== realMembership?.member_id) out.push({ key, label, id: r.id, name: nameOf(r) }) }
+    const add = (key: string, label: string, r: Row | undefined) => {
+      if (r && r.id !== realMembership?.member_id) out.push({ key, label, id: r.id, name: nameOf(r) })
+      else out.push({ key, label, id: '', name: '', disabled: true }) // sem ninguém para representar o perfil: aparece apagado
+    }
     const active = (r: Row) => !isInactive(r.id)
     const used = new Set<string>()
     const pick = (list: Row[]) => { const r = list.find((x) => !used.has(x.id)) ?? list[0]; if (r) used.add(r.id); return r }
+    const isStaff = (r: Row) => rolesOf(r).has('monitor') || rolesOf(r).has('professor')
 
     add('direcao', 'Direção', pick(rows.filter((r) => rolesOf(r).has('direcao') && !rolesOf(r).has('titular') && active(r))))
     for (const kind of ['professor', 'monitor'] as const) {
       for (const sec of secList) {
         const candidates = (staff.data ?? []).filter((a) => a.staff_kind === kind && sectionOfStaff(a) === sec.id).map((a) => byId.get(a.member_id)).filter((r): r is Row => !!r && active(r) && rolesOf(r).has(kind))
-        const r = pick(candidates)
-        if (!r) continue
-        const asg = (staff.data ?? []).find((a) => a.member_id === r.id && a.staff_kind === kind && sectionOfStaff(a) === sec.id)
-        const inst = kind === 'monitor' && asg?.instrument_id ? instById.get(asg.instrument_id)?.name : null
-        add(`${kind}:${sec.id}`, kind === 'professor' ? `Professor (${sec.name})` : `Monitor (${inst ?? sec.name})`, r)
+        add(`${kind}:${sec.id}`, `${kind === 'professor' ? 'Professor' : 'Monitor'} (${sec.name})`, pick(candidates))
       }
     }
+    // Músico e Senior enxergam o mesmo: um só perfil.
+    const musico = new Set((cats.data ?? []).filter((c) => c.category_name === 'Senior' || c.category_name === 'Músico').map((c) => c.member_id))
+    add('musico', 'Músico/Senior', pick(rows.filter((x) => musico.has(x.id) && active(x) && !isStaff(x) && !rolesOf(x).has('direcao'))))
+    // Alunos: Sopro por afinação (C, Eb, Bb) e Percussão.
     const aluno = new Set((cats.data ?? []).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
-    for (const sec of secList) {
-      const r = pick(rows.filter((x) => aluno.has(x.id) && active(x) && !rolesOf(x).has('monitor') && !rolesOf(x).has('professor') && sectionOfLinks(x).includes(sec.id)))
-      add(`aluno:${sec.id}`, `Aluno (${sec.name})`, r)
+    const alunos = rows.filter((x) => aluno.has(x.id) && active(x) && !isStaff(x))
+    const linkInsts = (r: Row) => r.member_artistic_links.filter((l) => !l.ended_at && l.instrument_id).map((l) => instById.get(l.instrument_id!)).filter(Boolean) as { section_id?: string | null; tuning?: string | null }[]
+    const sopro = secList.find((x) => /sopro/i.test(x.name))
+    const percussao = secList.find((x) => /percuss/i.test(x.name))
+    for (const t of ['C', 'Eb', 'Bb']) {
+      add(`aluno:sopro:${t}`, `Aluno (Sopro: ${t})`, sopro ? pick(alunos.filter((x) => linkInsts(x).some((i) => i.section_id === sopro.id && i.tuning === t))) : undefined)
     }
-    // Categorias de contribuição (a tela de mensalidades muda para cada uma).
-    for (const cat of ['Senior', 'Banda', 'Músico', 'Pernalta']) {
-      const ids = new Set((cats.data ?? []).filter((c) => c.category_name === cat).map((c) => c.member_id))
-      add(`cat:${cat}`, cat, pick(rows.filter((x) => ids.has(x.id) && active(x) && !rolesOf(x).has('monitor') && !rolesOf(x).has('professor') && !rolesOf(x).has('direcao'))))
-    }
-    // Pernalta também pode ser só o instrumento do naipe Performance, sem categoria própria.
-    const pernaltaInst = (instruments.data ?? []).find((i) => /pernalta/i.test(i.name))?.id
-    if (pernaltaInst && !out.some((o) => o.key === 'cat:Pernalta')) {
-      add('pernalta', 'Pernalta', pick(rows.filter((x) => active(x) && x.member_artistic_links.some((l) => !l.ended_at && l.instrument_id === pernaltaInst))))
-    }
-    add('bolsa', 'Aluno com bolsa', pick(rows.filter((x) => (scholars.data ?? new Set<string>()).has(x.id) && active(x) && !rolesOf(x).has('monitor') && !rolesOf(x).has('professor'))))
-    add('sem-conta', 'Pessoa sem conta de acesso', pick(rows.filter((x) => !x.user_id && active(x) && rolesOf(x).size <= 1)))
+    add('aluno:percussao', 'Aluno (Percussão)', percussao ? pick(alunos.filter((x) => sectionOfLinks(x).includes(percussao.id))) : undefined)
     const ina = pick(rows.filter((x) => isInactive(x.id) && !rolesOf(x).has('direcao') && !rolesOf(x).has('titular')))
-    add('inativo', 'Inativo (acesso limitado)', ina)
+    add('inativo', 'Inativo', ina)
     return out
-  }, [people.data, staff.data, cats.data, scholars.data, sections.data, subsections.data, instruments.data, isInactive, realMembership?.member_id])
+  }, [people.data, staff.data, cats.data, sections.data, subsections.data, instruments.data, isInactive, realMembership?.member_id])
 
   if (!allowed) return null
   const selected = profiles.find((p) => p.id === viewAs?.member_id)
@@ -133,7 +119,7 @@ export function ViewAsBar() {
           }}
         >
           <option value="">{realMembership?.roles.includes('titular') ? 'Titular' : 'Eu mesmo'} (eu mesmo)</option>
-          {profiles.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          {profiles.map((p) => <option key={p.key} value={p.key} disabled={p.disabled}>{p.label}{p.disabled ? ' (ninguém neste perfil)' : ''}</option>)}
         </Select>
         {viewAs && (
           <Button size="sm" variant="outline" className="h-8 shrink-0 bg-card" onClick={() => setViewAs(null)}>
