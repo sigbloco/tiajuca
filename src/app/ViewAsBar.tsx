@@ -59,7 +59,7 @@ export function ViewAsBar() {
 
   // Um exemplo de cada perfil: Direção, Professor e Monitor por naipe, Aluno por naipe e um Inativo.
   const profiles = useMemo(() => {
-    const out: { key: string; label: string; id: string; name: string; disabled?: boolean }[] = []
+    const out: { key: string; label: string; id: string; name: string; virtual?: { key: string; roles: string[]; inactive?: boolean } }[] = []
     const rows = people.data ?? []
     const byId = new Map(rows.map((r) => [r.id, r]))
     const nameOf = (r: Row) => shortName(r?.full_name, r?.display_name)
@@ -69,9 +69,11 @@ export function ViewAsBar() {
     const secList = (sections.data ?? []).filter((s) => s.is_active)
     const sectionOfStaff = (a: Staff) => a.section_id ?? (a.subsection_id ? subById.get(a.subsection_id)?.section_id : null) ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id : null) ?? null
     const sectionOfLinks = (r: Row) => r.member_artistic_links.filter((l) => !l.ended_at).map((l) => (l.instrument_id ? instById.get(l.instrument_id)?.section_id : null)).filter(Boolean) as string[]
+    // Sem ninguém no perfil, dá para visualizar mesmo assim: simula só os papéis (os dados continuam os seus).
+    const rolesFor = (key: string) => (key === 'direcao' ? ['direcao', 'integrante'] : key.startsWith('professor:') ? ['professor', 'integrante'] : key.startsWith('monitor:') ? ['monitor', 'integrante'] : ['integrante'])
     const add = (key: string, label: string, r: Row | undefined) => {
       if (r && r.id !== realMembership?.member_id) out.push({ key, label, id: r.id, name: nameOf(r) })
-      else out.push({ key, label, id: '', name: '', disabled: true }) // sem ninguém para representar o perfil: aparece apagado
+      else out.push({ key, label, id: `virtual:${key}`, name: label, virtual: { key, roles: rolesFor(key), inactive: key === 'inativo' } })
     }
     const active = (r: Row) => !isInactive(r.id)
     const used = new Set<string>()
@@ -104,7 +106,7 @@ export function ViewAsBar() {
   }, [people.data, staff.data, cats.data, sections.data, subsections.data, instruments.data, isInactive, realMembership?.member_id])
 
   if (!allowed) return null
-  const selected = profiles.find((p) => p.id === viewAs?.member_id)
+  const selected = profiles.find((p) => p.id === viewAs?.member_id || (!!viewAs?.virtual && p.key === viewAs.virtual.key))
   return (
     <div className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted')}>
       <div className="flex items-center gap-2">
@@ -116,11 +118,11 @@ export function ViewAsBar() {
           value={selected?.key ?? ''}
           onChange={(e) => {
             const p = profiles.find((x) => x.key === e.target.value)
-            setViewAs(p ? { member_id: p.id, display_name: p.name } : null)
+            setViewAs(p ? { member_id: p.id, display_name: p.name, ...(p.virtual ? { virtual: p.virtual } : {}) } : null)
           }}
         >
           <option value="">{realMembership?.roles.includes('titular') ? 'Titular' : 'Eu mesmo'} (eu mesmo)</option>
-          {profiles.map((p) => <option key={p.key} value={p.key} disabled={p.disabled}>{p.label}{p.disabled ? ' (ninguém neste perfil)' : ''}</option>)}
+          {profiles.map((p) => <option key={p.key} value={p.key}>{p.label}{p.virtual ? ' (sem pessoa)' : ''}</option>)}
         </Select>
         {viewAs && (
           <Button size="sm" variant="outline" className="h-8 shrink-0 bg-card" onClick={() => setViewAs(null)}>

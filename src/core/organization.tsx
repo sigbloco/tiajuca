@@ -22,7 +22,11 @@ export interface Membership {
 }
 
 /** Pessoa que a Direção está "visualizando como". Só muda o que a INTERFACE mostra: o banco continua respondendo ao usuário real. */
-export interface ViewAsTarget { member_id: string; display_name: string }
+export interface ViewAsTarget {
+  member_id: string; display_name: string
+  /** Perfil sem pessoa: só os papéis (e, se inativo, o acesso limitado) são simulados; os dados continuam os seus. */
+  virtual?: { key: string; roles: string[]; inactive?: boolean }
+}
 
 interface OrgContextValue {
   memberships: Membership[]
@@ -64,6 +68,21 @@ interface TargetAccess { roles: string[]; permissions: GrantedPermission[] }
 type Scope = 'own' | 'group' | 'org'
 const SCOPE_RANK: Record<Scope, number> = { own: 1, group: 2, org: 3 }
 
+/** Permissões de um conjunto de papéis do bloco (para visualizar como um perfil que ninguém ocupa). */
+async function loadRolesAccess(orgId: string, roleKeys: string[], ownOnly: boolean): Promise<TargetAccess> {
+  const { data, error } = await supabase.from('access_roles').select('key, rank, role_permissions(permission_key, scope)').eq('organization_id', orgId).in('key', roleKeys)
+  if (error) throw error
+  interface RoleRow { key: string; rank: number; role_permissions: { permission_key: string; scope: Scope }[] }
+  const rows = (data ?? []) as unknown as RoleRow[]
+  const best = new Map<string, Scope>()
+  for (const r of rows) for (const p of r.role_permissions) {
+    if (ownOnly && p.scope !== 'own') continue
+    const cur = best.get(p.permission_key)
+    if (!cur || SCOPE_RANK[p.scope] > SCOPE_RANK[cur]) best.set(p.permission_key, p.scope)
+  }
+  return { roles: ownOnly ? [] : [...rows].sort((a, b) => b.rank - a.rank).map((r) => r.key), permissions: [...best].map(([key, scope]) => ({ key: key as GrantedPermission['key'], scope })) }
+}
+
 /** Papéis e permissões de outra pessoa (leitura permitida a quem gerencia papéis). */
 async function loadTargetAccess(memberId: string): Promise<TargetAccess> {
   const { data, error } = await supabase
@@ -100,7 +119,7 @@ export function OrganizationProvider({ slug, children }: { slug: string; childre
   const access = useQuery({
     queryKey: ['view-as-access', real?.organization_id, target?.member_id],
     enabled: !!target,
-    queryFn: () => loadTargetAccess(target!.member_id),
+    queryFn: () => (target!.virtual ? loadRolesAccess(real!.organization_id, target!.virtual.roles, !!target!.virtual.inactive) : loadTargetAccess(target!.member_id)),
   })
 
   const setViewAs = useCallback((t: ViewAsTarget | null) => {
@@ -114,7 +133,10 @@ export function OrganizationProvider({ slug, children }: { slug: string; childre
   const membership = useMemo<Membership | null>(() => {
     if (!real) return null
     if (!target || !access.data) return real
-    return { ...real, member_id: target.member_id, display_name: target.display_name, roles: access.data.roles, permissions: access.data.permissions }
+    return {
+      ...real, member_id: target.virtual ? real.member_id : target.member_id, display_name: target.display_name, roles: access.data.roles, permissions: access.data.permissions,
+      ...(target.virtual?.inactive ? { inactive: true } : {}),
+    }
   }, [real, target, access.data])
 
   useEffect(() => {
