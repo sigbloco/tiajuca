@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { shortName } from '@/core/format'
+import { usePersonLabeler } from './personLabel'
+import { useMemberStatus } from './useMemberStatus'
 import { Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button, Input, cn } from '@/components/ui/primitives'
@@ -11,7 +12,9 @@ interface Person { id: string; full_name: string; display_name: string | null; e
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Busca integrantes (sem diferenciar acentos nem maiúsculas) e mostra os resultados na hora, abaixo do campo. */
-export function MemberPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+export function MemberPicker({ value, onChange, onlyActive }: { value: string; onChange: (id: string) => void; /** Esconde quem está inativo no ciclo atual (para escolher equipe). */ onlyActive?: boolean }) {
+  const labeler = usePersonLabeler()
+  const { isInactive } = useMemberStatus()
   const orgId = useOrgId()
   const [text, setText] = useState('')
   const [open, setOpen] = useState(false)
@@ -24,12 +27,12 @@ export function MemberPicker({ value, onChange }: { value: string; onChange: (id
       return (data ?? []) as Person[]
     },
   })
-  const label = (p: Person) => shortName(p.full_name, p.display_name)
+  const label = (p: Person) => labeler(p)
   const selected = (data ?? []).find((p) => p.id === value)
   const matches = useMemo(() => {
     const q = norm(text.trim())
-    return (data ?? []).filter((p) => !q || norm(`${p.full_name} ${p.display_name ?? ''} ${p.email ?? ''}`).includes(q)).slice(0, 8)
-  }, [data, text])
+    return (data ?? []).filter((p) => !(onlyActive && isInactive(p.id)) && (!q || norm(`${p.full_name} ${p.display_name ?? ''} ${p.email ?? ''}`).includes(q))).slice(0, 8)
+  }, [data, text, onlyActive, isInactive, labeler]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (selected) {
     return (
@@ -51,8 +54,7 @@ export function MemberPicker({ value, onChange }: { value: string; onChange: (id
             <li key={p.id} role="option" aria-selected={false}>
               <button type="button" className={cn('w-full px-3 py-2 text-left hover:bg-muted')}
                 onClick={() => { onChange(p.id); setOpen(false); setText('') }}>
-                <span className="font-semibold">{shortName(p.full_name, p.display_name)}</span>
-                {p.display_name && <span className="text-muted-foreground"> · {p.full_name}</span>}
+                <span className="font-semibold">{labeler(p)}</span>
               </button>
             </li>
           ))}

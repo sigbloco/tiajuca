@@ -1,20 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Ban, CircleCheck, Pencil, Plus, Settings, Trash2, UserPlus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, CircleCheck, Pencil, Network, Plus, Settings, Trash2, UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
+import { EMPTY_FILTER, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { shortName } from '@/core/format'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { MemberPicker } from '@/modules/members/MemberPicker'
+import { usePersonLabeler } from '@/modules/members/personLabel'
 import { TUNINGS } from '@/modules/repertoire/service'
 import { useCatalog } from './CatalogEditor'
 import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
@@ -36,6 +36,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [adding, setAdding] = useState<Kind | null>(null)
+  const labeler = usePersonLabeler()
   const col = COL[scope] as 'section_id' | 'subsection_id' | 'instrument_id'
   const { data } = useQuery({
     queryKey: ['staff-assignments', orgId],
@@ -67,17 +68,23 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
   if (mine.length === 0 && !canEdit) return null
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {mine.map((a) => (
-          <Chip key={a.id} label={`${shortName(a.members?.full_name, a.members?.display_name)} · ${KIND_LABEL[a.staff_kind]}`} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
-        ))}
-        {canEdit && (['professor', 'monitor', 'regente'] as const).map((kind) => (
-          <Button key={kind} type="button" size="sm" variant={adding === kind ? 'default' : 'outline'} onClick={() => setAdding(adding === kind ? null : kind)}><UserPlus className="h-4 w-4" /> {KIND_LABEL[kind]}</Button>
-        ))}
-      </div>
+      {canEdit && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(['professor', 'monitor', 'regente'] as const).map((kind) => (
+            <Button key={kind} type="button" size="sm" variant={adding === kind ? 'default' : 'outline'} onClick={() => setAdding(adding === kind ? null : kind)}><UserPlus className="h-4 w-4" /> {KIND_LABEL[kind]}</Button>
+          ))}
+        </div>
+      )}
       {adding && (
         <div className="max-w-sm">
-          <MemberPicker value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} />
+          <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} />
+        </div>
+      )}
+      {mine.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[...mine].sort((a, b) => KIND_LABEL[a.staff_kind].localeCompare(KIND_LABEL[b.staff_kind], 'pt-BR') || labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR')).map((a) => (
+            <Chip key={a.id} label={`${labeler(a.members ?? { full_name: '', display_name: null })} · ${KIND_LABEL[a.staff_kind]}`} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
+          ))}
         </div>
       )}
     </div>
@@ -141,9 +148,9 @@ export function NaipesPage() {
   const instMut = useStructureMutations('instruments')
   const drag = useHoldReorder()
   const open = useOpenSet()
-  const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
+  const filter: FilterValue = EMPTY_FILTER
   const [renaming, setRenaming] = useState<string | null>(null)
-  const searching = filter.search.trim() !== ''
+  const searching = false
   const secMut = useStructureMutations('sections')
   const [creating, setCreating] = useState(false)
   const ordered = (sections.data ?? []).slice().sort(byOrder)
@@ -222,6 +229,7 @@ export function NaipesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Naipes e instrumentos</h1>
         <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link to="organograma"><Network className="h-4 w-4" /> Organograma</Link></Button>
           {canEdit && <Button asChild variant="outline"><Link to="configuracoes"><Settings className="h-4 w-4" /> Configurações</Link></Button>}
           {canEdit && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>}
         </div>
@@ -231,7 +239,6 @@ export function NaipesPage() {
         Os nomes de naipe disponíveis ficam em Organização → Nomes de naipes. Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
         mude a ordem ou leve um instrumento para outro subnaipe. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
       </p>
-      <FilterBar value={filter} onChange={setFilter} />
       {sections.isLoading && <Skeleton className="h-24" />}
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}
       <div className="space-y-2">

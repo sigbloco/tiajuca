@@ -38,10 +38,6 @@ export function ColorPick({ label, value, onChange, hideDefault }: { label: stri
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <div className="flex flex-wrap items-center gap-2">
-        {!hideDefault && (
-          <button type="button" onClick={() => onChange(null)} aria-pressed={value === null}
-            className={`min-h-8 rounded-lg border px-2.5 text-sm font-semibold ${value === null ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>Padrão do bloco</button>
-        )}
         {palette.map((hex, i) => (
           <button key={i} type="button" aria-label={`Escolher ${hex}`} title={hex} aria-pressed={same(value, hex)} onClick={() => onChange(hex)}
             className={`h-7 w-7 rounded-full border ${same(value, hex) ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'}`} style={{ backgroundColor: hex }} />
@@ -50,6 +46,10 @@ export function ColorPick({ label, value, onChange, hideDefault }: { label: stri
           onClick={() => { const n = '#888888'; setPalette([...palette, n]); onChange(n) }}
           className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-border hover:bg-muted"><Plus className="h-4 w-4" /></button>
       </div>
+      {!hideDefault && (
+        <button type="button" onClick={() => onChange(null)} aria-pressed={value === null}
+          className={`min-h-8 rounded-lg border px-2.5 text-sm font-semibold ${value === null ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>Padrão do bloco</button>
+      )}
       {selectedIdx >= 0 && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="inline-flex items-center gap-2 font-semibold">Trocar esta cor

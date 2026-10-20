@@ -18,8 +18,6 @@ export function GlobalUnsavedGuard() {
   const count = useUnsavedCount()
   const dirty = count > 0
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
-  const [saving, setSaving] = useState(false)
-
   useEffect(() => {
     if (!dirty) return
     const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
@@ -27,9 +25,18 @@ export function GlobalUnsavedGuard() {
     return () => window.removeEventListener('beforeunload', h)
   }, [dirty])
 
-  if (blocker.state !== 'blocked') return null
   return (
-    <Dialog.Root open onOpenChange={(o) => { if (!o) blocker.reset() }}>
+    <UnsavedDialog open={blocker.state === 'blocked'} onSave={async () => { await saveAllUnsaved(); blocker.proceed?.() }}
+      onDiscard={() => blocker.proceed?.()} onStay={() => blocker.reset?.()} />
+  )
+}
+
+/** Pergunta "Salvar as alterações?" com três saídas. `onSave` deve lançar erro se falhar (a pessoa continua editando). */
+export function UnsavedDialog({ open, onSave, onDiscard, onStay }: { open: boolean; onSave: () => Promise<unknown>; onDiscard: () => void; onStay: () => void }) {
+  const [saving, setSaving] = useState(false)
+  if (!open) return null
+  return (
+    <Dialog.Root open onOpenChange={(o) => { if (!o) onStay() }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/50" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] w-[min(92vw,24rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-2xl bg-card p-6 shadow-xl">
@@ -40,10 +47,10 @@ export function GlobalUnsavedGuard() {
           <div className="flex flex-col gap-2">
             <Button disabled={saving} onClick={async () => {
               setSaving(true)
-              try { await saveAllUnsaved(); blocker.proceed() } catch { blocker.reset() } finally { setSaving(false) }
-            }}>{saving ? 'Salvando…' : 'Salvar e sair'}</Button>
-            <Button variant="outline" onClick={() => blocker.proceed()}>Sair sem salvar</Button>
-            <Button variant="ghost" onClick={() => blocker.reset()}>Continuar editando</Button>
+              try { await onSave() } catch { onStay() } finally { setSaving(false) }
+            }}>{saving ? 'Salvando…' : 'Salvar e continuar'}</Button>
+            <Button variant="outline" onClick={onDiscard}>Descartar</Button>
+            <Button variant="ghost" onClick={onStay}>Continuar editando</Button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

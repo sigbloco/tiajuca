@@ -27,6 +27,7 @@ import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { NaipesPage } from '@/modules/structure/NaipesPage'
 import { SiteSettings } from '@/modules/site/SiteSettings'
+import { Organogram } from '@/modules/structure/Organogram'
 import { ChecklistsPage } from '@/modules/structure/OrgPages'
 import { FunctionsPage, NaipesSettingsHome, SectionNamesPage } from '@/modules/structure/NaipesSettings'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
@@ -124,6 +125,7 @@ export const router = createBrowserRouter(
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
                 { path: 'naipes', element: <NaipesPage /> },
+                { path: 'naipes/organograma', element: <Organogram /> },
                 { path: 'naipes/configuracoes', element: <NaipesSettingsHome /> },
                 { path: 'naipes/configuracoes/nomes', element: <SectionNamesPage /> },
                 { path: 'naipes/configuracoes/funcoes', element: <FunctionsPage /> },

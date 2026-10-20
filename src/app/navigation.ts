@@ -60,7 +60,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'auditoria', label: 'Auditoria', icon: History, admin: true, permission: 'audit.read' },
 ]
 
-const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', nomes: 'Nomes de naipes', funcoes: 'Funções' }
+const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Funções' }
 
 /** Caminho de navegação (breadcrumb) a partir das partes da URL depois do slug. O último item é a página atual (sem link). */
 export function crumbsFor(segs: string[], base: string): { label: string; to?: string }[] {

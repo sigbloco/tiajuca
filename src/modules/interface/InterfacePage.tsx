@@ -11,7 +11,8 @@ import { supabase } from '@/core/supabase'
 import { applyTheme, varsForArea } from '@/core/theme'
 import { COLOR_SLOTS, areaOverrides, withAreaColors, type ThemeArea, type ThemeColors, type ThemeJson } from '@/core/themeModel'
 import { notifySaved } from '@/core/undo'
-import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
+import { UnsavedDialog, UnsavedGuard } from '@/components/shared/UnsavedGuard'
+import { saveAllUnsaved, useUnsavedCount } from '@/core/unsaved'
 import { useSearchParams } from 'react-router-dom'
 import { ColorPick } from '@/modules/site/ColorPick'
 
@@ -111,15 +112,20 @@ export function InterfacePage() {
   const [tab, setTab] = useState<ThemeArea>(() => (['site', 'shop'].includes(params.get('area') ?? '') ? (params.get('area') as ThemeArea) : 'general'))
   if (!can) return <Card className="p-6">Você não tem permissão para mudar a interface.</Card>
   const current = AREAS.find((a) => a.key === tab)!
+  const pending = useUnsavedCount()
+  const [next, setNext] = useState<ThemeArea | null>(null)
+  const go = (k: ThemeArea) => { if (k === tab) return; if (pending > 0) setNext(k); else setTab(k) }
   return (
     <div className="space-y-4">
       <h1>Interface</h1>
       <div role="tablist" className="flex flex-wrap gap-2">
         {AREAS.map((a) => (
-          <Button key={a.key} role="tab" aria-selected={tab === a.key} variant={tab === a.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => setTab(a.key)}>{a.label}</Button>
+          <Button key={a.key} role="tab" aria-selected={tab === a.key} variant={tab === a.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => go(a.key)}>{a.label}</Button>
         ))}
       </div>
       <ColorsEditor key={tab} area={tab} intro={current.intro} />
+      <UnsavedDialog open={next !== null} onSave={async () => { await saveAllUnsaved(); setTab(next!); setNext(null) }}
+        onDiscard={() => { setTab(next!); setNext(null) }} onStay={() => setNext(null)} />
     </div>
   )
 }

@@ -47,7 +47,7 @@ function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => 
           {adding !== k && <Button type="button" size="sm" variant="outline" onClick={() => setAdding(k)}><Plus className="h-4 w-4" /> Adicionar</Button>}
           {adding === k && (
             <div className="w-full max-w-sm">
-              <MemberPicker value="" onChange={(id) => { if (id && !value[k].includes(id)) onChange({ ...value, [k]: [...value[k], id] }); setAdding(null) }} />
+              <MemberPicker onlyActive value="" onChange={(id) => { if (id && !value[k].includes(id)) onChange({ ...value, [k]: [...value[k], id] }); setAdding(null) }} />
               <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(null)}>Cancelar</Button>
             </div>
           )}
