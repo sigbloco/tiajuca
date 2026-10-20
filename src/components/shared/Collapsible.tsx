@@ -10,12 +10,14 @@ export const TONES: Tone[] = ['primary', 'secondary', 'info', 'success', 'warnin
 
 /** Grupo que abre/fecha. Controlado pelo pai (que decide o estado inicial: todos fechados por padrão).
  *  Nível 0 = faixa colorida; nível 1 = barra lateral colorida (sem caixas dentro de caixas). */
-export function Collapsible({ open, onToggle, title, count, right, level = 0, tone = 'primary', children }: {
+export function Collapsible({ open, onToggle, title, count, right, below, level = 0, tone = 'primary', children }: {
   open: boolean
   onToggle: () => void
   title: ReactNode
   count?: number
   right?: ReactNode
+  /** Linha logo abaixo do nome, sempre visível (aberto ou fechado): ex.: equipe do grupo. */
+  below?: ReactNode
   level?: 0 | 1
   tone?: Tone
   children: ReactNode
@@ -30,6 +32,7 @@ export function Collapsible({ open, onToggle, title, count, right, level = 0, to
         </button>
         {right}
       </div>
+      {below && <div className={cn('pb-2 pl-10 pr-3 empty:hidden', level === 0 ? HEAD[tone] : 'bg-muted/40')}>{below}</div>}
       {open && <div className={cn('space-y-1.5', level === 0 ? 'p-2' : 'py-1.5 pl-2')}>{children}</div>}
     </div>
   )
