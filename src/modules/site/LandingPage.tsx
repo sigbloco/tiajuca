@@ -7,7 +7,9 @@ import { useMemberships } from '@/core/organization'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Skeleton } from '@/components/ui/primitives'
 import { DEFAULT_ORG_SLUG, supabase } from '@/core/supabase'
-import { applyTheme, type OrgTheme } from '@/core/theme'
+import type { OrgTheme } from '@/core/theme'
+import { areaOverrides } from '@/core/themeModel'
+import { useAreaTheme } from '@/core/useAreaTheme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { useAuth } from '@/core/auth'
 import { LINK_KINDS, hrefOf, textOn, youtubeId, type SiteLink, type SiteVideo } from './links'
@@ -48,9 +50,11 @@ export function LandingPage() {
   const { data: mine } = useMemberships()
   useEffect(() => {
     if (!data) return
-    applyTheme(data.org.theme, { cache: false })
     applyBrandToDocument({ name: data.org.name, logo_path: data.org.logo_path })
   }, [data])
+
+  // Cores da página inicial: as gerais + as de Interface → Site. Ao sair, voltam as gerais.
+  useAreaTheme(data?.org.theme, 'site')
 
   if (isLoading) return <main className="mx-auto max-w-md space-y-4 px-4 py-10"><Skeleton className="mx-auto h-32 w-32 rounded-full" /><Skeleton className="h-8" /><Skeleton className="h-24" /></main>
   if (isError || !data) {
@@ -61,10 +65,12 @@ export function LandingPage() {
   const links = (site.links ?? []).map((l) => ({ l, href: hrefOf(l) })).filter((x): x is { l: SiteLink; href: string } => !!x.href)
   const videos = (site.videos ?? []).map((v) => ({ v, id: youtubeId(v.url) })).filter((x): x is { v: SiteVideo; id: string } => !!x.id)
   const photo = site.photo_url || org.logo_path
+  // Fundo do topo: só a cor escolhida para o Site (sem ela, usa a cor principal).
+  const heroColor = areaOverrides(org.theme, 'site').header ?? null
 
   return (
-    <main className="min-h-screen pb-16" style={site.page_color ? { backgroundColor: site.page_color, color: textOn(site.page_color) } : undefined}>
-      <header className={`px-4 pb-20 pt-10 text-center ${site.header_color ? "" : "bg-primary text-primary-foreground"}`} style={site.header_color ? { backgroundColor: site.header_color, color: textOn(site.header_color) } : undefined}>
+    <main className="min-h-screen bg-background pb-16 text-foreground">
+      <header className={`px-4 pb-20 pt-10 text-center ${heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: heroColor, color: textOn(heroColor) } : undefined}>
         {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
         <OrgLogo name={org.name} logoPath={photo} className="mx-auto h-36 w-36 object-cover ring-4 ring-secondary" />
         <h1 className="mt-4 font-display text-3xl font-extrabold">{site.headline || org.name}</h1>

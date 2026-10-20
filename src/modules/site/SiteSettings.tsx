@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
-import { ThemeSettings } from './ThemeSettings'
-import { ColorPick } from './ColorPick'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
 
 interface SiteRow {
@@ -81,7 +80,7 @@ export function SiteSettings() {
       </div>
       <p className="text-muted-foreground">É a página que as pessoas veem ao abrir o endereço do site (antes de entrar): foto, descrição, redes e contatos, menu e vídeos.</p>
 
-      <ThemeSettings />
+      <Card className="p-4 text-sm">As <strong>cores</strong> do sistema, da página inicial e da loja (cabeçalho, fundo, botões…) agora ficam em <Link className="font-semibold text-primary underline" to={`/${membership?.slug}/interface`}>Interface</Link>.</Card>
 
       <Card className="space-y-3 p-4">
         <h3>Cabeçalho</h3>
@@ -100,13 +99,6 @@ export function SiteSettings() {
         <div className="space-y-1.5"><Label htmlFor="st-desc">Descrição curta</Label>
           <textarea id="st-desc" rows={4} maxLength={600} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <p className="text-xs text-muted-foreground">{(f.description ?? '').length}/600</p></div>
-      </Card>
-
-      <Card className="space-y-3 p-4">
-        <h3>Cores</h3>
-        <ColorPick label="Fundo do cabeçalho" value={f.header_color} onChange={(v) => setF({ ...f, header_color: v })} />
-        <ColorPick label="Fundo da página" value={f.page_color} onChange={(v) => setF({ ...f, page_color: v })} />
-        <p className="text-xs text-muted-foreground">O texto muda sozinho para branco ou escuro, conforme o fundo, para continuar legível. Sem escolha, usa as cores do bloco.</p>
       </Card>
 
       <Card className="space-y-3 p-4">

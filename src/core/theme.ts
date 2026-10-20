@@ -1,36 +1,23 @@
-export interface OrgTheme {
-  primary?: string
-  primaryForeground?: string
-  secondary?: string
-  secondaryForeground?: string
-  /** Cores guardadas pela Direção para escolher no painel (não afeta o visual). */
-  palette?: string[]
-}
+import { areaOverrides, applyThemeVars, resolveColors, themeVars, type ThemeArea, type ThemeJson } from './themeModel'
+
+/** Tema do bloco (JSON em `organizations.theme`). Veja `themeModel.ts` para as áreas Geral, Site e Loja. */
+export type OrgTheme = ThemeJson
 
 const CACHE_KEY = 'sigbloco:theme'
 
-function hexToChannels(hex: string): string | null {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
-  if (!m) return null
-  const n = parseInt(m[1], 16)
-  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`
+/** Variáveis da área, usando o texto antigo (primaryForeground…) só enquanto a cor não foi trocada na própria área. */
+export function varsForArea(theme: ThemeJson, area: ThemeArea): Record<string, string> {
+  const own = areaOverrides(theme, area)
+  return themeVars(resolveColors(theme, area), {
+    primary: own.primary ? undefined : theme.primaryForeground,
+    secondary: own.secondary ? undefined : theme.secondaryForeground,
+  })
 }
 
-const MAP: Record<Exclude<keyof OrgTheme, 'palette'>, string> = {
-  primary: '--primary',
-  primaryForeground: '--primary-foreground',
-  secondary: '--secondary',
-  secondaryForeground: '--secondary-foreground',
-}
-
-/** Aplica o tema da organização como CSS variables. Cache só de cores (não sensível), para evitar flash. */
+/** Aplica o tema GERAL da organização como CSS variables. Cache só de cores (não sensível), para evitar flash. */
 export function applyTheme(theme: OrgTheme | null | undefined, { cache = true } = {}) {
   if (!theme) return
-  const root = document.documentElement
-  for (const key of Object.keys(MAP) as (keyof typeof MAP)[]) {
-    const channels = theme[key] ? hexToChannels(theme[key] as string) : null
-    if (channels) root.style.setProperty(MAP[key], channels)
-  }
+  applyThemeVars(varsForArea(theme, 'general'))
   if (cache) {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(theme))

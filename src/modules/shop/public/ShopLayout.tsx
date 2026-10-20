@@ -5,11 +5,10 @@ import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Card, Skeleton } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
-import { applyTheme } from '@/core/theme'
+import { useAreaTheme } from '@/core/useAreaTheme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { useShopLabel } from '@/modules/site/useShopLabel'
 import { BackButton } from '@/components/shared/BackButton'
-import { buildShopTheme } from '../theme'
 import { LoginDialog } from './LoginDialog'
 import { StoreProvider, fetchStore, useStore } from './StoreContext'
 
@@ -32,7 +31,7 @@ function Header() {
   const { store, cart, basePath } = useStore()
   const shopLabel = useShopLabel(store.org.slug)
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-card">
+    <header className="sticky top-0 z-10 border-b border-border bg-header text-header-foreground">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link to={basePath} className="flex min-w-0 flex-1 items-center gap-2">
           <OrgLogo name={store.org.name} logoPath={store.org.logo_path} className="h-10 w-10 shrink-0" />
@@ -54,9 +53,9 @@ function Shell() {
   const { store, notices, dismissNotices, basePath } = useStore()
   const shopLabel = useShopLabel(store.org.slug)
   const { pathname } = useLocation()
+  // Cores: as gerais do bloco + as da loja (Interface → Loja). Ao sair da loja, voltam as gerais.
+  useAreaTheme(store.org.theme, 'shop')
   useEffect(() => {
-    // Cores do bloco (Configurações → Site) + cores só da loja, se definidas em Loja → Configurações.
-    applyTheme(buildShopTheme(store.org.theme, store.theme_override), { cache: false })
     applyBrandToDocument({ name: shopLabel, logo_path: store.org.logo_path })
   }, [store, shopLabel])
   return (

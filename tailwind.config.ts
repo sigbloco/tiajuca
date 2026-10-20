@@ -12,7 +12,8 @@ export default {
       colors: {
         background: token('background'),
         foreground: token('foreground'),
-        card: { DEFAULT: token('card'), foreground: token('foreground') },
+        card: { DEFAULT: token('card'), foreground: token('card-foreground') },
+        header: { DEFAULT: token('header'), foreground: token('header-foreground') },
         muted: { DEFAULT: token('muted'), foreground: token('muted-foreground') },
         border: token('border'),
         input: token('border'),

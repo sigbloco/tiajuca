@@ -4,7 +4,7 @@ import { EMPTY_SETTINGS, fromSettings, missingSetup, parsePercent, toSettings, t
 const ok: SettingsForm = {
   pix: true, pixKey: 'pix@bloco.com', pixBeneficiary: 'Rafael', infinitepay: false, handle: '', siteUrl: '',
   whatsapp: '(21) 99069-8483', email: 'loja@bloco.com', directors: [{ name: 'Rafael', phone: '(21) 99613-4845' }], mailFromName: 'Bloco', mailFromEmail: 'loja@bloco.com', defaultDiscount: '10',
-  themePrimary: '', themeSecondary: '', introText: '', reservationHours: '48', retentionYears: '5',
+  introText: '', reservationHours: '48', retentionYears: '5',
 }
 
 describe('telefones', () => {
@@ -71,22 +71,20 @@ describe('desconto padrão de integrante', () => {
 describe('aparência, textos, reserva e privacidade', () => {
   it('aceita vazio (usa os padrões) e valores válidos', () => {
     expect(validateSettings(ok)).toEqual([])
-    expect(validateSettings({ ...ok, themePrimary: '#1E3A8A', themeSecondary: '#ffd700', introText: 'Bem-vindo!', reservationHours: '72', retentionYears: '10' })).toEqual([])
+    expect(validateSettings({ ...ok, introText: 'Bem-vindo!', reservationHours: '72', retentionYears: '10' })).toEqual([])
   })
-  it('recusa texto grande, cor fora do formato e números fora da faixa', () => {
-    expect(validateSettings({ ...ok, themePrimary: 'azul' })).toHaveLength(1)
-    expect(validateSettings({ ...ok, themeSecondary: '#12345' })).toHaveLength(1)
+  it('recusa texto grande e números fora da faixa', () => {
     expect(validateSettings({ ...ok, introText: 'x'.repeat(401) })).toHaveLength(1)
     expect(validateSettings({ ...ok, reservationHours: '0' })).toHaveLength(1)
     expect(validateSettings({ ...ok, reservationHours: '721' })).toHaveLength(1)
     expect(validateSettings({ ...ok, reservationHours: '1,5' })).toHaveLength(1)
     expect(validateSettings({ ...ok, retentionYears: '21' })).toHaveLength(1)
   })
-  it('salva normalizado (cores em maiúsculas, vazio vira nulo) e volta igual ao carregar', () => {
-    const s = toSettings({ ...ok, themePrimary: '#ffd700', introText: '  Oi  ', reservationHours: '72', retentionYears: '10' })
-    expect(s).toMatchObject({ theme_primary: '#FFD700', theme_secondary: null, intro_text: 'Oi', reservation_hours: 72, privacy_retention_years: 10 })
+  it('salva normalizado (vazio vira nulo) e volta igual ao carregar', () => {
+    const s = toSettings({ ...ok, introText: '  Oi  ', reservationHours: '72', retentionYears: '10' })
+    expect(s).toMatchObject({ intro_text: 'Oi', reservation_hours: 72, privacy_retention_years: 10 })
     const f = fromSettings(s)
-    expect(f).toMatchObject({ themePrimary: '#FFD700', themeSecondary: '', reservationHours: '72', retentionYears: '10' })
+    expect(f).toMatchObject({ reservationHours: '72', retentionYears: '10' })
   })
 })
 

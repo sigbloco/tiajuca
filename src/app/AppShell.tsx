@@ -1,7 +1,6 @@
 import { Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useShopLabel } from '@/modules/site/useShopLabel'
 import { BackButton } from '@/components/shared/BackButton'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -23,7 +22,6 @@ export function AppShell() {
   const { signOut } = useAuth()
   const { pathname } = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
-  const shopLabel = useShopLabel(membership?.slug ?? '')
   const brandName = membership?.name
   const brandLogo = membership?.logo_path ?? null
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
@@ -33,7 +31,7 @@ export function AppShell() {
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   const entries: MenuEntry[] = [
-    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.to === 'gerenciar-loja' ? shopLabel : i.label, icon: i.icon, also: i.to === 'repertorio' ? ['drive'] : undefined })),
+    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, also: i.to === 'repertorio' ? ['drive'] : undefined })),
     ...HUB_ORDER.flatMap((hub) => {
       const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
       return children.length === 0 ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), 'lista-de-espera'] }]
@@ -45,7 +43,7 @@ export function AppShell() {
   const group = item?.group ?? (segs[0] === 'lista-de-espera' ? 'oficina' : undefined)
   const parent = segs.length === 0 ? null
     : segs[0] === 'drive' ? { to: `${base}/repertorio`, name: 'Repertório' }
-    : segs.length > 1 ? { to: `${base}/${segs[0]}`, name: segs[0] === 'gerenciar-loja' ? shopLabel : item?.label ?? 'a página anterior' }
+    : segs.length > 1 ? { to: `${base}/${segs[0]}`, name: item?.label ?? 'a página anterior' }
     : group ? { to: `${base}/${group}`, name: HUBS[group].label }
     : { to: base, name: 'a página inicial' }
   const isActive = (e: MenuEntry) => {
@@ -70,7 +68,7 @@ export function AppShell() {
     <ViewAsBar />
     <div className="min-h-screen md:flex">
       {/* Desktop: sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-card p-4 md:sticky md:top-0 md:flex md:max-h-screen">
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-header p-4 text-header-foreground md:sticky md:top-0 md:flex md:max-h-screen">
         <div className="mb-6 flex items-center gap-3">
           <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-11 w-11 shrink-0" />
           <p className="font-display text-xl font-extrabold leading-tight text-primary">{membership.name}</p>
@@ -94,7 +92,7 @@ export function AppShell() {
       </main>
 
       {/* Mobile: barra inferior fixa + "Mais" */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-header text-header-foreground pb-[env(safe-area-inset-bottom)] md:hidden">
         {primary.map((e) => (
           <NavLink
             key={e.to || 'home'}

@@ -21,6 +21,7 @@ import { DriveFoldersPage } from '@/modules/drive/DriveFoldersPage'
 import { AccessPage } from '@/modules/access/AccessPage'
 import { AuditPage } from '@/modules/audit/AuditPage'
 import { ReportsPage } from '@/modules/reports/ReportsPage'
+import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
@@ -150,6 +151,7 @@ export const router = createBrowserRouter(
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
+                { path: 'interface', element: <InterfacePage /> },
                 { path: 'configuracoes', element: <SettingsPage /> },
               ],
             },

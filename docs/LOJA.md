@@ -35,10 +35,10 @@ Criar pedido reserva; cancelar/expirar devolve; **retirar** baixa o estoque fís
 
 ## Configurar (pelo painel — nada disso exige mexer em código)
 
-**Loja → Configurações**: cores só da loja (opcionais) e texto de abertura da vitrine; prazo de reserva sem pagamento e tempo de guarda dos dados (aviso de privacidade);
+**Loja → Configurações**: texto de abertura da vitrine; prazo de reserva sem pagamento e tempo de guarda dos dados (aviso de privacidade);
 desconto padrão de integrante (já preenche produto novo); formas de pagamento, chave Pix e favorecido, InfiniteTag (com botão **Testar conexão**), endereço do site,
 WhatsApp/e-mail da loja, pessoas da Direção (botões de WhatsApp) e remetente dos e-mails.
-O **nome da loja** e as **cores padrão do bloco** ficam em **Configurações → Site**.
+O **nome público da loja** fica em **Configurações → Site**; as **cores** (cabeçalho, fundo, cartões, botões e destaque) ficam em **Interface**, nas abas **Geral** (sistema todo, ponto de partida), **Site** e **Loja** (cada uma sobrepõe só o que tiver cor própria).
 **Pontos de retirada**: nome, endereço e **agenda** — dias fixos da semana (ex.: ensaios às segundas) e/ou datas únicas (eventos), com horário; datas que passam somem sozinhas
 e um ponto que só tem datas passadas deixa de aparecer no checkout. **Produtos**: preço público, desconto de integrante, variações e fotos. **Pedidos**: pagamento, andamento, cancelar/reativar, arquivar.
 

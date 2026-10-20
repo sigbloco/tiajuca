@@ -11,6 +11,9 @@
   --background: 250 248 243;
   --foreground: 36 33 30;
   --card: 255 255 255;
+  --card-foreground: 36 33 30;
+  --header: 255 255 255;
+  --header-foreground: 36 33 30;
   --muted: 241 238 231;
   --muted-foreground: 112 106 98;
   --border: 228 223 214;

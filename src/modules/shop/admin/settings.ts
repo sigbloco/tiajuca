@@ -1,6 +1,5 @@
 import { supabase } from '@/core/supabase'
 import { maskPhone } from '@/components/ui/masked-inputs'
-import { isHexColor } from '../theme'
 
 /** Configurações da loja que o painel edita (tabela shop_settings). */
 export interface DirectorSetting { name: string; whatsapp: string }
@@ -18,8 +17,6 @@ export interface ShopSettings {
   /** Desconto de integrante (%) que já vem preenchido em produto novo. */
   default_member_discount_pct: number
   /** Aparência e textos da loja (opcionais). */
-  theme_primary: string | null
-  theme_secondary: string | null
   intro_text: string | null
   /** Horas que os itens ficam reservados aguardando o pagamento. */
   reservation_hours: number
@@ -30,10 +27,10 @@ export interface ShopSettings {
 export const EMPTY_SETTINGS: ShopSettings = {
   payment_methods: [], infinitepay_handle: null, public_site_url: null, pix_key: null, pix_beneficiary: null,
   contact_whatsapp: null, contact_email: null, directors: [], mail_from_name: null, mail_from_email: null, default_member_discount_pct: 0,
-  theme_primary: null, theme_secondary: null, intro_text: null, reservation_hours: 48, privacy_retention_years: 5,
+  intro_text: null, reservation_hours: 48, privacy_retention_years: 5,
 }
 
-const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, theme_primary, theme_secondary, intro_text, reservation_hours, privacy_retention_years'
+const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, reservation_hours, privacy_retention_years'
 
 export async function getSettings(orgId: string): Promise<ShopSettings> {
   const { data, error } = await supabase.from('shop_settings').select(COLUMNS).eq('organization_id', orgId).maybeSingle()
@@ -54,7 +51,7 @@ export interface SettingsForm {
   whatsapp: string; email: string; directors: DirectorForm[]
   mailFromName: string; mailFromEmail: string
   defaultDiscount: string
-  themePrimary: string; themeSecondary: string; introText: string
+  introText: string
   reservationHours: string; retentionYears: string
 }
 
@@ -89,7 +86,7 @@ export function fromSettings(s: ShopSettings, fallbackSiteUrl = ''): SettingsFor
     directors: s.directors.map((d) => ({ name: d.name, phone: fromWaDigits(d.whatsapp) })),
     mailFromName: s.mail_from_name ?? '', mailFromEmail: s.mail_from_email ?? '',
     defaultDiscount: String(s.default_member_discount_pct ?? 0).replace('.', ','),
-    themePrimary: s.theme_primary ?? '', themeSecondary: s.theme_secondary ?? '', introText: s.intro_text ?? '',
+    introText: s.intro_text ?? '',
     reservationHours: String(s.reservation_hours ?? 48), retentionYears: String(s.privacy_retention_years ?? 5),
   }
 }
@@ -118,9 +115,6 @@ export function validateSettings(f: SettingsForm): string[] {
   if (f.mailFromEmail.trim() && !EMAIL.test(f.mailFromEmail.trim())) errors.push('E-mail do remetente inválido.')
   const pct = parsePercent(f.defaultDiscount)
   if (pct === null || pct < 0 || pct > 100) errors.push('O desconto padrão de integrante deve ficar entre 0% e 100%.')
-  for (const [c, nome] of [[f.themePrimary, 'principal'], [f.themeSecondary, 'secundária']] as const) {
-    if (c.trim() && !isHexColor(c)) errors.push(`A cor ${nome} é inválida. Use o formato #RRGGBB.`)
-  }
   if (f.introText.length > 400) errors.push('O texto de abertura passa de 400 letras.')
   const hours = Number(f.reservationHours)
   if (!Number.isInteger(hours) || hours < 1 || hours > 720) errors.push('O prazo de reserva deve ficar entre 1 e 720 horas.')
@@ -144,8 +138,6 @@ export function toSettings(f: SettingsForm): ShopSettings {
     mail_from_name: f.mailFromName.trim() || null,
     mail_from_email: f.mailFromEmail.trim() || null,
     default_member_discount_pct: parsePercent(f.defaultDiscount) ?? 0,
-    theme_primary: f.themePrimary.trim().toUpperCase() || null,
-    theme_secondary: f.themeSecondary.trim().toUpperCase() || null,
     intro_text: f.introText.trim() || null,
     reservation_hours: Number(f.reservationHours) || 48,
     privacy_retention_years: Number(f.retentionYears) || 5,

@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, GraduationCap, History,
-  Home, Music2, Settings, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Home, Music2, Palette, Settings, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -48,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage', description: 'Formulários e novas inscrições para confirmar.' },
   { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
+  { to: 'interface', label: 'Interface', icon: Palette, admin: true, permission: 'org.manage' },
   { to: 'configuracoes', label: 'Configurações', icon: Settings, admin: true, permission: 'settings.manage' },
   { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, admin: true, permission: 'roles.manage' },
   { to: 'auditoria', label: 'Auditoria', icon: History, admin: true, permission: 'audit.read' },
