@@ -66,7 +66,7 @@ export function EventsPage() {
   // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
   const tabs = canManage && (
     <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
-      {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['tipos', 'Tipos de evento'], ['feriados', 'Feriados'], ['ciclos', 'Ciclos']] as const).map(([k, label]) => (
+      {([['agenda', 'Agenda'], ['ciclos', 'Ciclos'], ['recorrencias', 'Recorrências'], ['tipos', 'Tipos de evento'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
         <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
           className={cn('shrink-0 rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
       ))}

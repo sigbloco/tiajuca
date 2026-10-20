@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Collapsible } from '@/components/shared/Collapsible'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
@@ -57,6 +58,55 @@ function CycleSheet({ cycle, onClose }: { cycle: Cycle | null; onClose: () => vo
   )
 }
 
+interface Blockers { participations: number; events: number; attendance: number; forms: number; submissions: number; capacity: number; reactivations: number }
+
+/** O que impede a exclusão do ciclo, com a opção de apagar tudo isso junto. */
+function BlockersSheet({ cycle, onClose }: { cycle: Cycle; onClose: () => void }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const info = useQuery({
+    queryKey: ['cycle-blockers', cycle.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('cycle_blockers', { p_cycle: cycle.id })
+      if (error) throw error
+      return data as Blockers
+    },
+  })
+  const wipe = useMutation({
+    mutationFn: async () => { const { error } = await supabase.rpc('delete_cycle_cascade', { p_cycle: cycle.id }); if (error) throw error },
+    onSuccess: () => { toast.success('Ciclo e tudo que dependia dele foram apagados.'); qc.invalidateQueries({ queryKey: ['cycles', orgId] }); qc.invalidateQueries({ queryKey: ['members'] }); onClose() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const b = info.data
+  const rows: [number | undefined, string][] = [
+    [b?.participations, 'participações de integrantes no ciclo (quem estava ativo, inativo ou na lista de espera)'],
+    [b?.events, 'eventos do calendário'],
+    [b?.attendance, 'registros de presença desses eventos'],
+    [b?.forms, 'formulários de inscrição'],
+    [b?.submissions, 'inscrições recebidas nesses formulários'],
+    [b?.capacity, 'configurações de vagas por instrumento'],
+    [b?.reactivations, 'pedidos de reativação'],
+  ]
+  return (
+    <SheetContent title={`Excluir ${cycle.name}`} description="O que está impedindo a exclusão">
+      {info.isLoading && <Skeleton className="h-24" />}
+      {info.isError && <p className="text-destructive">{friendlyError(info.error)}</p>}
+      {b && (
+        <>
+          <p>Este ciclo não pode ser excluído porque outras informações dependem dele:</p>
+          <ul className="list-disc space-y-1 pl-5">
+            {rows.filter(([n]) => (n ?? 0) > 0).map(([n, label]) => <li key={label}><strong>{n}</strong> {label}</li>)}
+          </ul>
+          <p className="rounded-lg bg-warning/15 p-3 text-sm">Para excluir, é preciso apagar tudo isso junto. <strong>Isso não pode ser desfeito</strong> e remove o histórico do ciclo. Se só quiser tirá-lo da vista, edite as datas em vez de excluir.</p>
+          <Button variant="destructive" disabled={wipe.isPending}
+            onClick={() => { if (window.confirm(`Apagar o ciclo “${cycle.name}” e tudo que depende dele? Isso não pode ser desfeito.`)) wipe.mutate() }}>{wipe.isPending ? 'Apagando…' : 'Apagar tudo isso e o ciclo'}</Button>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+        </>
+      )}
+    </SheetContent>
+  )
+}
+
 /** Ciclos agrupados pela data: Atual (ou Atuais), Próximos e Passados. Sem status manual: a data diz se já foi, está acontecendo ou vai acontecer. */
 export function CyclesPage() {
   const orgId = useOrgId()
@@ -65,7 +115,9 @@ export function CyclesPage() {
   const canManage = usePermission('cycles.manage')
   const { data: cycles, isLoading } = useCycles()
   const { data: types } = useCycleTypes()
-  const [sheet, setSheet] = useState<{ cycle: Cycle | null } | null>(null)
+  const [sheet, setSheet] = useState<{ cycle: Cycle | null; blockers?: boolean } | null>(null)
+  const [blocked, setBlocked] = useState<Cycle | null>(null)
+  const [open, setOpen] = useState<Record<string, boolean>>({})
   const today = todayIso(membership?.timezone)
 
   const del = useMutation({
@@ -73,8 +125,8 @@ export function CyclesPage() {
       const { error } = await supabase.from('cycles').delete().eq('id', c.id).eq('organization_id', orgId)
       if (error) throw error
     },
-    onSuccess: () => { toast.success('Ciclo excluído.'); qc.invalidateQueries({ queryKey: ['cycles', orgId] }) },
-    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Este ciclo já tem participações ou eventos. Não dá para excluí-lo.' : friendlyError(e)),
+    onSuccess: () => { setBlocked(null); toast.success('Ciclo excluído.'); qc.invalidateQueries({ queryKey: ['cycles', orgId] }) },
+    onError: (e, c) => { if (/foreign key|violates|23503/i.test(String((e as Error).message ?? e))) setBlocked(c); else toast.error(friendlyError(e)) },
   })
 
   const all = (cycles ?? []).filter((c) => c.is_active)
@@ -90,13 +142,20 @@ export function CyclesPage() {
         {canManage && <Button onClick={() => setSheet({ cycle: null })}><Plus className="h-4 w-4" /> Novo ciclo</Button>}
       </div>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet && <CycleSheet key={sheet.cycle?.id ?? 'new'} cycle={sheet.cycle} onClose={() => setSheet(null)} />}
+        {sheet && (sheet.blockers && sheet.cycle
+          ? <BlockersSheet key={`b-${sheet.cycle.id}`} cycle={sheet.cycle} onClose={() => { setSheet(null); setBlocked(null) }} />
+          : <CycleSheet key={sheet.cycle?.id ?? 'new'} cycle={sheet.cycle} onClose={() => setSheet(null)} />)}
       </Sheet>
+      {blocked && (
+        <Card role="alert" className="flex flex-wrap items-center justify-between gap-2 border-destructive p-3">
+          <p className="font-semibold text-destructive">Este ciclo já tem participações ou eventos. Não dá para excluí-lo.</p>
+          <Button size="sm" variant="outline" onClick={() => setSheet({ cycle: blocked, blockers: true })}>Mais detalhes</Button>
+        </Card>
+      )}
       {isLoading && <Skeleton className="h-24" />}
       {cycles?.length === 0 && <EmptyState>Nenhum ciclo criado. Crie o primeiro para controlar vagas e participação.</EmptyState>}
       {groups.filter(([, list]) => list.length > 0).map(([title, list]) => (
-        <section key={title} className="space-y-2">
-          <h3>{title} <span className="text-base font-normal text-muted-foreground">({list.length})</span></h3>
+        <Collapsible key={title} open={open[title] ?? title.startsWith('Atua')} onToggle={() => setOpen((o) => ({ ...o, [title]: !(o[title] ?? title.startsWith('Atua')) }))} title={title} count={list.length}>
           <div className="grid gap-2">
             {list.map((c) => (
               <Card key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
@@ -114,7 +173,7 @@ export function CyclesPage() {
               </Card>
             ))}
           </div>
-        </section>
+        </Collapsible>
       ))}
     </div>
   )
