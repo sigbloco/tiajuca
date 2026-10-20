@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, GraduationCap, History,
-  Home, Music2, Palette, Settings, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Globe, Home, Music2, Palette, Settings, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -33,9 +33,9 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },
   { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read' },
-  { to: 'gerenciar-loja', label: 'Loja', icon: Store, permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
 
   { to: 'membros', label: 'Integrantes', icon: Users, group: 'organizacao', permission: 'members.read', description: 'Todas as pessoas, por naipe e instrumento.' },
+  { to: 'naipes', label: 'Naipes', icon: Drum, group: 'organizacao', permission: 'structure.manage', description: 'Naipes, subnaipes, instrumentos e quem os acompanha.' },
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage', description: 'Períodos do bloco (ex.: Carnaval 2026/27).' },
   { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
   { to: 'financeiro', label: 'Financeiro', icon: Banknote, group: 'organizacao', permission: 'finance.read', description: 'Receitas, despesas, distribuição e equipe.' },
@@ -48,6 +48,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage', description: 'Formulários e novas inscrições para confirmar.' },
   { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
+  { to: 'site', label: 'Site', icon: Globe, admin: true, permission: 'settings.manage' },
+  { to: 'gerenciar-loja', label: 'Loja', icon: Store, admin: true, permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
   { to: 'interface', label: 'Interface', icon: Palette, admin: true, permission: 'org.manage' },
   { to: 'configuracoes', label: 'Configurações', icon: Settings, admin: true, permission: 'settings.manage' },
   { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, admin: true, permission: 'roles.manage' },

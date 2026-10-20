@@ -78,3 +78,12 @@ export function addDaysIso(iso: string, days: number): string {
   const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + days))
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
 }
+
+const normName = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+/** Como mostrar uma pessoa nas listas: o primeiro nome e, se ela tiver um "como gostaria de ser chamado" diferente, entre parênteses. */
+export function shortName(fullName: string | null | undefined, displayName?: string | null): string {
+  const first = (fullName ?? '').trim().split(/\s+/)[0] ?? ''
+  const pref = (displayName ?? '').trim()
+  if (!first) return pref
+  return pref && normName(pref) !== normName(first) ? `${first} (${pref})` : first
+}

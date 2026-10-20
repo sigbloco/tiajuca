@@ -101,7 +101,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const [filter, setFilter] = useState<FilterValue>({ ...EMPTY_FILTER, status: 'active' })
   const [sectionFilter, setSectionFilter] = useState('')
   const [cycleSel, setCycleSel] = useState('')
-  const [alsoIn, setAlsoIn] = useState<string[]>([])
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [sheetOpen, setSheetOpen] = useState(false)
   const [selected, setSelected] = useState<MemberRow | null>(null)
@@ -119,7 +118,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   })
   const cycleButtons = useMemo(() => {
     const withPeople = new Set((allRows.data ?? []).map((r) => r.cycle_id))
-    return (cycles ?? []).filter((c) => c.is_active && (withPeople.has(c.id) || c.is_current)).sort((a, b) => b.starts_on.localeCompare(a.starts_on))
+    return (cycles ?? []).filter((c) => c.is_active).map((c) => ({ ...c, empty: !withPeople.has(c.id) && !c.is_current })).sort((a, b) => b.starts_on.localeCompare(a.starts_on))
   }, [cycles, allRows.data])
   const currentCycle = cycles?.find((c) => c.is_current)
   const activeCycleId = cycleSel || currentCycle?.id || cycleButtons[0]?.id || ''
@@ -174,7 +173,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       const st = statusOf(m.id)
       if (filter.status === 'active' && !st?.counts_as_active) continue
       if (filter.status === 'inactive' && (st?.counts_as_active || st?.is_waitlist)) continue
-      if (alsoIn.some((c) => !inCycle(m.id, c))) continue
       if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
       if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
       // Instrumento NAQUELE ciclo: vínculo vigente no período; sem ele, o mais recente.
@@ -200,7 +198,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, subById, data: { sectionList, map, total: seen.size } as TreeData }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, alsoIn])
+  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -257,7 +255,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   })
 
   const chip = (on: boolean) => cn('rounded-full border px-3 py-1.5 text-sm font-semibold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
-  const others = cycleButtons.filter((c) => c.id !== activeCycleId)
 
   return (
     <div className="space-y-4">
@@ -272,27 +269,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       </div>
 
       {cycleButtons.length > 1 && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Ciclo">
-            {cycleButtons.map((c) => (
-              <button key={c.id} role="tab" aria-selected={c.id === activeCycleId} className={chip(c.id === activeCycleId)}
-                onClick={() => { setCycleSel(c.id); setAlsoIn((a) => a.filter((x) => x !== c.id)) }}>
-                {c.name.replace(/^Carnaval\s*/, '')}{c.is_current ? ' · atual' : ''}
-              </button>
-            ))}
-          </div>
-          {others.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Também esteve em:</span>
-              {others.map((c) => (
-                <button key={c.id} aria-pressed={alsoIn.includes(c.id)} className={chip(alsoIn.includes(c.id))}
-                  onClick={() => setAlsoIn((a) => (a.includes(c.id) ? a.filter((x) => x !== c.id) : [...a, c.id]))}>
-                  {c.name.replace(/^Carnaval\s*/, '')}
-                </button>
-              ))}
-              {alsoIn.length > 0 && <Button size="sm" variant="ghost" onClick={() => setAlsoIn([])}>Limpar</Button>}
-            </div>
-          )}
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Ciclo">
+          {cycleButtons.map((c) => (
+            <button key={c.id} role="tab" aria-selected={c.id === activeCycleId} disabled={c.empty} title={c.empty ? 'Ainda não houve oficina neste ciclo' : undefined}
+              className={cn(chip(c.id === activeCycleId), c.empty && 'cursor-not-allowed opacity-40 hover:bg-card')}
+              onClick={() => setCycleSel(c.id)}>
+              {c.name}{c.is_current ? ' · atual' : ''}
+            </button>
+          ))}
         </div>
       )}
 
@@ -322,7 +306,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
 
       <p className="text-muted-foreground">
         {total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}
-        {alsoIn.length > 0 && ` que também estiveram em ${alsoIn.map((id) => cycles?.find((c) => c.id === id)?.name.replace(/^Carnaval\s*/, '')).join(' e ')}`}
       </p>
     </div>
   )

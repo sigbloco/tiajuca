@@ -26,6 +26,8 @@ import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
+import { NaipesPage } from '@/modules/structure/NaipesPage'
+import { SiteSettings } from '@/modules/site/SiteSettings'
 import { SettingsPage } from '@/modules/structure/SettingsPage'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
@@ -124,6 +126,7 @@ export const router = createBrowserRouter(
                   children: [
                     { path: 'ciclos', element: <CyclesPage /> },
                     { path: 'membros', element: <MembersPage /> },
+                    { path: 'naipes', element: <NaipesPage /> },
                     { path: 'mensalidades', element: <BillingPage /> },
                     { path: 'bolsas', element: <ScholarshipsPage /> },
                     { path: 'financeiro', element: <FinancePage /> },
@@ -151,6 +154,7 @@ export const router = createBrowserRouter(
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
+                { path: 'site', element: <SiteSettings /> },
                 { path: 'interface', element: <InterfacePage /> },
                 { path: 'configuracoes', element: <SettingsPage /> },
               ],

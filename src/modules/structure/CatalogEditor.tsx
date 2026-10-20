@@ -25,6 +25,8 @@ interface Props {
   /** Mostra seletor de cor (tipos de evento). */
   withColor?: boolean
   canEdit: boolean
+  /** Ordem alfabética fixa (sem setas nem arrastar): para listas que só alimentam menus de escolha. */
+  alphabetical?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -33,7 +35,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withSubsection, withColor, hint, canEdit }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withSubsection, withColor, hint, canEdit, alphabetical }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -44,6 +46,7 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
   const [subsectionId, setSubsectionId] = useState('')
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const visible = (items ?? []).filter((i) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search))
+    .sort((a, b) => (alphabetical ? a.name.localeCompare(b.name, 'pt-BR') : 0))
   const prog = useProgressive(visible, 5, filter.search)
 
   const refresh = () => invalidateCatalog(qc, orgId)
@@ -117,14 +120,14 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
       {items && visible.length === 0 && <EmptyState>{items.length === 0 ? 'Nada cadastrado ainda.' : 'Nenhum item encontrado.'}</EmptyState>}
       <div className="grid gap-2">
         {prog.visible.map((item, idx) => (
-          <Card key={item.id} {...(canEdit ? drag.row(item.id, onDragMove) : {})} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
-            {canEdit && drag.handle(item.id, onDragMove)}
-            <div className="flex flex-col">
+          <Card key={item.id} {...(canEdit && !alphabetical ? drag.row(item.id, onDragMove) : {})} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
+            {canEdit && !alphabetical && drag.handle(item.id, onDragMove)}
+            {!alphabetical && <div className="flex flex-col">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx === 0}
                 onClick={() => move.mutate({ a: item, b: visible[idx - 1], list: visible })}><ArrowUp className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === visible.length - 1}
                 onClick={() => move.mutate({ a: item, b: visible[idx + 1], list: visible })}><ArrowDown className="h-4 w-4" /></Button>
-            </div>
+            </div>}
             <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`}
               onSave={(v) => save.mutateAsync({ id: item.id, name: v })} />
             {withSection && <Badge className="hidden sm:inline-flex">{nameOf(sections.data, item.section_id)}</Badge>}
