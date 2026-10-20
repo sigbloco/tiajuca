@@ -15,7 +15,8 @@ import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { usePersonLabeler } from '@/modules/members/personLabel'
-import { TUNINGS } from '@/modules/repertoire/service'
+import { hasTuning } from '@/modules/repertoire/service'
+import { TuningChips } from './TuningChips'
 import { useCatalog } from './CatalogEditor'
 import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
 import { NewSectionSheet } from './NewSectionWizard'
@@ -200,7 +201,7 @@ export function NaipesPage() {
     const scope = `inst:${i.section_id}`
     return (
       <div key={i.id} {...(canEdit ? drag.row(i.id, onMove, scope) : {})} className={drag.cls(i.id)}>
-        <Collapsible level={1} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{i.tuning ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
+        <Collapsible level={1} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
           right={canEdit && (
             <Actions item={i} label="instrumento" idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
               onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
@@ -208,16 +209,10 @@ export function NaipesPage() {
               onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, 'o instrumento')} />
           )}>
           {renaming === i.id && <RenameForm name={i.name} label="instrumento" onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => setRenaming(null)} />}
-          {(
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
-              {TUNINGS.map((t) => (
-                <button key={t} type="button" aria-pressed={i.tuning === t} disabled={!canEdit}
-                  onClick={() => instMut.save.mutate({ id: i.id, name: i.name, tuning: i.tuning === t ? null : t })}
-                  className={cn('min-h-9 rounded-full border px-3 text-sm font-semibold', i.tuning === t ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>{t}</button>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">Afinação</span>
+            <TuningChips value={i.tuning ?? null} disabled={!canEdit} onChange={(v) => instMut.save.mutate({ id: i.id, name: i.name, tuning: v })} />
+          </div>
           <StaffBlock scope="instrument" id={i.id} canEdit={canEdit}  />
         </Collapsible>
       </div>

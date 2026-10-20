@@ -4,6 +4,7 @@ import { Badge, Card, EmptyState, Skeleton } from '@/components/ui/primitives'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { usePersonLabeler } from '@/modules/members/personLabel'
+import { hasTuning } from '@/modules/repertoire/service'
 import { useCatalog } from './CatalogEditor'
 import { byOrder } from './StructureManagers'
 
@@ -56,7 +57,7 @@ export function Organogram() {
           const loose = insts.filter((i) => !i.subsection_id)
           const instLine = (i: (typeof insts)[number]) => (
             <li key={i.id} className="space-y-1">
-              <p className="font-semibold">{i.name}{i.tuning ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</p>
+              <p className="font-semibold">{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</p>
               {people((a) => a.instrument_id === i.id, 'sm')}
             </li>
           )

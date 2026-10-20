@@ -47,6 +47,9 @@ export interface Attachment {
 
 /** Afinações comuns de instrumentos de sopro; a mesma partitura serve para todos os instrumentos de uma afinação. */
 export const TUNINGS = ['Bb', 'Eb', 'F', 'C']
+/** Instrumento sem afinação (percussão, performance…): anula a afinação. */
+export const NO_PITCH = 'indef'
+export const hasTuning = (t: string | null | undefined): t is string => !!t && t !== NO_PITCH
 
 const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 /** Adivinha para quem é uma partitura pelo nome do arquivo: nome do instrumento ou afinação (Bb, Eb, F, C). */

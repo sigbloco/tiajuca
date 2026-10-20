@@ -3,14 +3,14 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
-import { Button, Input, Label, Select, SheetContent, cn } from '@/components/ui/primitives'
+import { Button, Input, Label, Select, SheetContent } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { shortName } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from './CatalogEditor'
-import { TUNINGS } from '@/modules/repertoire/service'
+import { TuningChips } from './TuningChips'
 import { invalidateCatalog, saveCatalogItem } from './service'
 import { nextOrder } from './StructureManagers'
 
@@ -64,12 +64,7 @@ function InstrumentsPick({ value, onChange }: { value: Inst[]; onChange: (v: Ins
       {value.map((it, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
           <Input className="min-w-40 flex-1" aria-label={`Nome do instrumento ${i + 1}`} placeholder="Nome do instrumento" value={it.name} onChange={(e) => onChange(value.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} />
-          <div className="flex gap-1" role="group" aria-label="Afinação">
-            {TUNINGS.map((t) => (
-              <button key={t} type="button" aria-pressed={it.tuning === t} onClick={() => onChange(value.map((x, k) => (k === i ? { ...x, tuning: x.tuning === t ? null : t } : x)))}
-                className={cn('min-h-9 rounded-full border px-3 text-sm font-semibold', it.tuning === t ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>{t}</button>
-            ))}
-          </div>
+          <TuningChips value={it.tuning} onChange={(v) => onChange(value.map((x, k) => (k === i ? { ...x, tuning: v } : x)))} />
           <Button type="button" size="icon" variant="ghost" aria-label="Remover instrumento" onClick={() => onChange(value.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
         </div>
       ))}

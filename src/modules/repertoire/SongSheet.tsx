@@ -10,7 +10,7 @@ import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { DrivePicker } from './DrivePicker'
 import { getDriveConfig, type DriveFile } from './drive'
-import { KIND_LABEL, TUNINGS, guessTarget, listAttachments, openAttachment, uploadSongFile, type Attachment, type AttachmentKind, type Song } from './service'
+import { KIND_LABEL, TUNINGS, hasTuning, guessTarget, listAttachments, openAttachment, uploadSongFile, type Attachment, type AttachmentKind, type Song } from './service'
 
 const field = (v: string) => v.trim() || null
 
@@ -43,7 +43,7 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
   })
   const myIds = new Set((mine.data ?? []).map((l) => l.instrument_id))
   const mySections = new Set((mine.data ?? []).map((l) => l.instruments?.section_id).filter(Boolean) as string[])
-  const myTunings = new Set((mine.data ?? []).map((l) => l.instruments?.tuning).filter(Boolean) as string[])
+  const myTunings = new Set((mine.data ?? []).map((l) => l.instruments?.tuning).filter((t) => hasTuning(t)) as string[])
   const hasMine = myIds.size > 0
   const targetCols = (t = target) => ({
     instrument_id: t.startsWith('i:') ? t.slice(2) : null,
