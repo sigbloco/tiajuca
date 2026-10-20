@@ -6,6 +6,7 @@ import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays,
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { useCycles } from '@/modules/cycles/service'
+import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { CatalogEditor, useCatalog } from '@/modules/structure/CatalogEditor'
 import { EventSheet } from './EventSheet'
@@ -27,7 +28,7 @@ export function EventsPage() {
   const [typeId, setTypeId] = useState('')
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
-  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'tipos' | 'feriados'>('agenda')
+  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'tipos' | 'feriados' | 'ciclos'>('agenda')
   const cycles = useCycles()
   const types = useCatalog('activity_types')
 
@@ -65,7 +66,7 @@ export function EventsPage() {
   // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
   const tabs = canManage && (
     <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
-      {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['tipos', 'Tipos de evento'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
+      {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['tipos', 'Tipos de evento'], ['feriados', 'Feriados'], ['ciclos', 'Ciclos']] as const).map(([k, label]) => (
         <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
           className={cn('shrink-0 rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
       ))}
@@ -77,6 +78,7 @@ export function EventsPage() {
         {tab === 'recorrencias' && <RecurrencesSettings />}
         {tab === 'tipos' && <CatalogEditor table="activity_types" title="Tipos de evento" singular="Tipo" withColor canEdit={canManage} hint="Cada tipo tem uma cor no calendário." />}
         {tab === 'feriados' && <HolidaysSettings />}
+        {tab === 'ciclos' && <CyclesPage />}
       </div>
     )
   }

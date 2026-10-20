@@ -75,7 +75,7 @@ export function CyclesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1>Ciclos</h1>
+        <h2>Ciclos</h2>
         {canManage && (
           <Sheet open={open} onOpenChange={setOpen}>
             <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo ciclo</Button>

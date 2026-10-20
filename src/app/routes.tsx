@@ -6,7 +6,6 @@ import { isSupabaseConfigured } from '@/core/supabase'
 import { ClaimInvitePage, ForgotPasswordPage, NoOrganizationPage, ResetPasswordPage, SignupPage, VerifyEmailPage } from '@/modules/auth/pages'
 import { HomePage } from '@/modules/dashboard/HomePage'
 import { CapacityPage } from '@/modules/capacity/CapacityPage'
-import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
 import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/AttendancePages'
 import { EventsPage } from '@/modules/events/EventsPage'
@@ -130,7 +129,7 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="organizacao" />,
                   children: [
-                    { path: 'ciclos', element: <CyclesPage /> },
+                    { path: 'ciclos', element: <Navigate to="../eventos" relative="path" replace /> },
                     { path: 'fornecedores', element: <SuppliersPage /> },
                     { path: 'checklists', element: <ChecklistsPage /> },
                     { path: 'funcoes', element: <FunctionsPage /> },
