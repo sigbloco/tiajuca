@@ -9,7 +9,7 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { DrivePicker } from './DrivePicker'
-import { DriveFolderTree } from './DriveFolderTree'
+import { DriveRootTree } from './DriveFolderTree'
 import { getDriveConfig, type DriveFile } from './drive'
 import { KIND_LABEL, TUNINGS, hasTuning, guessTarget, listAttachments, openAttachment, uploadSongFile, type Attachment, type AttachmentKind, type Song } from './service'
 
@@ -164,43 +164,36 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
 /** Pasta da música no Drive: navegar pelas pastas do Drive do bloco, escolher uma das pastas cadastradas ou colar o link. */
 function DriveFolderField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const orgId = useOrgId()
-  const [browse, setBrowse] = useState(false)
+  const [rootId, setRootId] = useState('')
   const [picked, setPicked] = useState('')
-  const cfg = useQuery({ queryKey: ['drive-config', orgId], retry: false, queryFn: () => getDriveConfig(orgId) })
   const registered = useQuery({
     queryKey: ['drive-folders', orgId, 'for-songs'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('drive_folders').select('id, name, url, drive_folder_id').eq('organization_id', orgId).eq('is_active', true).order('name')
+      const { data, error } = await supabase.from('drive_folders').select('id, name, drive_folder_id').eq('organization_id', orgId).eq('is_active', true).order('name')
       if (error) throw error
-      return (data ?? []) as { id: string; name: string; url: string; drive_folder_id: string | null }[]
+      return (data ?? []) as { id: string; name: string; drive_folder_id: string | null }[]
     },
   })
-  // Raízes da árvore: as pastas cadastradas em Google Drive (com o identificador) e, se houver, a pasta de partituras da busca.
-  const treeRoots = [
-    ...(registered.data ?? []).filter((r) => r.drive_folder_id).map((r) => ({ id: r.drive_folder_id!, name: r.name })),
-    ...(cfg.data?.active && cfg.data.folder_id && !(registered.data ?? []).some((r) => r.drive_folder_id === cfg.data!.folder_id) ? [{ id: cfg.data.folder_id, name: 'Pasta de partituras' }] : []),
-  ]
+  const roots = (registered.data ?? []).filter((r) => r.drive_folder_id)
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="s-drive">Pasta da música no Drive (opcional)</Label>
+      <Label htmlFor="s-drive-root">Pasta da música no Drive (opcional)</Label>
       {value && (
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
           <span className="min-w-0 flex-1 truncate text-sm">{picked || value}</span>
           <Button asChild size="sm" variant="outline"><a href={value} target="_blank" rel="noreferrer noopener">Abrir</a></Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => { onChange(''); setPicked('') }}>Tirar</Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => { onChange(''); setPicked(''); setRootId('') }}>Tirar</Button>
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
-        {treeRoots.length > 0 && <Button type="button" size="sm" variant="outline" onClick={() => setBrowse(!browse)}>{browse ? 'Fechar árvore de pastas' : 'Escolher na árvore de pastas'}</Button>}
-        {(registered.data ?? []).length > 0 && (
-          <Select aria-label="Pastas cadastradas" className="w-56" value="" onChange={(e) => { const r = registered.data?.find((x) => x.id === e.target.value); if (r) { onChange(r.url); setPicked(r.name) } }}>
-            <option value="">Pastas cadastradas…</option>
-            {registered.data!.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+      {!value && (
+        <>
+          <Select id="s-drive-root" aria-label="Pasta cadastrada" value={rootId} onChange={(e) => setRootId(e.target.value)}>
+            <option value="">{roots.length === 0 ? 'Nenhuma pasta cadastrada em Google Drive' : 'Escolha primeiro uma pasta cadastrada…'}</option>
+            {roots.map((r) => <option key={r.id} value={r.drive_folder_id!}>{r.name}</option>)}
           </Select>
-        )}
-      </div>
-      {browse && <DriveFolderTree roots={treeRoots} onPick={(fo) => { onChange(fo.url); setPicked(fo.name); setBrowse(false) }} />}
-      <Input id="s-drive" type="url" placeholder="ou cole o link: https://drive.google.com/drive/folders/…" value={value} onChange={(e) => { onChange(e.target.value); setPicked('') }} />
+          {rootId && <DriveRootTree rootId={rootId} onPick={(fo) => { onChange(fo.url); setPicked(fo.name) }} />}
+        </>
+      )}
     </div>
   )
 }
@@ -240,12 +233,9 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
         <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
           <div className="space-y-1.5"><Label htmlFor="s-title">Título</Label><Input id="s-title" required value={f.title} onChange={set('title')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-artist">Artista</Label><Input id="s-artist" required value={f.artist} onChange={set('artist')} /></div>
-          <div className="space-y-1.5"><Label htmlFor="s-guide">Link do guia (opcional)</Label><Input id="s-guide" type="url" placeholder="https://…" value={f.guide_url} onChange={set('guide_url')} /></div>
+          <div className="space-y-1.5"><Label htmlFor="s-genre">Gênero</Label><Input id="s-genre" value={f.genre} onChange={set('genre')} /></div>
           <DriveFolderField value={f.drive_folder_url} onChange={(v) => setF({ ...f, drive_folder_url: v })} />
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5"><Label htmlFor="s-genre">Gênero</Label><Input id="s-genre" value={f.genre} onChange={set('genre')} /></div>
-            <div className="space-y-1.5"><Label htmlFor="s-key">Tom</Label><Input id="s-key" placeholder="Ex.: Dó maior" value={f.musical_key} onChange={set('musical_key')} /></div>
-          </div>
+          <div className="space-y-1.5"><Label htmlFor="s-guide">Link da guia (opcional)</Label><Input id="s-guide" type="url" placeholder="https://…" value={f.guide_url} onChange={set('guide_url')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-notes">Observações</Label>
             <textarea id="s-notes" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.notes} onChange={set('notes')} /></div>
           <Button type="submit" className="w-full" disabled={!valid || save.isPending}>Salvar música</Button>
