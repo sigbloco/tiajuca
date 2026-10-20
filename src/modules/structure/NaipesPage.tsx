@@ -204,7 +204,7 @@ export function NaipesPage() {
     const scope = `inst:${i.section_id}`
     return (
       <div key={i.id} {...(canEdit ? drag.row(i.id, onMove, scope) : {})} className={drag.cls(i.id)}>
-        <Collapsible below={<StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />} level={1} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
+        <Collapsible below={<StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />} level={1} expandable={isEditing(i.id)} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
           right={canEdit && (
             <Actions item={i} label="instrumento" idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
               onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
@@ -245,7 +245,7 @@ export function NaipesPage() {
           const idx = ordered.findIndex((x) => x.id === s.id)
           return (
             <div key={s.id} {...(canEdit ? drag.row(s.id, onMoveSec, 'sections') : {})} className={drag.cls(s.id)}>
-              <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
+              <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} expandable={insts.length > 0 || subs.length > 0 || isEditing(s.id)} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
                 right={canEdit && (
                   <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMoveSec, 'sections')}
                     onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
@@ -269,7 +269,7 @@ export function NaipesPage() {
                   return (
                     <div key={sub.id} data-sortid={`sub:${sub.id}`} data-sortscope={`inst:${s.id}`} className={cn('rounded-lg', drag.cls(`sub:${sub.id}`))}>
                       <div {...(canEdit ? drag.row(sub.id, onMoveSub, `sub:${s.id}`) : {})} className={drag.cls(sub.id)}>
-                        <Collapsible below={<StaffBlock scope="subsection" id={sub.id} canEdit={canEdit && isEditing(sub.id)} />} level={1} open={searching || open.isOpen(sub.id)} onToggle={() => open.toggle(sub.id)} title={<span className={cn(!sub.is_active && 'opacity-60')}>{sub.name}</span>} count={list.length}
+                        <Collapsible below={<StaffBlock scope="subsection" id={sub.id} canEdit={canEdit && isEditing(sub.id)} />} level={1} expandable={list.length > 0 || isEditing(sub.id)} open={searching || open.isOpen(sub.id)} onToggle={() => open.toggle(sub.id)} title={<span className={cn(!sub.is_active && 'opacity-60')}>{sub.name}</span>} count={list.length}
                           right={canEdit && (
                             <Actions item={sub} label="subnaipe" idx={si} total={subs.length} handle={drag.handle(sub.id, onMoveSub, `sub:${s.id}`)}
                               onUp={() => subMut.move.mutate({ a: sub, b: subs[si - 1], list: subs })} onDown={() => subMut.move.mutate({ a: sub, b: subs[si + 1], list: subs })}
