@@ -38,14 +38,12 @@ function useFolders(orgId: string) {
   })
 }
 
-function FolderSheet({ folder, rules, roles, onClose }: { folder: Folder | null; rules: Rule[]; roles: Role[]; onClose: () => void }) {
+function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules: Rule[]; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
-  const instruments = useCatalog('instruments')
   const [f, setF] = useState({ name: folder?.name ?? '', description: folder?.description ?? '', url: folder?.url ?? '' })
-  const [picked, setPicked] = useState<Set<string>>(() => new Set(rules.map((r) =>
-    r.access_role_id ? tkey({ kind: 'role', id: r.access_role_id }) : r.section_id ? tkey({ kind: 'section', id: r.section_id }) : tkey({ kind: 'instrument', id: r.instrument_id! }))))
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(rules.filter((r) => r.section_id).map((r) => tkey({ kind: 'section', id: r.section_id! }))))
   const toggle = (t: Target) => setPicked((p) => { const n = new Set(p); const k = tkey(t); if (n.has(k)) n.delete(k); else n.add(k); return n })
   const urlOk = /^https:\/\/(drive|docs)\.google\.com\//i.test(f.url.trim())
 
@@ -103,7 +101,6 @@ function FolderSheet({ folder, rules, roles, onClose }: { folder: Folder | null;
     )
   }
   const secs = (sections.data ?? []).filter((s) => s.is_active)
-  const insts = (instruments.data ?? []).filter((i) => i.is_active)
 
   return (
     <SheetContent title={folder ? 'Editar pasta' : 'Adicionar pasta do Google Drive'} description="Defina o link e quem enxerga esta pasta no app.">
@@ -116,18 +113,12 @@ function FolderSheet({ folder, rules, roles, onClose }: { folder: Folder | null;
 
         <div className="space-y-2">
           <p className="font-semibold">Quem vê esta pasta no app</p>
-          <p className="text-xs text-muted-foreground">Sem nenhuma marcação, só a Direção vê. Marque papéis, naipes ou instrumentos; a pessoa vê se tiver qualquer um deles.</p>
-          <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Papéis</p>
-            <div className="flex flex-wrap gap-2">{roles.filter((r) => r.key !== 'direcao' && r.key !== 'titular').map((r) => chip({ kind: 'role', id: r.id }, r.name))}</div></div>
-          <div><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Naipes</p>
-            <div className="flex flex-wrap gap-2">{secs.map((s) => chip({ kind: 'section', id: s.id }, s.name))}</div></div>
-          {secs.map((s) => {
-            const list = insts.filter((i) => i.section_id === s.id)
-            return list.length === 0 ? null : (
-              <div key={s.id}><p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Instrumentos · {s.name}</p>
-                <div className="flex flex-wrap gap-2">{list.map((i) => chip({ kind: 'instrument', id: i.id }, i.name))}</div></div>
-            )
-          })}
+          <div className="rounded-md bg-muted p-2 text-sm">
+            <p className="font-semibold">Sempre têm acesso: Direção, Professores e Monitores</p>
+            <p className="text-xs text-muted-foreground">Em todas as pastas, de qualquer naipe. Não precisa marcar.</p>
+          </div>
+          <p className="text-xs text-muted-foreground">Marque os naipes que também veem esta pasta. Sem nenhum naipe, só a equipe acima vê.</p>
+          <div className="flex flex-wrap gap-2">{secs.map((s) => chip({ kind: 'section', id: s.id }, s.name))}</div>
         </div>
 
         <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">
@@ -256,7 +247,8 @@ export function DriveFoldersPage() {
               {canManage && (
                 <div className="flex flex-wrap gap-1">
                   {!f.is_active && <Badge>Desativada</Badge>}
-                  {who.length === 0 ? <Badge className="bg-warning/20">Só a Direção vê</Badge> : who.map((w, i) => <Badge key={i}>{w}</Badge>)}
+                  <Badge className="bg-secondary/30">Direção, professores e monitores</Badge>
+                  {who.map((w, i) => <Badge key={i}>{w}</Badge>)}
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-2">
@@ -281,7 +273,7 @@ export function DriveFoldersPage() {
       </div>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && (
-          <FolderSheet key={sheet.folder?.id ?? 'new'} folder={sheet.folder} roles={roles.data ?? []} onClose={() => setSheet(null)}
+          <FolderSheet key={sheet.folder?.id ?? 'new'} folder={sheet.folder} onClose={() => setSheet(null)}
             rules={sheet.folder ? (rules.data ?? []).filter((r) => r.folder_id === sheet.folder!.id) : []} />
         )}
       </Sheet>

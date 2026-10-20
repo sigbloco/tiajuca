@@ -1,5 +1,5 @@
 import {
-  Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
+  Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, GraduationCap, History,
   Home, Music2, Settings, ShieldCheck, Store, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
@@ -32,7 +32,6 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '', label: 'Início', icon: Home },
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },
-  { to: 'drive', label: 'Google Drive', icon: FolderOpen, permission: 'drive.read' },
   { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read' },
   { to: 'gerenciar-loja', label: 'Loja', icon: Store, permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
 

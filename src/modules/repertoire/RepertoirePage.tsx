@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Music2, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, FolderOpen, Music2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -63,6 +63,7 @@ export function RepertoirePage() {
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const canManage = usePermission('repertoire.manage')
+  const canDrive = usePermission('drive.read')
   const [sheet, setSheet] = useState<{ rep: Repertoire | null } | null>(null)
   const { data, isLoading } = useQuery({ queryKey: ['repertoires', orgId], queryFn: () => listRepertoires(orgId) })
 
@@ -85,7 +86,10 @@ export function RepertoirePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1>Repertório</h1>
-        {canManage && <Button onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
+        <div className="flex flex-wrap gap-2">
+          {canDrive && <Button asChild variant="outline"><Link to={`/${membership?.slug}/drive`}><FolderOpen className="h-4 w-4" /> Google Drive</Link></Button>}
+          {canManage && <Button onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
+        </div>
       </div>
       {isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {data?.length === 0 && <EmptyState>Nenhum repertório ainda.{canManage ? ' Crie o primeiro para começar a cadastrar músicas.' : ''}</EmptyState>}

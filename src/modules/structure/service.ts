@@ -11,6 +11,7 @@ export interface CatalogItem {
   section_id?: string | null
   color?: string
   subsection_id?: string | null
+  tuning?: string | null
 }
 
 export async function listCatalog(table: CatalogTable, orgId: string): Promise<CatalogItem[]> {

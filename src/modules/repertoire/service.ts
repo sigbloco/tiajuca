@@ -18,6 +18,8 @@ export interface Song {
   genre: string | null
   musical_key: string | null
   notes: string | null
+  guide_url: string | null
+  drive_folder_url: string | null
   sort_order: number
   is_active: boolean
 }
@@ -29,6 +31,7 @@ export interface Attachment {
   song_id: string
   instrument_id: string | null
   section_id: string | null
+  tuning: string | null
   kind: AttachmentKind
   url: string | null
   storage_path: string | null
@@ -40,6 +43,23 @@ export interface Attachment {
   is_active: boolean
   instruments: { name: string } | null
   sections: { name: string } | null
+}
+
+/** Afinações comuns de instrumentos de sopro; a mesma partitura serve para todos os instrumentos de uma afinação. */
+export const TUNINGS = ['Bb', 'Eb', 'F', 'C']
+
+const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+/** Adivinha para quem é uma partitura pelo nome do arquivo: nome do instrumento ou afinação (Bb, Eb, F, C). */
+export function guessTarget(text: string, instruments: { id: string; name: string }[]): string {
+  const t = norm(text)
+  const byName = instruments.filter((i) => t.includes(norm(i.name))).sort((a, b) => b.name.length - a.name.length)[0]
+  if (byName) return `i:${byName.id}`
+  const m = /(?:^|[\s_.(\[-])(bb|si ?b|eb|mi ?b|em c|em f)(?=$|[\s_.)\]-])/.exec(t)
+  if (!m) return ''
+  const k = m[1]
+  if (k === 'bb' || k.startsWith('si')) return 't:Bb'
+  if (k === 'eb' || k.startsWith('mi')) return 't:Eb'
+  return k === 'em f' ? 't:F' : 't:C'
 }
 
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
@@ -60,7 +80,7 @@ export async function listSongs(repertoireId: string) {
 
 export async function listAttachments(songId: string) {
   const { data, error } = await supabase.from('song_attachments')
-    .select('id, song_id, instrument_id, section_id, kind, url, storage_path, file_name, mime_type, size_bytes, description, source, is_active, instruments(name), sections(name)')
+    .select('id, song_id, instrument_id, section_id, tuning, kind, url, storage_path, file_name, mime_type, size_bytes, description, source, is_active, instruments(name), sections(name)')
     .eq('song_id', songId).order('created_at')
   if (error) throw error
   return (data ?? []) as unknown as Attachment[]

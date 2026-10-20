@@ -11,6 +11,7 @@ import { useOrgId } from '@/core/organization'
 import { useCatalog } from './CatalogEditor'
 import { OkSelect, SaveInput } from '@/components/shared/ConfirmField'
 import { notifySaved } from '@/core/undo'
+import { TUNINGS } from '@/modules/repertoire/service'
 import { useHoldReorder } from '@/core/holdReorder'
 import { describeChange, moveItemTo, invalidateCatalog, previousOf, saveCatalogItem, swapOrder, type CatalogItem, type CatalogTable } from './service'
 
@@ -283,11 +284,18 @@ export function InstrumentsManager({ canEdit }: { canEdit: boolean }) {
                 <ProgressiveList items={g.items} resetKey={filter.search} render={(i) => (
                   <ItemRow key={i.id} item={i} siblings={g.items} canEdit={canEdit} mut={mut}
                     extra={
+                      <>
+                      <OkSelect className="h-9 w-24" aria-label={`Afinação de ${i.name} (opcional)`} disabled={!canEdit} value={i.tuning ?? ''}
+                        onSave={(v) => mut.save.mutateAsync({ id: i.id, name: i.name, tuning: v || null })}>
+                        <option value="">Afinação</option>
+                        {TUNINGS.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </OkSelect>
                       <OkSelect className="h-9 w-36" aria-label={`Subnaipe de ${i.name} (opcional)`} disabled={!canEdit} value={i.subsection_id ?? ''}
                         onSave={(v) => mut.save.mutateAsync({ id: i.id, name: i.name, subsection_id: v || null })}>
                         <option value="">Sem subnaipe</option>
                         {subs.filter((x) => x.is_active || x.id === i.subsection_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                       </OkSelect>
+                      </>
                     } />
                 )} />
               )

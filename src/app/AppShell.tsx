@@ -33,7 +33,7 @@ export function AppShell() {
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   const entries: MenuEntry[] = [
-    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.to === 'gerenciar-loja' ? shopLabel : i.label, icon: i.icon })),
+    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.to === 'gerenciar-loja' ? shopLabel : i.label, icon: i.icon, also: i.to === 'repertorio' ? ['drive'] : undefined })),
     ...HUB_ORDER.flatMap((hub) => {
       const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
       return children.length === 0 ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), 'lista-de-espera'] }]
@@ -44,6 +44,7 @@ export function AppShell() {
   const item = NAV_ITEMS.find((i) => i.to === segs[0])
   const group = item?.group ?? (segs[0] === 'lista-de-espera' ? 'oficina' : undefined)
   const parent = segs.length === 0 ? null
+    : segs[0] === 'drive' ? { to: `${base}/repertorio`, name: 'Repertório' }
     : segs.length > 1 ? { to: `${base}/${segs[0]}`, name: segs[0] === 'gerenciar-loja' ? shopLabel : item?.label ?? 'a página anterior' }
     : group ? { to: `${base}/${group}`, name: HUBS[group].label }
     : { to: base, name: 'a página inicial' }
