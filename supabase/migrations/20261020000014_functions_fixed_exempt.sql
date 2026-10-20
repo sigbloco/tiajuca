@@ -15,7 +15,7 @@ where not exists (select 1 from public.artistic_functions f where f.organization
 update public.artistic_functions set sort_order = case name
   when 'Direção' then 1 when 'Professor' then 2 when 'Monitor' then 3 when 'Regência' then 4 when 'Músico' then 5
   when 'Senior' then 6 when 'Aluno' then 7 when 'Redes sociais' then 8 when 'Apoio' then 9 when 'Produção' then 10 else 99 end;
-update public.artistic_functions set is_fixed = true where name in ('Direção', 'Professor', 'Monitor', 'Regência', 'Músico');
+update public.artistic_functions set is_fixed = true where name in ('Direção', 'Regência', 'Músico'); -- Professor e Monitor não são fixos; só a isenção deles é.
 update public.artistic_functions set is_exempt = true, exempt_locked = true where name in ('Direção', 'Professor', 'Monitor');
 -- Fora da lista combinada: fica guardada (os vínculos existentes são mantidos), mas desativada.
 update public.artistic_functions set is_active = false where name = 'Escritora';
