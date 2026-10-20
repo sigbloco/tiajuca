@@ -41,3 +41,6 @@
 @keyframes undo-bar { from { width: 100%; } to { width: 0%; } }
 .undo-bar { animation-name: undo-bar; animation-timing-function: linear; animation-fill-mode: forwards; }
 .undo-card:hover .undo-bar { animation-play-state: paused; }
+
+/* Edição na própria página: enquanto há um painel de edição aberto, o conteúdo da página fica oculto (e volta ao fechar). */
+main:has(> #edit-slot > *) > .page-body { display: none; }

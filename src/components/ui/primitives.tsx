@@ -3,7 +3,8 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { clsx, type ClassValue } from 'clsx'
 import { X } from 'lucide-react'
-import { forwardRef, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes } from 'react'
+import { forwardRef, useEffect, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes } from 'react'
+import { createPortal } from 'react-dom'
 import { twMerge } from 'tailwind-merge'
 
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
@@ -64,7 +65,11 @@ export const Badge = ({ className, ...props }: HTMLAttributes<HTMLSpanElement>) 
 )
 
 // Drawer lateral (Sheet) — padrão do projeto para criar/editar sem perder contexto.
-export const Sheet = DialogPrimitive.Root
+// Edição na própria página: o painel abre no lugar do conteúdo (em #edit-slot, dentro do AppShell) em vez de um drawer lateral.
+// Fora do AppShell (páginas públicas) volta a ser um drawer. Não é modal: nada de overlay nem armadilha de foco.
+export function Sheet(props: DialogPrimitive.DialogProps) {
+  return <DialogPrimitive.Root modal={false} {...props} />
+}
 export const SheetTrigger = DialogPrimitive.Trigger
 export const SheetClose = DialogPrimitive.Close
 
@@ -80,20 +85,29 @@ export function SheetContent({ title, description, children, className }: {
   const contentRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const guard = (e: { preventDefault: () => void }) => { if (dirty) { e.preventDefault(); setAsking(true) } }
-  return (
-    <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+  const slot = typeof document === 'undefined' ? null : document.getElementById('edit-slot')
+  // Ao abrir na página, sobe ao topo; ao fechar, volta para onde a pessoa estava.
+  useEffect(() => {
+    if (!slot) return
+    const y = window.scrollY
+    window.scrollTo(0, 0)
+    return () => window.scrollTo(0, y)
+  }, [slot])
+  const inline = Boolean(slot)
+  const content = (
       <DialogPrimitive.Content
         ref={contentRef}
         onEscapeKeyDown={guard}
-        onInteractOutside={guard}
+        onInteractOutside={(e) => { if (inline) e.preventDefault(); else guard(e) }}
         onInputCapture={(e) => {
           const t = e.target as HTMLInputElement
           if (t.closest?.('form') && !t.closest('[data-noguard]') && t.type !== 'search') setDirty(true)
         }}
         onSubmitCapture={() => setDirty(false)}
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-4 overflow-y-auto bg-card p-6 shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right',
+          inline
+            ? 'flex w-full flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-card md:p-6'
+            : 'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-4 overflow-y-auto bg-card p-6 shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right',
           className,
         )}
       >
@@ -123,6 +137,12 @@ export function SheetContent({ title, description, children, className }: {
           </div>
         )}
       </DialogPrimitive.Content>
+  )
+  if (slot) return createPortal(content, slot)
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+      {content}
     </DialogPrimitive.Portal>
   )
 }

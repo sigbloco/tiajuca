@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { DateInput, TimeInput } from '@/components/ui/masked-inputs'
+import { DateInput, PhoneInput, TimeInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
@@ -13,7 +13,11 @@ import { deletePickupPoint, listPickupPoints, savePickupPoint, type PickupPoint 
 function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const [f, setF] = useState({ name: point?.name ?? '', address: point?.address ?? '', opening_hours: point?.opening_hours ?? '', is_active: point?.is_active ?? true })
+  const [f, setF] = useState({ name: point?.name ?? '', address: point?.place_address ?? point?.address ?? '', opening_hours: point?.opening_hours ?? '', is_active: point?.is_active ?? true })
+  const [kind, setKind] = useState<PickupPoint['kind']>(point?.kind ?? 'place')
+  const [contact, setContact] = useState({ name: point?.contact_name ?? '', phone: point?.contact_phone ?? '' })
+  const person = kind === 'person'
+  const valid = !!f.name.trim() && (person ? !!contact.name.trim() && contact.phone.replace(/\D/g, '').length >= 10 : !!f.address.trim())
   const [slots, setSlots] = useState<ScheduleSlot[]>(point?.schedule ?? [])
   const [errors, setErrors] = useState<string[]>([])
   const today = todayIso()
@@ -25,11 +29,12 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
 
   const save = useMutation({
     mutationFn: async () => {
-      const errs = validateSchedule(slots)
+      const errs = person ? [] : validateSchedule(slots)
       setErrors(errs)
       if (errs.length) return false
       await savePickupPoint(orgId, point?.id ?? null, {
-        name: f.name.trim(), address: f.address.trim(), opening_hours: f.opening_hours.trim(), is_active: f.is_active, schedule: cleanSchedule(slots),
+        name: f.name.trim(), address: f.address.trim() || contact.name.trim(), place_address: person ? null : f.address.trim(), opening_hours: person ? '' : f.opening_hours.trim(), is_active: f.is_active,
+        schedule: person ? [] : cleanSchedule(slots), kind, contact_name: contact.name.trim() || null, contact_phone: contact.phone.trim() || null,
       })
       return true
     },
@@ -39,13 +44,33 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
 
   return (
     <SheetContent title={point ? 'Editar ponto de retirada' : 'Novo ponto de retirada'} description="O cliente escolhe um ponto ativo no checkout.">
-      <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim() && f.address.trim()) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
+        <div role="radiogroup" aria-label="Tipo de retirada" className="grid grid-cols-2 gap-2">
+          {([['place', 'Lugar e horário'], ['person', 'Combinar com uma pessoa']] as const).map(([k, label]) => (
+            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
+              className={`min-h-11 rounded-lg border px-3 text-sm font-semibold ${kind === k ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted'}`}>{label}</button>
+          ))}
+        </div>
         <div className="space-y-1.5"><Label htmlFor="pp-name">Nome</Label>
-          <Input id="pp-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="pp-addr">Endereço</Label>
-          <Input id="pp-addr" required value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></div>
-
+          <Input id="pp-name" required placeholder={person ? 'Ex.: Entrega combinada' : 'Ex.: Ensaio de segunda'} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+        {!person && (
+          <div className="space-y-1.5"><Label htmlFor="pp-addr">Endereço</Label>
+            <Input id="pp-addr" required value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></div>
+        )}
         <fieldset className="space-y-2 rounded-lg border border-border p-3">
+          <legend className="px-1 font-semibold">{person ? 'Quem combina a entrega' : 'Quem o cliente deve procurar (opcional)'}</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-1.5"><Label htmlFor="pp-cname">Nome da pessoa</Label>
+              <Input id="pp-cname" maxLength={80} required={person} value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label htmlFor="pp-cphone">WhatsApp / telefone</Label>
+              <PhoneInput id="pp-cphone" value={contact.phone} onChange={(v) => setContact({ ...contact, phone: v })} /></div>
+          </div>
+          <p className="text-sm text-muted-foreground">{person
+            ? 'O cliente vê o nome e o telefone e combina direto com a pessoa se será encontro ao vivo, entrega por aplicativo ou no ensaio. Não há endereço nem horário.'
+            : 'Aparece junto do endereço para o cliente saber a quem se apresentar. O telefone fica visível para quem comprar.'}</p>
+        </fieldset>
+
+        {!person && <fieldset className="space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 font-semibold">Dias e horários de retirada</legend>
           <p className="text-sm text-muted-foreground">Use <strong>toda semana</strong> para dias fixos (ex.: ensaios às segundas) e <strong>data única</strong> para eventos. Datas que já passaram deixam de aparecer; se só sobrarem datas passadas, o ponto some do checkout.</p>
           {slots.map((s, i) => (
@@ -73,21 +98,21 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
             <Button type="button" size="sm" variant="outline" onClick={() => setSlots((c) => [...c, { type: 'weekly', weekday: 1 }])}><Plus className="h-4 w-4" /> Dia da semana</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setSlots((c) => [...c, { type: 'date', date: '' }])}><Plus className="h-4 w-4" /> Data única</Button>
           </div>
-        </fieldset>
+        </fieldset>}
 
-        <div className="space-y-1.5"><Label htmlFor="pp-hours">Observação (opcional)</Label>
-          <Input id="pp-hours" placeholder="Ex.: Entrada pela portaria lateral" value={f.opening_hours} onChange={(e) => setF({ ...f, opening_hours: e.target.value })} /></div>
+        {!person && <div className="space-y-1.5"><Label htmlFor="pp-hours">Observação (opcional)</Label>
+          <Input id="pp-hours" placeholder="Ex.: Entrada pela portaria lateral" value={f.opening_hours} onChange={(e) => setF({ ...f, opening_hours: e.target.value })} /></div>}
 
-        <p className="rounded-lg bg-muted p-3 text-sm"><strong>O cliente verá:</strong> {preview.text || 'nenhum horário informado'}
-          {preview.expired > 0 && <span className="text-muted-foreground"> ({preview.expired} data(s) já passada(s) não aparece(m))</span>}</p>
-        {slots.length > 0 && !hasFutureSlot(slots, today) && <p role="alert" className="text-sm text-destructive">Todas as datas já passaram: este ponto não vai aparecer no checkout.</p>}
+        {!person && <p className="rounded-lg bg-muted p-3 text-sm"><strong>O cliente verá:</strong> {preview.text || 'nenhum horário informado'}
+          {preview.expired > 0 && <span className="text-muted-foreground"> ({preview.expired} data(s) já passada(s) não aparece(m))</span>}</p>}
+        {!person && slots.length > 0 && !hasFutureSlot(slots, today) && <p role="alert" className="text-sm text-destructive">Todas as datas já passaram: este ponto não vai aparecer no checkout.</p>}
 
         <label className="flex min-h-11 items-center gap-3">
           <input type="checkbox" className="h-5 w-5" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} />
           Disponível no checkout
         </label>
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || !f.address.trim() || save.isPending}>Salvar</Button>
+        <Button type="submit" className="w-full" disabled={!valid || save.isPending}>Salvar</Button>
       </form>
     </SheetContent>
   )
@@ -119,9 +144,9 @@ export function PickupPointsTab() {
         return (
           <Card key={p.id} className={`flex items-start justify-between gap-2 p-3 ${p.is_active ? '' : 'opacity-60'}`}>
             <div className="min-w-0">
-              <p className="font-semibold">{p.name} {!p.is_active && <Badge>Inativo</Badge>} {expired && <Badge>Datas encerradas</Badge>}</p>
+              <p className="font-semibold">{p.name} {!p.is_active && <Badge>Inativo</Badge>} {p.kind === 'person' && <Badge>Combinar com a pessoa</Badge>}{p.kind === 'place' && expired && <Badge>Datas encerradas</Badge>}</p>
               <p className="text-sm">{p.address}</p>
-              <p className="text-sm text-muted-foreground">{when || 'Horário não informado'}</p>
+              {p.kind === 'place' && <p className="text-sm text-muted-foreground">{when || 'Horário não informado'}</p>}
             </div>
             <div className="flex shrink-0">
               <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet({ point: p })}><Pencil className="h-4 w-4" /></Button>

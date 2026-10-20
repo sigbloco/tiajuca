@@ -9,7 +9,11 @@ export interface ShopProduct {
   price_cents: number; member_discount_pct: number; lead_time_days: number | null; is_active: boolean; sort_order: number
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
-export interface PickupPoint { id: string; name: string; address: string; opening_hours: string; schedule: ScheduleSlot[]; sort_order: number; is_active: boolean }
+export interface PickupPoint {
+  id: string; name: string; address: string; opening_hours: string; schedule: ScheduleSlot[]; sort_order: number; is_active: boolean
+  /** 'place' = lugar e horário; 'person' = combinar direto com uma pessoa. */
+  kind: 'place' | 'person'; contact_name: string | null; contact_phone: string | null; place_address: string | null
+}
 
 export const IMAGE_BUCKET = 'shop-images'
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
