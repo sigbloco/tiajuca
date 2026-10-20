@@ -320,10 +320,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </div>
       )}
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input className="pl-9" type="search" aria-label="Buscar integrante pelo nome" placeholder="Buscar pelo nome…" value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Situação no ciclo">
         <button type="button" aria-pressed={showActive} className={chip(showActive)} onClick={() => setShowActive(!showActive)}>Ativos</button>
         <button type="button" aria-pressed={showInactive} className={chip(showInactive)} onClick={() => setShowInactive(!showInactive)}>Inativos</button>
@@ -337,6 +333,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </div>
       )}
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input className="pl-9" type="search" aria-label="Buscar integrante pelo nome" placeholder="Buscar pelo nome…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
 
       <ReactivationRequests />
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
