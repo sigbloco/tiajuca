@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
-import { Link2, Pencil, Plus } from 'lucide-react'
+import { Link2, Pencil, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
-import { EMPTY_FILTER, FilterBar, matchesText, type FilterValue } from '@/components/shared/FilterBar'
+import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -84,9 +84,11 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
  * Integrantes agrupados por naipe → subnaipe → instrumento, VISTOS POR CICLO: os botões de ciclo mostram quem participou de cada
  * Carnaval (com o instrumento que tinha na época); "Também esteve em" cruza ciclos (ex.: ativos hoje que já estavam em 2024/25).
  */
+const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor', 'Professores'], ['monitor', 'Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
+const TYPE_KEYS = TYPE_OPTIONS.map(([k]) => k)
+
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
-  const [categoryFilter, setCategoryFilter] = useState('')
   const cats = useQuery({
     queryKey: ['members', orgId, 'categories'],
     queryFn: async () => {
@@ -96,11 +98,31 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     },
   })
   const categoryOf = new Map((cats.data ?? []).map((c) => [c.member_id, c]))
-  const categoryNames = [...new Set((cats.data ?? []).map((c) => c.category_name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  const wantedCategory = lockedCategory ?? categoryFilter
+  const wantedCategory = lockedCategory ?? ''
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
-  const [filter, setFilter] = useState<FilterValue>({ ...EMPTY_FILTER, status: 'active' })
-  const [sectionFilter, setSectionFilter] = useState('')
+  // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
+  const [search, setSearch] = useState('')
+  const filter: FilterValue = { ...EMPTY_FILTER, search }
+  const sectionFilter = ''
+  const [showActive, setShowActive] = useState(true)
+  const [showInactive, setShowInactive] = useState(false)
+  const [types, setTypes] = useState<Set<string>>(new Set(TYPE_KEYS))
+  const staffKinds = useQuery({
+    queryKey: ['staff-assignments', orgId, 'kinds'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind').eq('organization_id', orgId).is('valid_to', null).limit(3000)
+      if (error) throw error
+      const out = new Map<string, Set<string>>()
+      for (const r of data ?? []) { const set = out.get(r.member_id as string) ?? new Set<string>(); set.add(r.staff_kind as string); out.set(r.member_id as string, set) }
+      return out
+    },
+  })
+  const typesOf = (memberId: string) => {
+    const out = new Set<string>(staffKinds.data?.get(memberId) ?? [])
+    const cat = categoryOf.get(memberId)?.category_name
+    if (cat === 'Aluno') out.add('aluno'); else if (cat === 'Senior') out.add('senior'); else if (cat === 'Músico') out.add('musico'); else if (cat === 'Monitor') out.add('monitor')
+    return out
+  }
   const [cycleSel, setCycleSel] = useState('')
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -119,7 +141,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   })
   const cycleButtons = useMemo(() => {
     const withPeople = new Set((allRows.data ?? []).map((r) => r.cycle_id))
-    return (cycles ?? []).filter((c) => c.is_active).map((c) => ({ ...c, empty: !withPeople.has(c.id) && !c.is_current })).sort((a, b) => b.starts_on.localeCompare(a.starts_on))
+    return (cycles ?? []).filter((c) => c.is_active).map((c) => ({ ...c, empty: !withPeople.has(c.id) && !c.is_current })).sort((a, b) => Number(b.is_current) - Number(a.is_current) || b.starts_on.localeCompare(a.starts_on))
   }, [cycles, allRows.data])
   const currentCycle = cycles?.find((c) => c.is_current)
   const activeCycleId = cycleSel || currentCycle?.id || cycleButtons[0]?.id || ''
@@ -172,8 +194,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     for (const m of members.data ?? []) {
       if (!inCycle(m.id, activeCycleId)) continue
       const st = statusOf(m.id)
-      if (filter.status === 'active' && !st?.counts_as_active) continue
-      if (filter.status === 'inactive' && (st?.counts_as_active || st?.is_waitlist)) continue
+      if (showActive !== showInactive) {
+        if (showActive && !st?.counts_as_active) continue
+        if (showInactive && (st?.counts_as_active || st?.is_waitlist)) continue
+      }
+      if (!lockedCategory && types.size < TYPE_KEYS.length) {
+        const mine = typesOf(m.id)
+        if (![...types].some((t) => mine.has(t))) continue
+      }
       if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
       if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
       // Instrumento NAQUELE ciclo: vínculo vigente no período; sem ele, o mais recente.
@@ -199,7 +227,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, subById, data: { sectionList, map, total: seen.size } as TreeData }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data])
+  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, showActive, showInactive, types, staffKinds.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -281,18 +309,23 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </div>
       )}
 
-      <FilterBar value={filter} onChange={setFilter} extraCount={(sectionFilter ? 1 : 0) + (categoryFilter && !lockedCategory ? 1 : 0)} onClearExtra={() => { setSectionFilter(''); setCategoryFilter('') }}>
-        <Select aria-label="Naipe" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
-          <option value="">Todos os naipes</option>
-          {(sections.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </Select>
-        {!lockedCategory && categoryNames.length > 0 && (
-          <Select aria-label="Categoria" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="">Todas as categorias</option>
-            {categoryNames.map((n) => <option key={n} value={n}>{n}</option>)}
-          </Select>
-        )}
-      </FilterBar>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input className="pl-9" type="search" aria-label="Buscar integrante pelo nome" placeholder="Buscar pelo nome…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Situação no ciclo">
+        <button type="button" aria-pressed={showActive} className={chip(showActive)} onClick={() => setShowActive(!showActive)}>Ativos</button>
+        <button type="button" aria-pressed={showInactive} className={chip(showInactive)} onClick={() => setShowInactive(!showInactive)}>Inativos</button>
+      </div>
+      {!lockedCategory && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo de integrante">
+          {TYPE_OPTIONS.map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
+              onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
+          ))}
+        </div>
+      )}
+      <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
 
       <ReactivationRequests />
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
@@ -305,9 +338,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         {selected && <MemberDetailSheet member={selected} />}
       </Sheet>
 
-      <p className="text-muted-foreground">
-        {total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}
-      </p>
     </div>
   )
 }
