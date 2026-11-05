@@ -14,7 +14,7 @@ import { notifySaved } from '@/core/undo'
 import { UnsavedDialog, UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { saveAllUnsaved, useUnsavedCount } from '@/core/unsaved'
 import { useSearchParams } from 'react-router-dom'
-import { ColorPick, usePalette } from '@/modules/site/ColorPick'
+import { ColorPick, HexColorButton, usePalette } from '@/modules/site/ColorPick'
 
 type Tab = 'factory' | ThemeArea
 const AREAS: { key: Tab; label: string; intro: string }[] = [
@@ -37,8 +37,7 @@ function FactoryEditor() {
       <div className="flex flex-wrap items-center gap-3">
         {palette.map((hex, i) => (
           <div key={i} className="flex flex-col items-center gap-1 text-xs font-semibold">
-            <input type="color" aria-label={`Cor ${i + 1}`} value={hex} onChange={(e) => edit(i, e.target.value)}
-              className="h-11 w-14 cursor-pointer rounded border border-border bg-transparent p-0" />
+            <HexColorButton label={`Cor ${i + 1}`} value={hex} onChange={(v) => edit(i, v)} className="h-11 w-14 rounded border border-border" />
             <span>{i === 0 ? 'Principal' : i === 1 ? 'Apoio' : `Cor ${i + 1}`}</span>
             {palette.length > 2 && (
               <button type="button" className="inline-flex items-center gap-0.5 text-destructive hover:underline" onClick={() => setPalette(palette.filter((_, k) => k !== i))}>

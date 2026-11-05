@@ -34,6 +34,36 @@ function useColorList(area?: ThemeArea) {
   return [list, setList] as const
 }
 
+const HEX = /^#[0-9A-Fa-f]{6}$/
+
+/** Botão com a cor; abre uma janelinha para escolher no seletor ou digitar o hexadecimal (#RRGGBB). */
+export function HexColorButton({ value, onChange, label, className }: { value: string; onChange: (v: string) => void; label: string; className?: string }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState(value)
+  useEffect(() => { setText(value) }, [value])
+  const norm = (t: string) => { const x = t.trim().replace(/^#?/, '#'); return HEX.test(x) ? x.toUpperCase() : null }
+  const valid = norm(text)
+  return (
+    <span className="relative inline-block">
+      <button type="button" aria-label={label} title={value} aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        className={className ?? 'h-7 w-9 rounded border border-border'} style={{ backgroundColor: value }} />
+      {open && (
+        <div role="dialog" aria-label={label} className="absolute left-0 top-full z-50 mt-2 w-60 space-y-3 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-card">
+          <input type="color" aria-label="Seletor de cor" value={valid ?? value} onChange={(e) => { setText(e.target.value.toUpperCase()); onChange(e.target.value.toUpperCase()) }}
+            className="h-20 w-full cursor-pointer rounded border border-border bg-transparent p-0" />
+          <label className="block text-xs font-semibold">Hexadecimal
+            <input value={text} maxLength={7} spellCheck={false} aria-invalid={!valid} placeholder="#RRGGBB"
+              onChange={(e) => { setText(e.target.value); const v = norm(e.target.value); if (v) onChange(v) }}
+              className={`mt-1 block min-h-9 w-full rounded-lg border bg-background px-2 font-mono text-sm uppercase ${valid ? 'border-border' : 'border-destructive'}`} />
+          </label>
+          {!valid && <p className="text-xs text-destructive">Use 6 dígitos, ex.: #E93D2B</p>}
+          <button type="button" onClick={() => setOpen(false)} className="min-h-8 w-full rounded-lg border border-border text-sm font-semibold">Fechar</button>
+        </div>
+      )}
+    </span>
+  )
+}
+
 /** Paleta de fábrica do bloco (organizations.theme.palette). Só é editada/apagada na aba "Cores de fábrica". */
 export function usePalette() {
   return useColorList()
@@ -67,10 +97,9 @@ export function ColorPick({ label, value, onChange, area }: { label: string; val
         className={`min-h-8 rounded-lg border px-2.5 text-sm font-semibold ${value === null ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>Padrão do bloco</button>
       {ownIdx >= 0 && (
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <label className="inline-flex items-center gap-2 font-semibold">Trocar esta cor
-            <input type="color" aria-label={`Trocar a cor ${own[ownIdx]}`} value={own[ownIdx]} className="h-7 w-9 cursor-pointer rounded border border-border bg-transparent p-0"
-              onChange={(e) => { const v = e.target.value.toUpperCase(); onChange(v); setOwn(own.map((c, k) => (k === ownIdx ? v : c))) }} />
-          </label>
+          <div className="inline-flex items-center gap-2 font-semibold">Trocar esta cor
+            <HexColorButton label={`Trocar a cor ${own[ownIdx]}`} value={own[ownIdx]} onChange={(v) => { onChange(v); setOwn(own.map((c, k) => (k === ownIdx ? v : c))) }} />
+          </div>
           <button type="button" className="inline-flex items-center gap-1 font-semibold text-destructive hover:underline" onClick={() => { setOwn(own.filter((_, k) => k !== ownIdx)); onChange(null) }}><X className="h-3.5 w-3.5" /> Apagar esta cor</button>
         </div>
       )}
