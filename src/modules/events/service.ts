@@ -108,3 +108,16 @@ export async function materialize(orgId: string, until: string): Promise<number>
   if (error) throw error
   return (data as number) ?? 0
 }
+
+/** Cor escolhida no evento/recorrência → tipo existente dessa cor (ou cria um com o nome da cor). */
+export async function typeIdForColor(orgId: string, color: TypeColor): Promise<string> {
+  const { data, error } = await supabase.from('activity_types').select('id, color, is_active, sort_order').eq('organization_id', orgId)
+  if (error) throw error
+  const list = data ?? []
+  const found = list.find((t) => t.color === color && t.is_active) ?? list.find((t) => t.color === color)
+  if (found) return found.id
+  const { data: created, error: e2 } = await supabase.from('activity_types')
+    .insert({ organization_id: orgId, name: COLOR_LABEL[color], color, sort_order: list.reduce((m, t) => Math.max(m, t.sort_order ?? 0), 0) + 1 }).select('id').single()
+  if (e2) throw e2
+  return created.id
+}

@@ -13,10 +13,9 @@ import { ChecklistSection } from '@/modules/checklists/ChecklistSection'
 import { ItineraryEditor, cleanSteps } from './ItineraryEditor'
 import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { saveCatalogItem } from '@/modules/structure/service'
 import type { CatalogTable } from '@/modules/structure/service'
 import {
-  COLOR_BADGE, COLOR_DOT, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
+  COLOR_BADGE, COLOR_DOT, typeIdForColor, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
   type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -36,7 +35,6 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
   const qc = useQueryClient()
   const canManage = usePermission('events.manage')
   const canRecord = usePermission('attendance.record', 'group')
-  const types = useCatalog('activity_types')
   const cycles = useCycles()
 
   const isNew = activity === null
@@ -76,12 +74,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
   const refresh = () => qc.invalidateQueries({ queryKey: ['activities', orgId] })
   const save = useMutation({
     mutationFn: async () => {
-      // A cor escolhida no evento usa o tipo existente dessa cor (ou cria um).
-      const list = types.data ?? []
-      const typeId = (list.find((t) => t.color === f.color && t.is_active) ?? list.find((t) => t.color === f.color))?.id
-        ?? await saveCatalogItem('activity_types', orgId, { name: COLOR_LABEL[f.color], color: f.color, sort_order: list.reduce((m, t) => Math.max(m, t.sort_order), 0) + 1 })
-      if (!typeId) throw new Error('Não foi possível definir a cor.')
-      qc.invalidateQueries({ queryKey: ['catalog'] })
+      const typeId = await typeIdForColor(orgId, f.color)
       return saveActivity(orgId, activity?.id ?? null, {
         title: f.title.trim(),
         activity_type_id: typeId,

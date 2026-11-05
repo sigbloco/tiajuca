@@ -10,7 +10,7 @@ import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
-import { COLOR_BADGE, COLOR_DOT, COLOR_LABEL, STATUS_LABEL, listActivities, materialize, type Activity, type TypeColor } from './service'
+import { COLOR_BADGE, COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -24,8 +24,7 @@ export function EventsPage() {
 
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 }))
   const [cycleId, setCycleId] = useState('')
-  const [colorF, setColorF] = useState('')
-  const [selectedDay, setSelectedDay] = useState<string | null>(null)
+    const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
   const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados' | 'ciclos'>('agenda')
   const cycles = useCycles()
@@ -49,9 +48,9 @@ export function EventsPage() {
 
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
-    for (const a of data ?? []) if (!colorF || (a.activity_types?.color ?? 'muted') === colorF) (map[a.activity_date] ??= []).push(a)
+    for (const a of data ?? [])  (map[a.activity_date] ??= []).push(a)
     return map
-  }, [data, colorF])
+  }, [data])
 
   const monthPrefix = `${ym.y}-${String(ym.m + 1).padStart(2, '0')}`
   const listDays = Object.keys(byDay).filter((d) => d.startsWith(monthPrefix) && (!selectedDay || d === selectedDay)).sort()
@@ -98,14 +97,10 @@ export function EventsPage() {
 
       {tabs}
 
-      <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+      <div className="sm:max-w-xs">
         <Select aria-label="Filtrar por ciclo" value={cycleId} onChange={(e) => setCycleId(e.target.value)}>
           <option value="">Todos os ciclos</option>
           {cycles.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </Select>
-        <Select aria-label="Filtrar por cor" value={colorF} onChange={(e) => setColorF(e.target.value)}>
-          <option value="">Todas as cores</option>
-          {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
         </Select>
       </div>
 
@@ -126,7 +121,7 @@ export function EventsPage() {
                 key={d.iso}
                 onClick={() => setSelectedDay(selectedDay === d.iso ? null : d.iso)}
                 className={cn(
-                  'flex h-14 flex-col items-center rounded-lg p-1 hover:bg-muted',
+                  'flex h-11 flex-col items-center rounded-md p-0.5 hover:bg-muted',
                   Math.floor(di / 7) % 2 === 1 ? 'bg-muted/60' : 'bg-card',
                   !d.inMonth && 'opacity-40',
                   d.iso === today && 'ring-2 ring-primary',
@@ -134,8 +129,8 @@ export function EventsPage() {
                 )}
                 aria-label={`${formatDayLong(d.iso)}${list.length ? `, ${list.length} evento(s)` : ''}`}
               >
-                <span className="text-sm font-semibold">{Number(d.iso.slice(8))}</span>
-                <span className="mt-1 flex flex-wrap justify-center gap-0.5">
+                <span className="text-sm font-semibold leading-tight">{Number(d.iso.slice(8))}</span>
+                <span className="flex flex-wrap justify-center gap-0.5">
                   {list.slice(0, 4).map((a) => (
                     <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30')} />
                   ))}
