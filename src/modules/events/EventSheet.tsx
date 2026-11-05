@@ -15,7 +15,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { saveCatalogItem } from '@/modules/structure/service'
 import type { CatalogTable } from '@/modules/structure/service'
 import {
-  COLOR_BADGE, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
+  COLOR_BADGE, COLOR_DOT, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
   type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -42,7 +42,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
   const [editing, setEditing] = useState(isNew)
   const [f, setF] = useState({
     title: activity?.title ?? '',
-    activity_type_id: activity?.activity_type_id ?? '',
+    color: (activity?.activity_types?.color ?? 'primary') as TypeColor,
     activity_date: activity?.activity_date ?? defaultDate,
     start_time: activity?.start_time?.slice(0, 5) ?? '',
     end_time: activity?.end_time?.slice(0, 5) ?? '',
@@ -61,12 +61,6 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
     const pick = byDate ?? cycles.data.find((c) => c.is_current) ?? cycles.data.find((c) => c.is_active)
     if (pick) setF((x) => ({ ...x, cycle_id: pick.id }))
   }, [cycles.data]) // eslint-disable-line react-hooks/exhaustive-deps
-  const [newType, setNewType] = useState<{ name: string; color: TypeColor } | null>(null)
-  const addType = useMutation({
-    mutationFn: async () => saveCatalogItem('activity_types', orgId, { name: newType!.name.trim(), color: newType!.color, sort_order: (types.data?.reduce((m, t) => Math.max(m, t.sort_order), 0) ?? 0) + 1 }),
-    onSuccess: (id) => { qc.invalidateQueries({ queryKey: ['catalog'] }); if (id) setF((x) => ({ ...x, activity_type_id: id })); setNewType(null); toast.success('Tipo criado.') },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
   const [aKind, setAKind] = useState<AudienceKind | ''>('')
   const [aRef, setARef] = useState('')
   const audienceOptions = useCatalog(aKind ? AUDIENCE_TABLE[aKind] : 'sections')
@@ -82,10 +76,16 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['activities', orgId] })
   const save = useMutation({
-    mutationFn: () =>
-      saveActivity(orgId, activity?.id ?? null, {
+    mutationFn: async () => {
+      // A cor escolhida no evento usa o tipo existente dessa cor (ou cria um).
+      const list = types.data ?? []
+      const typeId = (list.find((t) => t.color === f.color && t.is_active) ?? list.find((t) => t.color === f.color))?.id
+        ?? await saveCatalogItem('activity_types', orgId, { name: COLOR_LABEL[f.color], color: f.color, sort_order: list.reduce((m, t) => Math.max(m, t.sort_order), 0) + 1 })
+      if (!typeId) throw new Error('Não foi possível definir a cor.')
+      qc.invalidateQueries({ queryKey: ['catalog'] })
+      return saveActivity(orgId, activity?.id ?? null, {
         title: f.title.trim(),
-        activity_type_id: f.activity_type_id,
+        activity_type_id: typeId,
         activity_date: f.activity_date,
         start_time: f.start_time || null,
         end_time: f.end_time || null,
@@ -94,7 +94,8 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
         cycle_id: f.cycle_id || null,
         visibility: f.visibility,
         itinerary: steps.filter((x) => x.time && x.label.trim()).map((x) => ({ time: x.time, label: x.label.trim() })).sort((a, b) => a.time.localeCompare(b.time)) || null,
-      }, aKind && aRef ? { kind: aKind, ref_id: aRef } : null),
+      }, aKind && aRef ? { kind: aKind, ref_id: aRef } : null)
+    },
     onSuccess: () => {
       toast.success(isNew ? 'Evento criado.' : 'Evento atualizado.')
       qc.invalidateQueries({ queryKey: ['audience'] })
@@ -109,7 +110,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const valid = f.title.trim() && f.activity_type_id && f.activity_date && f.cycle_id
+  const valid = f.title.trim() && f.activity_date && f.cycle_id
   const time = activity ? [formatTime(activity.start_time), formatTime(activity.end_time)].filter(Boolean).join(' – ') : ''
 
   if (!editing && activity) {
@@ -161,23 +162,15 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
       <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="ev-title">Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5">
-          <Label htmlFor="ev-type">Tipo</Label>
-          <div className="flex gap-2">
-            <Select id="ev-type" required value={f.activity_type_id} onChange={(e) => setF({ ...f, activity_type_id: e.target.value })}>
-              <option value="">Selecione…</option>
-              {types.data?.filter((t) => t.is_active || t.id === f.activity_type_id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </Select>
-            <Button type="button" size="icon" variant="outline" aria-label="Novo tipo" title="Novo tipo" onClick={() => setNewType(newType ? null : { name: '', color: 'primary' })}><Plus className="h-4 w-4" /></Button>
+          <Label>Cor no calendário</Label>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor no calendário">
+            {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => (
+              <button key={c} type="button" role="radio" aria-checked={f.color === c} onClick={() => setF({ ...f, color: c })}
+                className={cn('flex items-center gap-2 rounded-full border px-3 py-1.5', f.color === c ? 'border-primary bg-muted font-semibold ring-2 ring-primary' : 'border-border')}>
+                <span className={cn('h-3 w-3 rounded-full', COLOR_DOT[c])} />{COLOR_LABEL[c]}
+              </button>
+            ))}
           </div>
-          {newType && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
-              <Input aria-label="Nome do novo tipo" className="min-w-32 flex-1" placeholder="Nome do tipo" value={newType.name} onChange={(e) => setNewType({ ...newType, name: e.target.value })} />
-              <Select aria-label="Cor do tipo" className="w-36" value={newType.color} onChange={(e) => setNewType({ ...newType, color: e.target.value as TypeColor })}>
-                {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
-              </Select>
-              <Button type="button" size="sm" disabled={!newType.name.trim() || addType.isPending} onClick={() => addType.mutate()}>Criar</Button>
-            </div>
-          )}
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1.5"><Label htmlFor="ev-date">Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>

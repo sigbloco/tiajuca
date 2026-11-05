@@ -8,10 +8,9 @@ import { usePermission } from '@/core/permissions'
 import { useCycles } from '@/modules/cycles/service'
 import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
-import { CatalogEditor, useCatalog } from '@/modules/structure/CatalogEditor'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
-import { COLOR_BADGE, COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
+import { COLOR_BADGE, COLOR_DOT, COLOR_LABEL, STATUS_LABEL, listActivities, materialize, type Activity, type TypeColor } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -25,12 +24,11 @@ export function EventsPage() {
 
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 }))
   const [cycleId, setCycleId] = useState('')
-  const [typeId, setTypeId] = useState('')
+  const [colorF, setColorF] = useState('')
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
-  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'tipos' | 'feriados' | 'ciclos'>('agenda')
+  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados' | 'ciclos'>('agenda')
   const cycles = useCycles()
-  const types = useCatalog('activity_types')
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
   const from = days[0].iso
@@ -44,16 +42,16 @@ export function EventsPage() {
   useEffect(() => { if (canManage) gen.mutate() }, [canManage, orgId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, isLoading } = useQuery({
-    queryKey: ['activities', orgId, from, to, cycleId, typeId],
+    queryKey: ['activities', orgId, from, to, cycleId],
     placeholderData: keepPreviousData,
-    queryFn: () => listActivities({ orgId, from, to, cycleId: cycleId || undefined, typeId: typeId || undefined }),
+    queryFn: () => listActivities({ orgId, from, to, cycleId: cycleId || undefined }),
   })
 
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
-    for (const a of data ?? []) (map[a.activity_date] ??= []).push(a)
+    for (const a of data ?? []) if (!colorF || (a.activity_types?.color ?? 'muted') === colorF) (map[a.activity_date] ??= []).push(a)
     return map
-  }, [data])
+  }, [data, colorF])
 
   const monthPrefix = `${ym.y}-${String(ym.m + 1).padStart(2, '0')}`
   const listDays = Object.keys(byDay).filter((d) => d.startsWith(monthPrefix) && (!selectedDay || d === selectedDay)).sort()
@@ -66,29 +64,37 @@ export function EventsPage() {
   // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
   const tabs = canManage && (
     <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
-      {([['agenda', 'Agenda'], ['ciclos', 'Ciclos'], ['recorrencias', 'Recorrências'], ['tipos', 'Tipos de evento'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
+      {([['agenda', 'Agenda'], ['ciclos', 'Ciclos'], ['recorrencias', 'Recorrências'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
         <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
           className={cn('shrink-0 rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
       ))}
     </div>
   )
+  const header = (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1>Calendário</h1>
+        {canManage && <Button onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
+      </div>
+  )
+  const sheetEl = (
+    <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
+      {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
+    </Sheet>
+  )
   if (tab !== 'agenda' && canManage) {
     return (
-      <div className="space-y-4"><h1>Calendário</h1>{tabs}
+      <div className="space-y-4">{header}{tabs}
         {tab === 'recorrencias' && <RecurrencesSettings />}
-        {tab === 'tipos' && <CatalogEditor table="activity_types" title="Tipos de evento" singular="Tipo" withColor canEdit={canManage} hint="Cada tipo tem uma cor no calendário." />}
         {tab === 'feriados' && <HolidaysSettings />}
         {tab === 'ciclos' && <CyclesPage />}
+        {sheetEl}
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Calendário</h1>
-        {canManage && <Button onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
-      </div>
+      {header}
 
       {tabs}
 
@@ -97,9 +103,9 @@ export function EventsPage() {
           <option value="">Todos os ciclos</option>
           {cycles.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
-        <Select aria-label="Filtrar por tipo" value={typeId} onChange={(e) => setTypeId(e.target.value)}>
-          <option value="">Todos os tipos</option>
-          {types.data?.filter((t) => t.is_active).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        <Select aria-label="Filtrar por cor" value={colorF} onChange={(e) => setColorF(e.target.value)}>
+          <option value="">Todas as cores</option>
+          {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
         </Select>
       </div>
 
@@ -167,9 +173,7 @@ export function EventsPage() {
         ))}
       </div>
 
-      <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
-      </Sheet>
+      {sheetEl}
     </div>
   )
 }
