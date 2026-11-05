@@ -86,14 +86,14 @@ function CycleParticipation({ memberId }: { memberId: string }) {
 }
 
 function ContactLinks({ member }: { member: MemberRow }) {
-  const social = socialUrl(member.social_handle)
+  const socials = (member.social_handle ?? '').split('\n').map((x) => socialUrl(x)).filter((x): x is string => !!x)
   const wa = whatsappUrl(member.phone)
-  if (!member.phone && !social && !member.email) return null
+  if (!member.phone && socials.length === 0 && !member.email) return null
   const cls = 'inline-flex items-center rounded-md border border-border px-2 py-1 text-sm hover:bg-muted'
   return (
     <div className="flex flex-wrap gap-2">
       {member.phone && <a className={cls} href={wa ?? `tel:${member.phone}`} target="_blank" rel="noreferrer noopener">WhatsApp {maskPhone(member.phone)}</a>}
-      {social && <a className={cls} href={social} target="_blank" rel="noreferrer noopener">{socialLabel(social)}</a>}
+      {socials.map((social) => <a key={social} className={cls} href={social} target="_blank" rel="noreferrer noopener">{socialLabel(social)}</a>)}
       {member.email && <a className={cls} href={`mailto:${member.email}`}>{member.email}</a>}
     </div>
   )

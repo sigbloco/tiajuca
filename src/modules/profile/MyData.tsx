@@ -1,7 +1,7 @@
 import { useUnsaved } from '@/core/unsaved'
-import { socialLabel, socialUrl } from '@/core/social'
+import { socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock } from 'lucide-react'
+import { Lock, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
@@ -16,7 +16,9 @@ interface Me {
   birth_date: string | null; joined_at: string | null; affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null
 }
 
-/** Dados cadastrais do próprio integrante. Campos administrativos (nome completo, e-mail, nascimento) ficam só leitura. */
+const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); return l.length ? l : [''] }
+
+/** Dados cadastrais do próprio integrante: tudo editável, exceto a data de inscrição. Redes sociais: várias, uma por linha. */
 export function MyData({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -29,10 +31,10 @@ export function MyData({ memberId }: { memberId: string }) {
       return data as Me
     },
   })
-  const [f, setF] = useState({ display_name: '', phone: '', social_handle: '', affective_relation: '', played_other_blocks: false, other_blocks: '' })
+  const [f, setF] = useState({ full_name: '', email: '', birth_date: '', display_name: '', phone: '', socials: [''], affective_relation: '', played_other_blocks: false, other_blocks: '' })
   useEffect(() => {
     const d = me.data
-    if (d) setF({ display_name: d.display_name ?? '', phone: d.phone ? maskPhone(d.phone) : '', social_handle: d.social_handle ?? '', affective_relation: d.affective_relation ?? '',
+    if (d) setF({ full_name: d.full_name, email: d.email ?? '', birth_date: d.birth_date ?? '', display_name: d.display_name ?? '', phone: d.phone ? maskPhone(d.phone) : '', socials: toList(d.social_handle), affective_relation: d.affective_relation ?? '',
       played_other_blocks: d.played_other_blocks, other_blocks: d.other_blocks ?? '' })
   }, [me.data])
 
@@ -41,7 +43,8 @@ export function MyData({ memberId }: { memberId: string }) {
       const { error } = await supabase.rpc('update_my_profile', {
         p_member: memberId,
         p_patch: {
-          display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: socialUrl(f.social_handle) ?? '', affective_relation: f.affective_relation,
+          full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''),
+          social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n'), affective_relation: f.affective_relation,
           played_other_blocks: f.played_other_blocks, other_blocks: f.played_other_blocks ? f.other_blocks : '',
         },
       })
@@ -51,7 +54,7 @@ export function MyData({ memberId }: { memberId: string }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? JSON.stringify({ display_name: me.data.display_name ?? '', phone: me.data.phone ? maskPhone(me.data.phone) : '', social_handle: me.data.social_handle ?? '', affective_relation: me.data.affective_relation ?? '', played_other_blocks: me.data.played_other_blocks, other_blocks: me.data.other_blocks ?? '' }) : ''
+  const baseline = me.data ? JSON.stringify({ full_name: me.data.full_name, email: me.data.email ?? '', birth_date: me.data.birth_date ?? '', display_name: me.data.display_name ?? '', phone: me.data.phone ? maskPhone(me.data.phone) : '', socials: toList(me.data.social_handle), affective_relation: me.data.affective_relation ?? '', played_other_blocks: me.data.played_other_blocks, other_blocks: me.data.other_blocks ?? '' }) : ''
   useUnsaved(!!me.data && JSON.stringify(f) !== baseline, () => save.mutateAsync())
   if (me.isLoading || !me.data) return <Skeleton className="h-40" />
   const d = me.data
@@ -60,20 +63,25 @@ export function MyData({ memberId }: { memberId: string }) {
   return (
     <Card className="space-y-3 p-4">
       <h3>Meus dados</h3>
-      <dl className="grid gap-2 sm:grid-cols-2">
-        <div><dt className="text-xs text-muted-foreground">Nome completo</dt><dd className="font-semibold">{d.full_name}</dd></div>
-        <div><dt className="text-xs text-muted-foreground">E-mail</dt><dd className="font-semibold">{d.email ?? '—'}</dd></div>
-        <div><dt className="text-xs text-muted-foreground">Data de nascimento</dt><dd className="font-semibold">{formatDate(d.birth_date)}</dd></div>
-        <div><dt className="text-xs text-muted-foreground">Inscrição</dt><dd className="font-semibold">{formatDate(d.joined_at)}</dd></div>
-      </dl>
-      <p className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> Nome completo, e-mail e data de nascimento só a Direção altera. Se algo estiver errado, fale com ela.</p>
-      <form onSubmit={(e) => { e.preventDefault(); if (phoneOk) save.mutate() }} className="space-y-3 border-t border-border pt-3">
+      <p className="text-sm text-muted-foreground">Inscrição em <strong>{formatDate(d.joined_at)}</strong> (não pode ser alterada).</p>
+      <form onSubmit={(e) => { e.preventDefault(); if (phoneOk) save.mutate() }} className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label htmlFor="my-full">Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="my-email">E-mail</Label><Input id="my-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
+        </div>
         <div className="space-y-1.5"><Label htmlFor="my-display">Como prefere ser chamado(a)</Label><Input id="my-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} /></div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
-          <div className="space-y-1.5"><Label htmlFor="my-social">Rede social</Label><Input id="my-social" placeholder="@usuario" value={f.social_handle} onChange={(e) => setF({ ...f, social_handle: e.target.value })} />
-            {socialUrl(f.social_handle) && <a className="text-xs text-primary underline" href={socialUrl(f.social_handle)!} target="_blank" rel="noreferrer noopener">Abrir {socialLabel(socialUrl(f.social_handle)!)}</a>}</div>
+          <div className="space-y-1.5"><Label htmlFor="my-social-0">Redes sociais</Label>
+            {f.socials.map((v, i) => (
+              <div key={i} className="flex gap-2">
+                <Input id={`my-social-${i}`} placeholder="@usuario" value={v} onChange={(e) => setF({ ...f, socials: f.socials.map((x, j) => (j === i ? e.target.value : x)) })} />
+                {f.socials.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setF({ ...f, socials: f.socials.filter((_, j) => j !== i) })}><X className="h-4 w-4" /></Button>}
+              </div>
+            ))}
+            <Button type="button" size="sm" variant="outline" onClick={() => setF({ ...f, socials: [...f.socials, ''] })}><Plus className="h-4 w-4" /> Adicionar rede social</Button></div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="my-aff">Qual é a sua relação com a Grande Tijuca?</Label>
           <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
@@ -95,7 +103,7 @@ export function MySensitiveData({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
-  const [open, setOpen] = useState(false)
+  const open = true
   const row = useQuery({
     queryKey: ['my-sensitive', orgId, memberId],
     enabled: open,
@@ -137,7 +145,6 @@ export function MySensitiveData({ memberId }: { memberId: string }) {
     <Card className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2"><Lock className="h-4 w-4" /> Dados pessoais sensíveis</h3>
-        <Button size="sm" variant="outline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Ocultar' : 'Ver e editar'}</Button>
       </div>
       <p className="text-muted-foreground">Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</p>
       {open && (
