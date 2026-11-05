@@ -44,3 +44,11 @@
 
 /* Edição na própria página: enquanto há um painel de edição aberto, o conteúdo da página fica oculto (e volta ao fechar). */
 main:has(> #edit-slot > *) > .page-body { display: none; }
+
+/* Telas estreitas (mínimo 360px): nada pode "vazar" para os lados e criar rolagem horizontal. */
+html, body { overflow-x: clip; max-width: 100%; }
+/* Palavras/e-mails/links longos quebram em vez de alargar a página; itens de flex deixam de ter largura mínima fixa. */
+main, [role='dialog'], [role='alertdialog'] { overflow-wrap: anywhere; }
+/* Itens de grade (ex.: um <select> com opção longa) não podem esticar a coluna além do espaço. */
+:where(.grid) > * { min-width: 0; }
+input, select, textarea { max-width: 100%; min-width: 0; }
