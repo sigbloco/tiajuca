@@ -4,6 +4,10 @@ export type ProductKind = 'stock' | 'made_to_order'
 
 export interface VariantStock { stock: number | null; reserved: number; is_active: boolean }
 
+/** No painel o estoque vai de -1 a 99: -1 = ilimitado (guardado como nulo), 0 = esgotado. */
+export const stockToDb = (ui: number): number | null => (ui === -1 ? null : ui)
+export const stockFromDb = (db: number | null): number => (db === null ? -1 : db)
+
 export const toCents = (reais: number): number => Math.round(reais * 100)
 export const fromCents = (cents: number): number => cents / 100
 
@@ -50,6 +54,6 @@ export function validateProductDraft(d: ProductDraft): string[] {
     if (labels.some((l) => !l)) errors.push('Toda variação precisa de um nome.')
     if (new Set(labels).size !== labels.length) errors.push('Há variações com o mesmo nome.')
   }
-  if (d.kind === 'stock' && d.variants.some((v) => v.stock === null || !Number.isInteger(v.stock) || v.stock < 0)) errors.push('Informe o estoque (0 ou mais) de cada variação.')
+  if (d.kind === 'stock' && d.variants.some((v) => v.stock === null || !Number.isInteger(v.stock) || v.stock < -1 || v.stock > 99)) errors.push('Informe o estoque de cada variação (de -1 a 99; -1 = ilimitado, 0 = esgotado).')
   return errors
 }

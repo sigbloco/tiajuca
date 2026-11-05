@@ -53,8 +53,10 @@ describe('validação do produto', () => {
   it('encomenda exige prazo; estoque exige quantidade', () => {
     expect(validateProductDraft({ ...draft, kind: 'made_to_order', leadTimeDays: null, variants: [{ label: 'Único', stock: null }] })).toEqual(['Informe o prazo de produção (em dias).'])
     expect(validateProductDraft({ ...draft, kind: 'made_to_order', leadTimeDays: 15, variants: [{ label: 'Único', stock: null }] })).toEqual([])
-    expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: null }] })).toEqual(['Informe o estoque (0 ou mais) de cada variação.'])
-    expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: -1 }] })).toHaveLength(1)
+    expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: null }] })).toEqual(['Informe o estoque de cada variação (de -1 a 99; -1 = ilimitado, 0 = esgotado).'])
+    expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: -2 }] })).toHaveLength(1)
+    expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: 100 }] })).toHaveLength(1)
+    expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: -1 }] })).toEqual([])
   })
   it('rejeita variações repetidas (sem diferenciar maiúsculas) e desconto fora da faixa', () => {
     expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: 1 }, { label: ' m ', stock: 2 }] })).toEqual(['Há variações com o mesmo nome.'])

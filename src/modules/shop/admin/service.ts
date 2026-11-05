@@ -116,3 +116,10 @@ export async function savePickupPoint(orgId: string, id: string | null, row: Omi
   if (error) throw error
 }
 
+
+/** Grava a nova ordem de exibição dos produtos (índice na lista = sort_order). */
+export async function reorderProducts(orgId: string, ids: string[]) {
+  const results = await Promise.all(ids.map((id, i) => supabase.from('shop_products').update({ sort_order: i }).eq('id', id).eq('organization_id', orgId)))
+  const failed = results.find((r) => r.error)
+  if (failed?.error) throw failed.error
+}
