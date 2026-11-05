@@ -28,6 +28,7 @@ import { NaipesPage } from '@/modules/structure/NaipesPage'
 import { SiteSettings } from '@/modules/site/SiteSettings'
 import { Organogram } from '@/modules/structure/Organogram'
 import { ChecklistsPage, FunctionsPage } from '@/modules/structure/OrgPages'
+import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { SectionNamesPage } from '@/modules/structure/NaipesSettings'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
@@ -129,7 +130,7 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="organizacao" />,
                   children: [
-                    { path: 'ciclos', element: <Navigate to="../eventos" relative="path" replace /> },
+                    { path: 'ciclos', element: <CyclesPage /> },
                     { path: 'fornecedores', element: <SuppliersPage /> },
                     { path: 'checklists', element: <ChecklistsPage /> },
                     { path: 'funcoes', element: <FunctionsPage /> },

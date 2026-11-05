@@ -6,7 +6,6 @@ import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays,
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { useCycles } from '@/modules/cycles/service'
-import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
@@ -26,7 +25,7 @@ export function EventsPage() {
   const [cycleId, setCycleId] = useState('')
     const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
-  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados' | 'ciclos'>('agenda')
+  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados'>('agenda')
   const cycles = useCycles()
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
@@ -63,7 +62,7 @@ export function EventsPage() {
   // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
   const tabs = canManage && (
     <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
-      {([['agenda', 'Agenda'], ['ciclos', 'Ciclos'], ['recorrencias', 'Recorrências'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
+      {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
         <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
           className={cn('shrink-0 rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
       ))}
@@ -85,7 +84,6 @@ export function EventsPage() {
       <div className="space-y-4">{header}{tabs}
         {tab === 'recorrencias' && <RecurrencesSettings />}
         {tab === 'feriados' && <HolidaysSettings />}
-        {tab === 'ciclos' && <CyclesPage />}
         {sheetEl}
       </div>
     )
