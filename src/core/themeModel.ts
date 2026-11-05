@@ -70,9 +70,15 @@ export function areaOverrides(theme: ThemeJson | null | undefined, area: ThemeAr
   return clean(area === 'general' ? theme : area === 'site' ? theme.site : theme.shop)
 }
 
-/** Cores valendo na área: as do geral, sobrepostas pelas da própria área. */
+/** Cores de fábrica: as duas primeiras da paleta do bloco viram botões/destaque e cor de apoio (padrão de Sistema, Site e Loja). */
+export function factoryColors(theme: ThemeJson | null | undefined): ThemeColors {
+  const p = (theme?.palette ?? []).filter(isHex)
+  return p.length >= 2 ? { primary: p[0].trim().toUpperCase(), secondary: p[1].trim().toUpperCase() } : {}
+}
+
+/** Cores valendo na área: as de fábrica, sobrepostas pelas do Sistema e depois pelas da própria área. */
 export function resolveColors(theme: ThemeJson | null | undefined, area: ThemeArea): ThemeColors {
-  return { ...areaOverrides(theme, 'general'), ...(area === 'general' ? {} : areaOverrides(theme, area)) }
+  return { ...factoryColors(theme), ...areaOverrides(theme, 'general'), ...(area === 'general' ? {} : areaOverrides(theme, area)) }
 }
 
 /** Variáveis CSS (canais "r g b") para as cores dadas. Só emite o que foi definido; o resto fica no padrão do sistema. */

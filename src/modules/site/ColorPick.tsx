@@ -56,7 +56,7 @@ export function ColorPick({ label, value, onChange, hideDefault }: { label: stri
             <input type="color" aria-label={`Trocar a cor ${palette[selectedIdx]}`} value={palette[selectedIdx]} className="h-7 w-9 cursor-pointer rounded border border-border bg-transparent p-0"
               onChange={(e) => { const v = e.target.value.toUpperCase(); onChange(v); setPalette(palette.map((c, k) => (k === selectedIdx ? v : c))) }} />
           </label>
-          {palette.length > 1 && <button type="button" className="inline-flex items-center gap-1 font-semibold text-destructive hover:underline" onClick={() => setPalette(palette.filter((_, k) => k !== selectedIdx))}><X className="h-3.5 w-3.5" /> Tirar da paleta</button>}
+          {palette.length > 2 && <button type="button" className="inline-flex items-center gap-1 font-semibold text-destructive hover:underline" onClick={() => setPalette(palette.filter((_, k) => k !== selectedIdx))}><X className="h-3.5 w-3.5" /> Tirar da paleta</button>}
         </div>
       )}
     </div>

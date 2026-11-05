@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ShoppingCart } from 'lucide-react'
+import { Plus, ShoppingCart, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { toast } from 'sonner'
 import { OrgLogo } from '@/components/shared/OrgLogo'
@@ -14,13 +14,46 @@ import { notifySaved } from '@/core/undo'
 import { UnsavedDialog, UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { saveAllUnsaved, useUnsavedCount } from '@/core/unsaved'
 import { useSearchParams } from 'react-router-dom'
-import { ColorPick } from '@/modules/site/ColorPick'
+import { ColorPick, usePalette } from '@/modules/site/ColorPick'
 
-const AREAS: { key: ThemeArea; label: string; intro: string }[] = [
-  { key: 'general', label: 'Geral', intro: 'Cores do sistema inteiro. São o ponto de partida do Site e da Loja.' },
-  { key: 'site', label: 'Site', intro: 'Só a página inicial pública. Onde estiver “Padrão do bloco”, vale o Geral.' },
-  { key: 'shop', label: 'Loja', intro: 'Só a vitrine da loja. Onde estiver “Padrão do bloco”, vale o Geral.' },
+type Tab = 'factory' | ThemeArea
+const AREAS: { key: Tab; label: string; intro: string }[] = [
+  { key: 'factory', label: 'Cores de fábrica', intro: '' },
+  { key: 'general', label: 'Sistema', intro: 'Cores do sistema inteiro. Onde estiver “Padrão do bloco”, vale o das Cores de fábrica.' },
+  { key: 'site', label: 'Site', intro: 'Só a página inicial pública. Onde estiver “Padrão do bloco”, vale o Sistema (e, antes dele, as Cores de fábrica).' },
+  { key: 'shop', label: 'Loja', intro: 'Só a vitrine da loja. Onde estiver “Padrão do bloco”, vale o Sistema (e, antes dele, as Cores de fábrica).' },
 ]
+
+/** Padrão do bloco: no mínimo 2 cores (1ª = botões e destaques, 2ª = cor de apoio); as demais ficam na paleta. Replicado em Sistema, Site e Loja. */
+function FactoryEditor() {
+  const [palette, setPalette] = usePalette()
+  const edit = (i: number, v: string) => setPalette(palette.map((c, k) => (k === i ? v.toUpperCase() : c)))
+  return (
+    <Card className="space-y-4 p-4">
+      <p className="text-sm text-muted-foreground">
+        Escolha pelo menos 2 cores (pode adicionar mais). A 1ª vira os botões e destaques e a 2ª a cor de apoio, em Sistema, Site e Loja,
+        onde estiver “Padrão do bloco”. Todas ficam disponíveis para escolher nas outras abas.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        {palette.map((hex, i) => (
+          <div key={i} className="flex flex-col items-center gap-1 text-xs font-semibold">
+            <input type="color" aria-label={`Cor ${i + 1}`} value={hex} onChange={(e) => edit(i, e.target.value)}
+              className="h-11 w-14 cursor-pointer rounded border border-border bg-transparent p-0" />
+            <span>{i === 0 ? 'Principal' : i === 1 ? 'Apoio' : `Cor ${i + 1}`}</span>
+            {palette.length > 2 && (
+              <button type="button" className="inline-flex items-center gap-0.5 text-destructive hover:underline" onClick={() => setPalette(palette.filter((_, k) => k !== i))}>
+                <X className="h-3 w-3" /> Tirar
+              </button>
+            )}
+          </div>
+        ))}
+        <button type="button" aria-label="Adicionar cor" title="Adicionar cor" disabled={palette.length >= 24} onClick={() => setPalette([...palette, '#888888'])}
+          className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-dashed border-border hover:bg-muted"><Plus className="h-5 w-5" /></button>
+      </div>
+      <p className="text-xs text-muted-foreground">As mudanças são salvas sozinhas.</p>
+    </Card>
+  )
+}
 
 const EMPTY_THEME: ThemeJson = {}
 
@@ -86,14 +119,14 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
         <p className="text-sm text-muted-foreground">{intro}</p>
         {COLOR_SLOTS.map((s) => (
           <div key={s.key} className="space-y-1" title={s.hint}>
-            <ColorPick label={s.label} value={colors[s.key] ?? null} hideDefault={area === 'general' && (s.key === 'primary' || s.key === 'secondary')}
+            <ColorPick label={s.label} value={colors[s.key] ?? null}
               onChange={(v) => setColors((c) => ({ ...c, [s.key]: v }))} />
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
           <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Salvando…' : 'Salvar cores'}</Button>
           {dirty && <Button variant="ghost" onClick={() => setColors(saved)}>Descartar</Button>}
-          {area !== 'general' && <Button variant="outline" onClick={restore}>Restaurar cores de fábrica</Button>}
+          <Button variant="outline" onClick={restore}>Restaurar cores de fábrica</Button>
         </div>
       </Card>
       <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
@@ -109,12 +142,12 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
 export function InterfacePage() {
   const can = usePermission('org.manage')
   const [params] = useSearchParams()
-  const [tab, setTab] = useState<ThemeArea>(() => (['site', 'shop'].includes(params.get('area') ?? '') ? (params.get('area') as ThemeArea) : 'general'))
+  const [tab, setTab] = useState<Tab>(() => (['factory', 'general', 'site', 'shop'].includes(params.get('area') ?? '') ? (params.get('area') as Tab) : 'factory'))
   if (!can) return <Card className="p-6">Você não tem permissão para mudar a interface.</Card>
   const current = AREAS.find((a) => a.key === tab)!
   const pending = useUnsavedCount()
-  const [next, setNext] = useState<ThemeArea | null>(null)
-  const go = (k: ThemeArea) => { if (k === tab) return; if (pending > 0) setNext(k); else setTab(k) }
+  const [next, setNext] = useState<Tab | null>(null)
+  const go = (k: Tab) => { if (k === tab) return; if (pending > 0) setNext(k); else setTab(k) }
   return (
     <div className="space-y-4">
       <h1>Interface</h1>
@@ -123,7 +156,7 @@ export function InterfacePage() {
           <Button key={a.key} role="tab" aria-selected={tab === a.key} variant={tab === a.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => go(a.key)}>{a.label}</Button>
         ))}
       </div>
-      <ColorsEditor key={tab} area={tab} intro={current.intro} />
+      {tab === 'factory' ? <FactoryEditor /> : <ColorsEditor key={tab} area={tab} intro={current.intro} />}
       <UnsavedDialog open={next !== null} onSave={async () => { await saveAllUnsaved(); setTab(next!); setNext(null) }}
         onDiscard={() => { setTab(next!); setNext(null) }} onStay={() => setNext(null)} />
     </div>
