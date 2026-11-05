@@ -18,7 +18,7 @@ import { ViewAsBar } from './ViewAsBar'
 interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; admin?: boolean }
 
 // Itens que ficam na barra inferior do celular; o resto vai em "Mais".
-const MOBILE_PRIMARY = new Set(['', 'membros', 'repertorio', 'eventos', 'oficina'])
+const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
 
 export function AppShell() {
   const { membership } = useOrganization()
@@ -66,8 +66,8 @@ export function AppShell() {
       </NavLink>
     </div>
   ))
-  const primary = entries.filter((e) => MOBILE_PRIMARY.has(e.to))
-  const more = entries.filter((e) => !MOBILE_PRIMARY.has(e.to))
+  const primary = [...MOBILE_PRIMARY].map((to) => entries.find((e) => e.to === to)).filter((e): e is MenuEntry => !!e)
+  const more = entries // "Mais" lista tudo, inclusive os itens da barra inferior
 
   return (
     <div className="min-h-screen bg-muted">

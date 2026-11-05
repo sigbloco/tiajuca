@@ -7,7 +7,7 @@ import type { PermissionKey, PermissionScope } from '@/core/permissions'
 /** Áreas do menu: cada uma é UM item à esquerda; as subpáginas ficam dentro dela (página inicial com cartões). */
 export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
 export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
-  oficina: { label: 'Oficina', icon: Drum, description: 'Alunos, presença, vagas e novas inscrições.' },
+  oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, vagas e novas inscrições.' },
   financeiro: { label: 'Financeiro', icon: Banknote, description: 'Receitas, despesas, mensalidades e bolsas.', homePermission: 'finance.read' },
   organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, checklists, funções e Google Drive.' },
 }
