@@ -119,7 +119,7 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
         <p className="text-sm text-muted-foreground">{intro}</p>
         {COLOR_SLOTS.map((s) => (
           <div key={s.key} className="space-y-1" title={s.hint}>
-            <ColorPick label={s.label} value={colors[s.key] ?? null}
+            <ColorPick area={area} label={s.label} value={colors[s.key] ?? null}
               onChange={(v) => setColors((c) => ({ ...c, [s.key]: v }))} />
           </div>
         ))}

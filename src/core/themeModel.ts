@@ -24,6 +24,8 @@ export interface ThemeJson extends ThemeColors {
   primaryForeground?: string
   secondaryForeground?: string
   palette?: string[]
+  /** Cores criadas dentro de cada aba (Sistema, Site, Loja); só podem ser apagadas lá. */
+  extras?: Partial<Record<ThemeArea, string[]>>
   site?: ThemeColors
   shop?: ThemeColors
 }
