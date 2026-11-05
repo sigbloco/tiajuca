@@ -9,7 +9,8 @@ import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/f
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { materialize } from './service'
+import { ItineraryEditor, cleanSteps } from './ItineraryEditor'
+import { materialize, type ItineraryStep } from './service'
 
 interface Rule {
   id: string
@@ -22,6 +23,7 @@ interface Rule {
   starts_on: string
   until: string | null
   is_active: boolean
+  itinerary: ItineraryStep[] | null
 }
 
 function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }) {
@@ -39,12 +41,13 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
     starts_on: rule?.starts_on ?? todayIso(membership?.timezone),
     until: rule?.until ?? '',
   })
+  const [steps, setSteps] = useState<ItineraryStep[]>(() => (rule?.itinerary ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label })))
   const save = useMutation({
     mutationFn: async () => {
       const row = {
         title: f.title.trim(), activity_type_id: f.activity_type_id, weekday: Number(f.weekday),
         start_time: f.start_time || null, end_time: f.end_time || null, location: f.location.trim() || null,
-        starts_on: f.starts_on, until: f.until || null,
+        starts_on: f.starts_on, until: f.until || null, itinerary: cleanSteps(steps),
       }
       const q = rule
         ? supabase.from('recurrence_rules').update(row).eq('id', rule.id)
@@ -60,7 +63,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
-    <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Eventos já criados não mudam.">
+    <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Eventos já criados não mudam (o roteiro vale para os próximos).">
       <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="r-title">Título</Label><Input id="r-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
@@ -83,6 +86,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
           <div className="space-y-1.5"><Label htmlFor="r-end">Fim</Label><TimeInput id="r-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="r-loc">Local</Label><Input id="r-loc" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></div>
+        <ItineraryEditor steps={steps} onChange={setSteps} />
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="r-until">Até (opcional)</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
