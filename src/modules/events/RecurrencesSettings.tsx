@@ -146,6 +146,25 @@ export function RecurrencesSettings() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const reactivate = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('recurrence_rules').update({ is_active: true, until: null }).eq('id', id)
+      if (error) throw error
+      return materialize(orgId, addDaysIso(todayIso(membership?.timezone), 84))
+    },
+    onSuccess: () => { toast.success('Recorrência reativada.'); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.rpc('delete_recurrence', { p_rule: id })
+      if (error) throw error
+      return data as number
+    },
+    onSuccess: (n) => { toast.success(`Recorrência apagada. ${n} evento(s) removido(s).`); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -169,12 +188,19 @@ export function RecurrencesSettings() {
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => setSheet({ rule: r })}>Editar</Button>
+              {!r.is_active && (
+                <Button size="sm" variant="outline" disabled={reactivate.isPending} onClick={() => reactivate.mutate(r.id)}>Reativar</Button>
+              )}
               {r.is_active && (
                 <Button size="sm" variant="ghost" className="text-destructive" disabled={end.isPending}
                   onClick={() => { if (window.confirm('Encerrar esta recorrência? Eventos futuros sem presença serão cancelados.')) end.mutate(r.id) }}>
                   Encerrar
                 </Button>
               )}
+              <Button size="sm" variant="ghost" className="text-destructive" disabled={remove.isPending}
+                onClick={() => { if (window.confirm('Apagar esta recorrência e os eventos gerados por ela? Eventos com presença registrada são mantidos no histórico.')) remove.mutate(r.id) }}>
+                Apagar
+              </Button>
             </div>
           </Card>
         ))}
