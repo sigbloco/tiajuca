@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
+import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { useCycles } from '@/modules/cycles/service'
@@ -23,7 +24,7 @@ export function EventsPage() {
 
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 }))
   const [cycleId, setCycleId] = useState('')
-    const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
   const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados'>('agenda')
   const cycles = useCycles()
@@ -45,9 +46,19 @@ export function EventsPage() {
     queryFn: () => listActivities({ orgId, from, to, cycleId: cycleId || undefined }),
   })
 
+  const holidays = useQuery({
+    queryKey: ['holidays-range', orgId, from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('holidays').select('day, name').eq('organization_id', orgId).gte('day', from).lte('day', to)
+      if (error) throw error
+      return Object.fromEntries((data ?? []).map((h) => [h.day as string, h.name as string])) as Record<string, string>
+    },
+  })
+  const holidayOf = (iso: string) => holidays.data?.[iso]
+
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
-    for (const a of data ?? [])  (map[a.activity_date] ??= []).push(a)
+    for (const a of data ?? []) (map[a.activity_date] ??= []).push(a)
     return map
   }, [data])
 
@@ -119,16 +130,17 @@ export function EventsPage() {
                 key={d.iso}
                 onClick={() => setSelectedDay(selectedDay === d.iso ? null : d.iso)}
                 className={cn(
-                  'flex h-11 flex-col items-center rounded-md p-0.5 hover:bg-muted',
+                  'flex h-9 flex-col items-center justify-center rounded-md p-0 hover:bg-muted',
                   Math.floor(di / 7) % 2 === 1 ? 'bg-muted/60' : 'bg-card',
                   !d.inMonth && 'opacity-40',
                   d.iso === today && 'ring-2 ring-primary',
                   selectedDay === d.iso && 'bg-muted',
                 )}
-                aria-label={`${formatDayLong(d.iso)}${list.length ? `, ${list.length} evento(s)` : ''}`}
+                title={holidayOf(d.iso)}
+                aria-label={`${formatDayLong(d.iso)}${holidayOf(d.iso) ? `, feriado: ${holidayOf(d.iso)}` : ""}${list.length ? `, ${list.length} evento(s)` : ""}`}
               >
-                <span className="text-sm font-semibold leading-tight">{Number(d.iso.slice(8))}</span>
-                <span className="flex flex-wrap justify-center gap-0.5">
+                <span className={cn('text-xs font-semibold leading-none', holidayOf(d.iso) && 'rounded-full bg-destructive px-1.5 py-0.5 text-destructive-foreground')}>{Number(d.iso.slice(8))}</span>
+                <span className="mt-0.5 flex h-1.5 flex-wrap justify-center gap-0.5">
                   {list.slice(0, 4).map((a) => (
                     <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30')} />
                   ))}
@@ -139,6 +151,7 @@ export function EventsPage() {
         </div>
       </Card>
 
+      {selectedDay && holidayOf(selectedDay) && <Badge className="bg-destructive/15 text-destructive">Feriado: {holidayOf(selectedDay)}</Badge>}
       {isLoading && <Skeleton className="h-24" />}
       {data && listDays.length === 0 && <EmptyState>Nenhum evento {selectedDay ? 'neste dia' : 'neste mês'}.</EmptyState>}
       <div className="space-y-4">
