@@ -3,14 +3,14 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, TimeInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { ItineraryEditor, cleanSteps } from './ItineraryEditor'
-import { materialize, type ItineraryStep } from './service'
+import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
 
 interface Rule {
   id: string
@@ -20,6 +20,8 @@ interface Rule {
   start_time: string | null
   end_time: string | null
   location: string | null
+  description: string | null
+  visibility: 'members' | 'staff'
   starts_on: string
   until: string | null
   is_active: boolean
@@ -33,7 +35,9 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   const types = useCatalog('activity_types')
   const [f, setF] = useState({
     title: rule?.title ?? '',
-    activity_type_id: rule?.activity_type_id ?? '',
+    color: (types.data?.find((t) => t.id === rule?.activity_type_id)?.color ?? 'primary') as TypeColor,
+    description: rule?.description ?? '',
+    visibility: (rule?.visibility ?? 'members') as Rule['visibility'],
     weekday: String(rule?.weekday ?? 1),
     start_time: rule?.start_time?.slice(0, 5) ?? '',
     end_time: rule?.end_time?.slice(0, 5) ?? '',
@@ -45,7 +49,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   const save = useMutation({
     mutationFn: async () => {
       const row = {
-        title: f.title.trim(), activity_type_id: f.activity_type_id, weekday: Number(f.weekday),
+        title: f.title.trim(), activity_type_id: await typeIdForColor(orgId, f.color), description: f.description.trim() || null, visibility: f.visibility, weekday: Number(f.weekday),
         start_time: f.start_time || null, end_time: f.end_time || null, location: f.location.trim() || null,
         starts_on: f.starts_on, until: f.until || null, itinerary: cleanSteps(steps),
       }
@@ -66,32 +70,45 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
     <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Eventos já criados não mudam (o roteiro vale para os próximos).">
       <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="r-title">Título</Label><Input id="r-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="r-type">Tipo</Label>
-            <Select id="r-type" required value={f.activity_type_id} onChange={(e) => setF({ ...f, activity_type_id: e.target.value })}>
-              <option value="">Selecione…</option>
-              {types.data?.filter((t) => t.is_active).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </Select>
+        <div className="space-y-1.5">
+          <Label>Cor no calendário</Label>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor no calendário">
+            {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => (
+              <button key={c} type="button" role="radio" aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} aria-checked={f.color === c} onClick={() => setF({ ...f, color: c })}
+                className={cn('flex items-center rounded-full border p-2', f.color === c ? 'border-primary bg-muted ring-2 ring-primary' : 'border-border')}>
+                <span className={cn('h-4 w-4 rounded-full', COLOR_DOT[c])} />
+              </button>
+            ))}
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="r-day">Dia da semana</Label>
-            <Select id="r-day" value={f.weekday} onChange={(e) => setF({ ...f, weekday: e.target.value })}>
-              {WEEKDAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
-            </Select>
-          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="r-day">Dia da semana</Label>
+          <Select id="r-day" value={f.weekday} onChange={(e) => setF({ ...f, weekday: e.target.value })}>
+            {WEEKDAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+          </Select>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="r-start">Início</Label><TimeInput id="r-start" value={f.start_time} onChange={(v) => setF({ ...f, start_time: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="r-end">Fim</Label><TimeInput id="r-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="r-loc">Local</Label><Input id="r-loc" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></div>
+        <div className="space-y-1.5">
+          <Label htmlFor="r-desc">Descrição</Label>
+          <textarea id="r-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+        </div>
         <ItineraryEditor steps={steps} onChange={setSteps} />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-3">
           <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="r-until">Até (opcional)</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
+          <div className="space-y-1.5">
+            <Label htmlFor="r-vis">Quem vê</Label>
+            <Select id="r-vis" value={f.visibility} onChange={(e) => setF({ ...f, visibility: e.target.value as Rule['visibility'] })}>
+              {Object.entries(VISIBILITY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </Select>
+          </div>
         </div>
-        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.activity_type_id || !f.starts_on || save.isPending}>Salvar</Button>
+        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || save.isPending}>Salvar</Button>
       </form>
     </SheetContent>
   )
