@@ -152,10 +152,10 @@ export function EventsPage() {
       </Card>
 
       {selectedDay && holidayOf(selectedDay) && <Badge className="bg-destructive/15 text-destructive">Feriado: {holidayOf(selectedDay)}</Badge>}
-      {isLoading && <Skeleton className="h-24" />}
-      {data && listDays.length === 0 && <EmptyState>Nenhum evento {selectedDay ? 'neste dia' : 'neste mês'}.</EmptyState>}
+      {selectedDay && isLoading && <Skeleton className="h-24" />}
+      {selectedDay && data && listDays.length === 0 && <EmptyState>Nenhum evento neste dia.</EmptyState>}
       <div className="space-y-4">
-        {listDays.map((day) => (
+        {selectedDay && listDays.map((day) => (
           <section key={day} className="space-y-2">
             <h3 className="capitalize">{formatDayLong(day)}</h3>
             {byDay[day].map((a, ai) => {
