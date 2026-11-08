@@ -347,7 +347,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
-        {selected && <MemberDetailSheet member={selected} />}
+        {selected && <MemberDetailSheet member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
       </Sheet>
 
     </div>

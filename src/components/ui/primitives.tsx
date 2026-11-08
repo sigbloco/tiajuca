@@ -80,8 +80,10 @@ function CrumbRegistrar({ title, close }: { title: string; close: () => void }) 
   return null
 }
 
-export function SheetContent({ title, description, children, className, drawer }: {
+export function SheetContent({ title, titleExtra, description, children, className, drawer }: {
   title: string
+  /** Complemento ao lado do título (ex.: categoria), em fonte mais clara. */
+  titleExtra?: React.ReactNode
   description?: string
   children: React.ReactNode
   className?: string
@@ -122,7 +124,7 @@ export function SheetContent({ title, description, children, className, drawer }
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <DialogPrimitive.Title className="font-display text-xl font-bold">{title}</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="font-display text-xl font-bold">{title}{titleExtra && <span className="font-normal text-muted-foreground"> • {titleExtra}</span>}</DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-muted-foreground">{description ?? ''}</DialogPrimitive.Description>
           </div>
           <DialogPrimitive.Close ref={closeRef} onClick={guard} className="rounded-md p-1 hover:bg-muted" aria-label="Fechar">

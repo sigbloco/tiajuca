@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Button, Card, Input, Label, Select } from '@/components/ui/primitives'
+import { Button, Card, Input, Label } from '@/components/ui/primitives'
+import { MemberSection } from '@/modules/members/MemberSection'
 import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
@@ -10,8 +11,6 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-
-const QUICK = [0, 25, 50, 75, 100]
 
 /** Formulário de bolsa (0–100%). 0% encerra a bolsa. Usado na ficha do integrante e na página de Bolsas. */
 export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSaved?: () => void }) {
@@ -26,27 +25,18 @@ export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSav
       return data as { percent: number; reason: string | null; scholarship_type_id: string | null } | null
     },
   })
-  const types = useQuery({
-    queryKey: ['scholarship-types', orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('scholarship_types').select('id, name').eq('organization_id', orgId).eq('is_active', true).order('name')
-      if (error) throw error
-      return (data ?? []) as { id: string; name: string }[]
-    },
-  })
   const [percent, setPercent] = useState('0')
   const [reason, setReason] = useState('')
-  const [type, setType] = useState('')
   useEffect(() => {
-    setPercent(String(current?.percent ?? 0)); setReason(current?.reason ?? ''); setType(current?.scholarship_type_id ?? '')
+    setPercent(String(Math.round(Number(current?.percent ?? 0)))); setReason(current?.reason ?? '')
   }, [current])
 
-  const n = Number(percent.replace(',', '.'))
-  const valid = percent !== '' && Number.isFinite(n) && n >= 0 && n <= 100
+  const n = Number(percent)
+  const valid = percent !== '' && Number.isInteger(n) && n >= 0 && n <= 100
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('set_scholarship', {
-        p_member: memberId, p_percent: n, p_from: todayIso(membership?.timezone), p_type: type || null, p_reason: reason.trim() || null,
+        p_member: memberId, p_percent: n, p_from: todayIso(membership?.timezone), p_type: current?.scholarship_type_id ?? null, p_reason: reason.trim() || null,
       })
       if (error) throw error
     },
@@ -61,23 +51,11 @@ export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSav
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {QUICK.map((q) => (
-          <Button key={q} type="button" size="sm" variant={Number(percent) === q ? 'default' : 'outline'} onClick={() => setPercent(String(q))}>
-            {q === 0 ? 'Sem bolsa' : q === 100 ? '100% (isento)' : `${q}%`}
-          </Button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}`}>Percentual (%)</Label>
-          <Input id={`pct-${memberId}`} inputMode="decimal" value={percent} onChange={(e) => setPercent(e.target.value.replace(/[^\d.,]/g, ''))} /></div>
-        <div className="space-y-1.5"><Label htmlFor={`type-${memberId}`}>Tipo</Label>
-          <Select id={`type-${memberId}`} value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">Sem tipo</option>
-            {types.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </Select></div>
-      </div>
-      <Input placeholder="Motivo (opcional)" value={reason} onChange={(e) => setReason(e.target.value)} />
+      <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}`}>Percentual (%)</Label>
+        <Input id={`pct-${memberId}`} className="w-28" inputMode="numeric" maxLength={3} value={percent}
+          onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPercent(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
+      <div className="space-y-1.5"><Label htmlFor={`reason-${memberId}`}>Motivo</Label>
+        <Input id={`reason-${memberId}`} placeholder="Opcional" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
       <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()}>Salvar bolsa</Button>
     </div>
@@ -131,15 +109,13 @@ export function MemberBilling({ memberId }: { memberId: string }) {
 
   if (!canBilling) return null
   return (
-    <section className="space-y-2">
-      <h3>Contribuição mensal</h3>
+    <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(price.data)}</span>}</>}>
       <Card className="space-y-2 p-3">
         <Label htmlFor="fee-cat">Categoria</Label>
 <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
           <option value="">Não contribui</option>
           {categories.data?.filter((c) => c.is_active || c.id === assignment?.fee_category_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
-        {price.data != null && <p className="text-muted-foreground">Valor atual da categoria: {formatCurrency(price.data)}/mês</p>}
       </Card>
       {canSchol && (
         <Card className="space-y-2 p-3">
@@ -147,6 +123,6 @@ export function MemberBilling({ memberId }: { memberId: string }) {
           <ScholarshipForm memberId={memberId} />
         </Card>
       )}
-    </section>
+    </MemberSection>
   )
 }
