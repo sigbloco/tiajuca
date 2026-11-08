@@ -11,7 +11,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
-import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
+import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, syncOccurrences, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
 
 interface Rule {
   id: string
@@ -61,16 +61,18 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         : supabase.from('recurrence_rules').insert({ ...row, organization_id: orgId })
       const { error } = await q
       if (error) throw error
+      if (rule) await syncOccurrences(orgId, todayIso(membership?.timezone), rule.id)
     },
     onSuccess: () => {
-      toast.success('Recorrência salva. Novas datas serão geradas na agenda.')
+      toast.success('Recorrência salva. As próximas datas foram atualizadas.')
+      qc.invalidateQueries({ queryKey: ['activities', orgId] })
       qc.invalidateQueries({ queryKey: ['rules', orgId] })
       onClose()
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
-    <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Eventos já criados não mudam (o roteiro vale para os próximos).">
+    <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Ao salvar, as próximas datas já geradas são atualizadas; as passadas não mudam.">
       <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="r-title">Título</Label><Input id="r-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5">
@@ -128,8 +130,12 @@ export function RecurrencesSettings() {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['rules', orgId] }); qc.invalidateQueries({ queryKey: ['activities', orgId] }) }
 
   const generate = useMutation({
-    mutationFn: () => materialize(orgId, addDaysIso(todayIso(membership?.timezone), 84)),
-    onSuccess: (n) => { toast.success(n ? `${n} evento(s) gerado(s).` : 'Tudo já está gerado.'); refresh() },
+    mutationFn: async () => {
+      const created = await materialize(orgId, addDaysIso(todayIso(membership?.timezone), 84))
+      const updated = await syncOccurrences(orgId, todayIso(membership?.timezone))
+      return { created, updated }
+    },
+    onSuccess: ({ created, updated }) => { toast.success(`${created} evento(s) gerado(s); ${updated} próximo(s) atualizado(s) conforme a recorrência.`); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const end = useMutation({
@@ -169,7 +175,7 @@ export function RecurrencesSettings() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2>Recorrências</h2>
         <div className="flex gap-2">
-          <Button variant="outline" disabled={generate.isPending} onClick={() => generate.mutate()}>Gerar próximas datas</Button>
+          <Button variant="outline" disabled={generate.isPending} onClick={() => generate.mutate()}>Atualizar próximas datas</Button>
           <Button onClick={() => setSheet({ rule: null })}><Plus className="h-4 w-4" /> Nova</Button>
         </div>
       </div>
