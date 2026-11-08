@@ -69,7 +69,7 @@ function CycleParticipation({ memberId }: { memberId: string }) {
   })
 
   return (
-    <MemberSection level={2} title="Ciclos">
+    <MemberSection title="Ciclos">
       {isLoading && <Skeleton className="h-16" />}
       {cycles?.filter((c) => c.is_active).map((c) => {
         const current = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === c.id)?.status_id)
@@ -215,9 +215,9 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
         <div className="space-y-3">
           <ArtisticLinks memberId={member.id} />
           <ArtisticLinks memberId={member.id} mode="collab" />
-          <CycleParticipation memberId={member.id} />
         </div>
       </MemberSection>
+      <CycleParticipation memberId={member.id} />
       <MemberBilling memberId={member.id} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
     </SheetContent>
