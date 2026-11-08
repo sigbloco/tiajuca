@@ -200,6 +200,16 @@ export function EventsPage() {
                   <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ activity: a })}>
                     <p className={cn('truncate font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
                     <p className="truncate text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
+                    {a.itinerary && a.itinerary.length > 0 && (
+                      <ul className="mt-1.5 space-y-1 border-t border-border/60 pt-1.5 text-sm">
+                        {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k) => (
+                          <li key={k} className="flex gap-2">
+                            <span className="w-24 shrink-0 font-semibold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span>
+                            <span className="min-w-0"><span className="font-medium">{x.label}</span>{x.location && <span className="text-muted-foreground"> · {x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </button>
                   <div className="flex flex-col items-end gap-1">
                     {t && <Badge className={COLOR_BADGE[t.color]}>{t.name}</Badge>}
