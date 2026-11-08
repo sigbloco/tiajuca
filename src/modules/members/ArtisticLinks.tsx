@@ -14,7 +14,7 @@ import { MemberSection } from './MemberSection'
 
 interface LinkRow {
   id: string
-  started_at: string
+  started_at?: string
   instrument_id: string | null
   function_id: string | null
   skill_level_id: string | null
@@ -28,13 +28,14 @@ interface Draft { instrument_id: string; function_id: string; skill_level_id: st
 const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false }
 
 /** Vínculos artísticos do integrante: naipe → instrumento (subnaipe nunca aparece aqui) e/ou função. Editáveis. */
-export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo que já passou: só leitura, com os vínculos vigentes naquele período. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
+export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo atual: vínculos vigentes hoje. Outro ciclo (passado ou futuro): os do próprio ciclo, editáveis. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
   const collab = mode !== 'artistic' // colaborativa e remunerada só têm função
   const paid = mode === 'paid'
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const historical = !!cycle && !cycle.is_current
-  const canManage = usePermission('members.manage') && !historical
+  const byCycle = !!cycle && !cycle.is_current // outro ciclo: tabela própria, uma linha por ciclo
+  const table = byCycle ? 'cycle_participations' : 'member_artistic_links'
+  const canManage = usePermission('members.manage')
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
@@ -46,13 +47,12 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const { data } = useQuery({
     queryKey: ['member-links', orgId, memberId, mode, cycle?.id ?? 'now'],
     queryFn: async () => {
-      let q = supabase
-        .from('member_artistic_links')
-        .select('id, started_at, instrument_id, function_id, skill_level_id, is_student, is_paid, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
+      const base = supabase
+        .from(table)
+        .select('id, instrument_id, function_id, skill_level_id, is_student, is_paid, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
         .eq('member_id', memberId)
         .order('created_at')
-      q = historical ? q.lte('started_at', cycle!.ends_on).or('ended_at.is.null,ended_at.gte.' + cycle!.starts_on) : q.is('ended_at', null)
-      const { data, error } = await q
+      const { data, error } = await (byCycle ? base.eq('cycle_id', cycle!.id) : base.is('ended_at', null))
       if (error) throw error
       return ((data ?? []) as unknown as LinkRow[]).filter((l) => (l.instrument_id === null) === collab && (!collab || l.is_paid === paid))
     },
@@ -69,15 +69,15 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
     mutationFn: async () => {
       const row = collab ? { function_id: nn(f.function_id), is_paid: paid } : { instrument_id: nn(f.instrument_id), is_student: f.is_student, skill_level_id: f.is_student ? nn(f.skill_level_id) : null }
       if (editing === 'new') {
-        const { data: ins, error } = await supabase.from('member_artistic_links').insert({
-          organization_id: orgId, member_id: memberId, ...row, is_primary: (data?.length ?? 0) === 0,
+        const { data: ins, error } = await supabase.from(table).insert({
+          organization_id: orgId, member_id: memberId, ...(byCycle ? { cycle_id: cycle!.id } : {}), ...row, is_primary: (data?.length ?? 0) === 0,
         }).select('id').single()
         if (error) throw error
         return { kind: 'new' as const, id: (ins as { id: string }).id, prev: null }
       }
       const old = data?.find((l) => l.id === editing)
       const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, is_student: old.is_student } : null
-      const { error } = await supabase.from('member_artistic_links').update(row).eq('id', editing!)
+      const { error } = await supabase.from(table).update(row).eq('id', editing!)
       if (error) throw error
       return { kind: 'edit' as const, id: editing, prev }
     },
@@ -85,8 +85,8 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
       close(); refresh()
       notifyChange(r.kind === 'new' ? 'Vínculo adicionado.' : 'Vínculo atualizado.', async () => {
         const { error } = r.kind === 'new'
-          ? await supabase.from('member_artistic_links').update({ ended_at: new Date().toISOString().slice(0, 10) }).eq('id', r.id!)
-          : await supabase.from('member_artistic_links').update(r.prev!).eq('id', r.id!)
+          ? (byCycle ? await supabase.from(table).delete().eq('id', r.id!) : await supabase.from(table).update({ ended_at: new Date().toISOString().slice(0, 10) }).eq('id', r.id!))
+          : await supabase.from(table).update(r.prev!).eq('id', r.id!)
         if (error) throw error
         refresh()
       })
@@ -95,13 +95,17 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   })
   const end = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('member_artistic_links').update({ ended_at: new Date().toISOString().slice(0, 10) }).eq('id', id)
+      // Ciclo atual: encerra o vínculo (fica a data). Outro ciclo: tira a participação daquele ciclo.
+      const { error } = byCycle ? await supabase.from(table).delete().eq('id', id) : await supabase.from(table).update({ ended_at: new Date().toISOString().slice(0, 10) }).eq('id', id)
       if (error) throw error
+      return data?.find((l) => l.id === id) ?? null
     },
-    onSuccess: (_d, id) => {
+    onSuccess: (gone, id) => {
       refresh()
-      notifyChange('Vínculo encerrado.', async () => {
-        const { error } = await supabase.from('member_artistic_links').update({ ended_at: null }).eq('id', id)
+      notifyChange(byCycle ? 'Participação removida do ciclo.' : 'Vínculo encerrado.', async () => {
+        const { error } = byCycle && gone
+          ? await supabase.from(table).insert({ organization_id: orgId, member_id: memberId, cycle_id: cycle!.id, instrument_id: gone.instrument_id, function_id: gone.function_id, skill_level_id: gone.skill_level_id, is_student: gone.is_student, is_paid: gone.is_paid })
+          : await supabase.from(table).update({ ended_at: null }).eq('id', id)
         if (error) throw error
         refresh()
       })

@@ -49,6 +49,27 @@ function ParticipationBlock({ memberId, cycle }: { memberId: string; cycle?: Cyc
   )
 }
 
+/** Ao entrar num ciclo que não é o atual, começa com a participação, a categoria e a bolsa do ciclo anterior em que a pessoa tinha registro. Devolve o nome do ciclo copiado. */
+async function copyFromPrevious(orgId: string, memberId: string, target: CycleLite, all: CycleLite[]): Promise<string | null> {
+  const has = await supabase.from('cycle_participations').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('cycle_id', target.id)
+  const hasFee = await supabase.from('cycle_fee_assignments').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('cycle_id', target.id)
+  if ((has.count ?? 0) > 0 || (hasFee.count ?? 0) > 0) return null
+  const prevs = all.filter((c) => c.starts_on < target.starts_on).sort((a, b) => b.starts_on.localeCompare(a.starts_on))
+  for (const prev of prevs) {
+    const parts = await supabase.from('cycle_participations').select('instrument_id, function_id, skill_level_id, is_student, is_paid, is_primary').eq('member_id', memberId).eq('cycle_id', prev.id)
+    const fee = await supabase.from('cycle_fee_assignments').select('fee_category_id').eq('member_id', memberId).eq('cycle_id', prev.id).maybeSingle()
+    const sch = await supabase.from('cycle_scholarships').select('percent, reason, scholarship_type_id').eq('member_id', memberId).eq('cycle_id', prev.id).maybeSingle()
+    if (parts.error) throw parts.error
+    if (!parts.data?.length && !fee.data) continue
+    const base = { organization_id: orgId, member_id: memberId, cycle_id: target.id }
+    if (parts.data?.length) { const { error } = await supabase.from('cycle_participations').insert(parts.data.map((x) => ({ ...base, ...x }))); if (error) throw error }
+    if (fee.data) { const { error } = await supabase.from('cycle_fee_assignments').insert({ ...base, fee_category_id: (fee.data as { fee_category_id: string }).fee_category_id }); if (error) throw error }
+    if (sch.data) { const { error } = await supabase.from('cycle_scholarships').insert({ ...base, ...(sch.data as object) }); if (error) throw error }
+    return prev.name
+  }
+  return null
+}
+
 /** Um ciclo da pessoa: situação, e como filhos a participação e a contribuição daquele ciclo. */
 function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, statuses }: {
   cycle: CycleLite; status?: { key: string; name: string; counts_as_active: boolean; is_waitlist: boolean }; memberId: string; canManage: boolean
@@ -119,6 +140,19 @@ function CyclesSection({ memberId }: { memberId: string }) {
       else toast.error(msg)
     },
   })
+  const add = useMutation({
+    mutationFn: async (cycleId: string) => {
+      await setMemberCycleStatus({ member: memberId, cycle: cycleId, status: 'active' })
+      const target = (cycles ?? []).find((c) => c.id === cycleId)
+      return target && !target.is_current ? copyFromPrevious(orgId, memberId, target, cycles ?? []) : null
+    },
+    onSuccess: (copied) => {
+      refresh()
+      qc.invalidateQueries({ queryKey: ['member-links', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['cycle-billing', orgId, memberId] })
+      toast.success(copied ? 'Ciclo adicionado, com a participação e a contribuição copiadas de ' + copied + '.' : 'Ciclo adicionado.')
+    },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const remove = useMutation({
     mutationFn: async (c: CycleLite) => {
       const { error } = await supabase.rpc('remove_member_cycle', { p_member: memberId, p_cycle: c.id })
@@ -142,7 +176,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
         {isLoading && <Skeleton className="h-16" />}
         {adding && (
           <div className="flex items-center gap-2 rounded-md bg-muted/40 p-2">
-            <Select aria-label="Ciclo" defaultValue="" onChange={(e) => { if (e.target.value) { change.mutate({ cycle: e.target.value, status: 'active' }); setAdding(false) } }}>
+            <Select aria-label="Ciclo" defaultValue="" onChange={(e) => { if (e.target.value) { add.mutate(e.target.value); setAdding(false) } }}>
               <option value="">Escolha o ciclo</option>
               {missing.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>

@@ -73,39 +73,99 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
 /** Seção "Contribuição" da ficha do integrante (somente Direção): categoria e bolsa. Dados sensíveis NÃO aparecem aqui. */
 type CycleWindow = { id: string; name?: string; starts_on: string; ends_on: string; is_current: boolean }
 
-/** Contribuição de um ciclo que já passou: categoria, bolsa e valor vigentes naquele período (só leitura). */
-function HistoricalBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindow }) {
+/** Contribuição de um ciclo que não é o atual (passado ou futuro): categoria e bolsa daquele ciclo, editáveis. */
+function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindow }) {
   const orgId = useOrgId()
+  const { membership } = useOrganization()
+  const qc = useQueryClient()
+  const canBilling = usePermission('billing.manage')
+  const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
-  const win = (q: any) => q.lte('valid_from', cycle.ends_on).or('valid_to.is.null,valid_to.gte.' + cycle.starts_on).order('valid_from', { ascending: false }).limit(1)
+  const today = todayIso(membership?.timezone)
   const info = useQuery({
-    queryKey: ['member-billing-cycle', orgId, memberId, cycle.id],
+    queryKey: ['cycle-billing', orgId, memberId, cycle.id],
     queryFn: async () => {
-      const a = await win(supabase.from('member_fee_assignments').select('fee_category_id').eq('member_id', memberId))
+      const a = await supabase.from('cycle_fee_assignments').select('fee_category_id').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
       if (a.error) throw a.error
-      const catId = (a.data?.[0] as { fee_category_id: string } | undefined)?.fee_category_id ?? null
-      const s = await win(supabase.from('scholarships').select('percent, reason').eq('member_id', memberId))
+      const s = await supabase.from('cycle_scholarships').select('percent, reason').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
       if (s.error) throw s.error
-      const sch = (s.data?.[0] ?? null) as { percent: number; reason: string | null } | null
-      let price: number | null = null
-      if (catId) {
-        const p = await supabase.from('fee_category_prices').select('amount').eq('fee_category_id', catId).lte('valid_from', cycle.ends_on).or('valid_to.is.null,valid_to.gte.' + cycle.ends_on).order('valid_from', { ascending: false }).limit(1)
-        if (p.error) throw p.error
-        price = p.data?.[0] ? Number(p.data[0].amount) : null
-      }
-      const l = await supabase.from('member_artistic_links').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('is_paid', true).lte('started_at', cycle.ends_on).or('ended_at.is.null,ended_at.gte.' + cycle.starts_on)
+      const l = await supabase.from('cycle_participations').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('cycle_id', cycle.id).eq('is_paid', true)
       if (l.error) throw l.error
-      return { catId, sch, price, paid: (l.count ?? 0) > 0 }
+      return { catId: (a.data as { fee_category_id: string } | null)?.fee_category_id ?? '', sch: s.data as { percent: number; reason: string | null } | null, paid: (l.count ?? 0) > 0 }
     },
   })
-  if (!info.data || info.data.paid) return null
-  const { catId, sch, price } = info.data
-  const pct = Number(sch?.percent ?? 0)
-  const name = categories.data?.find((c) => c.id === catId)?.name ?? 'Não contribuiu'
+  const catId = info.data?.catId ?? ''
+  const priceDate = cycle.ends_on < today ? cycle.ends_on : today
+  const price = useQuery({
+    queryKey: ['cycle-price', orgId, catId, priceDate],
+    enabled: !!catId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('fee_category_prices').select('amount').eq('fee_category_id', catId).lte('valid_from', priceDate).or('valid_to.is.null,valid_to.gte.' + priceDate).order('valid_from', { ascending: false }).limit(1)
+      if (error) throw error
+      return data?.[0] ? Number(data[0].amount) : null
+    },
+  })
+  const [pct, setPct] = useState('0')
+  const [reason, setReason] = useState('')
+  useEffect(() => { setPct(String(Math.round(Number(info.data?.sch?.percent ?? 0)))); setReason(info.data?.sch?.reason ?? '') }, [info.data])
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['cycle-billing', orgId, memberId, cycle.id] }); qc.invalidateQueries({ queryKey: ['members'] }) }
+
+  const setCategory = useMutation({
+    mutationFn: async (category: string) => {
+      const ex = await supabase.from('cycle_fee_assignments').select('id').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
+      if (ex.error) throw ex.error
+      const prev = catId
+      if (!category) { const { error } = await supabase.from('cycle_fee_assignments').delete().eq('member_id', memberId).eq('cycle_id', cycle.id); if (error) throw error }
+      else if (ex.data) { const { error } = await supabase.from('cycle_fee_assignments').update({ fee_category_id: category }).eq('id', (ex.data as { id: string }).id); if (error) throw error }
+      else { const { error } = await supabase.from('cycle_fee_assignments').insert({ organization_id: orgId, member_id: memberId, cycle_id: cycle.id, fee_category_id: category }); if (error) throw error }
+      return prev
+    },
+    onSuccess: (prev, category) => {
+      refresh()
+      notifyChange(category ? 'Categoria do ciclo atualizada.' : 'Pessoa sem contribuição neste ciclo.', async () => { await setCategory.mutateAsync(prev) })
+    },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const n = Number(pct)
+  const valid = pct !== '' && Number.isInteger(n) && n >= 0 && n <= 100
+  const saveSch = useMutation({
+    mutationFn: async () => {
+      const ex = await supabase.from('cycle_scholarships').select('id').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
+      if (ex.error) throw ex.error
+      if (n === 0) { const { error } = await supabase.from('cycle_scholarships').delete().eq('member_id', memberId).eq('cycle_id', cycle.id); if (error) throw error; return }
+      const row = { percent: n, reason: reason.trim() || null }
+      if (ex.data) { const { error } = await supabase.from('cycle_scholarships').update(row).eq('id', (ex.data as { id: string }).id); if (error) throw error }
+      else { const { error } = await supabase.from('cycle_scholarships').insert({ organization_id: orgId, member_id: memberId, cycle_id: cycle.id, ...row }); if (error) throw error }
+    },
+    onSuccess: () => { toast.success(n === 0 ? 'Bolsa removida do ciclo.' : 'Bolsa do ciclo atualizada.'); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const changed = valid && (n !== Math.round(Number(info.data?.sch?.percent ?? 0)) || reason.trim() !== (info.data?.sch?.reason ?? ''))
+  const autoSave = () => { if (changed && !saveSch.isPending) saveSch.mutate() }
+
+  if (!canBilling || !info.data || info.data.paid) return null
+  const catName = categories.data?.find((c) => c.id === catId)?.name
   return (
-    <MemberSection title={<>Contribuição mensal{price != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price * (100 - pct)) / 100)}</span>}</>}>
-      <p className="text-sm"><span className="text-muted-foreground">Categoria </span><span className="font-semibold">{name}</span></p>
-      {catId && name !== 'Isento' && pct > 0 && <p className="text-sm"><span className="text-muted-foreground">Bolsa </span><span className="font-semibold">{pct}%</span>{sch?.reason ? <span className="text-muted-foreground"> · {sch.reason}</span> : null}</p>}
+    <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
+      <div className="flex items-center gap-2">
+        <Label htmlFor={'cc-cat-' + cycle.id}>Categoria</Label>
+        <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
+          <option value="">Não contribui</option>
+          {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </OkSelect>
+      </div>
+      {canSchol && catId && catName !== 'Isento' && (
+        <div className="space-y-1.5 pt-1">
+          <p className="text-sm font-semibold">Bolsa</p>
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5"><Label htmlFor={'cc-pct-' + cycle.id} className="text-xs">Percentual (%)</Label>
+              <Input id={'cc-pct-' + cycle.id} className="h-8 w-16 px-2 text-center text-sm" inputMode="numeric" maxLength={3} value={pct} onBlur={autoSave}
+                onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPct(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
+            <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={'cc-reason-' + cycle.id} className="text-xs">Motivo</Label>
+              <Input id={'cc-reason-' + cycle.id} className="h-8 text-sm" placeholder="Opcional" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
+          </div>
+        </div>
+      )}
     </MemberSection>
   )
 }
@@ -164,7 +224,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  if (canBilling && cycle && !cycle.is_current) return <HistoricalBilling memberId={memberId} cycle={cycle} />
+  if (canBilling && cycle && !cycle.is_current) return <CycleBilling memberId={memberId} cycle={cycle} />
   if (!canBilling || paid.data) return null
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
