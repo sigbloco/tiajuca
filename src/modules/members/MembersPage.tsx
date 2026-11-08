@@ -144,7 +144,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     queryKey: ['members', orgId, 'grouped'],
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
-        .select('id, full_name, display_name, email, phone, social_handle, user_id, archived_at, member_artistic_links(instrument_id, function_id, started_at, ended_at)')
+        .select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at, member_artistic_links(instrument_id, function_id, started_at, ended_at)')
         .eq('organization_id', orgId).is('archived_at', null).order('full_name').limit(2000)
       if (error) throw error
       return (data ?? []) as unknown as GroupMember[]
