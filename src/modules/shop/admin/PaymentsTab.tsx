@@ -55,6 +55,9 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
           <textarea id="st-intro" rows={3} maxLength={400} value={f.introText} onChange={(e) => set({ introText: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <p className="text-sm text-muted-foreground">Mostrado no alto da loja. Ex.: &quot;Camisas do Carnaval 2027! Retire nos ensaios, às segundas.&quot; ({f.introText.length}/400)</p></div>
+        <div className="space-y-1.5"><Label htmlFor="st-feat">Título dos produtos em destaque</Label>
+          <Input id="st-feat" maxLength={60} value={f.featuredTitle} onChange={(e) => set({ featuredTitle: e.target.value })} />
+          <p className="text-sm text-muted-foreground">Seção no alto da loja com os produtos marcados como destaque. Ex.: &quot;Camisas do Carnaval&quot;. Os demais produtos ficam embaixo, na ordem definida em Produtos.</p></div>
       </Card>
 
       <Card className="space-y-3 p-4">

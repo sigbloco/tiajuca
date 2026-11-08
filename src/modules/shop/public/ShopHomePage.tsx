@@ -17,6 +17,8 @@ export function ShopHomePage() {
   const { store, isMember, basePath } = useStore()
   const [filter, setFilter] = useState<'all' | ProductKind>('all')
   const products = store.products.filter((p) => filter === 'all' || p.kind === filter)
+  const featured = products.filter((p) => p.is_featured)
+  const others = products.filter((p) => !p.is_featured)
 
   return (
     <div className="space-y-4">
@@ -28,6 +30,23 @@ export function ShopHomePage() {
         ))}
       </div>
       {products.length === 0 && <EmptyState>{store.products.length === 0 ? 'A loja ainda não tem produtos.' : 'Nenhum produto neste filtro.'}</EmptyState>}
+      {featured.length > 0 && (
+        <section aria-labelledby="shop-featured" className="space-y-2">
+          <h2 id="shop-featured" className="text-xl font-bold">{store.featured_title || 'Destaques'}</h2>
+          {renderGrid(featured)}
+        </section>
+      )}
+      {others.length > 0 && (
+        <section aria-label="Outros produtos" className="space-y-2">
+          {featured.length > 0 && <h2 className="text-xl font-bold">Outros produtos</h2>}
+          {renderGrid(others)}
+        </section>
+      )}
+    </div>
+  )
+
+  function renderGrid(products: typeof store.products) {
+    return (
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {products.map((p) => {
           const a = productAvailability(p.kind, p.variants.map((v) => ({ stock: v.available, reserved: 0, is_active: true })))
@@ -52,6 +71,6 @@ export function ShopHomePage() {
           )
         })}
       </ul>
-    </div>
-  )
+    )
+  }
 }

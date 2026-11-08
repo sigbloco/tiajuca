@@ -21,7 +21,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
     name: product?.name ?? '', description: product?.description ?? '', kind: (product?.kind ?? 'stock') as ProductKind,
     price: product ? fromCents(product.price_cents) : (null as number | null),
     discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ? String(product.lead_time_days) : '',
-    is_active: product?.is_active ?? true,
+    is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
   const [variants, setVariants] = useState<VariantRow[]>(
     product?.shop_product_variants.map((v) => ({ id: v.id, label: v.label, stock: String(stockFromDb(v.stock)), reserved: v.reserved, is_active: v.is_active }))
@@ -52,7 +52,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
       if (errs.length) return null
       const input = {
         name: f.name.trim(), description: f.description.trim(), price_cents: draft.priceCents!, member_discount_pct: discount,
-        lead_time_days: isStock ? null : draft.leadTimeDays, is_active: f.is_active,
+        lead_time_days: isStock ? null : draft.leadTimeDays, is_active: f.is_active, is_featured: f.is_featured,
       }
       const rows = variants.map((v, i) => ({ id: v.id, label: v.label, stock: isStock ? stockToDb(draft.variants[i].stock as number) : null, is_active: v.is_active }))
       if (product) { await updateProduct(orgId, product.id, input, product.kind, rows); return product.id }
@@ -120,6 +120,10 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
         {publicCents !== null && discount > 0 && discount <= 100 && (
           <p className="text-sm text-muted-foreground">Integrante ativo paga {formatCurrency(fromCents(memberPriceCents(publicCents, discount)))}.</p>
         )}
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" className="h-4 w-4" checked={f.is_featured} onChange={(e) => setF({ ...f, is_featured: e.target.checked })} />
+          Produto em destaque (aparece na seção do alto da loja)
+        </label>
         {!isStock && (
           <div className="space-y-1.5"><Label htmlFor="pr-lead">Prazo de produção (dias)</Label>
             <Input id="pr-lead" inputMode="numeric" value={f.leadTime} onChange={(e) => setF({ ...f, leadTime: e.target.value.replace(/\D/g, '') })} /></div>
