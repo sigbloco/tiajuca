@@ -99,8 +99,9 @@ const tri = (v: boolean | null) => (v === null ? '' : v ? 'yes' : 'no')
 const fromTri = (v: string) => (v === '' ? null : v === 'yes')
 
 /** Dados pessoais sensíveis (LGPD): opcionais; só o titular e a Direção veem; nunca em listas, chamadas, financeiro ou painéis. */
-export function MySensitiveData({ memberId }: { memberId: string }) {
+export function MySensitiveData({ memberId, admin = false }: { memberId: string; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
   const orgId = useOrgId()
+  useEffect(() => { if (admin) void supabase.rpc('log_sensitive_access', { p_member: memberId }) }, [admin, memberId])
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const open = true
@@ -141,12 +142,15 @@ export function MySensitiveData({ memberId }: { memberId: string }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const Wrap = admin ? 'div' : Card
   return (
-    <Card className="space-y-3 p-4">
-      <div className="flex items-center justify-between gap-2">
+    <Wrap className={admin ? 'space-y-3' : 'space-y-3 p-4'}>
+      {!admin && <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2"><Lock className="h-4 w-4" /> Dados pessoais sensíveis</h3>
-      </div>
-      <p className="text-muted-foreground">Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</p>
+      </div>}
+      <p className="text-muted-foreground">{admin
+        ? <>Opcionais (LGPD). Só a própria pessoa e a Direção enxergam; cada consulta fica registrada na auditoria.</>
+        : <>Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</>}</p>
       {open && (
         <>
           {row.isLoading ? <Skeleton className="h-24" /> : (
@@ -165,8 +169,8 @@ export function MySensitiveData({ memberId }: { memberId: string }) {
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={save.isPending}>Salvar</Button>
                 <Button type="button" variant="ghost" className="text-destructive" disabled={save.isPending}
-                  onClick={() => { if (window.confirm('Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
-                  Apagar meus dados sensíveis
+                  onClick={() => { if (window.confirm(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
+                  {admin ? 'Apagar dados sensíveis' : 'Apagar meus dados sensíveis'}
                 </Button>
               </div>
             </form>
@@ -180,9 +184,9 @@ export function MySensitiveData({ memberId }: { memberId: string }) {
               ))}
             </section>
           )}
-          <p className="text-xs text-muted-foreground">Para corrigir dados cadastrais travados, excluir seu cadastro ou revogar consentimentos, fale com a Direção.</p>
+          {!admin && <p className="text-xs text-muted-foreground">Para corrigir dados cadastrais travados, excluir seu cadastro ou revogar consentimentos, fale com a Direção.</p>}
         </>
       )}
-    </Card>
+    </Wrap>
   )
 }

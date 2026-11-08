@@ -12,6 +12,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { MemberSection } from './MemberSection'
 
 interface LinkRow {
   id: string
@@ -154,8 +155,7 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
   )
 
   return (
-    <section className="space-y-2">
-      <h3>Participação artística</h3>
+    <MemberSection title="Participação artística" defaultOpen>
       {data?.length === 0 && <p className="text-muted-foreground">Nenhum vínculo ainda.</p>}
       {data?.map((l) => (editing === l.id ? <div key={l.id}>{form}</div> : (
         <Card key={l.id} className="flex items-center justify-between gap-2 p-3">
@@ -181,6 +181,6 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
           <Plus className="h-4 w-4" /> Adicionar vínculo
         </Button>
       )}
-    </section>
+    </MemberSection>
   )
 }
