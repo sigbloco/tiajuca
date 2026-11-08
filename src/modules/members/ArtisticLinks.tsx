@@ -3,11 +3,9 @@ import { Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { AutoComplete, Chip } from '@/components/shared/AutoComplete'
-import { DateInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Label, Select } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
-import { formatDate } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -20,15 +18,17 @@ interface LinkRow {
   instrument_id: string | null
   function_id: string | null
   skill_level_id: string | null
+  is_student: boolean
   instruments: { name: string; section_id: string; sections: { name: string } | null } | null
   artistic_functions: { name: string } | null
   skill_levels: { name: string } | null
 }
-interface Draft { section_id: string; instrument_id: string; function_id: string; skill_level_id: string; started_at: string }
-const EMPTY: Draft = { section_id: '', instrument_id: '', function_id: '', skill_level_id: '', started_at: '' }
+interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_student: boolean }
+const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false }
 
 /** Vínculos artísticos do integrante: naipe → instrumento (subnaipe nunca aparece aqui) e/ou função. Editáveis. */
-export function ArtisticLinks({ memberId }: { memberId: string }) {
+export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: string; mode?: 'artistic' | 'collab' }) {
+  const collab = mode === 'collab'
   const orgId = useOrgId()
   const qc = useQueryClient()
   const canManage = usePermission('members.manage')
@@ -45,12 +45,12 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('member_artistic_links')
-        .select('id, started_at, instrument_id, function_id, skill_level_id, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
+        .select('id, started_at, instrument_id, function_id, skill_level_id, is_student, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
         .eq('member_id', memberId)
         .is('ended_at', null)
         .order('created_at')
       if (error) throw error
-      return (data ?? []) as unknown as LinkRow[]
+      return ((data ?? []) as unknown as LinkRow[]).filter((l) => (l.instrument_id === null) === collab)
     },
   })
   const refresh = () => {
@@ -63,18 +63,17 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
 
   const save = useMutation({
     mutationFn: async () => {
-      const started = f.started_at || null
-      const row = { instrument_id: nn(f.instrument_id), function_id: nn(f.function_id), skill_level_id: nn(f.skill_level_id) }
+      const row = collab ? { function_id: nn(f.function_id) } : { instrument_id: nn(f.instrument_id), is_student: f.is_student, skill_level_id: f.is_student ? nn(f.skill_level_id) : null }
       if (editing === 'new') {
         const { data: ins, error } = await supabase.from('member_artistic_links').insert({
-          organization_id: orgId, member_id: memberId, ...row, ...(started ? { started_at: started } : {}), is_primary: (data?.length ?? 0) === 0,
+          organization_id: orgId, member_id: memberId, ...row, is_primary: (data?.length ?? 0) === 0,
         }).select('id').single()
         if (error) throw error
         return { kind: 'new' as const, id: (ins as { id: string }).id, prev: null }
       }
       const old = data?.find((l) => l.id === editing)
-      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, started_at: old.started_at } : null
-      const { error } = await supabase.from('member_artistic_links').update({ ...row, ...(started ? { started_at: started } : {}) }).eq('id', editing!)
+      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, is_student: old.is_student } : null
+      const { error } = await supabase.from('member_artistic_links').update(row).eq('id', editing!)
       if (error) throw error
       return { kind: 'edit' as const, id: editing, prev }
     },
@@ -88,7 +87,7 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
         refresh()
       })
     },
-    onError: (e) => toast.error(/check|violat/i.test(String(e)) ? 'Escolha um instrumento ou uma função.' : friendlyError(e)),
+    onError: (e) => toast.error(/check|violat/i.test(String(e)) ? collab ? 'Escolha uma função.' : 'Escolha uma atividade.' : friendlyError(e)),
   })
   const end = useMutation({
     mutationFn: async (id: string) => {
@@ -113,40 +112,39 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
   }
   const startEdit = (l: LinkRow) => {
     setEditing(l.id)
-    setF({
-      section_id: l.instruments?.section_id ?? '', instrument_id: l.instrument_id ?? '', function_id: l.function_id ?? '',
-      skill_level_id: l.skill_level_id ?? '', started_at: l.started_at,
-    })
+    setF({ instrument_id: l.instrument_id ?? '', function_id: l.function_id ?? '', skill_level_id: l.skill_level_id ?? '', is_student: l.is_student })
   }
 
   const form = (
     <Card className="space-y-2 p-3">
-      <div className="space-y-1.5">
-        <Label>Instrumento</Label>
-        {f.instrument_id ? (
-          <div><Chip label={instrumentLabel(f.instrument_id)} onRemove={() => setF({ ...f, instrument_id: '', section_id: '' })} removeLabel="Trocar instrumento" /></div>
-        ) : (
-          <AutoComplete aria-label="Instrumento" placeholder="Escreva o instrumento (ex.: Surdo)…"
-            options={active(instruments.data).map((i) => ({ id: i.id, label: i.name, hint: sections.data?.find((s) => s.id === i.section_id)?.name }))}
-            onPick={(o) => setF({ ...f, instrument_id: o.id, section_id: instruments.data?.find((i) => i.id === o.id)?.section_id ?? '' })} />
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
+      {collab ? (
         <Select value={f.function_id} aria-label="Função" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
-          <option value="">Função (opcional)</option>
+          <option value="">Escolha a função</option>
           {active(functions.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
         </Select>
-        <Select value={f.skill_level_id} aria-label="Nível" onChange={(e) => setF({ ...f, skill_level_id: e.target.value })}>
-          <option value="">Nível (opcional)</option>
-          {active(levels.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="al-since">Desde</Label>
-        <DateInput id="al-since" value={f.started_at} onChange={(v) => setF({ ...f, started_at: v })} />
-      </div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            <Label>Atividade</Label>
+            {f.instrument_id ? (
+              <div><Chip label={instrumentLabel(f.instrument_id)} onRemove={() => setF({ ...f, instrument_id: '' })} removeLabel="Trocar atividade" /></div>
+            ) : (
+              <AutoComplete aria-label="Atividade" placeholder="Escreva a atividade (ex.: Surdo)…"
+                options={active(instruments.data).map((i) => ({ id: i.id, label: i.name, hint: sections.data?.find((s) => s.id === i.section_id)?.name }))}
+                onPick={(o) => setF({ ...f, instrument_id: o.id })} />
+            )}
+          </div>
+          <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked, skill_level_id: e.target.checked ? f.skill_level_id : '' })} /> Aluno</label>
+          {f.is_student && (
+            <Select value={f.skill_level_id} aria-label="Nível" onChange={(e) => setF({ ...f, skill_level_id: e.target.value })}>
+              <option value="">Nível (opcional)</option>
+              {active(levels.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </Select>
+          )}
+        </>
+      )}
       <div className="flex gap-2">
-        <Button size="sm" disabled={(!f.instrument_id && !f.function_id) || save.isPending} onClick={() => save.mutate()}>
+        <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>
           {editing === 'new' ? 'Adicionar' : 'Salvar'}
         </Button>
         <Button size="sm" variant="ghost" onClick={close}>Cancelar</Button>
@@ -155,17 +153,15 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
   )
 
   return (
-    <MemberSection title="Participação artística" defaultOpen>
-      {data?.length === 0 && <p className="text-muted-foreground">Nenhum vínculo ainda.</p>}
+    <MemberSection title={collab ? 'Participação colaborativa' : 'Participação artística'} defaultOpen={!collab}>
+      {data?.length === 0 && <p className="text-muted-foreground">Nenhuma participação ainda.</p>}
       {data?.map((l) => (editing === l.id ? <div key={l.id}>{form}</div> : (
         <Card key={l.id} className="flex items-center justify-between gap-2 p-3">
           <div className="min-w-0">
             <p className="truncate font-semibold">
-              {[l.instruments?.name, l.artistic_functions?.name].filter(Boolean).join(' · ')}
+              {collab ? l.artistic_functions?.name : [l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
             </p>
-            <p className="text-muted-foreground">
-              {[l.instruments?.sections?.name, l.skill_levels?.name].filter(Boolean).join(' · ')} · desde {formatDate(l.started_at)}
-            </p>
+            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name].filter(Boolean).join(' · ')}</p>}
           </div>
           {canManage && (
             <div className="flex shrink-0 gap-1">
@@ -178,7 +174,7 @@ export function ArtisticLinks({ memberId }: { memberId: string }) {
       {canManage && editing === 'new' && form}
       {canManage && editing === null && (
         <Button size="sm" variant="outline" onClick={() => { setF(EMPTY); setEditing('new') }}>
-          <Plus className="h-4 w-4" /> Adicionar vínculo
+          <Plus className="h-4 w-4" /> Adicionar
         </Button>
       )}
     </MemberSection>
