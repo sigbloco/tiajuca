@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
-import { Link2, Pencil, Plus, Search } from 'lucide-react'
+import { Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -15,12 +15,13 @@ import { useOrgId } from '@/core/organization'
 import { Can } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { hrefOf } from '@/modules/site/links'
+import { maskPhone } from '@/components/ui/masked-inputs'
 import { WhatsAppIcon } from './MemberSection'
 import { isPastCycle, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
 import { ReactivationRequests } from './Reactivation'
-import { createInvite, createMember, type MemberRow } from './service'
+import { createMember, type MemberRow } from './service'
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
   const orgId = useOrgId()
@@ -55,28 +56,6 @@ function NewMemberSheet({ onClose }: { onClose: () => void }) {
   )
 }
 
-function InviteButton({ member }: { member: MemberRow }) {
-  const invite = useMutation({
-    mutationFn: () => createInvite(member.id),
-    onSuccess: async (token) => {
-      const link = `${window.location.origin}/convite/${token}`
-      try {
-        await navigator.clipboard.writeText(link)
-        toast.success('Link de convite copiado. Válido por 7 dias.')
-      } catch {
-        toast.message('Link de convite', { description: link })
-      }
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  if (member.user_id) return <Badge className="bg-success/15 text-success">Conta vinculada</Badge>
-  return (
-    <Button size="icon" variant="ghost" disabled={invite.isPending} onClick={() => invite.mutate()} title="Copiar link de convite: a pessoa usa para criar o acesso dela ao app" aria-label={`Copiar link de convite para ${member.full_name}`}>
-      <Link2 className="h-4 w-4" />
-    </Button>
-  )
-}
-
 interface GroupMember extends MemberRow {
   member_artistic_links: { instrument_id: string | null; function_id: string | null; started_at: string; ended_at: string | null }[]
 }
@@ -87,6 +66,7 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
  * Integrantes agrupados por naipe → instrumento, VISTOS POR CICLO: os botões de ciclo mostram quem participou de cada
  * Carnaval (com o instrumento que tinha na época); "Também esteve em" cruza ciclos (ex.: ativos hoje que já estavam em 2024/25).
  */
+const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
 const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor', 'Professores'], ['monitor', 'Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
@@ -252,19 +232,20 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
-            <p className={cn('truncate font-semibold', dim && 'font-medium')}>{m.display_name?.trim() || m.full_name.trim().split(/s+/)[0]} {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}{!lockedCategory && categoryOf.get(m.id) && <Badge className="bg-muted">{categoryOf.get(m.id)!.category_name}</Badge>}</p>
+            <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
+              <span className="truncate">{m.full_name.trim().split(/\s+/)[0]}</span>
+              {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
+              {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{TYPE_LABEL[t] ?? t}</Badge>)}
+            </p>
+            {m.display_name?.trim() && <p className="truncate text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
-          <p className="flex flex-wrap items-center gap-x-3 text-muted-foreground">
-            <span className="truncate">{m.full_name}</span>
-            {wa && (
-              <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center text-success hover:opacity-80" title="Conversar no WhatsApp" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
-                <WhatsAppIcon className="h-5 w-5" />
-              </a>
-            )}
-          </p>
+          {wa && (
+            <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-success" title="Conversar no WhatsApp" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
+              <WhatsAppIcon className="h-4 w-4 text-success" /> {maskPhone(m.phone ?? '')}
+            </a>
+          )}
         </div>
         <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${shortName(m?.full_name, m?.display_name)}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
-        <Can permission="members.manage"><InviteButton member={m} /></Can>
       </div>
     )
   }

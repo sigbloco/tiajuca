@@ -68,9 +68,3 @@ export async function createMember(orgId: string, m: NewMember) {
   if (error) throw error
   return data.id as string
 }
-
-export async function createInvite(memberId: string): Promise<string> {
-  const { data, error } = await supabase.rpc('create_member_invite', { p_member: memberId })
-  if (error) throw error
-  return data as string
-}
