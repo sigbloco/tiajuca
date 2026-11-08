@@ -152,7 +152,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
         full_name: f.full_name.trim(), display_name: nn(f.display_name), email: nn(f.email)?.toLowerCase() ?? null, phone: digits || null,
         social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n') || null,
         birth_date: f.birth_date || null, joined_at: f.joined_at || null, affective_relation: nn(f.affective_relation),
-        played_other_blocks: f.played_other_blocks, other_blocks: f.played_other_blocks ? nn(f.other_blocks) : null,
+        played_other_blocks: !!nn(f.other_blocks), other_blocks: nn(f.other_blocks),
       }
       const { error } = await supabase.from('members').update(patch).eq('id', member.id)
       if (error) throw error
@@ -191,8 +191,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
           <Button type="button" size="sm" variant="outline" onClick={() => setF({ ...f, socials: [...f.socials, ''] })}><Plus className="h-4 w-4" /> Adicionar rede social</Button>
         </>)}
         {fld('rd-aff', 'Relação com a Grande Tijuca', <textarea id="rd-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} />)}
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.played_other_blocks} onChange={(e) => setF({ ...f, played_other_blocks: e.target.checked })} /> Toca ou já tocou com outros blocos</label>
-        {f.played_other_blocks && fld('rd-other', 'Quais blocos?', <Input id="rd-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} />)}
+        {fld('rd-other', 'Outros blocos', <Input id="rd-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} />)}
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={!phoneOk || save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar'}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -208,12 +207,11 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   const { data } = useQuery({
     queryKey: ['member-relation', orgId, memberId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('affective_relation, played_other_blocks, other_blocks').eq('id', memberId).single()
+      const { data, error } = await supabase.from('members').select('affective_relation, other_blocks').eq('id', memberId).single()
       if (error) throw error
-      return data as { affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null }
+      return data as { affective_relation: string | null; other_blocks: string | null }
     },
   })
-  const blocks = data?.played_other_blocks ? (data.other_blocks?.trim() ? 'Sim — ' + data.other_blocks.trim() : 'Sim') : data ? 'Não' : ''
   return (
     <section className="space-y-2">
       <div className="space-y-0.5">
@@ -221,8 +219,8 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
         <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.affective_relation?.trim() ?? ''}</p>
       </div>
       <div className="space-y-0.5">
-        <h3 className="font-display text-base font-bold">Já tocou com outros blocos?</h3>
-        <p className="min-h-5 whitespace-pre-wrap text-sm">{blocks}</p>
+        <h3 className="font-display text-base font-bold">Outros blocos</h3>
+        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.other_blocks?.trim() ?? ''}</p>
       </div>
     </section>
   )
