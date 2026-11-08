@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Cake, Globe, Mail, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Button, Input, Label, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, Input, Label, Select, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { socialLabel, socialUrl } from '@/core/social'
 import { whatsappUrl } from '@/modules/suppliers/service'
@@ -67,10 +67,24 @@ function CycleParticipation({ memberId }: { memberId: string }) {
     },
   })
 
+  const [adding, setAdding] = useState(false)
+  const activeCycles = (cycles ?? []).filter((c) => c.is_active)
+  const missing = activeCycles.filter((c) => !rows?.some((x) => x.cycle_id === c.id))
   return (
-    <MemberSection title="Ciclos">
+    <MemberSection title={<span className="inline-flex items-center gap-1.5">Ciclos{canManage && !adding && missing.length > 0 && (
+      <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
+    )}</span>}>
       {isLoading && <Skeleton className="h-16" />}
-      {cycles?.filter((c) => c.is_active).map((c, idx) => {
+      {adding && (
+        <div className="flex items-center gap-2 rounded-md bg-muted/40 p-2">
+          <Select aria-label="Ciclo" defaultValue="" onChange={(e) => { if (e.target.value) { change.mutate({ cycle: e.target.value, status: 'active' }); setAdding(false) } }}>
+            <option value="">Escolha o ciclo</option>
+            {missing.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button>
+        </div>
+      )}
+      {activeCycles.filter((c) => rows?.some((x) => x.cycle_id === c.id)).map((c, idx) => {
         const current = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === c.id)?.status_id)
         const past = isPastCycle(c)
         // Ciclo que já passou: "Participou" / "Não participou"; Ativo/Inativo é só do ciclo atual.
@@ -120,10 +134,9 @@ interface Registration { birth_date: string | null; joined_at: string | null; af
 const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); return l.length ? l : [''] }
 
 /** Dados cadastrais: só quem pode gerenciar integrantes (Titular e Direção) edita — todos os campos. */
-function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChanged: (p: Partial<MemberRow>) => void }) {
+function RegistrationEditor({ member, onChanged, open, setOpen }: { member: MemberRow; onChanged: (p: Partial<MemberRow>) => void; open: boolean; setOpen: (v: boolean) => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const [open, setOpen] = useState(false)
   const reg = useQuery({
     queryKey: ['member-registration', orgId, member.id],
     enabled: open,
@@ -167,7 +180,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  if (!open) return <div><Button size="icon" variant="outline" aria-label="Editar dados" title="Editar dados" onClick={() => setOpen(true)}><Pencil className="h-4 w-4" /></Button></div>
+  if (!open) return null
   if (!reg.data) return <Skeleton className="h-24" />
   const fld = (id: string, label: string, el: ReactNode) => <div className="space-y-1.5"><Label htmlFor={id}>{label}</Label>{el}</div>
   return (
@@ -229,10 +242,15 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
 export function MemberDetailSheet({ member, category, onChanged = () => {} }: { member: MemberRow; category?: string; onChanged?: (p: Partial<MemberRow>) => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
+  const [editing, setEditing] = useState(false)
+  void category
   return (
-    <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
+    <SheetContent title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
+      <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
+    )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
-      {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} />}
+      {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
+      <CycleParticipation memberId={member.id} />
       <MemberSection title="Participação">
         <div className="space-y-3">
           <ArtisticLinks memberId={member.id} />
@@ -240,7 +258,6 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
           <ArtisticLinks memberId={member.id} mode="paid" />
         </div>
       </MemberSection>
-      <CycleParticipation memberId={member.id} />
       <MemberBilling memberId={member.id} />
       <RelationWithBlock memberId={member.id} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}

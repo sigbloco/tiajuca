@@ -80,10 +80,12 @@ function CrumbRegistrar({ title, close }: { title: string; close: () => void }) 
   return null
 }
 
-export function SheetContent({ title, titleExtra, description, children, className, drawer }: {
+export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer }: {
   title: string
   /** Complemento ao lado do título (ex.: categoria), em fonte mais clara. */
   titleExtra?: React.ReactNode
+  /** Botão ao lado do título, sem bullet (ex.: lápis de editar). */
+  titleAction?: React.ReactNode
   description?: string
   children: React.ReactNode
   className?: string
@@ -124,7 +126,7 @@ export function SheetContent({ title, titleExtra, description, children, classNa
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <DialogPrimitive.Title className="font-display text-xl font-bold">{title}{titleExtra && <span className="font-normal text-muted-foreground"> • {titleExtra}</span>}</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="font-display text-xl font-bold">{title}{titleExtra && <span className="font-normal text-muted-foreground"> • {titleExtra}</span>}{titleAction && <span className="ml-1.5 inline-flex align-middle">{titleAction}</span>}</DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-muted-foreground">{description ?? ''}</DialogPrimitive.Description>
           </div>
           <DialogPrimitive.Close ref={closeRef} onClick={guard} className="rounded-md p-1 hover:bg-muted" aria-label="Fechar">
