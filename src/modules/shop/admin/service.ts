@@ -93,37 +93,6 @@ export async function uploadProductImage(orgId: string, productId: string, file:
   }
 }
 
-export interface OptimizeResult { total: number; optimized: number; skipped: number; failed: number; savedBytes: number }
-
-/** Reprocessa as fotos já enviadas: reduz e converte para WebP. Só troca a foto se ela ficar pelo menos 15% menor; a antiga é apagada depois de a nova estar gravada. */
-export async function optimizeExistingImages(orgId: string, onProgress?: (done: number, total: number) => void): Promise<OptimizeResult> {
-  const { data, error } = await supabase.from('shop_product_images').select('id, product_id, storage_path').eq('organization_id', orgId)
-  if (error) throw error
-  const rows = data as { id: string; product_id: string; storage_path: string }[]
-  const res: OptimizeResult = { total: rows.length, optimized: 0, skipped: 0, failed: 0, savedBytes: 0 }
-  for (const [i, row] of rows.entries()) {
-    try {
-      const resp = await fetch(imageUrl(row.storage_path))
-      if (!resp.ok) throw new Error('download')
-      const original = await resp.blob()
-      const small = await resizeImage(original)
-      if (small.size > original.size * 0.85) { res.skipped++; continue }
-      const path = `${orgId}/${row.product_id}/${crypto.randomUUID()}.webp`
-      const up = await supabase.storage.from(IMAGE_BUCKET).upload(path, small, { contentType: 'image/webp', upsert: false })
-      if (up.error) throw up.error
-      const upd = await supabase.from('shop_product_images').update({ storage_path: path }).eq('id', row.id)
-      if (upd.error) { await supabase.storage.from(IMAGE_BUCKET).remove([path]); throw upd.error }
-      await supabase.storage.from(IMAGE_BUCKET).remove([row.storage_path])
-      res.optimized++
-      res.savedBytes += original.size - small.size
-    } catch {
-      res.failed++
-    }
-    onProgress?.(i + 1, rows.length)
-  }
-  return res
-}
-
 export async function deleteProductImage(image: ShopImage) {
   const { error } = await supabase.from('shop_product_images').delete().eq('id', image.id)
   if (error) throw error
