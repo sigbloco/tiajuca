@@ -74,22 +74,19 @@ function InstrumentsPick({ value, onChange, label, tuned }: { value: Inst[]; onC
   )
 }
 
-/** Criar um naipe de uma vez: nome, afinação, equipe e subnaipes (cada um com sua equipe). */
+/** Criar um naipe de uma vez: nome, afinação, equipe e instrumentos. */
 export function NewSectionSheet({ onClose }: { onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const names = useCatalog('section_names')
   const [name, setName] = useState('')
   const [insts, setInsts] = useState<Inst[]>([])
   const [staff, setStaff] = useState<Staff>(EMPTY_STAFF)
-  const [withSubs, setWithSubs] = useState(false)
-  const [subs, setSubs] = useState<{ name: string; staff: Staff; insts: Inst[] }[]>([{ name: '', staff: EMPTY_STAFF, insts: [] }])
   const instruments = useCatalog('instruments')
 
   const reset = () => onClose()
-  const assign = async (member: string, kind: 'professor' | 'monitor', col: 'section_id' | 'subsection_id', id: string) => {
+  const assign = async (member: string, kind: 'professor' | 'monitor', col: 'section_id', id: string) => {
     const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: member, staff_kind: kind, [col]: id })
     if (error) throw error
   }
@@ -100,20 +97,7 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
       for (const m of staff.professors) await assign(m, 'professor', 'section_id', secId)
       for (const m of staff.monitors) await assign(m, 'monitor', 'section_id', secId)
       let instOrder = nextOrder(instruments.data ?? [])
-      const makeInsts = async (list: Inst[], subId: string | null) => {
-        for (const it of list.filter((x) => x.name.trim())) await saveCatalogItem('instruments', orgId, { name: it.name.trim(), section_id: secId, subsection_id: subId, tuning: tuned ? it.tuning : mode === 'undefined' ? NO_PITCH : null, sort_order: instOrder++ })
-      }
-      await makeInsts(insts, null)
-      if (withSubs) {
-        let order = nextOrder(subsections.data ?? [])
-        for (const s of subs.filter((x) => x.name.trim())) {
-          const subId = await saveCatalogItem('subsections', orgId, { name: s.name.trim(), section_id: secId, sort_order: order++ })
-          if (!subId) continue
-          for (const m of s.staff.professors) await assign(m, 'professor', 'subsection_id', subId)
-          for (const m of s.staff.monitors) await assign(m, 'monitor', 'subsection_id', subId)
-          await makeInsts(s.insts, subId)
-        }
-      }
+      for (const it of insts.filter((x) => x.name.trim())) await saveCatalogItem('instruments', orgId, { name: it.name.trim(), section_id: secId, tuning: tuned ? it.tuning : mode === 'undefined' ? NO_PITCH : null, sort_order: instOrder++ })
     },
     onSuccess: () => { toast.success('Naipe criado.'); invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['staff-assignments', orgId] }); reset() },
     onError: (e) => { toast.error(friendlyError(e)); invalidateCatalog(qc, orgId) },
@@ -126,7 +110,7 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
   const taken = new Set((sections.data ?? []).filter((s) => s.is_active).map((s) => s.name.toLowerCase()))
   const available = (names.data ?? []).filter((n) => n.is_active && !taken.has(n.name.toLowerCase()))
   return (
-    <SheetContent title="Novo naipe" description="Escolha o naipe e, se quiser, já cadastre equipe, subnaipes e instrumentos.">
+    <SheetContent title="Novo naipe" description="Escolha o naipe e, se quiser, já cadastre equipe e instrumentos.">
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate() }}>
         <div className="space-y-1.5"><Label htmlFor="ns-name">Nome do naipe</Label>
           <Select id="ns-name" required value={name} onChange={(e) => setName(e.target.value)}>
@@ -136,24 +120,7 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
           {available.length === 0 && <p className="text-sm text-muted-foreground">Todos os nomes já têm naipe. Cadastre mais nomes em Organização → Nomes de naipes.</p>}</div>
         <div className="space-y-1.5"><p className="font-semibold">Equipe do naipe</p><StaffPick value={staff} onChange={setStaff} /></div>
         <div className="space-y-1.5"><p className="font-semibold">{itemPlural(label)} do naipe</p><InstrumentsPick value={insts} onChange={setInsts} label={label} tuned={tuned} /></div>
-        <label className="flex min-h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={withSubs} onChange={(e) => setWithSubs(e.target.checked)} /> Este naipe tem subnaipes</label>
-        {withSubs && (
-          <div className="space-y-3">
-            {subs.map((s, i) => (
-              <div key={i} className="space-y-2 rounded-lg border border-border p-3">
-                <div className="flex gap-2">
-                  <Input aria-label={`Nome do subnaipe ${i + 1}`} placeholder="Nome do subnaipe" value={s.name} onChange={(e) => setSubs(subs.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} />
-                  <Button type="button" size="icon" variant="ghost" aria-label="Remover subnaipe" disabled={subs.length === 1} onClick={() => setSubs(subs.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-                <StaffPick value={s.staff} onChange={(v) => setSubs(subs.map((x, k) => (k === i ? { ...x, staff: v } : x)))} />
-                <p className="text-sm font-semibold">{itemPlural(label)} deste subnaipe</p>
-                <InstrumentsPick value={s.insts} onChange={(v) => setSubs(subs.map((x, k) => (k === i ? { ...x, insts: v } : x)))} label={label} tuned={tuned} />
-              </div>
-            ))}
-            <Button type="button" size="sm" variant="outline" onClick={() => setSubs([...subs, { name: '', staff: EMPTY_STAFF, insts: [] }])}><Plus className="h-4 w-4" /> Subnaipe</Button>
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground">A afinação é de cada item (opcional) e só aparece nos naipes de altura definida. Dá para acrescentar mais instrumentos e subnaipes depois, na página Naipes.</p>
+        <p className="text-sm text-muted-foreground">A afinação é de cada item (opcional) e só aparece nos naipes de altura definida. Dá para acrescentar mais instrumentos depois, na página Naipes.</p>
         <div className="flex gap-2">
           <Button type="submit" disabled={!name.trim() || create.isPending}>{create.isPending ? 'Criando…' : 'Criar naipe'}</Button>
           <Button type="button" variant="ghost" onClick={reset}>Cancelar</Button>

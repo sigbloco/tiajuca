@@ -18,7 +18,6 @@ export function Organogram() {
   const orgId = useOrgId()
   const labeler = usePersonLabeler()
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const staff = useQuery({
     queryKey: ['staff-assignments', orgId],
@@ -47,14 +46,12 @@ export function Organogram() {
   const loading = sections.isLoading || staff.isLoading
   return (
     <div className="space-y-4">
-      <div><h1>Organograma</h1><p className="text-muted-foreground">Naipes, subnaipes e instrumentos com seus regentes, professores e monitores. Para mudar, volte a Naipes e instrumentos.</p></div>
+      <div><h1>Organograma</h1><p className="text-muted-foreground">Naipes e instrumentos com seus regentes, professores e monitores. Para mudar, volte a Naipes e instrumentos.</p></div>
       {loading && <Skeleton className="h-32" />}
       {!loading && secs.length === 0 && <EmptyState>Nenhum naipe cadastrado.</EmptyState>}
       <div className="grid gap-4 md:grid-cols-2">
         {secs.map((s) => {
-          const subs = (subsections.data ?? []).filter((x) => x.section_id === s.id && x.is_active).sort(byOrder)
           const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id && i.is_active).sort(byOrder)
-          const loose = insts.filter((i) => !i.subsection_id)
           const instLine = (i: (typeof insts)[number]) => (
             <li key={i.id} className="space-y-1">
               <p className="font-semibold">{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</p>
@@ -65,14 +62,7 @@ export function Organogram() {
             <Card key={s.id} className="space-y-3 p-4">
               <h2 className="text-primary">{s.name}</h2>
               {people((a) => a.section_id === s.id)}
-              {loose.length > 0 && <ul className="space-y-2 border-l-2 border-border pl-3">{loose.map(instLine)}</ul>}
-              {subs.map((sub) => (
-                <div key={sub.id} className="space-y-2 border-l-4 border-primary/60 pl-3">
-                  <h3>{sub.name}</h3>
-                  {people((a) => a.subsection_id === sub.id)}
-                  <ul className="space-y-2">{insts.filter((i) => i.subsection_id === sub.id).map(instLine)}</ul>
-                </div>
-              ))}
+              {insts.length > 0 && <ul className="space-y-2 border-l-2 border-border pl-3">{insts.map(instLine)}</ul>}
             </Card>
           )
         })}
