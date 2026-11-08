@@ -79,6 +79,15 @@ export function MemberBilling({ memberId }: { memberId: string }) {
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
   const [livePct, setLivePct] = useState(0)
+  // Quem tem atividade remunerada não contribui: a seção some.
+  const paid = useQuery({
+    queryKey: ['member-links', orgId, memberId, 'has-paid'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('member_artistic_links').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('is_paid', true).is('ended_at', null)
+      if (error) throw error
+      return (count ?? 0) > 0
+    },
+  })
 
   const { data: assignment } = useQuery({
     queryKey: ['fee-assignment', orgId, memberId],
@@ -116,7 +125,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  if (!canBilling) return null
+  if (!canBilling || paid.data) return null
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="flex items-center gap-2">
@@ -126,7 +135,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </div>
-      {canSchol && (
+      {canSchol && assignment?.fee_category_id && (
         <div className="space-y-1.5 pt-1">
           <p className="text-sm font-semibold">Bolsa</p>
           <ScholarshipForm memberId={memberId} auto onPercent={setLivePct} />
