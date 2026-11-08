@@ -264,7 +264,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       ))
     const sk0 = `${activeCycleId}:${sec.id}`
     return (
-      <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0)} onToggle={() => toggle(sk0, isOpen(sk0))}>
+      <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0, t.sectionList.length === 1)} onToggle={() => toggle(sk0, isOpen(sk0, t.sectionList.length === 1))}>
         <div className="space-y-2">{renderLeaves(subs.get('') ?? new Map(), `${sk0}:`)}</div>
       </Collapsible>
     )

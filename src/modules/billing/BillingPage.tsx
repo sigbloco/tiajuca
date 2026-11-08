@@ -237,7 +237,7 @@ function AdminBilling() {
         const kNv = 'n:' + nv
         return (
           <Collapsible key={nv} tone={tone} title={nv} count={count} right={<span className="text-sm text-muted-foreground">{formatCurrency(sum)}</span>}
-            open={forceOpen || !!open[kNv]} onToggle={() => setOpen((o) => ({ ...o, [kNv]: !o[kNv] }))}>
+            open={forceOpen || (open[kNv] ?? grouped.length === 1)} onToggle={() => setOpen((o) => ({ ...o, [kNv]: !(forceOpen || (o[kNv] ?? grouped.length === 1)) }))}>
             {[...groups.entries()].sort((x, y) => x[0].localeCompare(y[0], 'pt-BR')).map(([g, items]) => {
               const k = kNv + ':' + g
               const subtotal = items.reduce((n, c) => n + c.final_amount, 0)

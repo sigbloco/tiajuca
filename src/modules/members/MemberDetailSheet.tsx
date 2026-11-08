@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Cake, Globe, Mail, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Button, Input, Label, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { Button, Input, Label, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { socialLabel, socialUrl } from '@/core/social'
 import { whatsappUrl } from '@/modules/suppliers/service'
@@ -71,14 +71,14 @@ function CycleParticipation({ memberId }: { memberId: string }) {
   return (
     <MemberSection title="Ciclos">
       {isLoading && <Skeleton className="h-16" />}
-      {cycles?.filter((c) => c.is_active).map((c) => {
+      {cycles?.filter((c) => c.is_active).map((c, idx) => {
         const current = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === c.id)?.status_id)
         const past = isPastCycle(c)
         // Ciclo que já passou: "Participou" / "Não participou"; Ativo/Inativo é só do ciclo atual.
         const optionsFor = past ? (statuses ?? []).filter((s) => !s.is_waitlist) : (statuses ?? [])
         const labelOf = (s: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !s.is_waitlist ? (s.counts_as_active ? 'Participou' : 'Não participou') : s.name)
         return (
-          <div key={c.id} className="flex items-center justify-between gap-2">
+          <div key={c.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
             <p className="font-semibold">{c.name}</p>
             <OkSelect
               className="w-40"
