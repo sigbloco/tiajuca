@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
+import { MonthInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
@@ -49,10 +50,11 @@ function CycleSheet({ cycle, onClose }: { cycle: Cycle | null; onClose: () => vo
         </div>
         <div className="space-y-1.5"><Label htmlFor="cy-name">Nome</Label><Input id="cy-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5"><Label htmlFor="cy-start">Início (mês e ano)</Label><Input id="cy-start" type="month" required value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="cy-end">Término (mês e ano)</Label><Input id="cy-end" type="month" required min={form.start || undefined} value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="cy-start">Início (mês e ano)</Label><MonthInput id="cy-start" required value={form.start} onChange={(v) => setForm({ ...form, start: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="cy-end">Término (mês e ano)</Label><MonthInput id="cy-end" required value={form.end} onChange={(v) => setForm({ ...form, end: v })} /></div>
         </div>
         <Button type="submit" className="w-full" disabled={!valid || save.isPending}>{cycle ? 'Salvar' : 'Criar ciclo'}</Button>
+        {form.start && form.end && form.end < form.start && <p className="text-sm text-destructive">O término deve ser depois do início.</p>}
       </form>
     </SheetContent>
   )
