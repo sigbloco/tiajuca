@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { MemberLink } from '@/modules/members/MemberLink'
 import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
@@ -181,8 +182,8 @@ export function EventsPage() {
       {selectedDay && isLoading && <Skeleton className="h-24" />}
       {selectedDay && birthdaysOn(selectedDay).length > 0 && (
         <Card className="space-y-1 p-3">
-          <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-secondary" /> Aniversariantes</p>
-          {birthdaysOn(selectedDay).map((p) => <p key={p.id} className="text-muted-foreground">{p.name} · {p.age} anos</p>)}
+          <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> Aniversariantes</p>
+          {birthdaysOn(selectedDay).map((p) => <p key={p.id} className="text-muted-foreground"><MemberLink id={p.id} className="font-semibold text-foreground">{p.name}</MemberLink> · {p.age} anos</p>)}
         </Card>
       )}
       {selectedDay && data && listDays.length === 0 && birthdaysOn(selectedDay).length === 0 && <EmptyState>Nenhum evento neste dia.</EmptyState>}

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { MemberLink } from '@/modules/members/MemberLink'
 import { Crown, GraduationCap, Users } from 'lucide-react'
 import { Badge, Card, EmptyState, Skeleton } from '@/components/ui/primitives'
 import { useOrgId } from '@/core/organization'
@@ -9,7 +10,7 @@ import { useCatalog } from './CatalogEditor'
 import { byOrder } from './StructureManagers'
 
 type Kind = 'regente' | 'professor' | 'monitor'
-interface Assignment { id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
 const ORDER: Kind[] = ['regente', 'professor', 'monitor']
 const LABEL: Record<Kind, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor' }
 
@@ -22,7 +23,7 @@ export function Organogram() {
   const staff = useQuery({
     queryKey: ['staff-assignments', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name)')
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name)')
         .eq('organization_id', orgId).is('valid_to', null).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]
@@ -36,7 +37,7 @@ export function Organogram() {
         {list.map((a) => (
           <Badge key={a.id} className={size === 'sm' ? 'text-xs' : ''}>
             {a.staff_kind === 'regente' ? <Crown className="mr-1 h-3 w-3" /> : a.staff_kind === 'professor' ? <GraduationCap className="mr-1 h-3 w-3" /> : <Users className="mr-1 h-3 w-3" />}
-            {labeler(a.members ?? { full_name: '', display_name: null })} · {LABEL[a.staff_kind]}
+            <MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {LABEL[a.staff_kind]}
           </Badge>
         ))}
       </div>
