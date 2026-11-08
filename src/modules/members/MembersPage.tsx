@@ -66,6 +66,8 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
  * Integrantes agrupados por naipe → instrumento, VISTOS POR CICLO: os botões de ciclo mostram quem participou de cada
  * Carnaval (com o instrumento que tinha na época); "Também esteve em" cruza ciclos (ex.: ativos hoje que já estavam em 2024/25).
  */
+const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
 const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor', 'Professores'], ['monitor', 'Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
 
@@ -237,7 +239,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
               {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{TYPE_LABEL[t] ?? t}</Badge>)}
             </p>
-            {m.display_name?.trim() && <p className="truncate text-muted-foreground">{m.display_name.trim()}</p>}
+            {m.display_name?.trim() && sameName(m.display_name, m.full_name.trim().split(/\s+/)[0]) === false && <p className="truncate text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
           {wa && (
             <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-success" title="Conversar no WhatsApp" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
