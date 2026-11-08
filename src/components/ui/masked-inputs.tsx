@@ -119,3 +119,20 @@ export function MoneyInput({ id, value, onChange, required }: { id?: string; val
       }} />
   )
 }
+
+/** Mês e ano com máscara (digita só números: 052027 → 05/2027). Emite "AAAA-MM" quando completo e válido; senão, vazio. */
+export function MonthInput({ id, value, onChange, required }: { id?: string; value: string; onChange: (v: string) => void; required?: boolean }) {
+  const toText = (v: string) => (/^\d{4}-\d{2}$/.test(v) ? `${v.slice(5)}/${v.slice(0, 4)}` : '')
+  const [text, setText] = useState(toText(value))
+  useEffect(() => { if (value !== '' && toText(value) !== text) setText(toText(value)) }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <Input id={id} inputMode="numeric" autoComplete="off" placeholder="mm/aaaa" maxLength={7} required={required} value={text}
+      onChange={(e) => {
+        const d = e.target.value.replace(/\D/g, '').slice(0, 6)
+        const masked = d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d
+        setText(masked)
+        const m = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(masked)
+        onChange(m ? `${m[2]}-${m[1]}` : '')
+      }} />
+  )
+}
