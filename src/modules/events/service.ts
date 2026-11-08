@@ -110,6 +110,23 @@ export async function materialize(orgId: string, until: string): Promise<number>
   return (data as number) ?? 0
 }
 
+/** Leva o horário, local, descrição e roteiro das recorrências (ativas, ou só a indicada) para as próximas ocorrências já geradas e ainda agendadas. */
+export async function syncOccurrences(orgId: string, today: string, ruleId?: string): Promise<number> {
+  let q = supabase.from('recurrence_rules').select('id, title, start_time, end_time, location, description, itinerary').eq('organization_id', orgId).eq('is_active', true)
+  if (ruleId) q = q.eq('id', ruleId)
+  const { data: rules, error } = await q
+  if (error) throw error
+  let n = 0
+  for (const r of rules ?? []) {
+    const { data, error: e2 } = await supabase.from('activities')
+      .update({ title: r.title, start_time: r.start_time, end_time: r.end_time, location: r.location, description: r.description, itinerary: r.itinerary })
+      .eq('recurrence_rule_id', r.id).eq('status', 'scheduled').gte('activity_date', today).select('id')
+    if (e2) throw e2
+    n += data?.length ?? 0
+  }
+  return n
+}
+
 /** Cor escolhida no evento/recorrência → tipo existente dessa cor (ou cria um com o nome da cor). */
 export async function typeIdForColor(orgId: string, color: TypeColor): Promise<string> {
   const { data, error } = await supabase.from('activity_types').select('id, color, is_active, sort_order').eq('organization_id', orgId)
