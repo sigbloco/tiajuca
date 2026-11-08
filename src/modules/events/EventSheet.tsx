@@ -10,7 +10,7 @@ import { formatDayLong, formatTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { ChecklistSection } from '@/modules/checklists/ChecklistSection'
-import { ItineraryEditor, cleanSteps } from './ItineraryEditor'
+import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
 import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogTable } from '@/modules/structure/service'
@@ -50,7 +50,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
     cycle_id: activity?.cycle_id ?? '',
     visibility: activity?.visibility ?? ('members' as Activity['visibility']),
   })
-  const [steps, setSteps] = useState<ItineraryStep[]>(() => (activity?.itinerary ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label })))
+  const [steps, setSteps] = useState<ItineraryStep[]>(() => loadSteps(activity?.itinerary))
   // Ciclo sempre definido: o que contém a data ou, na falta, o ciclo atual.
   useEffect(() => {
     if (f.cycle_id || !cycles.data) return
@@ -124,7 +124,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
             <h3>Roteiro</h3>
             <ol className="divide-y divide-border rounded-lg border border-border">
               {[...activity.itinerary].sort((a, b) => a.time.localeCompare(b.time)).map((x, i) => (
-                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span className="w-12 shrink-0 font-display font-bold">{x.time.slice(0, 5)}</span><span>{x.label}</span></li>
+                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span className="w-24 shrink-0 font-display font-bold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span><span className="min-w-0"><span className="font-semibold">{x.label}</span>{x.location && <span className="block text-muted-foreground">{x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span></li>
               ))}
             </ol>
           </section>

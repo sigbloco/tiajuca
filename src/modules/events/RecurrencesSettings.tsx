@@ -2,14 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { DateInput, TimeInput } from '@/components/ui/masked-inputs'
+import { DateInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { ItineraryEditor, cleanSteps } from './ItineraryEditor'
+import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
 import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
 
 interface Rule {
@@ -36,22 +36,24 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   const [f, setF] = useState({
     title: rule?.title ?? '',
     color: (types.data?.find((t) => t.id === rule?.activity_type_id)?.color ?? 'primary') as TypeColor,
-    description: rule?.description ?? '',
     visibility: (rule?.visibility ?? 'members') as Rule['visibility'],
     weekday: String(rule?.weekday ?? 1),
-    start_time: rule?.start_time?.slice(0, 5) ?? '',
-    end_time: rule?.end_time?.slice(0, 5) ?? '',
-    location: rule?.location ?? '',
     starts_on: rule?.starts_on ?? todayIso(membership?.timezone),
     until: rule?.until ?? '',
   })
-  const [steps, setSteps] = useState<ItineraryStep[]>(() => (rule?.itinerary ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label })))
+  // Recorrência antiga, sem roteiro: o horário, o local e a descrição dela viram o primeiro item.
+  const [steps, setSteps] = useState<ItineraryStep[]>(() => (rule?.itinerary?.length || !rule?.start_time
+    ? loadSteps(rule?.itinerary)
+    : loadSteps([{ time: rule.start_time, end: rule.end_time ?? undefined, label: rule.title, location: rule.location ?? undefined, description: rule.description ?? undefined }])))
   const save = useMutation({
     mutationFn: async () => {
+      const items = cleanSteps(steps)
       const row = {
-        title: f.title.trim(), activity_type_id: await typeIdForColor(orgId, f.color), description: f.description.trim() || null, visibility: f.visibility, weekday: Number(f.weekday),
-        start_time: f.start_time || null, end_time: f.end_time || null, location: f.location.trim() || null,
-        starts_on: f.starts_on, until: f.until || null, itinerary: cleanSteps(steps),
+        title: f.title.trim(), activity_type_id: await typeIdForColor(orgId, f.color), visibility: f.visibility, weekday: Number(f.weekday),
+        // Horário, local e descrição do evento vêm do roteiro: começa no primeiro item e termina no último fim.
+        start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
+        location: items.find((x) => x.location)?.location ?? null, description: items.map((x) => x.description).filter(Boolean).join('\n') || null,
+        starts_on: f.starts_on, until: f.until || null, itinerary: items,
       }
       const q = rule
         ? supabase.from('recurrence_rules').update(row).eq('id', rule.id)
@@ -87,20 +89,12 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             {WEEKDAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
           </Select>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5"><Label htmlFor="r-start">Início</Label><TimeInput id="r-start" value={f.start_time} onChange={(v) => setF({ ...f, start_time: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="r-end">Fim</Label><TimeInput id="r-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
-        </div>
-        <div className="space-y-1.5"><Label htmlFor="r-loc">Local</Label><Input id="r-loc" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></div>
-        <div className="space-y-1.5">
-          <Label htmlFor="r-desc">Descrição</Label>
-          <textarea id="r-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
-        </div>
         <ItineraryEditor steps={steps} onChange={setSteps} />
         <div className="space-y-3">
-          <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="r-until">Até (opcional)</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
+            <div className="space-y-1.5"><Label htmlFor="r-until">Até (opcional)</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="r-vis">Quem vê</Label>
             <Select id="r-vis" value={f.visibility} onChange={(e) => setF({ ...f, visibility: e.target.value as Rule['visibility'] })}>
