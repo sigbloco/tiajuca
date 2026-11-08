@@ -12,6 +12,9 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
+/** Categorias de contribuição que se escolhem na ficha do integrante. */
+const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
+
 /** Formulário de bolsa (0–100%). 0% encerra a bolsa. Usado na ficha do integrante e na página de Bolsas. */
 export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSaved?: () => void }) {
   const orgId = useOrgId()
@@ -51,11 +54,13 @@ export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSav
 
   return (
     <div className="space-y-2">
+      <div className="flex items-end gap-2">
       <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}`}>Percentual (%)</Label>
-        <Input id={`pct-${memberId}`} className="w-28" inputMode="numeric" maxLength={3} value={percent}
+        <Input id={`pct-${memberId}`} className="w-16 px-2 text-center" inputMode="numeric" maxLength={3} value={percent}
           onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPercent(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
-      <div className="space-y-1.5"><Label htmlFor={`reason-${memberId}`}>Motivo</Label>
+      <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={`reason-${memberId}`}>Motivo</Label>
         <Input id={`reason-${memberId}`} placeholder="Opcional" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+      </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
       <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()}>Salvar bolsa</Button>
     </div>
@@ -114,7 +119,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
         <Label htmlFor="fee-cat">Categoria</Label>
 <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
           <option value="">Não contribui</option>
-          {categories.data?.filter((c) => c.is_active || c.id === assignment?.fee_category_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </Card>
       {canSchol && (
