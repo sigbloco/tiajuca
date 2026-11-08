@@ -57,7 +57,6 @@ function NewMemberSheet({ onClose }: { onClose: () => void }) {
 }
 
 interface GroupMember extends MemberRow {
-  member_artistic_links: { instrument_id: string | null; function_id: string | null; started_at: string; ended_at: string | null }[]
 }
 interface Leaf { key: string; label: string; members: GroupMember[] }
 interface TreeData { sectionList: { id: string; name: string; sort_order: number; is_active: boolean }[]; map: Map<string, Map<string, Map<string, Leaf>>>; total: number }
@@ -73,15 +72,6 @@ const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor',
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
-  const cats = useQuery({
-    queryKey: ['members', orgId, 'categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId })
-      if (error) throw error
-      return (data ?? []) as { member_id: string; category_id: string; category_name: string }[]
-    },
-  })
-  const categoryOf = new Map((cats.data ?? []).map((c) => [c.member_id, c]))
   const wantedCategory = lockedCategory ?? ''
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
@@ -141,11 +131,34 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const activeCycle = cycles?.find((c) => c.id === activeCycleId)
   const pastCycle = !!activeCycle && isPastCycle(activeCycle)
 
+  // Categoria e participação (instrumento/função) de cada pessoa NO CICLO escolhido.
+  const cats = useQuery({
+    queryKey: ['members', orgId, 'categories', activeCycleId],
+    enabled: !!activeCycleId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: activeCycleId })
+      if (error) throw error
+      return (data ?? []) as { member_id: string; category_id: string; category_name: string }[]
+    },
+  })
+  const categoryOf = new Map((cats.data ?? []).map((c) => [c.member_id, c]))
+  const parts = useQuery({
+    queryKey: ['members', orgId, 'cycle-participations', activeCycleId],
+    enabled: !!activeCycleId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cycle_participations').select('member_id, instrument_id, function_id').eq('cycle_id', activeCycleId).limit(5000)
+      if (error) throw error
+      const out = new Map<string, { instrument_id: string | null; function_id: string | null }[]>()
+      for (const x of data ?? []) { const l = out.get(x.member_id as string) ?? []; l.push({ instrument_id: x.instrument_id as string | null, function_id: x.function_id as string | null }); out.set(x.member_id as string, l) }
+      return out
+    },
+  })
+
   const members = useQuery({
     queryKey: ['members', orgId, 'grouped'],
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
-        .select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at, member_artistic_links(instrument_id, function_id, started_at, ended_at)')
+        .select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at')
         .eq('organization_id', orgId).is('archived_at', null).order('full_name').limit(2000)
       if (error) throw error
       return (data ?? []) as unknown as GroupMember[]
@@ -182,7 +195,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       if (!leaf.members.includes(m)) leaf.members.push(m)
       leaves.set(leafKey, leaf); subs.set(subId, leaves); map.set(secId, subs)
     }
-    const isCurrent = !!activeCycle?.is_current
     for (const m of members.data ?? []) {
       if (!inCycle(m.id, activeCycleId)) continue
       const st = statusOf(m.id)
@@ -196,11 +208,8 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       }
       if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
       if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
-      // Instrumento NAQUELE ciclo: vínculo vigente no período; sem ele, o mais recente.
-      const mine = m.member_artistic_links
-      const inWindow = isCurrent ? mine.filter((x) => !x.ended_at)
-        : mine.filter((x) => x.started_at <= (activeCycle?.ends_on ?? '9999') && (!x.ended_at || x.ended_at >= (activeCycle?.starts_on ?? '0000')))
-      const links = inWindow.length ? inWindow : [...mine].sort((a, b) => b.started_at.localeCompare(a.started_at)).slice(0, 1)
+      // Instrumento/função NAQUELE ciclo (participação do próprio ciclo).
+      const links = parts.data?.get(m.id) ?? []
       let placed = false
       for (const l of links) {
         const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
@@ -218,7 +227,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, showActive, showInactive, types, staffKinds.data])
+  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
