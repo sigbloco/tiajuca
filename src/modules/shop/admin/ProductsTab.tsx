@@ -8,7 +8,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, productAvailability } from '../catalog'
 import { ProductSheet } from './ProductSheet'
-import { imageUrl, listProducts, optimizeExistingImages, reorderProducts, type ShopProduct } from './service'
+import { imageUrl, listProducts, reorderProducts, type ShopProduct } from './service'
 import { getSettings } from './settings'
 
 function stockSummary(p: ShopProduct): string {
@@ -63,27 +63,13 @@ export function ProductsTab() {
     setDragId(null)
     if (local) save.mutate(local)
   }
-  const [progress, setProgress] = useState<string | null>(null)
-  const optimize = async () => {
-    if (!window.confirm('Reduzir todas as fotos já enviadas (lado maior 900 px, formato WebP)? As fotos originais maiores são substituídas. Pode levar alguns minutos.')) return
-    setProgress('Preparando…')
-    try {
-      const r = await optimizeExistingImages(orgId, (d, t) => setProgress(`Reduzindo fotos… ${d}/${t}`))
-      await qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] })
-      const mb = (r.savedBytes / 1048576).toFixed(1).replace('.', ',')
-      toast.success(`${r.optimized} foto(s) reduzida(s), ${mb} MB a menos. ${r.skipped} já estavam leves${r.failed ? `; ${r.failed} deram erro (rode de novo)` : ''}.`)
-    } catch (e) { toast.error(friendlyError(e)) } finally { setProgress(null) }
-  }
   const current = sheet && sheet !== 'new' ? q.data?.find((p) => p.id === sheet) ?? null : null
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Produtos</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" disabled={progress !== null} onClick={optimize}>{progress ?? 'Reduzir fotos existentes'}</Button>
-          <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
-        </div>
+        <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
       </div>
       {q.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
