@@ -16,7 +16,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
 
 /** Formulário de bolsa (0–100%). 0% encerra a bolsa. Usado na ficha do integrante e na página de Bolsas. */
-export function ScholarshipForm({ memberId, onSaved, auto = false }: { memberId: string; onSaved?: () => void; /** Grava ao sair do campo (sem botão): usado na ficha do integrante. */ auto?: boolean }) {
+export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: { memberId: string; onSaved?: () => void; /** Avisa o percentual válido a cada digitação (o valor da mensalidade acompanha). */ onPercent?: (n: number) => void; /** Grava ao sair do campo (sem botão): usado na ficha do integrante. */ auto?: boolean }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -36,6 +36,7 @@ export function ScholarshipForm({ memberId, onSaved, auto = false }: { memberId:
 
   const n = Number(percent)
   const valid = percent !== '' && Number.isInteger(n) && n >= 0 && n <= 100
+  useEffect(() => { if (valid) onPercent?.(n) }, [n, valid]) // eslint-disable-line react-hooks/exhaustive-deps
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('set_scholarship', {
@@ -77,6 +78,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
   const canBilling = usePermission('billing.manage')
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
+  const [livePct, setLivePct] = useState(0)
 
   const { data: assignment } = useQuery({
     queryKey: ['fee-assignment', orgId, memberId],
@@ -116,7 +118,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
 
   if (!canBilling) return null
   return (
-    <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(price.data)}</span>}</>}>
+    <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="flex items-center gap-2">
         <Label htmlFor="fee-cat">Categoria</Label>
         <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
@@ -127,7 +129,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
       {canSchol && (
         <div className="space-y-1.5 pt-1">
           <p className="text-sm font-semibold">Bolsa</p>
-          <ScholarshipForm memberId={memberId} auto />
+          <ScholarshipForm memberId={memberId} auto onPercent={setLivePct} />
         </div>
       )}
     </MemberSection>
