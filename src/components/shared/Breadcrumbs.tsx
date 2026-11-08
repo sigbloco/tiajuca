@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useExtraCrumbs } from '@/core/breadcrumb'
 
@@ -10,6 +10,20 @@ export interface Crumb { label: string; to?: string }
  */
 export function Breadcrumbs({ crumbs, home }: { crumbs: Crumb[]; home: string }) {
   const extra = useExtraCrumbs()
+  const navRef = useRef<HTMLElement>(null)
+  // Se o caminho quebrar de linha, esconde o "•" que ficaria sozinho no fim da linha (o item seguinte foi para a de baixo).
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const fix = () => nav.querySelectorAll<HTMLElement>('[data-bullet]').forEach((b) => {
+      const next = b.nextElementSibling as HTMLElement | null
+      b.style.visibility = next && next.offsetTop > b.offsetTop + 2 ? 'hidden' : 'visible'
+    })
+    fix()
+    const ro = new ResizeObserver(fix)
+    ro.observe(nav)
+    return () => ro.disconnect()
+  })
   if (crumbs.length === 0 && extra.length === 0) return null
   const all: (Crumb & { close?: () => void })[] = [...crumbs]
   if (extra.length > 0 && all.length > 0) {
@@ -18,13 +32,13 @@ export function Breadcrumbs({ crumbs, home }: { crumbs: Crumb[]; home: string })
   }
   for (const e of extra) all.push({ label: e.title })
   return (
-    <nav aria-label="Você está em" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <nav ref={navRef} aria-label="Você está em" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <Link to={home} className="font-semibold text-primary hover:underline">Início</Link>
       {all.map((c, i) => {
         const last = i === all.length - 1
         return (
           <Fragment key={`${c.label}-${i}`}>
-            <span aria-hidden className="text-muted-foreground">•</span>
+            <span aria-hidden data-bullet className="text-muted-foreground">•</span>
             {last ? <span aria-current="page" className="font-semibold">{c.label}</span>
               : c.close ? <button type="button" onClick={c.close} className="font-semibold text-primary hover:underline">{c.label}</button>
               : c.to ? <Link to={c.to} className="font-semibold text-primary hover:underline">{c.label}</Link>
