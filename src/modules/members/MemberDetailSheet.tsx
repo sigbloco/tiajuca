@@ -203,6 +203,26 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
   )
 }
 
+/** "Relação com a Grande Tijuca": texto que a pessoa escreveu na inscrição. Último item da ficha. */
+function RelationWithBlock({ memberId }: { memberId: string }) {
+  const orgId = useOrgId()
+  const { data } = useQuery({
+    queryKey: ['member-relation', orgId, memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('members').select('affective_relation').eq('id', memberId).single()
+      if (error) throw error
+      return (data as { affective_relation: string | null }).affective_relation
+    },
+  })
+  if (!data?.trim()) return null
+  return (
+    <section className="space-y-1">
+      <h3 className="font-display text-base font-bold">Relação com a Grande Tijuca</h3>
+      <p className="whitespace-pre-wrap text-sm">{data}</p>
+    </section>
+  )
+}
+
 export function MemberDetailSheet({ member, category, onChanged = () => {} }: { member: MemberRow; category?: string; onChanged?: (p: Partial<MemberRow>) => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
@@ -215,11 +235,13 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
         <div className="space-y-3">
           <ArtisticLinks memberId={member.id} />
           <ArtisticLinks memberId={member.id} mode="collab" />
+          <ArtisticLinks memberId={member.id} mode="paid" />
         </div>
       </MemberSection>
       <CycleParticipation memberId={member.id} />
       <MemberBilling memberId={member.id} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
+      <RelationWithBlock memberId={member.id} />
     </SheetContent>
   )
 }
