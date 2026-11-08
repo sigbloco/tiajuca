@@ -30,7 +30,7 @@ import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
 import type { MemberRow } from './service'
 
-function CycleParticipation({ memberId }: { memberId: string }) {
+function CycleParticipation({ memberId, selected, onSelect }: { memberId: string; selected: string; onSelect: (id: string) => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: cycles } = useCycles()
@@ -92,7 +92,7 @@ function CycleParticipation({ memberId }: { memberId: string }) {
         const labelOf = (s: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !s.is_waitlist ? (s.counts_as_active ? 'Participou' : 'Não participou') : s.name)
         return (
           <div key={c.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
-            <p className="font-semibold">{c.name}</p>
+            <button type="button" className={cn('min-w-0 truncate text-left font-semibold hover:underline', c.id === selected && 'text-primary')} aria-pressed={c.id === selected} title="Ver a participação e a contribuição deste ciclo" onClick={() => onSelect(c.id)}>{c.name}{c.id === selected ? ' ●' : ''}</button>
             <OkSelect
               className="w-40"
               disabled={!canManage}
@@ -243,6 +243,9 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   const [editing, setEditing] = useState(false)
+  const { data: allCycles } = useCycles()
+  const [pickedCycle, setPickedCycle] = useState('')
+  const cycle = allCycles?.find((c) => c.id === pickedCycle) ?? allCycles?.find((c) => c.is_current)
   void category
   return (
     <SheetContent title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
@@ -250,15 +253,15 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
     )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
-      <CycleParticipation memberId={member.id} />
-      <MemberSection title="Participação">
+      <CycleParticipation memberId={member.id} selected={cycle?.id ?? ''} onSelect={setPickedCycle} />
+      <MemberSection title={<>Participação{cycle && <span className="font-normal text-muted-foreground"> • {cycle.name}</span>}</>}>
         <div className="space-y-3">
-          <ArtisticLinks memberId={member.id} />
-          <ArtisticLinks memberId={member.id} mode="collab" />
-          <ArtisticLinks memberId={member.id} mode="paid" />
+          <ArtisticLinks memberId={member.id} cycle={cycle} />
+          <ArtisticLinks memberId={member.id} mode="collab" cycle={cycle} />
+          <ArtisticLinks memberId={member.id} mode="paid" cycle={cycle} />
         </div>
       </MemberSection>
-      <MemberBilling memberId={member.id} />
+      <MemberBilling memberId={member.id} cycle={cycle} />
       <RelationWithBlock memberId={member.id} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
     </SheetContent>

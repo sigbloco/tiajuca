@@ -28,12 +28,13 @@ interface Draft { instrument_id: string; function_id: string; skill_level_id: st
 const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false }
 
 /** Vínculos artísticos do integrante: naipe → instrumento (subnaipe nunca aparece aqui) e/ou função. Editáveis. */
-export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid' }) {
+export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo que já passou: só leitura, com os vínculos vigentes naquele período. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
   const collab = mode !== 'artistic' // colaborativa e remunerada só têm função
   const paid = mode === 'paid'
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const canManage = usePermission('members.manage')
+  const historical = !!cycle && !cycle.is_current
+  const canManage = usePermission('members.manage') && !historical
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
@@ -43,14 +44,15 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
   const [f, setF] = useState<Draft>(EMPTY)
 
   const { data } = useQuery({
-    queryKey: ['member-links', orgId, memberId, mode],
+    queryKey: ['member-links', orgId, memberId, mode, cycle?.id ?? 'now'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('member_artistic_links')
         .select('id, started_at, instrument_id, function_id, skill_level_id, is_student, is_paid, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
         .eq('member_id', memberId)
-        .is('ended_at', null)
         .order('created_at')
+      q = historical ? q.lte('started_at', cycle!.ends_on).or('ended_at.is.null,ended_at.gte.' + cycle!.starts_on) : q.is('ended_at', null)
+      const { data, error } = await q
       if (error) throw error
       return ((data ?? []) as unknown as LinkRow[]).filter((l) => (l.instrument_id === null) === collab && (!collab || l.is_paid === paid))
     },

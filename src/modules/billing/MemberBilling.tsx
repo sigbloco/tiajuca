@@ -71,7 +71,46 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
 }
 
 /** Seção "Contribuição" da ficha do integrante (somente Direção): categoria e bolsa. Dados sensíveis NÃO aparecem aqui. */
-export function MemberBilling({ memberId }: { memberId: string }) {
+type CycleWindow = { id: string; name?: string; starts_on: string; ends_on: string; is_current: boolean }
+
+/** Contribuição de um ciclo que já passou: categoria, bolsa e valor vigentes naquele período (só leitura). */
+function HistoricalBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindow }) {
+  const orgId = useOrgId()
+  const categories = useCatalog('fee_categories')
+  const win = (q: any) => q.lte('valid_from', cycle.ends_on).or('valid_to.is.null,valid_to.gte.' + cycle.starts_on).order('valid_from', { ascending: false }).limit(1)
+  const info = useQuery({
+    queryKey: ['member-billing-cycle', orgId, memberId, cycle.id],
+    queryFn: async () => {
+      const a = await win(supabase.from('member_fee_assignments').select('fee_category_id').eq('member_id', memberId))
+      if (a.error) throw a.error
+      const catId = (a.data?.[0] as { fee_category_id: string } | undefined)?.fee_category_id ?? null
+      const s = await win(supabase.from('scholarships').select('percent, reason').eq('member_id', memberId))
+      if (s.error) throw s.error
+      const sch = (s.data?.[0] ?? null) as { percent: number; reason: string | null } | null
+      let price: number | null = null
+      if (catId) {
+        const p = await supabase.from('fee_category_prices').select('amount').eq('fee_category_id', catId).lte('valid_from', cycle.ends_on).or('valid_to.is.null,valid_to.gte.' + cycle.ends_on).order('valid_from', { ascending: false }).limit(1)
+        if (p.error) throw p.error
+        price = p.data?.[0] ? Number(p.data[0].amount) : null
+      }
+      const l = await supabase.from('member_artistic_links').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('is_paid', true).lte('started_at', cycle.ends_on).or('ended_at.is.null,ended_at.gte.' + cycle.starts_on)
+      if (l.error) throw l.error
+      return { catId, sch, price, paid: (l.count ?? 0) > 0 }
+    },
+  })
+  if (!info.data || info.data.paid) return null
+  const { catId, sch, price } = info.data
+  const pct = Number(sch?.percent ?? 0)
+  const name = categories.data?.find((c) => c.id === catId)?.name ?? 'Não contribuiu'
+  return (
+    <MemberSection title={<>Contribuição mensal{price != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price * (100 - pct)) / 100)}</span>}</>}>
+      <p className="text-sm"><span className="text-muted-foreground">Categoria </span><span className="font-semibold">{name}</span></p>
+      {catId && name !== 'Isento' && pct > 0 && <p className="text-sm"><span className="text-muted-foreground">Bolsa </span><span className="font-semibold">{pct}%</span>{sch?.reason ? <span className="text-muted-foreground"> · {sch.reason}</span> : null}</p>}
+    </MemberSection>
+  )
+}
+
+export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo mostrado; os que já passaram aparecem só para leitura. */ cycle?: CycleWindow }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -125,6 +164,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  if (canBilling && cycle && !cycle.is_current) return <HistoricalBilling memberId={memberId} cycle={cycle} />
   if (!canBilling || paid.data) return null
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
