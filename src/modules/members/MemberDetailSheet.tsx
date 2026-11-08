@@ -13,10 +13,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Cake, Globe, Mail, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Button, Input, Label, Select, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, Input, Label, Select, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { socialLabel, socialUrl } from '@/core/social'
 import { whatsappUrl } from '@/modules/suppliers/service'
+import { Collapsible } from '@/components/shared/Collapsible'
 import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
@@ -30,13 +31,65 @@ import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
 import type { MemberRow } from './service'
 
-function CycleParticipation({ memberId, selected, onSelect }: { memberId: string; selected: string; onSelect: (id: string) => void }) {
+type CycleLite = { id: string; name: string; starts_on: string; ends_on: string; is_current: boolean }
+
+/** Participação (artística, colaborativa, remunerada) e contribuição de um ciclo. Sem ciclo: o que vale hoje. */
+function ParticipationBlock({ memberId, cycle }: { memberId: string; cycle?: CycleLite }) {
+  return (
+    <div className="space-y-3">
+      <MemberSection title="Participação">
+        <div className="space-y-3">
+          <ArtisticLinks memberId={memberId} cycle={cycle} />
+          <ArtisticLinks memberId={memberId} mode="collab" cycle={cycle} />
+          <ArtisticLinks memberId={memberId} mode="paid" cycle={cycle} />
+        </div>
+      </MemberSection>
+      <MemberBilling memberId={memberId} cycle={cycle} />
+    </div>
+  )
+}
+
+/** Um ciclo da pessoa: situação, e como filhos a participação e a contribuição daquele ciclo. */
+function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, statuses }: {
+  cycle: CycleLite; status?: { key: string; name: string; counts_as_active: boolean; is_waitlist: boolean }; memberId: string; canManage: boolean
+  onChange: (cycle: string, status: string) => Promise<unknown>; onRemove: (cycle: CycleLite) => void
+  statuses: { id: string; key: string; name: string; counts_as_active: boolean; is_waitlist: boolean }[]
+}) {
+  const [open, setOpen] = useState(cycle.is_current)
+  const past = isPastCycle(cycle)
+  // Ciclo que já passou: "Participou" / "Não participou"; Ativo/Inativo é só do ciclo atual.
+  const optionsFor = past ? statuses.filter((x) => !x.is_waitlist) : statuses
+  const labelOf = (x: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !x.is_waitlist ? (x.counts_as_active ? 'Participou' : 'Não participou') : x.name)
+  return (
+    <Collapsible level={1} open={open} onToggle={() => setOpen((o) => !o)} title={<span className="text-sm">{cycle.name}{cycle.is_current ? ' · atual' : ''}</span>}
+      right={canManage && (
+        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>
+      )}>
+      <div className="space-y-3 pb-2">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm">Situação</Label>
+          <OkSelect className="w-40" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
+            {!status && <option value="">Sem registro</option>}
+            {status && past && status.is_waitlist && <option value={status.key}>{status.name}</option>}
+            {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
+          </OkSelect>
+        </div>
+        <ParticipationBlock memberId={memberId} cycle={cycle} />
+      </div>
+    </Collapsible>
+  )
+}
+
+/** Ciclos da pessoa em ordem cronológica, cada um um grupo com seus filhos. Sem nenhum ciclo, a participação e a contribuição ficam soltas (nada se perde). */
+function CyclesSection({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: cycles } = useCycles()
   const { data: statuses } = useCycleStatuses()
   const canManage = usePermission('member_cycles.manage', 'group')
   const canForce = usePermission('capacity.manage')
+  const [open, setOpen] = useState(true)
+  const [adding, setAdding] = useState(false)
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ['member-cycles', orgId, memberId],
@@ -46,68 +99,66 @@ function CycleParticipation({ memberId, selected, onSelect }: { memberId: string
       return data as { cycle_id: string; status_id: string }[]
     },
   })
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ['member-cycles', orgId, memberId] })
+    qc.invalidateQueries({ queryKey: ['capacity', orgId] })
+    qc.invalidateQueries({ queryKey: ['members'] })
+  }
+  const statusOfCycle = (cycleId: string) => statuses?.find((x) => x.id === rows?.find((r) => r.cycle_id === cycleId)?.status_id)
 
   const change = useMutation({
     mutationFn: (v: { cycle: string; status: string; force?: boolean }) => setMemberCycleStatus({ member: memberId, ...v }),
     onSuccess: (_d, v) => {
-      const before = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === v.cycle)?.status_id)?.key
-      const refresh = () => {
-        qc.invalidateQueries({ queryKey: ['member-cycles', orgId, memberId] })
-        qc.invalidateQueries({ queryKey: ['capacity', orgId] })
-        qc.invalidateQueries({ queryKey: ['members'] })
-      }
+      const before = statuses?.find((x) => x.id === rows?.find((r) => r.cycle_id === v.cycle)?.status_id)?.key
       refresh()
       notifyChange('Status atualizado.', before ? async () => { await setMemberCycleStatus({ member: memberId, cycle: v.cycle, status: before, force: true }); refresh() } : undefined)
     },
     onError: (e, v) => {
       const msg = friendlyError(e)
-      if (canForce && /lotado/i.test(msg) && !v.force) {
-        toast.error(msg, { action: { label: 'Autorizar exceção', onClick: () => change.mutate({ ...v, force: true }) } })
-      } else toast.error(msg)
+      if (canForce && /lotado/i.test(msg) && !v.force) toast.error(msg, { action: { label: 'Autorizar exceção', onClick: () => change.mutate({ ...v, force: true }) } })
+      else toast.error(msg)
     },
   })
+  const remove = useMutation({
+    mutationFn: async (c: CycleLite) => {
+      const { error } = await supabase.rpc('remove_member_cycle', { p_member: memberId, p_cycle: c.id })
+      if (error) throw error
+      return { c, before: statusOfCycle(c.id)?.key }
+    },
+    onSuccess: ({ c, before }) => {
+      refresh()
+      notifyChange('Ciclo removido. A participação e a contribuição da pessoa foram mantidas.', before ? async () => { await setMemberCycleStatus({ member: memberId, cycle: c.id, status: before, force: true }); refresh() } : undefined)
+    },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
 
-  const [adding, setAdding] = useState(false)
-  const activeCycles = (cycles ?? []).filter((c) => c.is_active)
-  const missing = activeCycles.filter((c) => !rows?.some((x) => x.cycle_id === c.id))
+  const mine = (cycles ?? []).filter((c) => c.is_active && rows?.some((x) => x.cycle_id === c.id)).sort((a, b) => a.starts_on.localeCompare(b.starts_on))
+  const missing = (cycles ?? []).filter((c) => c.is_active && !rows?.some((x) => x.cycle_id === c.id)).sort((a, b) => a.starts_on.localeCompare(b.starts_on))
   return (
-    <MemberSection title={<span className="inline-flex items-center gap-1.5">Ciclos{canManage && !adding && missing.length > 0 && (
-      <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
-    )}</span>}>
-      {isLoading && <Skeleton className="h-16" />}
-      {adding && (
-        <div className="flex items-center gap-2 rounded-md bg-muted/40 p-2">
-          <Select aria-label="Ciclo" defaultValue="" onChange={(e) => { if (e.target.value) { change.mutate({ cycle: e.target.value, status: 'active' }); setAdding(false) } }}>
-            <option value="">Escolha o ciclo</option>
-            {missing.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button>
-        </div>
-      )}
-      {activeCycles.filter((c) => rows?.some((x) => x.cycle_id === c.id)).map((c, idx) => {
-        const current = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === c.id)?.status_id)
-        const past = isPastCycle(c)
-        // Ciclo que já passou: "Participou" / "Não participou"; Ativo/Inativo é só do ciclo atual.
-        const optionsFor = past ? (statuses ?? []).filter((s) => !s.is_waitlist) : (statuses ?? [])
-        const labelOf = (s: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !s.is_waitlist ? (s.counts_as_active ? 'Participou' : 'Não participou') : s.name)
-        return (
-          <div key={c.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
-            <button type="button" className={cn('min-w-0 truncate text-left font-semibold hover:underline', c.id === selected && 'text-primary')} aria-pressed={c.id === selected} title="Ver a participação e a contribuição deste ciclo" onClick={() => onSelect(c.id)}>{c.name}{c.id === selected ? ' ●' : ''}</button>
-            <OkSelect
-              className="w-40"
-              disabled={!canManage}
-              value={current?.key ?? ''}
-              onSave={(v) => change.mutateAsync({ cycle: c.id, status: v })}
-              aria-label={`Status em ${c.name}`}
-            >
-              {!current && <option value="">Sem registro</option>}
-              {current && past && current.is_waitlist && <option value={current.key}>{current.name}</option>}
-              {optionsFor.map((s) => <option key={s.id} value={s.key}>{labelOf(s)}</option>)}
-            </OkSelect>
+    <div className="space-y-3">
+      <Collapsible open={open} onToggle={() => setOpen((o) => !o)} title={<span className="text-[15px]">Ciclos</span>} count={mine.length}
+        right={canManage && !adding && missing.length > 0 && (
+          <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => { setAdding(true); setOpen(true) }}><Plus className="h-3.5 w-3.5" /></button>
+        )}>
+        {isLoading && <Skeleton className="h-16" />}
+        {adding && (
+          <div className="flex items-center gap-2 rounded-md bg-muted/40 p-2">
+            <Select aria-label="Ciclo" defaultValue="" onChange={(e) => { if (e.target.value) { change.mutate({ cycle: e.target.value, status: 'active' }); setAdding(false) } }}>
+              <option value="">Escolha o ciclo</option>
+              {missing.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button>
           </div>
-        )
-      })}
-    </MemberSection>
+        )}
+        {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
+        {mine.map((c) => (
+          <CycleGroup key={c.id} cycle={c} status={statusOfCycle(c.id)} memberId={memberId} canManage={canManage} statuses={statuses ?? []}
+            onChange={(cycle, status) => change.mutateAsync({ cycle, status })}
+            onRemove={(cy) => { if (window.confirm('Tirar a pessoa do ciclo “' + cy.name + '”? A participação e a contribuição dela não são apagadas.')) remove.mutate(cy) }} />
+        ))}
+      </Collapsible>
+      {!isLoading && mine.length === 0 && <ParticipationBlock memberId={memberId} />}
+    </div>
   )
 }
 
@@ -243,9 +294,6 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   const [editing, setEditing] = useState(false)
-  const { data: allCycles } = useCycles()
-  const [pickedCycle, setPickedCycle] = useState('')
-  const cycle = allCycles?.find((c) => c.id === pickedCycle) ?? allCycles?.find((c) => c.is_current)
   void category
   return (
     <SheetContent title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
@@ -253,15 +301,7 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
     )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
-      <CycleParticipation memberId={member.id} selected={cycle?.id ?? ''} onSelect={setPickedCycle} />
-      <MemberSection title={<>Participação{cycle && <span className="font-normal text-muted-foreground"> • {cycle.name}</span>}</>}>
-        <div className="space-y-3">
-          <ArtisticLinks memberId={member.id} cycle={cycle} />
-          <ArtisticLinks memberId={member.id} mode="collab" cycle={cycle} />
-          <ArtisticLinks memberId={member.id} mode="paid" cycle={cycle} />
-        </div>
-      </MemberSection>
-      <MemberBilling memberId={member.id} cycle={cycle} />
+      <CyclesSection memberId={member.id} />
       <RelationWithBlock memberId={member.id} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
     </SheetContent>
