@@ -1,19 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Link2, Pencil, Plus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
-import { DateInput, PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
+import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { Can } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { hrefOf, LINK_KINDS } from '@/modules/site/links'
+import { hrefOf } from '@/modules/site/links'
+import { WhatsAppIcon } from './MemberSection'
 import { isPastCycle, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
@@ -69,8 +71,8 @@ function InviteButton({ member }: { member: MemberRow }) {
   })
   if (member.user_id) return <Badge className="bg-success/15 text-success">Conta vinculada</Badge>
   return (
-    <Button size="sm" variant="outline" disabled={invite.isPending} onClick={() => invite.mutate()}>
-      <Link2 className="h-4 w-4" /> Convidar
+    <Button size="icon" variant="ghost" disabled={invite.isPending} onClick={() => invite.mutate()} title="Copiar link de convite: a pessoa usa para criar o acesso dela ao app" aria-label={`Copiar link de convite para ${member.full_name}`}>
+      <Link2 className="h-4 w-4" />
     </Button>
   )
 }
@@ -127,6 +129,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [sheetOpen, setSheetOpen] = useState(false)
   const [selected, setSelected] = useState<MemberRow | null>(null)
+  const [params, setParams] = useSearchParams()
+  const wantedId = params.get('m')
+  useEffect(() => {
+    if (!wantedId || selected?.id === wantedId) return
+    void supabase.from('members').select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at').eq('id', wantedId).maybeSingle()
+      .then(({ data }) => { if (data) setSelected(data as MemberRow) })
+  }, [wantedId]) // eslint-disable-line react-hooks/exhaustive-deps
+  const closeSheet = () => { setSelected(null); if (wantedId) setParams({}, { replace: true }) }
   const { data: cycles } = useCycles()
   const { data: statuses } = useCycleStatuses()
 
@@ -247,8 +257,8 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
           <p className="flex flex-wrap items-center gap-x-3 text-muted-foreground">
             <span className="truncate">{m.full_name}</span>
             {wa && (
-              <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 font-semibold text-success hover:underline" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
-                {LINK_KINDS.whatsapp.icon('h-4 w-4')} {maskPhone(m.phone ?? '')}
+              <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center text-success hover:opacity-80" title="Conversar no WhatsApp" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
+                <WhatsAppIcon className="h-5 w-5" />
               </a>
             )}
           </p>
@@ -328,7 +338,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       {renderSections(tree.data)}
       {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
 
-      <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={selected !== null} onOpenChange={(o) => !o && closeSheet()}>
         {selected && <MemberDetailSheet member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
       </Sheet>
 

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { MemberLink } from '@/modules/members/MemberLink'
 import { useMemo, useState } from 'react'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { Badge, EmptyState, Skeleton } from '@/components/ui/primitives'
@@ -75,7 +76,7 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
   const row = (c: Charge) => (
     <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-card px-3 py-2">
       <p className="min-w-0 truncate font-semibold">
-        {labeler(c.members ?? { full_name: '', display_name: null })} {c.fee_categories?.name && <Badge className="bg-muted">{c.fee_categories.name}</Badge>}
+        <MemberLink id={c.member_id}>{labeler(c.members ?? { full_name: '', display_name: null })}</MemberLink> {c.fee_categories?.name && <Badge className="bg-muted">{c.fee_categories.name}</Badge>}
       </p>
       <span className="flex items-center gap-2">
         <span className="font-semibold">{formatCurrency(c.final_amount)}</span>
