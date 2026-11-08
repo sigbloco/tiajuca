@@ -8,7 +8,7 @@ import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -88,8 +88,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const [search, setSearch] = useState('')
   const filter: FilterValue = { ...EMPTY_FILTER, search }
   const sectionFilter = ''
-  const [showActive, setShowActive] = useState(true)
-  const [showInactive, setShowInactive] = useState(false)
+  const [situation, setSituation] = useState<'ativos' | 'inativos' | 'todos'>('ativos')
+  const showActive = situation !== 'inativos'
+  const showInactive = situation !== 'ativos'
   const [types, setTypes] = useState<Set<string>>(new Set())
   const staffKinds = useQuery({
     queryKey: ['staff-assignments', orgId, 'kinds'],
@@ -274,31 +275,31 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
         <h1>{title}</h1>
         <Can permission="members.manage">
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <Button onClick={() => setSheetOpen(true)}><Plus className="h-4 w-4" /> Novo integrante</Button>
+            <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card hover:bg-muted" aria-label="Novo integrante" title="Novo integrante" onClick={() => setSheetOpen(true)}><Plus className="h-4 w-4" /></button>
             <NewMemberSheet onClose={() => setSheetOpen(false)} />
           </Sheet>
         </Can>
       </div>
 
-      {cycleButtons.length > 1 && (
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Ciclo">
-          {cycleButtons.map((c) => (
-            <button key={c.id} role="tab" aria-selected={c.id === activeCycleId} disabled={c.empty} title={c.empty ? 'Ainda não houve oficina neste ciclo' : undefined}
-              className={cn(chip(c.id === activeCycleId), c.empty && 'cursor-not-allowed opacity-40 hover:bg-card')}
-              onClick={() => setCycleSel(c.id)}>
-              {c.name}{c.is_current ? ' · atual' : ''}
-            </button>
-          ))}
+      <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+        <div className="space-y-1">
+          <Label htmlFor="mb-cycle" className="text-xs">Ciclo</Label>
+          <Select id="mb-cycle" value={activeCycleId} onChange={(e) => setCycleSel(e.target.value)}>
+            {cycleButtons.map((c) => <option key={c.id} value={c.id} disabled={c.empty}>{c.name}{c.is_current ? ' · atual' : ''}</option>)}
+          </Select>
         </div>
-      )}
-
-      <div className="flex flex-wrap gap-2" role="group" aria-label={pastCycle ? 'Participação no ciclo' : 'Situação no ciclo'}>
-        <button type="button" aria-pressed={showActive} className={chip(showActive)} onClick={() => setShowActive(!showActive)}>{pastCycle ? 'Participou' : 'Ativos'}</button>
-        <button type="button" aria-pressed={showInactive} className={chip(showInactive)} onClick={() => setShowInactive(!showInactive)}>{pastCycle ? 'Não participou' : 'Inativos'}</button>
+        <div className="space-y-1">
+          <Label htmlFor="mb-situation" className="text-xs">Situação</Label>
+          <Select id="mb-situation" value={situation} onChange={(e) => setSituation(e.target.value as 'ativos' | 'inativos' | 'todos')}>
+            <option value="ativos">{pastCycle ? 'Participaram' : 'Ativos'}</option>
+            <option value="inativos">{pastCycle ? 'Não participaram' : 'Inativos'}</option>
+            <option value="todos">Todos</option>
+          </Select>
+        </div>
       </div>
       {!lockedCategory && (
         <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo de integrante">
