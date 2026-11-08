@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { shortName } from '@/core/format'
+import { givenName, shortName } from '@/core/format'
 import { Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -235,11 +235,11 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
-              <span className="truncate">{m.full_name.trim().split(/\s+/)[0]}</span>
+              <span className="truncate">{givenName(m.full_name, m.display_name)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
               {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{TYPE_LABEL[t] ?? t}</Badge>)}
             </p>
-            {m.display_name?.trim() && sameName(m.display_name, m.full_name.trim().split(/\s+/)[0]) === false && <p className="truncate text-muted-foreground">{m.display_name.trim()}</p>}
+            {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="truncate text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
           {wa && (
             <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-success" title="Conversar no WhatsApp" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>

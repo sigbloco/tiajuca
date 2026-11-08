@@ -80,10 +80,28 @@ export function addDaysIso(iso: string, days: number): string {
 }
 
 const normName = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+// Segundos nomes comuns: "Ana Luísa", "João Pedro", "Maria Clara"… (sem acento, minúsculos).
+const SECOND_GIVEN = new Set(('ana maria luisa luiza luiz luis clara beatriz paula julia eduarda eduardo fernanda fernando carolina cristina helena laura lucia vitoria victoria gabriela gabriel isabel isabela isabella joao jose pedro paulo carlos antonio augusto henrique felipe miguel rafael rodrigo roberto marcelo vinicius victor marcos andre alexandre daniel lucas matheus guilherme leonardo leandro thiago tiago gustavo renato ricardo sergio valeria elisa eliza rita sofia sophia alice aline amanda bianca camila claudia daniela flavia leticia livia marina mariana patricia renata sara sandra tereza teresa vanessa viviane raquel rosa regina silvia simone stella estela cecilia antonia angela adriana juliana larissa natalia nicole olivia luana lara manuela emilia francisco fabio bruno diego caio davi david samuel jorge mauricio nelson otavio raul ronaldo rogerio').split(' '))
+const PARTICLES = new Set(['de', 'da', 'do', 'dos', 'das', 'e'])
+
+/** Nome de batismo para tratar a pessoa: "Ana" (de "Ana Silva") ou "Ana Luísa" quando o primeiro nome é composto.
+ *  Detecta nome duplo se o "como prefere ser chamado" é as duas primeiras palavras do nome, ou se a segunda palavra é um segundo nome comum. */
+export function givenName(fullName: string | null | undefined, displayName?: string | null): string {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  const [a, b] = parts
+  if (!a) return ''
+  if (!b || PARTICLES.has(normName(b))) return a
+  const pref = normName(displayName ?? '')
+  if (pref === normName(a + ' ' + b) || SECOND_GIVEN.has(normName(b))) return a + ' ' + b
+  return a
+}
+
 /** Como mostrar uma pessoa nas listas: o primeiro nome e, se ela tiver um "como gostaria de ser chamado" diferente, entre parênteses. */
 export function shortName(fullName: string | null | undefined, displayName?: string | null): string {
-  const first = (fullName ?? '').trim().split(/\s+/)[0] ?? ''
+  const first = givenName(fullName, displayName)
   const pref = (displayName ?? '').trim()
   if (!first) return pref
-  return pref && normName(pref) !== normName(first) ? `${first} (${pref})` : first
+  // Apelido que já é uma parte do nome ("Ana" para "Ana Luísa") não precisa de parênteses.
+  const same = normName(pref) === normName(first) || normName(first).split(' ').includes(normName(pref))
+  return pref && !same ? `${first} (${pref})` : first
 }
