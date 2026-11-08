@@ -4,7 +4,7 @@ import { Collapsible } from '@/components/shared/Collapsible'
 /** Seção recolhível da ficha do integrante (cada uma guarda o próprio estado aberto/fechado). */
 export function MemberSection({ title, defaultOpen = false, children }: { title: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
-  return <Collapsible open={open} onToggle={() => setOpen((o) => !o)} title={title}>{children}</Collapsible>
+  return <Collapsible open={open} onToggle={() => setOpen((o) => !o)} title={title} titleClass="overflow-visible whitespace-normal text-[15px] leading-tight">{children}</Collapsible>
 }
 
 export function WhatsAppIcon({ className }: { className?: string }) {

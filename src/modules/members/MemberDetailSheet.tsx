@@ -196,10 +196,11 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   return (
-    <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={member.full_name}>
+    <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={member.full_name} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} />}
       <ArtisticLinks memberId={member.id} />
+      <ArtisticLinks memberId={member.id} mode="collab" />
       <CycleParticipation memberId={member.id} />
       <MemberBilling memberId={member.id} />
       {canSensitive && <MemberSection title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
