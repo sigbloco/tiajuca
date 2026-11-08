@@ -61,11 +61,12 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, st
   const optionsFor = past ? statuses.filter((x) => !x.is_waitlist) : statuses
   const labelOf = (x: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !x.is_waitlist ? (x.counts_as_active ? 'Participou' : 'Não participou') : x.name)
   return (
-    <Collapsible level={1} open={open} onToggle={() => setOpen((o) => !o)} title={<span className="text-sm">{cycle.name}{cycle.is_current ? ' · atual' : ''}</span>}
+    <Collapsible open={open} onToggle={() => setOpen((o) => !o)} titleClass="overflow-visible whitespace-normal text-[15px] leading-tight" title={<>{cycle.name}{cycle.is_current ? ' · atual' : ''}</>}
       right={canManage && (
         <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>
       )}>
-      <div className="space-y-3 pb-2">
+      <div className="space-y-3 p-1">
+        <p className="text-sm"><span className="text-muted-foreground">Início </span><span className="font-semibold">{formatDate(cycle.starts_on)}</span><span className="text-muted-foreground"> · Término </span><span className="font-semibold">{formatDate(cycle.ends_on)}</span></p>
         <div className="flex items-center gap-2">
           <Label className="text-sm">Situação</Label>
           <OkSelect className="w-40" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
@@ -88,7 +89,6 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const { data: statuses } = useCycleStatuses()
   const canManage = usePermission('member_cycles.manage', 'group')
   const canForce = usePermission('capacity.manage')
-  const [open, setOpen] = useState(true)
   const [adding, setAdding] = useState(false)
 
   const { data: rows, isLoading } = useQuery({
@@ -136,10 +136,9 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const missing = (cycles ?? []).filter((c) => c.is_active && !rows?.some((x) => x.cycle_id === c.id)).sort((a, b) => a.starts_on.localeCompare(b.starts_on))
   return (
     <div className="space-y-3">
-      <Collapsible open={open} onToggle={() => setOpen((o) => !o)} title={<span className="text-[15px]">Ciclos</span>} count={mine.length}
-        right={canManage && !adding && missing.length > 0 && (
-          <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => { setAdding(true); setOpen(true) }}><Plus className="h-3.5 w-3.5" /></button>
-        )}>
+      <MemberSection title={<span className="inline-flex items-center gap-1.5">Ciclos{canManage && !adding && missing.length > 0 && (
+        <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
+      )}</span>}>
         {isLoading && <Skeleton className="h-16" />}
         {adding && (
           <div className="flex items-center gap-2 rounded-md bg-muted/40 p-2">
@@ -156,7 +155,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
             onChange={(cycle, status) => change.mutateAsync({ cycle, status })}
             onRemove={(cy) => { if (window.confirm('Tirar a pessoa do ciclo “' + cy.name + '”? A participação e a contribuição dela não são apagadas.')) remove.mutate(cy) }} />
         ))}
-      </Collapsible>
+      </MemberSection>
       {!isLoading && mine.length === 0 && <ParticipationBlock memberId={memberId} />}
     </div>
   )
