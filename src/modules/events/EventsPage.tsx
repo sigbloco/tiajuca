@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
@@ -55,6 +55,31 @@ export function EventsPage() {
     },
   })
   const holidayOf = (iso: string) => holidays.data?.[iso]
+
+  // Aniversários: de quem a pessoa logada já pode ver (RLS de integrantes); repetem todo ano.
+  const birthdays = useQuery({
+    queryKey: ['birthdays', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('members').select('id, full_name, display_name, birth_date').eq('organization_id', orgId).is('archived_at', null).not('birth_date', 'is', null).limit(2000)
+      if (error) throw error
+      const map: Record<string, { id: string; name: string; year: number }[]> = {}
+      for (const m of data ?? []) {
+        const b = m.birth_date as string
+        const name = (m.display_name as string | null)?.trim() || (m.full_name as string).trim().split(/\s+/)[0]
+        ;(map[b.slice(5)] ??= []).push({ id: m.id as string, name, year: Number(b.slice(0, 4)) })
+      }
+      return map
+    },
+  })
+  const birthdaysOn = (iso: string) => {
+    const map = birthdays.data
+    if (!map) return []
+    const y = Number(iso.slice(0, 4))
+    const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
+    const out = [...(map[iso.slice(5)] ?? [])]
+    if (!leap && iso.slice(5) === '02-28') out.push(...(map['02-29'] ?? [])) // 29/02 comemora em 28/02 nos anos comuns
+    return out.map((p) => ({ ...p, age: y - p.year })).filter((p) => p.age >= 0)
+  }
 
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
@@ -137,10 +162,11 @@ export function EventsPage() {
                   selectedDay === d.iso && 'bg-muted',
                 )}
                 title={holidayOf(d.iso)}
-                aria-label={`${formatDayLong(d.iso)}${holidayOf(d.iso) ? `, feriado: ${holidayOf(d.iso)}` : ""}${list.length ? `, ${list.length} evento(s)` : ""}`}
+                aria-label={`${formatDayLong(d.iso)}${holidayOf(d.iso) ? `, feriado: ${holidayOf(d.iso)}` : ""}${list.length ? `, ${list.length} evento(s)` : ""}${birthdaysOn(d.iso).length ? `, ${birthdaysOn(d.iso).length} aniversário(s)` : ""}`}
               >
                 <span className={cn('text-xs font-semibold leading-none', holidayOf(d.iso) && 'rounded-full bg-destructive px-1.5 py-0.5 text-destructive-foreground')}>{Number(d.iso.slice(8))}</span>
-                <span className="mt-0.5 flex h-1.5 flex-wrap justify-center gap-0.5">
+                <span className="mt-0.5 flex h-1.5 flex-wrap items-center justify-center gap-0.5">
+                  {birthdaysOn(d.iso).length > 0 && <Cake className="h-2.5 w-2.5 text-secondary" aria-hidden="true" />}
                   {list.slice(0, 4).map((a) => (
                     <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30')} />
                   ))}
@@ -153,7 +179,13 @@ export function EventsPage() {
 
       {selectedDay && holidayOf(selectedDay) && <Badge className="bg-destructive/15 text-destructive">Feriado: {holidayOf(selectedDay)}</Badge>}
       {selectedDay && isLoading && <Skeleton className="h-24" />}
-      {selectedDay && data && listDays.length === 0 && <EmptyState>Nenhum evento neste dia.</EmptyState>}
+      {selectedDay && birthdaysOn(selectedDay).length > 0 && (
+        <Card className="space-y-1 p-3">
+          <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-secondary" /> Aniversariantes</p>
+          {birthdaysOn(selectedDay).map((p) => <p key={p.id} className="text-muted-foreground">{p.name} · {p.age} anos</p>)}
+        </Card>
+      )}
+      {selectedDay && data && listDays.length === 0 && birthdaysOn(selectedDay).length === 0 && <EmptyState>Nenhum evento neste dia.</EmptyState>}
       <div className="space-y-4">
         {selectedDay && listDays.map((day) => (
           <section key={day} className="space-y-2">
