@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
-import { Badge, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, EmptyState, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
@@ -12,14 +12,13 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 const STAFF_ROLES = ['titular', 'direcao', 'professor', 'monitor']
 
 /**
- * Receitas de mensalidades agrupadas: naipe → subnaipe → pessoas, cada uma com a etiqueta da categoria (aluno, sênior, músico, pernalta…).
+ * Receitas de mensalidades agrupadas: naipe → pessoas, cada uma com a etiqueta da categoria (aluno, sênior, músico, pernalta…).
  * Quem não contribui por fazer parte da organização (Direção, professores, monitores, regentes e a categoria de equipe) não aparece.
  */
 export function ReceiptsByGroup({ competence }: { competence: string }) {
   const orgId = useOrgId()
   const labeler = usePersonLabeler()
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const charges = useQuery({ queryKey: ['billing', orgId, 'all', competence], queryFn: () => listAllCharges(orgId, competence) })
@@ -53,7 +52,7 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
       const ls = byMember.get(memberId) ?? []
       const pick = ls.find((l) => l.started_at <= monthEnd && (!l.ended_at || l.ended_at >= monthStart)) ?? [...ls].sort((a, b) => b.started_at.localeCompare(a.started_at))[0]
       const inst = pick ? instById.get(pick.instrument_id) : undefined
-      return { section: inst?.section_id ?? '', sub: inst?.subsection_id ?? '' }
+      return { section: inst?.section_id ?? '', sub: '' }
     }
     const isStaffCategory = (name?: string) => !!name && /equipe|monitor/i.test(name)
     const map = new Map<string, Map<string, Charge[]>>()
@@ -71,8 +70,6 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
   }, [charges.data, links.data, instruments.data, staff.data, competence])
 
   const secList = [...(sections.data ?? []).filter((s) => tree.map.has(s.id)).sort((a, b) => a.sort_order - b.sort_order), ...(tree.map.has('') ? [{ id: '', name: 'Sem naipe' }] : [])]
-  const subName = (id: string) => (subsections.data ?? []).find((s) => s.id === id)?.name ?? 'Sem subnaipe'
-  const subOrder = (id: string) => (subsections.data ?? []).find((s) => s.id === id)?.sort_order ?? 9999
   const loading = charges.isLoading || sections.isLoading || staff.isLoading
 
   const row = (c: Charge) => (
@@ -99,21 +96,10 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
         const all = [...subs.values()].flat()
         const tone: Tone = TONES[idx % TONES.length]
         const k = `s:${sec.id}`
-        const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : subOrder(a) - subOrder(b)))
         return (
           <Collapsible key={k} tone={tone} title={sec.name} count={all.length} open={open[k] ?? false} onToggle={() => setOpen((o) => ({ ...o, [k]: !(o[k] ?? false) }))}
             right={<span className="hidden text-sm sm:inline"><span className="font-semibold text-success">{formatCurrency(sum(all, 'paid'))}</span> <span className="text-muted-foreground">de {formatCurrency(sum(all))}</span></span>}>
-            {subKeys.map((sk) => {
-              const list = (subs.get(sk) ?? []).slice().sort((a, b) => labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR'))
-              if (sk === '') return <div key={`${k}:none`} className="space-y-1.5">{list.map(row)}</div>
-              const kk = `${k}:${sk}`
-              return (
-                <Collapsible key={kk} level={1} tone={tone} title={subName(sk)} count={list.length} open={open[kk] ?? false} onToggle={() => setOpen((o) => ({ ...o, [kk]: !(o[kk] ?? false) }))}
-                  right={<span className={cn('hidden text-sm sm:inline')}><span className="font-semibold text-success">{formatCurrency(sum(list, 'paid'))}</span> <span className="text-muted-foreground">de {formatCurrency(sum(list))}</span></span>}>
-                  <div className="space-y-1.5">{list.map(row)}</div>
-                </Collapsible>
-              )
-            })}
+            <div className="space-y-1.5">{(subs.get('') ?? []).slice().sort((a, b) => labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR')).map(row)}</div>
           </Collapsible>
         )
       })}

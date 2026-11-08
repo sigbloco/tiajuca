@@ -19,8 +19,8 @@ import {
   type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
-const AUDIENCE_TABLE: Record<AudienceKind, CatalogTable> = { section: 'sections', subsection: 'subsections', instrument: 'instruments' }
-const AUDIENCE_LABEL: Record<AudienceKind, string> = { section: 'Naipe', subsection: 'Subnaipe', instrument: 'Instrumento' }
+const AUDIENCE_TABLE: Record<AudienceKind, CatalogTable> = { section: 'sections', subsection: 'sections', instrument: 'instruments' }
+const AUDIENCE_LABEL: Record<'section' | 'instrument', string> = { section: 'Naipe', instrument: 'Instrumento' }
 
 interface Props {
   activity: Activity | null
@@ -195,7 +195,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           <div className="space-y-2">
             <Select id="ev-aud" value={aKind} onChange={(e) => { setAKind(e.target.value as AudienceKind | ''); setARef('') }}>
               <option value="">Todos os ativos no ciclo</option>
-              {(Object.keys(AUDIENCE_LABEL) as AudienceKind[]).map((k) => <option key={k} value={k}>{AUDIENCE_LABEL[k]}</option>)}
+              {(Object.keys(AUDIENCE_LABEL) as ('section' | 'instrument')[]).map((k) => <option key={k} value={k}>{AUDIENCE_LABEL[k]}</option>)}
             </Select>
             <Select aria-label="Público" disabled={!aKind} value={aRef} onChange={(e) => setARef(e.target.value)}>
               <option value="">{aKind ? 'Selecione…' : '—'}</option>

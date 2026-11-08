@@ -14,7 +14,7 @@ import { describeChange, moveItemTo, invalidateCatalog, previousOf, saveCatalogI
 export const byOrder = (a: CatalogItem, b: CatalogItem) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)
 export const nextOrder = (items: CatalogItem[]) => items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1
 
-const SINGULAR: Partial<Record<CatalogTable, string>> = { sections: 'Naipe', subsections: 'Subnaipe', instruments: 'Instrumento' }
+const SINGULAR: Partial<Record<CatalogTable, string>> = { sections: 'Naipe', instruments: 'Instrumento' }
 
 export function useStructureMutations(table: CatalogTable) {
   const orgId = useOrgId()

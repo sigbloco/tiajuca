@@ -18,7 +18,7 @@ import { usePersonLabeler } from '@/modules/members/personLabel'
 import { NO_PITCH, hasTuning } from '@/modules/repertoire/service'
 import { TuningChips } from './TuningChips'
 import { useCatalog } from './CatalogEditor'
-import { itemPlural, invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
+import { invalidateCatalog, saveCatalogItem, type CatalogItem, type CatalogTable } from './service'
 import { NewSectionSheet } from './NewSectionWizard'
 import { Sheet } from '@/components/ui/primitives'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
@@ -32,7 +32,7 @@ const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsect
 
 const KIND_LABEL: Record<Kind, string> = { professor: 'Professor', monitor: 'Monitor', regente: 'Regente' }
 
-/** Equipe de um naipe, subnaipe ou instrumento: chips de quem já está designado e botões para acrescentar (+Professor, +Monitor, +Regente). */
+/** Equipe de um naipe ou instrumento: chips de quem já está designado e botões para acrescentar (+Professor, +Monitor, +Regente). */
 function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit: boolean; kinds?: Kind[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -92,7 +92,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
   )
 }
 
-/** Campo para criar um item (instrumento ou subnaipe) dentro de um naipe/subnaipe. */
+/** Campo para criar um item (instrumento) dentro de um naipe. */
 function AddInline({ placeholder, label, onAdd, pending }: { placeholder: string; label: string; onAdd: (name: string) => void; pending: boolean }) {
   const [name, setName] = useState('')
   return (
@@ -137,15 +137,13 @@ function RenameForm({ name, label, onSave, onCancel }: { name: string; label: st
   )
 }
 
-/** Naipes, subnaipes e instrumentos numa página só, todos com o mesmo padrão. Arraste um instrumento para outro subnaipe para mudá-lo de lugar. */
+/** Naipes e instrumentos numa página só, todos com o mesmo padrão. */
 export function NaipesPage() {
   const canEdit = usePermission('structure.manage')
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
-  const subMut = useStructureMutations('subsections')
   const instMut = useStructureMutations('instruments')
   const drag = useHoldReorder()
   const open = useOpenSet()
@@ -160,16 +158,15 @@ export function NaipesPage() {
   const ordered = (sections.data ?? []).slice().sort(byOrder)
 
   const view = useMemo(() => (sections.data ?? []).slice().sort(byOrder).map((s) => {
-    const subs = (subsections.data ?? []).filter((x) => x.section_id === s.id).sort(byOrder)
     const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id).sort(byOrder)
     const okI = (i: CatalogItem) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search)
-    const visible = matchesText(s.name, filter.search) || insts.some(okI) || subs.some((x) => matchesText(x.name, filter.search))
-    return { s, subs, insts, okI, show: matchesStatus(s.is_active, filter.status) && visible }
-  }).filter((g) => g.show), [sections.data, subsections.data, instruments.data, filter])
+    const visible = matchesText(s.name, filter.search) || insts.some(okI)
+    return { s, insts, okI, show: matchesStatus(s.is_active, filter.status) && visible }
+  }).filter((g) => g.show), [sections.data, instruments.data, filter])
 
   const addNode = useMutation({
-    mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; subsection_id?: string | null; sort_order: number; tuning?: string | null }) =>
-      saveCatalogItem(v.table, orgId, { name: v.name, sort_order: v.sort_order, ...(v.tuning ? { tuning: v.tuning } : {}), ...(v.section_id ? { section_id: v.section_id } : {}), ...(v.subsection_id ? { subsection_id: v.subsection_id } : {}) }),
+    mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; sort_order: number; tuning?: string | null }) =>
+      saveCatalogItem(v.table, orgId, { name: v.name, sort_order: v.sort_order, ...(v.tuning ? { tuning: v.tuning } : {}), ...(v.section_id ? { section_id: v.section_id } : {}) }),
     onSuccess: () => { notifySaved('Criado.'); invalidateCatalog(qc, orgId) },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -186,16 +183,9 @@ export function NaipesPage() {
   }
   const toggle = (mut: Mut, item: CatalogItem) => mut.save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })
 
-  /** Arrastar um instrumento: sobre outro instrumento do mesmo grupo reordena; sobre um subnaipe (ou "do naipe") muda de grupo. */
+  /** Arrastar um instrumento sobre outro do mesmo naipe reordena. */
   const moveInstrument = (secInsts: CatalogItem[]) => (fromId: string, toId: string) => {
-    const from = secInsts.find((i) => i.id === fromId)
-    if (!from) return
-    if (toId.startsWith('sub:')) { instMut.save.mutate({ id: from.id, name: from.name, subsection_id: toId.slice(4) }); return }
-    if (toId.startsWith('nosub:')) { instMut.save.mutate({ id: from.id, name: from.name, subsection_id: null }); return }
-    const to = secInsts.find((i) => i.id === toId)
-    if (!to) return
-    if ((from.subsection_id ?? null) === (to.subsection_id ?? null)) instMut.reorder.mutate({ from: fromId, to: toId, list: secInsts.filter((i) => (i.subsection_id ?? null) === (from.subsection_id ?? null)) })
-    else instMut.save.mutate({ id: from.id, name: from.name, subsection_id: to.subsection_id ?? null })
+    if (secInsts.some((i) => i.id === fromId) && secInsts.some((i) => i.id === toId)) instMut.reorder.mutate({ from: fromId, to: toId, list: secInsts })
   }
 
   const instNode = (i: CatalogItem, group: CatalogItem[], secInsts: CatalogItem[], sec: CatalogItem) => {
@@ -234,19 +224,18 @@ export function NaipesPage() {
       </div>
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
       <p className="text-muted-foreground">
-        Os nomes de naipe disponíveis ficam em Organização → Nomes de naipes. Cada naipe tem seus subnaipes e instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
-        mude a ordem ou leve um instrumento para outro subnaipe. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
+        Os nomes de naipe disponíveis ficam em Organização → Nomes de naipes. Cada naipe tem seus instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
+        mude a ordem. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
       </p>
       {sections.isLoading && <Skeleton className="h-24" />}
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}
       <div className="space-y-2">
-        {view.map(({ s, subs, insts, okI }) => {
-          const noSub = insts.filter((i) => !i.subsection_id)
+        {view.map(({ s, insts, okI }) => {
           const onMoveSec = (f: string, t: string) => secMut.reorder.mutate({ from: f, to: t, list: ordered })
           const idx = ordered.findIndex((x) => x.id === s.id)
           return (
             <div key={s.id} {...(canEdit ? drag.row(s.id, onMoveSec, 'sections') : {})} className={drag.cls(s.id)}>
-              <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} expandable={insts.length > 0 || subs.length > 0 || isEditing(s.id)} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
+              <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} expandable={insts.length > 0 || isEditing(s.id)} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
                 right={canEdit && (
                   <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMoveSec, 'sections')}
                     onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
@@ -255,41 +244,11 @@ export function NaipesPage() {
                 )}>
                 {isEditing(s.id) && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => toggleEdit(s.id)} />}
 
-                {(subs.length === 0 || noSub.length > 0) && (
-                <div data-sortid={`nosub:${s.id}`} data-sortscope={`inst:${s.id}`} className={cn('space-y-1.5 rounded-lg', drag.cls(`nosub:${s.id}`))}>
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">{subs.length > 0 ? 'Sem subnaipe (arraste cada um para um subnaipe)' : `${itemPlural(s.item_label ?? 'Instrumento')} do naipe`}</p>
-                  {noSub.filter(okI).map((i) => instNode(i, noSub, insts, s))}
-                  {canEdit && isEditing(s.id) && subs.length === 0 && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} do naipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
+                <div className="space-y-1.5">
+                  {insts.filter(okI).map((i) => instNode(i, insts, insts, s))}
+                  {canEdit && isEditing(s.id) && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} do naipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
                     onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, tuning: s.pitch_mode === 'undefined' ? NO_PITCH : null, sort_order: nextOrder(instruments.data ?? []) })} />}
                 </div>
-                )}
-
-                {subs.filter((x) => matchesStatus(x.is_active, filter.status)).map((sub, si) => {
-                  const list = insts.filter((i) => i.subsection_id === sub.id)
-                  const onMoveSub = (f: string, t: string) => subMut.reorder.mutate({ from: f, to: t, list: subs })
-                  return (
-                    <div key={sub.id} data-sortid={`sub:${sub.id}`} data-sortscope={`inst:${s.id}`} className={cn('rounded-lg', drag.cls(`sub:${sub.id}`))}>
-                      <div {...(canEdit ? drag.row(sub.id, onMoveSub, `sub:${s.id}`) : {})} className={drag.cls(sub.id)}>
-                        <Collapsible below={<StaffBlock scope="subsection" id={sub.id} canEdit={canEdit && isEditing(sub.id)} />} level={1} expandable={list.length > 0 || isEditing(sub.id)} open={searching || open.isOpen(sub.id)} onToggle={() => open.toggle(sub.id)} title={<span className={cn(!sub.is_active && 'opacity-60')}>{sub.name}</span>} count={list.length}
-                          right={canEdit && (
-                            <Actions item={sub} label="subnaipe" idx={si} total={subs.length} handle={drag.handle(sub.id, onMoveSub, `sub:${s.id}`)}
-                              onUp={() => subMut.move.mutate({ a: sub, b: subs[si - 1], list: subs })} onDown={() => subMut.move.mutate({ a: sub, b: subs[si + 1], list: subs })}
-                              onEdit={() => { toggleEdit(sub.id); if (!open.isOpen(sub.id) && !isEditing(sub.id)) open.toggle(sub.id) }}
-                              onToggle={() => toggle(subMut, sub)} onDelete={() => confirmDelete('subsections', sub, 'o subnaipe')} />
-                          )}>
-                          {isEditing(sub.id) && <RenameForm name={sub.name} label="subnaipe" onSave={(v) => subMut.save.mutate({ id: sub.id, name: v })} onCancel={() => toggleEdit(sub.id)} />}
-                          <div className="space-y-1.5">
-                            {list.filter(okI).map((i) => instNode(i, list, insts, s))}
-                            {canEdit && isEditing(sub.id) && <AddInline placeholder={`Novo(a) ${(s.item_label ?? 'Instrumento').toLowerCase()} deste subnaipe`} label={s.item_label ?? 'Instrumento'} pending={addNode.isPending}
-                              onAdd={(name) => addNode.mutate({ table: 'instruments', name, section_id: s.id, subsection_id: sub.id, tuning: s.pitch_mode === 'undefined' ? NO_PITCH : null, sort_order: nextOrder(instruments.data ?? []) })} />}
-                          </div>
-                        </Collapsible>
-                      </div>
-                    </div>
-                  )
-                })}
-                {canEdit && isEditing(s.id) && <AddInline placeholder={`Novo subnaipe de ${s.name}`} label="Subnaipe" pending={addNode.isPending}
-                  onAdd={(name) => addNode.mutate({ table: 'subsections', name, section_id: s.id, sort_order: nextOrder(subsections.data ?? []) })} />}
               </Collapsible>
             </div>
           )

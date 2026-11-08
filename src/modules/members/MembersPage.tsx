@@ -82,11 +82,10 @@ interface Leaf { key: string; label: string; members: GroupMember[] }
 interface TreeData { sectionList: { id: string; name: string; sort_order: number; is_active: boolean }[]; map: Map<string, Map<string, Map<string, Leaf>>>; total: number }
 
 /**
- * Integrantes agrupados por naipe → subnaipe → instrumento, VISTOS POR CICLO: os botões de ciclo mostram quem participou de cada
+ * Integrantes agrupados por naipe → instrumento, VISTOS POR CICLO: os botões de ciclo mostram quem participou de cada
  * Carnaval (com o instrumento que tinha na época); "Também esteve em" cruza ciclos (ex.: ativos hoje que já estavam em 2024/25).
  */
 const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor', 'Professores'], ['monitor', 'Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
-const TYPE_KEYS = TYPE_OPTIONS.map(([k]) => k)
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
@@ -107,7 +106,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const sectionFilter = ''
   const [showActive, setShowActive] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
-  const [types, setTypes] = useState<Set<string>>(new Set(TYPE_KEYS))
+  const [types, setTypes] = useState<Set<string>>(new Set())
   const staffKinds = useQuery({
     queryKey: ['staff-assignments', orgId, 'kinds'],
     queryFn: async () => {
@@ -160,7 +159,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     },
   })
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
 
@@ -179,7 +177,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
 
   const tree = useMemo(() => {
     const secs = sections.data ?? []
-    const subById = new Map((subsections.data ?? []).map((s) => [s.id, s]))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
     const fnById = new Map((functions.data ?? []).map((f) => [f.id, f]))
     const searching = filter.search.trim() !== ''
@@ -200,7 +197,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         if (showActive && !st?.counts_as_active) continue
         if (showInactive && (st?.counts_as_active || st?.is_waitlist)) continue
       }
-      if (!lockedCategory && types.size < TYPE_KEYS.length) {
+      if (!lockedCategory && types.size > 0) {
         const mine = typesOf(m.id)
         if (![...types].some((t) => mine.has(t))) continue
       }
@@ -216,8 +213,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
         const fn = l.function_id ? fnById.get(l.function_id) : undefined
         if (inst?.section_id) {
-          const sub = inst.subsection_id && subById.has(inst.subsection_id) ? inst.subsection_id : ''
-          add(inst.section_id, sub, inst.id, inst.name, m); placed = true
+          add(inst.section_id, '', inst.id, inst.name, m); placed = true
         } else if (fn?.section_id) {
           add(fn.section_id, '', `fn:${fn.id}`, fn.name, m); placed = true
         }
@@ -227,9 +223,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     }
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
-    return { searching, subById, data: { sectionList, map, total: seen.size } as TreeData }
+    return { searching, data: { sectionList, map, total: seen.size } as TreeData }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, subsections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, showActive, showInactive, types, staffKinds.data])
+  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, showActive, showInactive, types, staffKinds.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -267,8 +263,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const tone: Tone = TONES[idx % TONES.length]
     const subs = t.map.get(sec.id)!
     const count = new Set([...subs.values()].flatMap((l) => [...l.values()].flatMap((x) => x.members.map((m) => m.id)))).size
-    const hasSubs = [...subs.keys()].some((k) => k !== '')
-    const subKeys = [...subs.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : (tree.subById.get(a)?.sort_order ?? 0) - (tree.subById.get(b)?.sort_order ?? 0)))
     const renderLeaves = (leaves: Map<string, Leaf>, p: string) =>
       [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
         <Collapsible key={p + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(p + leaf.key, leaves.size === 1)} onToggle={() => toggle(p + leaf.key, isOpen(p + leaf.key, leaves.size === 1))}>
@@ -278,24 +272,12 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const sk0 = `${activeCycleId}:${sec.id}`
     return (
       <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0)} onToggle={() => toggle(sk0, isOpen(sk0))}>
-        {subKeys.map((sk) => {
-          const leaves = subs.get(sk)!
-          // Subnaipe é opcional: quem não tem fica direto no naipe, sem grupo "Sem subnaipe".
-          if (!hasSubs || sk === '') return <div key={sk} className="space-y-2">{renderLeaves(leaves, `${sk0}:`)}</div>
-          const subCount = new Set([...leaves.values()].flatMap((x) => x.members.map((m) => m.id))).size
-          const subName = tree.subById.get(sk)?.name ?? 'Subnaipe'
-          const k = `${sk0}:sub:${sk}`
-          return (
-            <Collapsible key={k} level={1} tone={tone} title={subName} count={subCount} open={isOpen(k, subKeys.length === 1)} onToggle={() => toggle(k, isOpen(k, subKeys.length === 1))}>
-              {renderLeaves(leaves, `${k}:`)}
-            </Collapsible>
-          )
-        })}
+        <div className="space-y-2">{renderLeaves(subs.get('') ?? new Map(), `${sk0}:`)}</div>
       </Collapsible>
     )
   })
 
-  const chip = (on: boolean) => cn('rounded-full border px-3 py-1.5 text-sm font-semibold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
+  const chip = (on: boolean) => cn('rounded-full border px-2.5 py-1 text-xs font-semibold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
 
   return (
     <div className="space-y-4">
