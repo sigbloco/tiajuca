@@ -3,7 +3,7 @@ import { Pencil, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { AutoComplete, Chip } from '@/components/shared/AutoComplete'
-import { Button, Label, Select } from '@/components/ui/primitives'
+import { Button, Label, Select, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
@@ -158,8 +158,8 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
     <MemberSection level={2} title={<span className="inline-flex items-center gap-1.5">{collab ? 'Colaborativa' : 'Artística'}{canManage && editing === null && (
       <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={collab ? 'Adicionar participação colaborativa' : 'Adicionar participação artística'} title="Adicionar" onClick={() => { setF(EMPTY); setEditing('new') }}><Plus className="h-3.5 w-3.5" /></button>
     )}</span>}>
-      {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l) => (editing === l.id ? <div key={l.id}>{form}</div> : (
-        <div key={l.id} className="flex items-center justify-between gap-2">
+      {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l, idx) => (editing === l.id ? <div key={l.id}>{form}</div> : (
+        <div key={l.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
           <div className="min-w-0">
             <p className="truncate font-semibold">
               {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :[l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
@@ -168,7 +168,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
           </div>
           {canManage && (
             <div className="flex shrink-0 gap-1">
-              <Button size="icon" variant="ghost" aria-label="Editar vínculo" onClick={() => startEdit(l)}><Pencil className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Editar vínculo" onClick={() => startEdit(l)}><Pencil className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" aria-label="Encerrar" title="Encerrar" onClick={() => end.mutate(l.id)}><X className="h-4 w-4" /></Button>
             </div>
           )}
