@@ -9,6 +9,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { useCycles } from '@/modules/cycles/service'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
+import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
 import { COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
@@ -57,7 +58,8 @@ export function EventsPage() {
   })
   const holidayOf = (iso: string) => holidays.data?.[iso]
 
-  // Aniversários: de quem a pessoa logada já pode ver (RLS de integrantes); repetem todo ano.
+  // Aniversários: de quem a pessoa logada já pode ver (RLS de integrantes), só de quem está ativo no ciclo atual; repetem todo ano.
+  const memberStatus = useMemberStatus()
   const birthdays = useQuery({
     queryKey: ['birthdays', orgId],
     queryFn: async () => {
@@ -79,7 +81,7 @@ export function EventsPage() {
     const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
     const out = [...(map[iso.slice(5)] ?? [])]
     if (!leap && iso.slice(5) === '02-28') out.push(...(map['02-29'] ?? [])) // 29/02 comemora em 28/02 nos anos comuns
-    return out.map((p) => ({ ...p, age: y - p.year })).filter((p) => p.age >= 0)
+    return out.map((p) => ({ ...p, age: y - p.year })).filter((p) => p.age >= 0 && !(memberStatus.ready && memberStatus.isInactive(p.id)))
   }
 
   const byDay = useMemo(() => {
