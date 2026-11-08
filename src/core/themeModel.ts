@@ -16,6 +16,12 @@ export interface ThemeColors {
   card?: string | null
   /** Cabeçalho (e menu lateral, no admin). */
   header?: string | null
+  /** Texto sobre cada cor (vazio = escolhido sozinho para ficar legível). */
+  primaryText?: string | null
+  secondaryText?: string | null
+  text?: string | null
+  cardText?: string | null
+  headerText?: string | null
 }
 export type ColorKey = keyof ThemeColors
 export type ThemeArea = 'general' | 'site' | 'shop'
@@ -32,10 +38,15 @@ export interface ThemeJson extends ThemeColors {
 
 export const COLOR_SLOTS: { key: ColorKey; label: string; hint: string }[] = [
   { key: 'primary', label: 'Botões e destaques', hint: 'Cor dos botões principais, links e seleções.' },
+  { key: 'primaryText', label: 'Texto dos botões e destaques', hint: 'Letras dentro dos botões principais.' },
   { key: 'secondary', label: 'Cor de apoio', hint: 'Selos, avisos e detalhes.' },
+  { key: 'secondaryText', label: 'Texto da cor de apoio', hint: 'Letras dentro dos selos e avisos.' },
   { key: 'background', label: 'Fundo principal', hint: 'Fundo atrás de tudo.' },
+  { key: 'text', label: 'Texto principal', hint: 'Letras sobre o fundo principal.' },
   { key: 'card', label: 'Cartões e caixas', hint: 'Fundo das caixas de conteúdo.' },
+  { key: 'cardText', label: 'Texto dos cartões', hint: 'Letras dentro das caixas de conteúdo.' },
   { key: 'header', label: 'Cabeçalho', hint: 'Topo da página (e menu lateral no admin).' },
+  { key: 'headerText', label: 'Texto do cabeçalho', hint: 'Letras no topo da página (e no menu lateral do admin).' },
 ]
 
 export const isHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9A-Fa-f]{6}$/.test(v.trim())
@@ -87,19 +98,25 @@ export function resolveColors(theme: ThemeJson | null | undefined, area: ThemeAr
 export function themeVars(c: ThemeColors, explicitForeground?: { primary?: string; secondary?: string }): Record<string, string> {
   const v: Record<string, string> = {}
   const set = (name: string, hex: string) => { v[name] = channels(hex) }
-  if (c.primary) { set('--primary', c.primary); set('--primary-foreground', explicitForeground?.primary && isHex(explicitForeground.primary) ? explicitForeground.primary : textOn(c.primary)) }
-  if (c.secondary) { set('--secondary', c.secondary); set('--secondary-foreground', explicitForeground?.secondary && isHex(explicitForeground.secondary) ? explicitForeground.secondary : textOn(c.secondary)) }
+  if (!c.primary && c.primaryText) set('--primary-foreground', c.primaryText)
+  if (!c.secondary && c.secondaryText) set('--secondary-foreground', c.secondaryText)
+  if (c.primary) { set('--primary', c.primary); set('--primary-foreground', c.primaryText ?? (explicitForeground?.primary && isHex(explicitForeground.primary) ? explicitForeground.primary : textOn(c.primary))) }
+  if (c.secondary) { set('--secondary', c.secondary); set('--secondary-foreground', c.secondaryText ?? (explicitForeground?.secondary && isHex(explicitForeground.secondary) ? explicitForeground.secondary : textOn(c.secondary))) }
   if (c.background) {
-    const fg = textOn(c.background)
+    const fg = c.text ?? textOn(c.background)
     set('--background', c.background); set('--foreground', fg)
     set('--muted', mix(c.background, fg, 0.07)); set('--muted-foreground', mix(fg, c.background, 0.4)); set('--border', mix(c.background, fg, 0.14))
+  } else if (c.text) {
+    set('--foreground', c.text); set('--muted-foreground', mix(c.text, textOn(c.text), 0.4))
   }
   // Sem cor própria, cartões e cabeçalho acompanham o tom do fundo (claro → branco; escuro → um pouco mais claro que o fundo).
   const derived = c.background ? (textOn(c.background) === '#1c1c14' ? '#FFFFFF' : mix(c.background, '#FFFFFF', 0.08)) : undefined
   const card = c.card ?? derived
   const header = c.header ?? derived
-  if (card) { set('--card', card); set('--card-foreground', textOn(card)) }
-  if (header) { set('--header', header); set('--header-foreground', textOn(header)) }
+  if (card) set('--card', card)
+  if (card || c.cardText) set('--card-foreground', c.cardText ?? textOn(card as string))
+  if (header) set('--header', header)
+  if (header || c.headerText) set('--header-foreground', c.headerText ?? textOn(header as string))
   return v
 }
 
@@ -129,8 +146,8 @@ export function withAreaColors(theme: ThemeJson | null | undefined, area: ThemeA
     for (const { key } of COLOR_SLOTS) delete base[key]
     Object.assign(base, next)
     // Textos sobre as cores principais ficam coerentes com as cores novas (o sistema antigo lê estes campos).
-    if (next.primary) base.primaryForeground = textOn(next.primary); else delete base.primaryForeground
-    if (next.secondary) base.secondaryForeground = textOn(next.secondary); else delete base.secondaryForeground
+    if (next.primaryText) base.primaryForeground = next.primaryText; else if (next.primary) base.primaryForeground = textOn(next.primary); else delete base.primaryForeground
+    if (next.secondaryText) base.secondaryForeground = next.secondaryText; else if (next.secondary) base.secondaryForeground = textOn(next.secondary); else delete base.secondaryForeground
   } else if (Object.keys(next).length) base[area] = next
   else delete base[area]
   return base

@@ -18,7 +18,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   open_forms: { slug: string; title: string }[]
 }
@@ -70,10 +70,10 @@ export function LandingPage() {
 
   return (
     <main className="min-h-screen bg-background pb-16 text-foreground">
-      <header className={`px-4 pb-20 pt-10 text-center ${heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: heroColor, color: textOn(heroColor) } : undefined}>
+      <header className={`px-4 pb-20 pt-10 text-center ${heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: heroColor, color: areaOverrides(org.theme, 'site').headerText ?? textOn(heroColor) } : undefined}>
         {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
         <OrgLogo name={org.name} logoPath={photo} className="mx-auto h-36 w-36 object-cover ring-4 ring-secondary" />
-        <h1 className="mt-4 font-display text-3xl font-extrabold">{site.headline || org.name}</h1>
+        <h1 className={site.hide_headline ? 'sr-only' : 'mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
       </header>
 
       <div className="-mt-12 mx-auto max-w-md space-y-5 px-4">
