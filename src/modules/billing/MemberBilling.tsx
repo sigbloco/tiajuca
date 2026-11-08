@@ -135,7 +135,7 @@ export function MemberBilling({ memberId }: { memberId: string }) {
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </div>
-      {canSchol && assignment?.fee_category_id && (
+      {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && (
         <div className="space-y-1.5 pt-1">
           <p className="text-sm font-semibold">Bolsa</p>
           <ScholarshipForm memberId={memberId} auto onPercent={setLivePct} />

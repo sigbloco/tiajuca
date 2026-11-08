@@ -202,22 +202,28 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
   )
 }
 
-/** "Relação com a Grande Tijuca": texto que a pessoa escreveu na inscrição. Último item da ficha. */
+/** Respostas da inscrição: relação com a Grande Tijuca e se já tocou com outros blocos. Em branco quando não há resposta. */
 function RelationWithBlock({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
   const { data } = useQuery({
     queryKey: ['member-relation', orgId, memberId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('affective_relation').eq('id', memberId).single()
+      const { data, error } = await supabase.from('members').select('affective_relation, played_other_blocks, other_blocks').eq('id', memberId).single()
       if (error) throw error
-      return (data as { affective_relation: string | null }).affective_relation
+      return data as { affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null }
     },
   })
-  if (!data?.trim()) return null
+  const blocks = data?.played_other_blocks ? (data.other_blocks?.trim() ? 'Sim — ' + data.other_blocks.trim() : 'Sim') : data ? 'Não' : ''
   return (
-    <section className="space-y-1">
-      <h3 className="font-display text-base font-bold">Relação com a Grande Tijuca</h3>
-      <p className="whitespace-pre-wrap text-sm">{data}</p>
+    <section className="space-y-2">
+      <div className="space-y-0.5">
+        <h3 className="font-display text-base font-bold">Relação com a Grande Tijuca</h3>
+        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.affective_relation?.trim() ?? ''}</p>
+      </div>
+      <div className="space-y-0.5">
+        <h3 className="font-display text-base font-bold">Já tocou com outros blocos?</h3>
+        <p className="min-h-5 whitespace-pre-wrap text-sm">{blocks}</p>
+      </div>
     </section>
   )
 }
@@ -238,8 +244,8 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
       </MemberSection>
       <CycleParticipation memberId={member.id} />
       <MemberBilling memberId={member.id} />
-      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
       <RelationWithBlock memberId={member.id} />
+      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
     </SheetContent>
   )
 }
