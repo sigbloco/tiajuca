@@ -14,7 +14,8 @@ export const COLOR_LABEL: Record<TypeColor, string> = {
   primary: 'Vermelho (marca)', secondary: 'Amarelo (marca)', info: 'Azul', success: 'Verde', warning: 'Laranja', muted: 'Cinza',
 }
 
-export interface ItineraryStep { time: string; label: string }
+/** Item do roteiro: início (`time`), fim, nome (`label`), local e descrição. */
+export interface ItineraryStep { time: string; label: string; end?: string; location?: string; description?: string }
 export interface Activity {
   id: string
   activity_type_id: string
