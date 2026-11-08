@@ -11,11 +11,11 @@ import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
-import { HUBS, HUB_ORDER, NAV_ITEMS, crumbsFor, type NavItem } from './navigation'
+import { HUBS, NAV_ITEMS, crumbsFor, type HubKey, type NavItem } from './navigation'
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { ViewAsBar } from './ViewAsBar'
 
-interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; admin?: boolean }
+interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; /** Traço separador acima do item. */ sep?: boolean }
 
 // Itens que ficam na barra inferior do celular; o resto vai em "Mais".
 const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
@@ -41,14 +41,17 @@ export function AppShell() {
   const visible = (i: NavItem) => !(i.to === 'perfil' && isTitular) && (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
+  const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))
+  const hubEntry = (hub: HubKey): MenuEntry[] => {
+    const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
+    const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
+    return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), ...(hub === 'oficina' ? ['lista-de-espera'] : [])] }]
+  }
+  const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
-    ...NAV_ITEMS.filter((i) => !i.group && !i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon})),
-    ...HUB_ORDER.flatMap((hub) => {
-      const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
-      const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
-      return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), ...(hub === 'oficina' ? ['lista-de-espera'] : [])] }]
-    }),
-    ...NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, admin: true })),
+    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('repertorio'), ...direct('naipes'),
+    ...withSep([...hubEntry('organizacao'), ...hubEntry('financeiro')]),
+    ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
   ]
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
   const crumbs = crumbsFor(segs, base)
@@ -60,7 +63,7 @@ export function AppShell() {
   const link = (e: MenuEntry) =>
     cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive(e) && 'bg-primary text-primary-foreground hover:bg-primary')
   const renderEntries = (list: MenuEntry[], onClick?: () => void) => list.map((e, idx) => (
-    <div key={e.to || 'home'} className={cn(e.admin && !list[idx - 1]?.admin && 'mt-2 border-t border-border pt-3')}>
+    <div key={e.to || 'home'} className={cn(e.sep && idx > 0 && 'mt-2 border-t border-border pt-3')}>
       <NavLink to={`${base}/${e.to}`} className={link(e)} onClick={onClick}>
         <e.icon className="h-5 w-5" /> {e.label}
       </NavLink>
