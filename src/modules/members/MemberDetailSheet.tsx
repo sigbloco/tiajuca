@@ -264,6 +264,8 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
   )
 }
 
+const Blank = () => <span className="text-xs italic text-muted-foreground/70">em branco</span>
+
 /** Respostas da inscrição: relação com a Grande Tijuca e se já tocou com outros blocos. Em branco quando não há resposta. */
 function RelationWithBlock({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
@@ -279,11 +281,11 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
     <section className="space-y-2">
       <div className="space-y-0.5">
         <h3 className="font-display text-base font-bold">Relação com a Grande Tijuca</h3>
-        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.affective_relation?.trim() ?? ''}</p>
+        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.affective_relation?.trim() || (data ? <Blank /> : '')}</p>
       </div>
       <div className="space-y-0.5">
         <h3 className="font-display text-base font-bold">Outros blocos</h3>
-        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.other_blocks?.trim() ?? ''}</p>
+        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.other_blocks?.trim() || (data ? <Blank /> : '')}</p>
       </div>
     </section>
   )
