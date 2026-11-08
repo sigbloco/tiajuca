@@ -11,7 +11,7 @@ import { useCycles } from '@/modules/cycles/service'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
-import { COLOR_BADGE, COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
+import { COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -195,26 +195,30 @@ export function EventsPage() {
               const t = a.activity_types
               const time = [formatTime(a.start_time), formatTime(a.end_time)].filter(Boolean).join(' – ')
               return (
-                <Card key={a.id} className={cn('flex items-center gap-3 p-3', ai % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60')}>
-                  <span className={cn('h-10 w-1.5 shrink-0 rounded-full', COLOR_DOT[t?.color ?? 'muted'])} />
+                <Card key={a.id} className={cn('flex items-stretch gap-3 p-3', ai % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60')}>
+                  <span className={cn('w-1.5 shrink-0 rounded-full', COLOR_DOT[t?.color ?? 'muted'])} />
                   <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ activity: a })}>
-                    <p className={cn('truncate font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
-                    <p className="truncate text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
-                    {a.itinerary && a.itinerary.length > 0 && (
-                      <ul className="mt-1.5 space-y-1 border-t border-border/60 pt-1.5 text-sm">
-                        {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k) => (
-                          <li key={k} className="flex gap-2">
-                            <span className="w-24 shrink-0 font-semibold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span>
-                            <span className="min-w-0"><span className="font-medium">{x.label}</span>{x.location && <span className="text-muted-foreground"> · {x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span>
-                          </li>
-                        ))}
-                      </ul>
+                    <p className={cn('font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
+                    {a.itinerary && a.itinerary.length > 0 ? (
+                      <div className="text-muted-foreground">
+                        {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k, list) => {
+                          const loc = x.location?.trim()
+                          const lastLoc = list.slice(0, k).reverse().find((y) => y.location?.trim())?.location?.trim().toLowerCase()
+                          const showLoc = !!loc && loc.toLowerCase() !== lastLoc
+                          return (
+                            <div key={k}>
+                              {showLoc && <p className="font-medium text-foreground">{loc}</p>}
+                              <p>{x.time.slice(0, 5)}{x.end ? ' – ' + x.end.slice(0, 5) : ''} · {x.label}</p>
+                              {x.description && <p className="whitespace-pre-wrap text-sm">{x.description}</p>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
                     )}
                   </button>
-                  <div className="flex flex-col items-end gap-1">
-                    {t && <Badge className={COLOR_BADGE[t.color]}>{t.name}</Badge>}
-                    {a.status !== 'scheduled' && <Badge>{STATUS_LABEL[a.status]}</Badge>}
-                  </div>
+                  {a.status !== 'scheduled' && <div className="flex flex-col items-end gap-1"><Badge>{STATUS_LABEL[a.status]}</Badge></div>}
                 </Card>
               )
             })}

@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
+import { Collapsible } from '@/components/shared/Collapsible'
+import { Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -114,6 +115,7 @@ export function RecurrencesSettings() {
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const [sheet, setSheet] = useState<{ rule: Rule | null } | null>(null)
+  const [trashOpen, setTrashOpen] = useState(false)
 
   const { data } = useQuery({
     queryKey: ['rules', orgId],
@@ -136,7 +138,7 @@ export function RecurrencesSettings() {
       if (error) throw error
       return data as number
     },
-    onSuccess: (n) => { toast.success(`Recorrência encerrada. ${n} evento(s) futuro(s) cancelado(s).`); refresh() },
+    onSuccess: (n) => { toast.success(`Recorrência na lixeira. ${n} evento(s) futuro(s) cancelado(s).`); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -144,9 +146,11 @@ export function RecurrencesSettings() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('recurrence_rules').update({ is_active: true, until: null }).eq('id', id)
       if (error) throw error
+      const { error: e2 } = await supabase.from('activities').update({ status: 'scheduled' }).eq('recurrence_rule_id', id).eq('status', 'cancelled').gt('activity_date', todayIso(membership?.timezone))
+      if (e2) throw e2
       return materialize(orgId, addDaysIso(todayIso(membership?.timezone), 84))
     },
-    onSuccess: () => { toast.success('Recorrência reativada.'); refresh() },
+    onSuccess: () => { toast.success('Recorrência restaurada.'); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const remove = useMutation({
@@ -155,10 +159,11 @@ export function RecurrencesSettings() {
       if (error) throw error
       return data as number
     },
-    onSuccess: (n) => { toast.success(`Recorrência apagada. ${n} evento(s) removido(s).`); refresh() },
+    onSuccess: (n) => { toast.success(`Recorrência apagada de vez. ${n} evento(s) removido(s).`); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const summary = (r: Rule) => WEEKDAYS[r.weekday] + (r.start_time ? ' · ' + formatTime(r.start_time) + (r.end_time ? '–' + formatTime(r.end_time) : '') : '') + (r.location ? ' · ' + r.location : '') + ' · desde ' + formatDate(r.starts_on) + (r.until ? ' até ' + formatDate(r.until) : '')
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -169,36 +174,37 @@ export function RecurrencesSettings() {
         </div>
       </div>
       <p className="text-muted-foreground">As próximas 12 semanas são geradas automaticamente quando a Direção abre a agenda.</p>
-      {data?.length === 0 && <EmptyState>Nenhuma recorrência.</EmptyState>}
+      {data?.filter((r) => r.is_active).length === 0 && <EmptyState>Nenhuma recorrência.</EmptyState>}
       <div className="grid gap-2">
-        {data?.map((r) => (
-          <Card key={r.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
+        {data?.filter((r) => r.is_active).map((r) => (
+          <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
-              <p className="font-semibold">{r.title} {!r.is_active && <Badge>Encerrada</Badge>}</p>
-              <p className="text-muted-foreground">
-                {WEEKDAYS[r.weekday]}{r.start_time ? ` · ${formatTime(r.start_time)}${r.end_time ? `–${formatTime(r.end_time)}` : ''}` : ''}
-                {r.location ? ` · ${r.location}` : ''} · desde {formatDate(r.starts_on)}{r.until ? ` até ${formatDate(r.until)}` : ''}
-              </p>
+              <p className="font-semibold">{r.title}</p>
+              <p className="text-muted-foreground">{summary(r)}</p>
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSheet({ rule: r })}>Editar</Button>
-              {!r.is_active && (
-                <Button size="sm" variant="outline" disabled={reactivate.isPending} onClick={() => reactivate.mutate(r.id)}>Reativar</Button>
-              )}
-              {r.is_active && (
-                <Button size="sm" variant="ghost" className="text-destructive" disabled={end.isPending}
-                  onClick={() => { if (window.confirm('Encerrar esta recorrência? Eventos futuros sem presença serão cancelados.')) end.mutate(r.id) }}>
-                  Encerrar
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" className="text-destructive" disabled={remove.isPending}
-                onClick={() => { if (window.confirm('Apagar esta recorrência e os eventos gerados por ela? Eventos com presença registrada são mantidos no histórico.')) remove.mutate(r.id) }}>
-                Apagar
-              </Button>
+            <div className="flex shrink-0 gap-1">
+              <Button size="icon" variant="ghost" aria-label={'Editar ' + r.title} title="Editar" onClick={() => setSheet({ rule: r })}><Pencil className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="text-destructive" aria-label={'Apagar ' + r.title} title="Apagar (vai para a lixeira)" disabled={end.isPending} onClick={() => end.mutate(r.id)}><Trash2 className="h-4 w-4" /></Button>
             </div>
           </Card>
         ))}
       </div>
+      <Collapsible open={trashOpen} onToggle={() => setTrashOpen((o) => !o)} tone="muted" title="Lixeira" count={data?.filter((r) => !r.is_active).length ?? 0}>
+        {data?.filter((r) => !r.is_active).length === 0 && <p className="px-1 text-muted-foreground">A lixeira está vazia.</p>}
+        {data?.filter((r) => !r.is_active).map((r) => (
+          <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
+            <div className="min-w-0">
+              <p className="font-semibold">{r.title}</p>
+              <p className="text-muted-foreground">{summary(r)}</p>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <Button size="icon" variant="ghost" aria-label={'Restaurar ' + r.title} title="Restaurar" disabled={reactivate.isPending} onClick={() => reactivate.mutate(r.id)}><Undo2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="text-destructive" aria-label={'Apagar ' + r.title + ' de vez'} title="Apagar de vez" disabled={remove.isPending}
+                onClick={() => { if (window.confirm('Apagar de vez esta recorrência e os eventos gerados por ela? Isso não pode ser desfeito. Eventos com presença registrada são mantidos no histórico.')) remove.mutate(r.id) }}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          </Card>
+        ))}
+      </Collapsible>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <RuleSheet key={sheet.rule?.id ?? 'new'} rule={sheet.rule} onClose={() => setSheet(null)} />}
       </Sheet>

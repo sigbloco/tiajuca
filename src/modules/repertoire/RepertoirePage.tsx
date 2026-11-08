@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Music2, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Music2, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -100,7 +100,7 @@ export function RepertoirePage() {
                     <Button asChild size="sm"><Link to={`/${membership?.slug}/repertorio/${r.id}?nova=1`}><Plus className="h-4 w-4" /> Música</Link></Button>
                     <Button size="icon" variant="ghost" aria-label="Subir" disabled={i === 0} onClick={() => swap.mutate({ from: i, to: i - 1 })}><ArrowUp className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" aria-label="Descer" disabled={i === data.length - 1} onClick={() => swap.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-4 w-4" /></Button>
-                    <Button size="sm" variant="outline" onClick={() => setSheet({ rep: r })}>Editar</Button>
+                    <Button size="icon" variant="outline" aria-label={'Editar ' + r.name} title="Editar" onClick={() => setSheet({ rep: r })}><Pencil className="h-4 w-4" /></Button>
                   </div>
                 )}
               </div>

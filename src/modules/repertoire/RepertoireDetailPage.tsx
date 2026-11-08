@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Plus, Share2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Pencil, Plus, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -55,7 +55,7 @@ export function RepertoireDetailPage() {
           <div className="flex items-center gap-2">{rep && <span className={cn('h-3 w-3 shrink-0 rounded-full', COLOR_DOT[rep.color])} />}<h1 className="truncate">{rep?.name ?? 'Repertório'}</h1></div>
           {rep?.description && <p className="text-muted-foreground">{rep.description}</p>}
         </div>
-        {canManage && rep && <Button size="sm" variant="outline" onClick={() => setEditRep(true)}>Editar</Button>}
+        {canManage && rep && <Button size="icon" variant="outline" aria-label="Editar" title="Editar" onClick={() => setEditRep(true)}><Pencil className="h-4 w-4" /></Button>}
       </div>
 
       <div className="flex flex-wrap gap-2">

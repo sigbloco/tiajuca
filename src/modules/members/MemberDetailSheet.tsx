@@ -168,7 +168,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  if (!open) return <div><Button size="sm" variant="outline" onClick={() => setOpen(true)}><Pencil className="h-4 w-4" /> Editar dados</Button></div>
+  if (!open) return <div><Button size="icon" variant="outline" aria-label="Editar dados" title="Editar dados" onClick={() => setOpen(true)}><Pencil className="h-4 w-4" /></Button></div>
   if (!reg.data) return <Skeleton className="h-24" />
   const fld = (id: string, label: string, el: ReactNode) => <div className="space-y-1.5"><Label htmlFor={id}>{label}</Label>{el}</div>
   return (

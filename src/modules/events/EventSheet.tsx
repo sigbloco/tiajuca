@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck } from 'lucide-react'
+import { ClipboardCheck, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -134,7 +134,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           {canRecord && activity.status !== 'cancelled' && (
             <Button asChild><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /> Abrir chamada</Link></Button>
           )}
-          {canManage && <Button variant="outline" onClick={() => setEditing(true)}>Editar</Button>}
+          {canManage && <Button variant="outline" size="icon" className="self-end" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
           {canManage && activity.status !== 'cancelled' && (
             <Button variant="ghost" className="text-destructive" disabled={changeStatus.isPending}
               onClick={() => { if (window.confirm('Cancelar este evento? Ele continuará no histórico como cancelado.')) changeStatus.mutate('cancelled') }}>
