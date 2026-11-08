@@ -13,9 +13,9 @@ import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteV
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -40,7 +40,7 @@ export function SiteSettings() {
     const { error } = await supabase.from('site_settings').upsert({
       organization_id: orgId, headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url,
       links: row.links, videos: row.videos, enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label,
-      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, header_color: row.header_color, page_color: row.page_color,
+      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
     }, { onConflict: 'organization_id' })
     if (error) throw error
   }
@@ -97,7 +97,9 @@ export function SiteSettings() {
           </div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="st-head">Título</Label>
-          <Input id="st-head" placeholder={membership?.name ?? 'Nome do bloco'} value={f.headline ?? ''} onChange={(e) => setF({ ...f, headline: e.target.value })} /></div>
+          <Input id="st-head" placeholder={membership?.name ?? 'Nome do bloco'} value={f.headline ?? ''} onChange={(e) => setF({ ...f, headline: e.target.value })} />
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.hide_headline} onChange={(e) => setF({ ...f, hide_headline: e.target.checked })} /> Esconder o título na página</label>
+          <p className="text-xs text-muted-foreground">Só a logo aparece. O título continua no código da página, para buscadores (SEO) e leitores de tela.</p></div>
         <div className="space-y-1.5"><Label htmlFor="st-desc">Descrição curta</Label>
           <textarea id="st-desc" rows={4} maxLength={600} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <p className="text-xs text-muted-foreground">{(f.description ?? '').length}/600</p></div>

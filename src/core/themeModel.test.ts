@@ -109,3 +109,23 @@ describe('aplicar e restaurar no elemento', () => {
     expect(MANAGED_VARS).toContain('--header')
   })
 })
+
+describe('cores de texto', () => {
+  it('texto escolhido vale no lugar do automático', () => {
+    const v = themeVars({ primary: '#E93D2B', primaryText: '#111111', background: '#FFFFFF', text: '#222222', card: '#EEEEEE', cardText: '#333333', header: '#000000', headerText: '#FAFAFA' })
+    expect(v['--primary-foreground']).toBe('17 17 17')
+    expect(v['--foreground']).toBe('34 34 34')
+    expect(v['--card-foreground']).toBe('51 51 51')
+    expect(v['--header-foreground']).toBe('250 250 250')
+  })
+  it('texto sem a cor de fundo também é aplicado', () => {
+    const v = themeVars({ text: '#222222', headerText: '#FAFAFA' })
+    expect(v['--foreground']).toBe('34 34 34')
+    expect(v['--header-foreground']).toBe('250 250 250')
+    expect(v['--header']).toBeUndefined()
+  })
+  it('sem texto escolhido, continua automático e é gravado no tema', () => {
+    expect(themeVars({ background: '#000000' })['--foreground']).toBe('255 255 255')
+    expect(withAreaColors({}, 'site', { cardText: '#333333' }).site).toEqual({ cardText: '#333333' })
+  })
+})

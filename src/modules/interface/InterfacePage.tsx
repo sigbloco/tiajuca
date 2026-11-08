@@ -9,7 +9,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { applyTheme, varsForArea } from '@/core/theme'
-import { COLOR_SLOTS, areaOverrides, withAreaColors, type ThemeArea, type ThemeColors, type ThemeJson } from '@/core/themeModel'
+import { COLOR_SLOTS, areaOverrides, withAreaColors, type ColorKey, type ThemeArea, type ThemeColors, type ThemeJson } from '@/core/themeModel'
 import { notifySaved } from '@/core/undo'
 import { UnsavedDialog, UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { saveAllUnsaved, useUnsavedCount } from '@/core/unsaved'
@@ -57,27 +57,33 @@ function FactoryEditor() {
 const EMPTY_THEME: ThemeJson = {}
 
 /** Miniatura: cabeçalho, fundo, cartão com botão e destaque, já com as cores escolhidas (variáveis CSS só dentro da miniatura). */
-function Preview({ vars, title }: { vars: Record<string, string>; title: string }) {
+function Preview({ vars, title, onPick }: { vars: Record<string, string>; title: string; onPick: (k: ColorKey) => void }) {
   const { membership } = useOrganization()
+  // Clique em qualquer parte da prévia: seleciona o esquema de cores correspondente (o elemento mais específico vence).
+  const pick = (e: React.MouseEvent) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-slot]')
+    if (el?.dataset.slot) onPick(el.dataset.slot as ColorKey)
+  }
   return (
-    <div aria-label="Prévia" className="overflow-hidden rounded-xl border border-border" style={vars as CSSProperties}>
-      <div className="bg-background text-foreground">
-        <div className="flex items-center justify-between gap-2 border-b border-border bg-header px-3 py-2 text-header-foreground">
+    <div aria-label="Prévia" title="Clique num item para escolher a cor dele" onClick={pick}
+      className="cursor-pointer overflow-hidden rounded-xl border border-border" style={vars as CSSProperties}>
+      <div data-slot="background" className="bg-background text-foreground">
+        <div data-slot="header" className="flex items-center justify-between gap-2 border-b border-border bg-header px-3 py-2 text-header-foreground">
           <span className="flex items-center gap-2 font-display font-extrabold leading-tight">
-            <OrgLogo name={membership?.name} logoPath={membership?.logo_path} className="h-7 w-7" /> {title}
+            <OrgLogo name={membership?.name} logoPath={membership?.logo_path} className="h-7 w-7" /> <span data-slot="headerText">{title}</span>
           </span>
-          <span className="flex items-center gap-3 text-xs font-semibold"><span>Pedidos</span><ShoppingCart className="h-4 w-4" /></span>
+          <span data-slot="headerText" className="flex items-center gap-3 text-xs font-semibold"><span>Pedidos</span><ShoppingCart className="h-4 w-4" /></span>
         </div>
         <div className="space-y-3 p-3">
-          <div className="space-y-2 rounded-lg border border-border bg-card p-3 text-card-foreground shadow-card">
-            <p className="font-bold">Camisa 2027</p>
-            <p className="text-xs text-muted-foreground">Texto de apoio do produto.</p>
+          <div data-slot="card" className="space-y-2 rounded-lg border border-border bg-card p-3 text-card-foreground shadow-card">
+            <p data-slot="cardText" className="font-bold">Camisa 2027</p>
+            <p data-slot="cardText" className="text-xs text-muted-foreground">Texto de apoio do produto.</p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-primary-foreground">Comprar</span>
-              <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-secondary-foreground">Destaque</span>
+              <span data-slot="primary" className="rounded-lg bg-primary px-3 py-1.5 text-sm font-bold text-primary-foreground"><span data-slot="primaryText">Comprar</span></span>
+              <span data-slot="secondary" className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-secondary-foreground"><span data-slot="secondaryText">Destaque</span></span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">Texto sobre o fundo principal.</p>
+          <p data-slot="text" className="text-xs text-muted-foreground">Texto sobre o fundo principal.</p>
         </div>
       </div>
     </div>
@@ -110,6 +116,12 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
   const restore = () => setColors({})
+  // Clique na prévia: destaca e rola até o seletor daquela cor.
+  const [active, setActive] = useState<ColorKey | null>(null)
+  const pickSlot = (k: ColorKey) => {
+    setActive(k)
+    document.getElementById(`slot-${k}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
@@ -117,7 +129,7 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
       <Card className="space-y-4 p-4">
         <p className="text-sm text-muted-foreground">{intro}</p>
         {COLOR_SLOTS.map((s) => (
-          <div key={s.key} className="space-y-1" title={s.hint}>
+          <div key={s.key} id={`slot-${s.key}`} className={cn('space-y-1 rounded-lg p-2 transition', active === s.key && 'bg-muted ring-2 ring-primary')} title={s.hint}>
             <ColorPick area={area} label={s.label} value={colors[s.key] ?? null}
               onChange={(v) => setColors((c) => ({ ...c, [s.key]: v }))} />
           </div>
@@ -130,8 +142,8 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
       </Card>
       <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
         <p className="text-sm font-semibold">Prévia</p>
-        <Preview vars={vars} title={title} />
-        <p className="text-xs text-muted-foreground">A prévia mostra as cores ainda não salvas.</p>
+        <Preview vars={vars} title={title} onPick={pickSlot} />
+        <p className="text-xs text-muted-foreground">Clique num item da prévia para escolher a cor dele. A prévia mostra as cores ainda não salvas.</p>
       </div>
     </div>
   )
