@@ -24,11 +24,13 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const charges = useQuery({ queryKey: ['billing', orgId, 'all', competence], queryFn: () => listAllCharges(orgId, competence) })
   const links = useQuery({
-    queryKey: ['billing', orgId, 'links'],
+    queryKey: ['billing', orgId, 'cycle-links'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('member_artistic_links').select('member_id, instrument_id, started_at, ended_at').eq('organization_id', orgId).not('instrument_id', 'is', null).limit(5000)
+      // Participação por ciclo: cada linha vale pelo período do ciclo dela (o mês usa a do ciclo que o cobre).
+      const { data, error } = await supabase.from('cycle_participations').select('member_id, instrument_id, cycles(starts_on, ends_on)').eq('organization_id', orgId).not('instrument_id', 'is', null).limit(5000)
       if (error) throw error
-      return (data ?? []) as { member_id: string; instrument_id: string; started_at: string; ended_at: string | null }[]
+      return ((data ?? []) as unknown as { member_id: string; instrument_id: string; cycles: { starts_on: string; ends_on: string } | null }[])
+        .filter((x) => x.cycles).map((x) => ({ member_id: x.member_id, instrument_id: x.instrument_id, started_at: x.cycles!.starts_on, ended_at: x.cycles!.ends_on as string | null }))
     },
   })
   const staff = useQuery({
