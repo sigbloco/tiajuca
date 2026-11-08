@@ -95,6 +95,11 @@ export function MyData({ memberId }: { memberId: string }) {
 
 const GENDERS = [['feminino', 'Feminino'], ['masculino', 'Masculino'], ['nao_binario', 'Não-binário'], ['outro', 'Outro'], ['prefiro_nao_informar', 'Prefiro não informar']]
 const RACES = [['branca', 'Branca'], ['preta', 'Preta'], ['parda', 'Parda'], ['amarela', 'Amarela'], ['indigena', 'Indígena'], ['prefiro_nao_informar', 'Prefiro não informar']]
+/** Opções da lista + o valor já gravado quando vem de outra grafia (ex.: "Mulher", "Branca" da planilha importada). */
+const withCurrent = (opts: string[][], current: string) => [
+  ...opts.map(([v, l]) => <option key={v} value={v}>{l}</option>),
+  ...(current && !opts.some(([v]) => v === current) ? [<option key={current} value={current}>{current}</option>] : []),
+]
 const tri = (v: boolean | null) => (v === null ? '' : v ? 'yes' : 'no')
 const fromTri = (v: string) => (v === '' ? null : v === 'yes')
 
@@ -157,9 +162,9 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(false) }} className="space-y-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor="s-gender">Gênero</Label>
-                  <Select id="s-gender" value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}><option value="">Não informar</option>{GENDERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></div>
+                  <Select id="s-gender" value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}><option value="">Não informar</option>{withCurrent(GENDERS, f.gender)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-race">Cor/raça</Label>
-                  <Select id="s-race" value={f.race_color} onChange={(e) => setF({ ...f, race_color: e.target.value })}><option value="">Não informar</option>{RACES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></div>
+                  <Select id="s-race" value={f.race_color} onChange={(e) => setF({ ...f, race_color: e.target.value })}><option value="">Não informar</option>{withCurrent(RACES, f.race_color)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-trans">Você se considera trans?</Label>
                   <Select id="s-trans" value={f.is_trans} onChange={(e) => setF({ ...f, is_trans: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-pcd">É PCD (pessoa com deficiência)?</Label>

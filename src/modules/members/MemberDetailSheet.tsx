@@ -1,8 +1,17 @@
-import { shortName } from '@/core/format'
+import { formatDate, shortName } from '@/core/format'
+
+function ageOf(iso: string | null | undefined): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '')
+  if (!m) return null
+  const now = new Date()
+  let age = now.getFullYear() - Number(m[1])
+  if (now.getMonth() + 1 < Number(m[2]) || (now.getMonth() + 1 === Number(m[2]) && now.getDate() < Number(m[3]))) age--
+  return age >= 0 ? age : null
+}
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toast } from 'sonner'
-import { Globe, Mail, Pencil, Plus, X } from 'lucide-react'
+import { Cake, Globe, Mail, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Card, Input, Label, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
@@ -91,7 +100,7 @@ function CycleParticipation({ memberId }: { memberId: string }) {
 function ContactLinks({ member }: { member: MemberRow }) {
   const socials = (member.social_handle ?? '').split('\n').map((x) => socialUrl(x)).filter((x): x is string => !!x)
   const wa = whatsappUrl(member.phone)
-  if (!member.phone && socials.length === 0 && !member.email) return null
+  if (!member.phone && socials.length === 0 && !member.email && !member.birth_date) return null
   const cls = 'inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted'
   return (
     <div className="flex flex-wrap gap-2">
@@ -102,6 +111,7 @@ function ContactLinks({ member }: { member: MemberRow }) {
         </a>
       ))}
       {member.email && <a className={cls} href={`mailto:${member.email}`} aria-label="E-mail"><Mail className="h-4 w-4" /> {member.email}</a>}
+      {member.birth_date && <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm" aria-label="Data de nascimento"><Cake className="h-4 w-4" /> {formatDate(member.birth_date)}</span>}
     </div>
   )
 }
@@ -150,7 +160,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
     },
     onSuccess: (p) => {
       toast.success('Dados atualizados.')
-      onChanged({ full_name: p.full_name, display_name: p.display_name, email: p.email, phone: p.phone, social_handle: p.social_handle })
+      onChanged({ full_name: p.full_name, display_name: p.display_name, email: p.email, phone: p.phone, social_handle: p.social_handle, birth_date: p.birth_date })
       qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['member-registration', orgId, member.id] }); qc.invalidateQueries({ queryKey: ['memberships'] })
       setOpen(false)
     },
@@ -196,7 +206,7 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   return (
-    <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={member.full_name} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
+    <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} />}
       <ArtisticLinks memberId={member.id} />
