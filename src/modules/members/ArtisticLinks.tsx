@@ -3,7 +3,7 @@ import { Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { AutoComplete, Chip } from '@/components/shared/AutoComplete'
-import { Button, Card, Label, Select } from '@/components/ui/primitives'
+import { Button, Label, Select } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
@@ -41,7 +41,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
   const [f, setF] = useState<Draft>(EMPTY)
 
   const { data } = useQuery({
-    queryKey: ['member-links', orgId, memberId],
+    queryKey: ['member-links', orgId, memberId, mode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('member_artistic_links')
@@ -116,7 +116,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
   }
 
   const form = (
-    <Card className="space-y-2 p-3">
+    <div className="space-y-2 rounded-md bg-muted/40 p-2">
       {collab ? (
         <Select value={f.function_id} aria-label="Função" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
           <option value="">Escolha a função</option>
@@ -149,15 +149,15 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
         </Button>
         <Button size="sm" variant="ghost" onClick={close}>Cancelar</Button>
       </div>
-    </Card>
+    </div>
   )
 
   // Sem participação e sem permissão de editar: nada para mostrar.
   if (!canManage && (data?.length ?? 0) === 0) return null
   return (
-    <MemberSection title={collab ? 'Participação colaborativa' : 'Participação artística'} defaultOpen={!collab}>
+    <MemberSection level={2} title={collab ? 'Colaborativa' : 'Artística'}>
       {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l) => (editing === l.id ? <div key={l.id}>{form}</div> : (
-        <Card key={l.id} className="flex items-center justify-between gap-2 p-3">
+        <div key={l.id} className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate font-semibold">
               {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :[l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
@@ -170,7 +170,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
               <Button size="sm" variant="outline" onClick={() => end.mutate(l.id)}>Encerrar</Button>
             </div>
           )}
-        </Card>
+        </div>
       )))}
       {canManage && editing === 'new' && form}
       {canManage && editing === null && (

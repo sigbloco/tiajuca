@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Button, Card, Input, Label } from '@/components/ui/primitives'
+import { Button, Input, Label, cn } from '@/components/ui/primitives'
 import { MemberSection } from '@/modules/members/MemberSection'
 import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
@@ -16,7 +16,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
 
 /** Formulário de bolsa (0–100%). 0% encerra a bolsa. Usado na ficha do integrante e na página de Bolsas. */
-export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSaved?: () => void }) {
+export function ScholarshipForm({ memberId, onSaved, auto = false }: { memberId: string; onSaved?: () => void; /** Grava ao sair do campo (sem botão): usado na ficha do integrante. */ auto?: boolean }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -52,17 +52,19 @@ export function ScholarshipForm({ memberId, onSaved }: { memberId: string; onSav
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const changed = valid && (n !== Math.round(Number(current?.percent ?? 0)) || reason.trim() !== (current?.reason ?? ''))
+  const autoSave = () => { if (auto && changed && !save.isPending) save.mutate() }
   return (
     <div className="space-y-2">
       <div className="flex items-end gap-2">
-      <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}`}>Percentual (%)</Label>
-        <Input id={`pct-${memberId}`} className="w-16 px-2 text-center" inputMode="numeric" maxLength={3} value={percent}
+      <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}`} className={auto ? 'text-xs' : undefined}>Percentual (%)</Label>
+        <Input id={`pct-${memberId}`} className={cn('w-16 px-2 text-center', auto && 'h-8 text-sm')} inputMode="numeric" maxLength={3} value={percent} onBlur={autoSave}
           onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPercent(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
-      <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={`reason-${memberId}`}>Motivo</Label>
-        <Input id={`reason-${memberId}`} placeholder="Opcional" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+      <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={`reason-${memberId}`} className={auto ? 'text-xs' : undefined}>Motivo</Label>
+        <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Opcional" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
       </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
-      <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()}>Salvar bolsa</Button>
+      {!auto && <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()}>Salvar bolsa</Button>}
     </div>
   )
 }
@@ -115,18 +117,18 @@ export function MemberBilling({ memberId }: { memberId: string }) {
   if (!canBilling) return null
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(price.data)}</span>}</>}>
-      <Card className="space-y-2 p-3">
+      <div className="flex items-center gap-2">
         <Label htmlFor="fee-cat">Categoria</Label>
-<OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
+        <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
           <option value="">Não contribui</option>
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
-      </Card>
+      </div>
       {canSchol && (
-        <Card className="space-y-2 p-3">
-          <h3 className="text-sm">Bolsa</h3>
-          <ScholarshipForm memberId={memberId} />
-        </Card>
+        <div className="space-y-1.5 pt-1">
+          <p className="text-sm font-semibold">Bolsa</p>
+          <ScholarshipForm memberId={memberId} auto />
+        </div>
       )}
     </MemberSection>
   )
