@@ -166,7 +166,7 @@ export function EventsPage() {
               >
                 <span className={cn('text-xs font-semibold leading-none', holidayOf(d.iso) && 'rounded-full bg-destructive px-1.5 py-0.5 text-destructive-foreground')}>{Number(d.iso.slice(8))}</span>
                 <span className="mt-0.5 flex h-1.5 flex-wrap items-center justify-center gap-0.5">
-                  {birthdaysOn(d.iso).length > 0 && <Cake className="h-2.5 w-2.5 text-secondary" aria-hidden="true" />}
+                  {birthdaysOn(d.iso).length > 0 && <Cake className="-my-0.5 h-3 w-3 text-foreground" strokeWidth={2.75} aria-hidden="true" />}
                   {list.slice(0, 4).map((a) => (
                     <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30')} />
                   ))}
