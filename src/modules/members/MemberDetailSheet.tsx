@@ -25,7 +25,6 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { isPastCycle, setMemberCycleStatus, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { MemberBilling } from '@/modules/billing/MemberBilling'
-import { MemberRole } from './MemberRole'
 import { MySensitiveData } from '@/modules/profile/MyData'
 import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
@@ -229,7 +228,6 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
   return (
     <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
-      <MemberRole memberId={member.id} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} />}
       <MemberSection title="Participação">
         <div className="space-y-3">
