@@ -4,7 +4,7 @@ import { EMPTY_SETTINGS, fromSettings, missingSetup, parsePercent, toSettings, t
 const ok: SettingsForm = {
   pix: true, pixKey: 'pix@bloco.com', pixBeneficiary: 'Rafael', infinitepay: false, handle: '', siteUrl: '',
   whatsapp: '(21) 99069-8483', email: 'loja@bloco.com', directors: [{ name: 'Rafael', phone: '(21) 99613-4845' }], mailFromName: 'Bloco', mailFromEmail: 'loja@bloco.com', defaultDiscount: '10',
-  introText: '', reservationHours: '48', retentionYears: '5',
+  introText: '', featuredTitle: 'Destaques', reservationHours: '48', retentionYears: '5',
 }
 
 describe('telefones', () => {

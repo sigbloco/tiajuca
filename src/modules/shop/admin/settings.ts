@@ -18,6 +18,8 @@ export interface ShopSettings {
   default_member_discount_pct: number
   /** Aparência e textos da loja (opcionais). */
   intro_text: string | null
+  /** Título da seção de produtos em destaque na vitrine. */
+  featured_title: string
   /** Horas que os itens ficam reservados aguardando o pagamento. */
   reservation_hours: number
   /** Anos de guarda dos dados do pedido (aviso de privacidade). */
@@ -27,10 +29,10 @@ export interface ShopSettings {
 export const EMPTY_SETTINGS: ShopSettings = {
   payment_methods: [], infinitepay_handle: null, public_site_url: null, pix_key: null, pix_beneficiary: null,
   contact_whatsapp: null, contact_email: null, directors: [], mail_from_name: null, mail_from_email: null, default_member_discount_pct: 0,
-  intro_text: null, reservation_hours: 48, privacy_retention_years: 5,
+  intro_text: null, featured_title: 'Destaques', reservation_hours: 48, privacy_retention_years: 5,
 }
 
-const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, reservation_hours, privacy_retention_years'
+const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, featured_title, reservation_hours, privacy_retention_years'
 
 export async function getSettings(orgId: string): Promise<ShopSettings> {
   const { data, error } = await supabase.from('shop_settings').select(COLUMNS).eq('organization_id', orgId).maybeSingle()
@@ -52,6 +54,7 @@ export interface SettingsForm {
   mailFromName: string; mailFromEmail: string
   defaultDiscount: string
   introText: string
+  featuredTitle: string
   reservationHours: string; retentionYears: string
 }
 
@@ -87,6 +90,7 @@ export function fromSettings(s: ShopSettings, fallbackSiteUrl = ''): SettingsFor
     mailFromName: s.mail_from_name ?? '', mailFromEmail: s.mail_from_email ?? '',
     defaultDiscount: String(s.default_member_discount_pct ?? 0).replace('.', ','),
     introText: s.intro_text ?? '',
+    featuredTitle: s.featured_title ?? 'Destaques',
     reservationHours: String(s.reservation_hours ?? 48), retentionYears: String(s.privacy_retention_years ?? 5),
   }
 }
@@ -116,6 +120,8 @@ export function validateSettings(f: SettingsForm): string[] {
   const pct = parsePercent(f.defaultDiscount)
   if (pct === null || pct < 0 || pct > 100) errors.push('O desconto padrão de integrante deve ficar entre 0% e 100%.')
   if (f.introText.length > 400) errors.push('O texto de abertura passa de 400 letras.')
+  if (!f.featuredTitle.trim()) errors.push('Informe o título da seção de destaques.')
+  if (f.featuredTitle.length > 60) errors.push('O título dos destaques passa de 60 letras.')
   const hours = Number(f.reservationHours)
   if (!Number.isInteger(hours) || hours < 1 || hours > 720) errors.push('O prazo de reserva deve ficar entre 1 e 720 horas.')
   const years = Number(f.retentionYears)
@@ -139,6 +145,7 @@ export function toSettings(f: SettingsForm): ShopSettings {
     mail_from_email: f.mailFromEmail.trim() || null,
     default_member_discount_pct: parsePercent(f.defaultDiscount) ?? 0,
     intro_text: f.introText.trim() || null,
+    featured_title: f.featuredTitle.trim() || 'Destaques',
     reservation_hours: Number(f.reservationHours) || 48,
     privacy_retention_years: Number(f.retentionYears) || 5,
   }

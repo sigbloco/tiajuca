@@ -10,6 +10,7 @@ export interface PickupPointPublic { id: string; name: string; address: string; 
 export interface StoreData {
   org: { id: string; name: string; short_name: string; slug: string; logo_path: string | null; theme: OrgTheme }
   intro_text: string | null
+  featured_title: string
   reservation_hours: number
   privacy_retention_years: number
   payment_methods: string[]
