@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Cake, Globe, Mail, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Button, Card, Input, Label, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { Button, Input, Label, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { socialLabel, socialUrl } from '@/core/social'
 import { whatsappUrl } from '@/modules/suppliers/service'
@@ -25,6 +25,7 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { isPastCycle, setMemberCycleStatus, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { MemberBilling } from '@/modules/billing/MemberBilling'
+import { MemberRole } from './MemberRole'
 import { MySensitiveData } from '@/modules/profile/MyData'
 import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
@@ -68,7 +69,7 @@ function CycleParticipation({ memberId }: { memberId: string }) {
   })
 
   return (
-    <MemberSection title="Participação nos ciclos">
+    <MemberSection level={2} title="Ciclos">
       {isLoading && <Skeleton className="h-16" />}
       {cycles?.filter((c) => c.is_active).map((c) => {
         const current = statuses?.find((s) => s.id === rows?.find((r) => r.cycle_id === c.id)?.status_id)
@@ -77,7 +78,7 @@ function CycleParticipation({ memberId }: { memberId: string }) {
         const optionsFor = past ? (statuses ?? []).filter((s) => !s.is_waitlist) : (statuses ?? [])
         const labelOf = (s: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !s.is_waitlist ? (s.counts_as_active ? 'Participou' : 'Não participou') : s.name)
         return (
-          <Card key={c.id} className="flex items-center justify-between gap-2 p-3">
+          <div key={c.id} className="flex items-center justify-between gap-2">
             <p className="font-semibold">{c.name}</p>
             <OkSelect
               className="w-40"
@@ -90,7 +91,7 @@ function CycleParticipation({ memberId }: { memberId: string }) {
               {current && past && current.is_waitlist && <option value={current.key}>{current.name}</option>}
               {optionsFor.map((s) => <option key={s.id} value={s.key}>{labelOf(s)}</option>)}
             </OkSelect>
-          </Card>
+          </div>
         )
       })}
     </MemberSection>
@@ -171,7 +172,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
   if (!reg.data) return <Skeleton className="h-24" />
   const fld = (id: string, label: string, el: ReactNode) => <div className="space-y-1.5"><Label htmlFor={id}>{label}</Label>{el}</div>
   return (
-    <Card className="p-3">
+    <div className="rounded-md bg-muted/40 p-2">
       <form onSubmit={(e) => { e.preventDefault(); if (phoneOk) save.mutate() }} className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-2">
           {fld('rd-full', 'Nome completo', <Input id="rd-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} />)}
@@ -198,7 +199,7 @@ function RegistrationEditor({ member, onChanged }: { member: MemberRow; onChange
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
         </div>
       </form>
-    </Card>
+    </div>
   )
 }
 
@@ -208,12 +209,17 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
   return (
     <SheetContent title={shortName(member.full_name, member.display_name)} titleExtra={category} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
+      <MemberRole memberId={member.id} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} />}
-      <ArtisticLinks memberId={member.id} />
-      <ArtisticLinks memberId={member.id} mode="collab" />
-      <CycleParticipation memberId={member.id} />
+      <MemberSection title="Participação">
+        <div className="space-y-3">
+          <ArtisticLinks memberId={member.id} />
+          <ArtisticLinks memberId={member.id} mode="collab" />
+          <CycleParticipation memberId={member.id} />
+        </div>
+      </MemberSection>
       <MemberBilling memberId={member.id} />
-      {canSensitive && <MemberSection title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
+      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
     </SheetContent>
   )
 }

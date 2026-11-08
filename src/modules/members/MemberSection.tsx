@@ -1,10 +1,22 @@
 import { useState, type ReactNode } from 'react'
 import { Collapsible } from '@/components/shared/Collapsible'
 
-/** Seção recolhível da ficha do integrante (cada uma guarda o próprio estado aberto/fechado). */
-export function MemberSection({ title, defaultOpen = false, children }: { title: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen)
-  return <Collapsible open={open} onToggle={() => setOpen((o) => !o)} title={title} titleClass="overflow-visible whitespace-normal text-[15px] leading-tight">{children}</Collapsible>
+/**
+ * Bloco da ficha do integrante. Por padrão é só um título com o conteúdo embaixo (sem caixas nem contornos);
+ * com `collapsible` vira uma faixa que abre e fecha (só os dados sensíveis).
+ * `level` 1 = título de seção, 2 = subtítulo (menor, dentro de uma seção).
+ */
+export function MemberSection({ title, collapsible = false, level = 1, children }: { title: ReactNode; collapsible?: boolean; level?: 1 | 2; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  if (collapsible) {
+    return <Collapsible open={open} onToggle={() => setOpen((o) => !o)} title={title} titleClass="overflow-visible whitespace-normal text-[15px] leading-tight">{children}</Collapsible>
+  }
+  return (
+    <section className="space-y-1.5">
+      {level === 1 ? <h3 className="font-display text-base font-bold">{title}</h3> : <h4 className="text-sm font-semibold text-muted-foreground">{title}</h4>}
+      {children}
+    </section>
+  )
 }
 
 export function WhatsAppIcon({ className }: { className?: string }) {
