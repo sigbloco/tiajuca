@@ -152,14 +152,15 @@ export function ArtisticLinks({ memberId, mode = 'artistic' }: { memberId: strin
     </Card>
   )
 
+  // Sem participação e sem permissão de editar: nada para mostrar.
+  if (!canManage && (data?.length ?? 0) === 0) return null
   return (
     <MemberSection title={collab ? 'Participação colaborativa' : 'Participação artística'} defaultOpen={!collab}>
-      {data?.length === 0 && <p className="text-muted-foreground">Nenhuma participação ainda.</p>}
-      {data?.map((l) => (editing === l.id ? <div key={l.id}>{form}</div> : (
+      {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l) => (editing === l.id ? <div key={l.id}>{form}</div> : (
         <Card key={l.id} className="flex items-center justify-between gap-2 p-3">
           <div className="min-w-0">
             <p className="truncate font-semibold">
-              {collab ? l.artistic_functions?.name : [l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
+              {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :[l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
             </p>
             {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name].filter(Boolean).join(' · ')}</p>}
           </div>

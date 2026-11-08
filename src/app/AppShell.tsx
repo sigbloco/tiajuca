@@ -96,7 +96,7 @@ export function AppShell() {
 
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         <Breadcrumbs crumbs={crumbs} home={base} />
-        <div id="edit-slot" />
+        <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">
           <InactiveNotice />
           <Outlet />
