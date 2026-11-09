@@ -204,10 +204,11 @@ export function NaipesPage() {
   const searching = false
   const secMut = useStructureMutations('sections')
   const [creating, setCreating] = useState(false)
-  const ordered = (sections.data ?? []).slice().sort(byOrder)
+  // Itens desativados ficam na Lixeira (menu), não aqui.
+  const ordered = (sections.data ?? []).filter((s) => s.is_active).sort(byOrder)
 
-  const view = useMemo(() => (sections.data ?? []).slice().sort(byOrder).map((s) => {
-    const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id).sort(byOrder)
+  const view = useMemo(() => (sections.data ?? []).filter((s) => s.is_active).sort(byOrder).map((s) => {
+    const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id && i.is_active).sort(byOrder)
     const okI = (i: CatalogItem) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search)
     const visible = matchesText(s.name, filter.search) || insts.some(okI)
     return { s, insts, okI, show: matchesStatus(s.is_active, filter.status) && visible }
@@ -219,16 +220,9 @@ export function NaipesPage() {
     onSuccess: () => { notifySaved('Criado.'); invalidateCatalog(qc, orgId) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const del = useMutation({
-    mutationFn: async (v: { table: CatalogTable; id: string }) => {
-      const { error } = await supabase.from(v.table).delete().eq('id', v.id).eq('organization_id', orgId)
-      if (error) throw error
-    },
-    onSuccess: () => { notifySaved('Excluído.'); invalidateCatalog(qc, orgId) },
-    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Não dá para excluir: há itens dentro ou pessoas, vagas e músicas ligadas a ele. Desative em vez de excluir.' : friendlyError(e)),
-  })
+  /** A lixeira move para a Lixeira (menu): dá para restaurar ou excluir de vez por lá. */
   const confirmDelete = (table: CatalogTable, item: CatalogItem, what: string) => {
-    if (window.confirm(`Excluir ${what} “${item.name}”? Isso não pode ser desfeito. Se ele já foi usado, prefira desativar.`)) del.mutate({ table, id: item.id })
+    if (window.confirm(`Mover ${what} “${item.name}” para a Lixeira? Você pode restaurar depois.`)) (table === 'sections' ? secMut : instMut).save.mutate({ id: item.id, name: item.name, is_active: false })
   }
 
   /** Arrastar um instrumento sobre outro do mesmo naipe reordena. */
