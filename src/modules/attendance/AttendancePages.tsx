@@ -57,7 +57,7 @@ function useInstrumentCatalog() {
 }
 
 interface StaffRow { member_id: string; staff_kind: 'professor' | 'monitor' | 'regente'; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
-const STAFF_ABBR = { professor: 'Prof.', monitor: 'Monitor', regente: 'Regente' } as const
+const STAFF_ABBR = { professor: 'Prof.', monitor: 'Monitor(a)', regente: 'Regente' } as const
 
 /** Um horário do dia: título e, por instrumento (ordem alfabética de naipe), a equipe. */
 function ActivityCard({ a, orgId, catalog, staff, slug }: { a: Activity; orgId: string; catalog: InstrumentInfo[]; staff: StaffRow[]; slug?: string }) {
