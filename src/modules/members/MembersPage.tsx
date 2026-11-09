@@ -85,7 +85,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const staffKinds = useQuery({
     queryKey: ['staff-assignments', orgId, 'kinds'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind').eq('organization_id', orgId).is('valid_to', null).limit(3000)
+      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, cycles!inner(is_current)').eq('organization_id', orgId).is('valid_to', null).eq('cycles.is_current', true).limit(3000)
       if (error) throw error
       const out = new Map<string, Set<string>>()
       for (const r of data ?? []) { const set = out.get(r.member_id as string) ?? new Set<string>(); set.add(r.staff_kind as string); out.set(r.member_id as string, set) }

@@ -42,7 +42,7 @@ export function ViewAsBar() {
     queryKey: ['view-as-staff', orgId],
     enabled: allowed,
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, section_id, subsection_id, instrument_id').eq('organization_id', orgId!).is('valid_to', null)
+      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, section_id, subsection_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId!).is('valid_to', null).eq('cycles.is_current', true)
       if (error) throw error
       return (data ?? []) as Staff[]
     },

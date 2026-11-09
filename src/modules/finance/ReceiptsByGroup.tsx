@@ -38,7 +38,7 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
     queryFn: async () => {
       const [roles, assignments] = await Promise.all([
         supabase.from('member_access_roles').select('member_id, access_roles!inner(key)').eq('organization_id', orgId).is('revoked_at', null).in('access_roles.key', STAFF_ROLES).limit(3000),
-        supabase.from('staff_assignments').select('member_id').eq('organization_id', orgId).is('valid_to', null).limit(3000),
+        supabase.from('staff_assignments').select('member_id, cycles!inner(is_current)').eq('organization_id', orgId).is('valid_to', null).eq('cycles.is_current', true).limit(3000),
       ])
       if (roles.error) throw roles.error
       if (assignments.error) throw assignments.error

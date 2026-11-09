@@ -23,8 +23,8 @@ export function Organogram() {
   const staff = useQuery({
     queryKey: ['staff-assignments', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name)')
-        .eq('organization_id', orgId).is('valid_to', null).limit(3000)
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name), cycles!inner(is_current)')
+        .eq('organization_id', orgId).is('valid_to', null).eq('cycles.is_current', true).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]
     },
