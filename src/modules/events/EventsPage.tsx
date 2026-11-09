@@ -1,9 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Ban, Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
+import { toast } from 'sonner'
+import { friendlyError } from '@/core/errors'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -12,7 +14,7 @@ import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
-import { COLOR_DOT, STATUS_LABEL, listActivities, materialize, type Activity } from './service'
+import { COLOR_DOT, STATUS_LABEL, cancelWord, listActivities, materialize, setActivityStatus, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -35,6 +37,12 @@ export function EventsPage() {
   const to = days[days.length - 1].iso
 
   // Direção: garante as ocorrências das recorrências (idempotente) para as próximas 12 semanas.
+  // Cancelar uma aula/ensaio direto da lista (ex.: chuva), com o motivo.
+  const cancel = useMutation({
+    mutationFn: (v: { a: Activity; reason: string }) => setActivityStatus(orgId, v.a.id, 'cancelled', v.reason),
+    onSuccess: () => { toast.success('Cancelado.'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const gen = useMutation({
     mutationFn: () => materialize(orgId, addDaysIso(today, 84)),
     onSuccess: (n) => { if (n > 0) qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
@@ -220,7 +228,17 @@ export function EventsPage() {
                       <p className="text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
                     )}
                   </button>
-                  {a.status !== 'scheduled' && <div className="flex flex-col items-end gap-1"><Badge>{STATUS_LABEL[a.status]}</Badge></div>}
+                  {a.status === 'cancelled' && a.cancel_reason && <p className="sr-only">{a.cancel_reason}</p>}
+                  {(a.status !== 'scheduled' || canManage) && (
+                    <div className="flex flex-col items-end gap-1">
+                      {a.status !== 'scheduled' && <Badge>{STATUS_LABEL[a.status]}{a.status === 'cancelled' && a.cancel_reason ? ` · ${a.cancel_reason}` : ''}</Badge>}
+                      {canManage && a.status === 'scheduled' && (
+                        <Button size="sm" variant="outline" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
+                          onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?
+Motivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate({ a, reason }) }}><Ban className="h-4 w-4" /> Cancelar {cancelWord(t?.name)}</Button>
+                      )}
+                    </div>
+                  )}
                 </Card>
               )
             })}
