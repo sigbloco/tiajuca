@@ -24,8 +24,8 @@ interface LinkRow {
   artistic_functions: { name: string } | null
   skill_levels: { name: string } | null
 }
-interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_student: boolean }
-const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false }
+interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_student: boolean; is_paid: boolean }
+const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false, is_paid: false }
 
 /** Vínculos artísticos do integrante: naipe → instrumento (subnaipe nunca aparece aqui) e/ou função. Editáveis. */
 export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo atual: vínculos vigentes hoje. Outro ciclo (passado ou futuro): os do próprio ciclo, editáveis. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
@@ -64,11 +64,11 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
     qc.invalidateQueries({ queryKey: ['members', orgId] })
   }
   const nn = (v: string) => v || null
-  const close = () => { setEditing(null); setF(EMPTY) }
+  const close = () => { setEditing(null); setF({ ...EMPTY, is_paid: paid }) }
 
   const save = useMutation({
     mutationFn: async () => {
-      const row = collab ? { function_id: nn(f.function_id), is_paid: paid } : { instrument_id: nn(f.instrument_id), is_student: f.is_student, skill_level_id: f.is_student ? nn(f.skill_level_id) : null }
+      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id), is_student: f.is_student, skill_level_id: f.is_student ? nn(f.skill_level_id) : null }
       if (editing === 'new') {
         const { data: ins, error } = await supabase.from(table).insert({
           organization_id: orgId, member_id: memberId, ...(byCycle ? { cycle_id: cycle!.id } : {}), ...row, is_primary: (data?.length ?? 0) === 0,
@@ -77,7 +77,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         return { kind: 'new' as const, id: (ins as { id: string }).id, prev: null }
       }
       const old = data?.find((l) => l.id === editing)
-      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, is_student: old.is_student } : null
+      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, is_student: old.is_student, is_paid: old.is_paid } : null
       const { error } = await supabase.from(table).update(row).eq('id', editing!)
       if (error) throw error
       return { kind: 'edit' as const, id: editing, prev }
@@ -121,16 +121,22 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   }
   const startEdit = (l: LinkRow) => {
     setEditing(l.id)
-    setF({ instrument_id: l.instrument_id ?? '', function_id: l.function_id ?? '', skill_level_id: l.skill_level_id ?? '', is_student: l.is_student })
+    setF({ instrument_id: l.instrument_id ?? '', function_id: l.function_id ?? '', skill_level_id: l.skill_level_id ?? '', is_student: l.is_student, is_paid: l.is_paid })
   }
 
   const form = (
     <div className="space-y-2 rounded-md bg-muted/40 p-2">
       {collab ? (
-        <Select value={f.function_id} aria-label="Função" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
-          <option value="">Escolha a função</option>
-          {active(functions.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-        </Select>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <Select value={f.function_id} aria-label="Função" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
+            <option value="">Escolha a função</option>
+            {active(functions.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </Select>
+          <Select value={f.is_paid ? 'paid' : 'collaborative'} aria-label="Remunerada ou colaborativa" onChange={(e) => setF({ ...f, is_paid: e.target.value === 'paid' })}>
+            <option value="paid">Remunerada</option>
+            <option value="collaborative">Colaborativa</option>
+          </Select>
+        </div>
       ) : (
         <>
           <div className="space-y-1.5">
@@ -165,7 +171,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   if (!canManage && (data?.length ?? 0) === 0) return null
   return (
     <MemberSection level={2} title={<span className="inline-flex items-center gap-1.5">{paid ? 'Remunerada' : collab ? 'Colaborativa' : 'Artística'}{canManage && editing === null && (
-      <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={paid ? 'Adicionar participação remunerada' : collab ? 'Adicionar participação colaborativa' : 'Adicionar participação artística'} title="Adicionar" onClick={() => { setF(EMPTY); setEditing('new') }}><Plus className="h-3.5 w-3.5" /></button>
+      <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={paid ? 'Adicionar participação remunerada' : collab ? 'Adicionar participação colaborativa' : 'Adicionar participação artística'} title="Adicionar" onClick={() => { setF({ ...EMPTY, is_paid: paid }); setEditing('new') }}><Plus className="h-3.5 w-3.5" /></button>
     )}</span>}>
       {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l, idx) => (editing === l.id ? <div key={l.id}>{form}</div> : (
         <div key={l.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>

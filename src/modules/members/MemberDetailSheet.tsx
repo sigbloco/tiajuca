@@ -29,7 +29,6 @@ import { MemberBilling } from '@/modules/billing/MemberBilling'
 import { MySensitiveData } from '@/modules/profile/MyData'
 import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
-import { StaffSection } from './StaffSection'
 import type { MemberRow } from './service'
 
 type CycleLite = { id: string; name: string; starts_on: string; ends_on: string; is_current: boolean }
@@ -338,7 +337,6 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
       <ContactLinks member={member} />
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
       <CyclesSection memberId={member.id} />
-      <StaffSection memberId={member.id} />
       <RelationWithBlock memberId={member.id} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
     </SheetContent>
