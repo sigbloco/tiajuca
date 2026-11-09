@@ -29,6 +29,8 @@ import { MemberBilling } from '@/modules/billing/MemberBilling'
 import { MySensitiveData } from '@/modules/profile/MyData'
 import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
+import { FormAnswers } from './FormAnswers'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import type { MemberRow } from './service'
 
 type CycleLite = { id: string; name: string; starts_on: string; ends_on: string; is_current: boolean }
@@ -111,6 +113,8 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const canManage = usePermission('member_cycles.manage', 'group')
   const canForce = usePermission('capacity.manage')
   const [adding, setAdding] = useState(false)
+  const [pick, setPick] = useState('')
+  const { cycleId: globalCycle } = useSelectedCycle()
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ['member-cycles', orgId, memberId],
@@ -167,6 +171,8 @@ function CyclesSection({ memberId }: { memberId: string }) {
   })
 
   const mine = (cycles ?? []).filter((c) => c.is_active && rows?.some((x) => x.cycle_id === c.id)).sort((a, b) => a.starts_on.localeCompare(b.starts_on))
+  // Um ciclo por vez, escolhido no menu: o do menu fixo (se a pessoa participa dele), senão o mais recente.
+  const chosen = mine.find((c) => c.id === pick) ?? mine.find((c) => c.id === globalCycle) ?? mine[mine.length - 1]
   const missing = (cycles ?? []).filter((c) => c.is_active && !rows?.some((x) => x.cycle_id === c.id)).sort((a, b) => a.starts_on.localeCompare(b.starts_on))
   return (
     <div className="space-y-3">
@@ -184,7 +190,12 @@ function CyclesSection({ memberId }: { memberId: string }) {
           </div>
         )}
         {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
-        {mine.map((c) => (
+        {mine.length > 1 && (
+          <Select aria-label="Ciclo" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
+            {mine.map((c) => <option key={c.id} value={c.id}>{c.name}{c.is_current ? ' · atual' : ''}</option>)}
+          </Select>
+        )}
+        {(chosen ? [chosen] : []).map((c) => (
           <CycleGroup key={c.id} cycle={c} status={statusOfCycle(c.id)} memberId={memberId} canManage={canManage} statuses={statuses ?? []}
             onChange={(cycle, status) => change.mutateAsync({ cycle, status })}
             onRemove={(cy) => { if (window.confirm('Tirar a pessoa do ciclo “' + cy.name + '”? A participação e a contribuição dela não são apagadas.')) remove.mutate(cy) }} />
@@ -335,10 +346,11 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
       <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
     )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
+      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
       <CyclesSection memberId={member.id} />
       <RelationWithBlock memberId={member.id} />
-      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
+      <FormAnswers memberId={member.id} />
     </SheetContent>
   )
 }
