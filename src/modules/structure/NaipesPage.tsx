@@ -1,4 +1,5 @@
 import { MemberLink } from '@/modules/members/MemberLink'
+import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -94,7 +95,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
       {mine.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {[...mine].sort((a, b) => KIND_LABEL[a.staff_kind].localeCompare(KIND_LABEL[b.staff_kind], 'pt-BR') || labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR')).map((a) => (
-            <Chip key={a.id} label={<><MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {KIND_LABEL[a.staff_kind]} · <CompMark value={a.compensation} /></>} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
+            <Chip key={a.id} label={<StaffChipLabel name={<MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink>} role={<>{KIND_LABEL[a.staff_kind]} · <CompMark value={a.compensation} /></>} />} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
           ))}
         </div>
       )}
