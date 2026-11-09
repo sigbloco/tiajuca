@@ -13,8 +13,6 @@ export interface CatalogItem {
   subsection_id?: string | null
   tuning?: string | null
   has_tuning?: boolean
-  /** Naipe com oficina (aparece na Presença). */
-  has_workshop?: boolean
   /** Como se chamam os itens do naipe: Instrumento, Atividade ou Voz. */
   item_label?: string
   /** Funções: fixa (não exclui nem desativa), isenta e isenção fixa. */

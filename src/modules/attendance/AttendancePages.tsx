@@ -8,6 +8,7 @@ import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/componen
 import { friendlyError } from '@/core/errors'
 import { addDaysIso, formatDayShort, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
+import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { supabase } from '@/core/supabase'
 import { listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
@@ -41,14 +42,33 @@ const statusClass = (s: Status, active: boolean) =>
     ? s.counts_as_present ? 'border-success bg-success text-white' : s.key === 'justified' ? 'border-warning bg-warning text-white' : 'border-destructive bg-destructive text-white'
     : 'border-border bg-card text-foreground hover:bg-muted'
 
-interface InstrumentInfo { id: string; name: string; section_id: string; subsection_id: string | null; section: string; has_workshop: boolean }
+/** Oficina por instrumento e por ciclo: instrumentos com oficina em cada ciclo. */
+function useWorkshops() {
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['workshops', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrument_cycle_workshop').select('instrument_id, cycle_id').eq('organization_id', orgId).eq('has_workshop', true)
+      if (error) throw error
+      const by = new Map<string, Set<string>>()
+      for (const r of data ?? []) { const k = r.cycle_id as string; if (!by.has(k)) by.set(k, new Set()); by.get(k)!.add(r.instrument_id as string) }
+      return by
+    },
+  })
+}
+/** Ciclo da atividade: o dela, senão o que cobre a data, senão o principal. */
+function cycleOf(a: { cycle_id: string | null; activity_date: string }, cycles: Cycle[]) {
+  return a.cycle_id ?? cycles.find((c) => a.activity_date >= c.starts_on && a.activity_date <= c.ends_on)?.id ?? cycles.find((c) => c.is_current)?.id ?? null
+}
+
+interface InstrumentInfo { id: string; name: string; section_id: string; subsection_id: string | null; section: string }
 /** Catálogo de instrumentos com o naipe de cada um (para filtrar a chamada e mostrar a equipe). */
 function useInstrumentCatalog() {
   const orgId = useOrgId()
   return useQuery({
     queryKey: ['instrument-catalog', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, has_workshop, sections(name)').eq('organization_id', orgId).limit(1000)
+      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, sections(name)').eq('organization_id', orgId).limit(1000)
       if (error) throw error
       const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string } | null })[]).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
       return { list, byName: new Map(list.map((i) => [i.name, i])) }
@@ -59,9 +79,10 @@ function useInstrumentCatalog() {
 const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
 
 /** Um horário do dia: título e os naipes da oficina (cada um abre a chamada só daquele naipe). */
-function ActivityCard({ a, sections, slug }: { a: Activity; sections: { id: string; name: string; has_workshop: boolean }[]; slug?: string }) {
+function ActivityCard({ a, sections, withWorkshop: wsIds, instruments, slug }: { a: Activity; sections: { id: string; name: string }[]; withWorkshop: Set<string>; instruments: InstrumentInfo[]; slug?: string }) {
   const title = plain(a.title)
-  const withWorkshop = sections.filter((s) => s.has_workshop)
+  const wsSections = new Set(instruments.filter((i) => wsIds.has(i.id)).map((i) => i.section_id))
+  const withWorkshop = sections.filter((s) => wsSections.has(s.id))
   const pool = withWorkshop.length > 0 ? withWorkshop : sections
   // Naipes cujo nome aparece no título ("Oficina de Percussão" → Percussão). Sem coincidência, todos com oficina.
   const matched = pool.filter((s) => title.includes(plain(s.name)))
@@ -93,12 +114,15 @@ export function AttendanceListPage() {
     queryKey: ['activities', orgId, 'attendance-list', today],
     queryFn: () => listActivities({ orgId, from: addDaysIso(today, -90), to: addDaysIso(today, 90) }),
   })
+  const cycles = useCycles()
+  const workshops = useWorkshops()
+  const catalog = useInstrumentCatalog()
   const sections = useQuery({
     queryKey: ['sections-workshop', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sections').select('id, name, sort_order, has_workshop').eq('organization_id', orgId).eq('is_active', true).order('name')
+      const { data, error } = await supabase.from('sections').select('id, name').eq('organization_id', orgId).eq('is_active', true).order('name')
       if (error) throw error
-      return (data ?? []) as { id: string; name: string; sort_order: number; has_workshop: boolean }[]
+      return (data ?? []) as { id: string; name: string }[]
     },
   })
   const items = (data ?? []).filter((a) => a.status !== 'cancelled')
@@ -121,7 +145,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} sections={sections.data ?? []} slug={membership?.slug} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} sections={sections.data ?? []} withWorkshop={workshops.data?.get(cycleOf(a, cycles.data ?? []) ?? '') ?? new Set()} instruments={catalog.data?.list ?? []} slug={membership?.slug} />)}
       </div>
     </div>
   )
@@ -145,9 +169,9 @@ export function AttendanceRosterPage() {
     queryKey: ['activity', orgId, activityId],
     queryFn: async () => {
       const { data, error } = await supabase.from('activities')
-        .select('id, title, activity_date, start_time, status, activity_types(name, color)').eq('id', activityId).single()
+        .select('id, title, activity_date, start_time, status, cycle_id, activity_types(name, color)').eq('id', activityId).single()
       if (error) throw error
-      return data as unknown as Pick<Activity, 'id' | 'title' | 'activity_date' | 'start_time' | 'status' | 'activity_types'>
+      return data as unknown as Pick<Activity, 'id' | 'title' | 'activity_date' | 'start_time' | 'status' | 'cycle_id' | 'activity_types'>
     },
   })
   const roster = useQuery({
@@ -206,7 +230,10 @@ export function AttendanceRosterPage() {
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
   const naipes = [...new Set(rows.flatMap(sectionsOf))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Naipe com instrumentos marcados "Oficina": a chamada mostra só quem toca esses instrumentos.
-  const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && i.has_workshop).map((i) => i.name))
+  const cycles = useCycles()
+  const workshops = useWorkshops()
+  const wsIds = activity.data ? workshops.data?.get(cycleOf(activity.data, cycles.data ?? []) ?? '') : undefined
+  const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && wsIds?.has(i.id)).map((i) => i.name))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
     && (workshopNames.size === 0 || (r.instruments ?? '').split(', ').some((n) => workshopNames.has(n))))
