@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
 import { SaveInput } from '@/components/shared/ConfirmField'
+import { FitText } from '@/components/shared/FitText'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
@@ -124,8 +125,8 @@ export function Actions({ item, label, idx, total, onUp, onDown, onEdit, onDelet
   )
 }
 
-/** Oficina e vagas por instrumento (ciclo principal), editadas junto com o naipe. Linhas zebradas. */
-function SectionWorkshop({ sec, insts }: { sec: CatalogItem; insts: CatalogItem[] }) {
+/** Oficina e vagas por instrumento no ciclo principal (valem só para esse ciclo; o seguinte começa do zero). Linhas zebradas. */
+function SectionWorkshop({ insts }: { insts: CatalogItem[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const cycle = useQuery({
@@ -145,6 +146,15 @@ function SectionWorkshop({ sec, insts }: { sec: CatalogItem; insts: CatalogItem[
       return new Map((data ?? []).map((r) => [r.instrument_id as string, r.capacity as number]))
     },
   })
+  const workshops = useQuery({
+    queryKey: ['workshop-edit', orgId, cycle.data?.id],
+    enabled: Boolean(cycle.data?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrument_cycle_workshop').select('instrument_id, has_workshop').eq('organization_id', orgId).eq('cycle_id', cycle.data!.id)
+      if (error) throw error
+      return new Map((data ?? []).map((r) => [r.instrument_id as string, r.has_workshop as boolean]))
+    },
+  })
   const save = useMutation({
     mutationFn: async (v: { id: string; capacity: number }) => {
       const { error } = await supabase.from('instrument_cycle_capacity')
@@ -154,48 +164,37 @@ function SectionWorkshop({ sec, insts }: { sec: CatalogItem; insts: CatalogItem[
     onSuccess: () => { notifySaved('Vagas atualizadas.'); qc.invalidateQueries({ queryKey: ['capacity-edit', orgId] }); qc.invalidateQueries({ queryKey: ['capacity', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  // Marcar/desmarcar oficina: ajusta o instrumento e deixa o naipe marcado se ao menos um instrumento tiver oficina.
   const setWorkshop = useMutation({
-    mutationFn: async (v: { ids: string[]; on: boolean }) => {
-      const r1 = await supabase.from('instruments').update({ has_workshop: v.on }).in('id', v.ids).eq('organization_id', orgId)
-      if (r1.error) throw r1.error
-      const others = insts.filter((i) => !v.ids.includes(i.id) && i.has_workshop).length
-      const secOn = v.on || others > 0
-      if (secOn !== !!sec.has_workshop) {
-        const r2 = await supabase.from('sections').update({ has_workshop: secOn }).eq('id', sec.id).eq('organization_id', orgId)
-        if (r2.error) throw r2.error
-      }
+    mutationFn: async (v: { id: string; on: boolean }) => {
+      const { error } = await supabase.from('instrument_cycle_workshop')
+        .upsert({ organization_id: orgId, instrument_id: v.id, cycle_id: cycle.data!.id, has_workshop: v.on }, { onConflict: 'instrument_id,cycle_id' })
+      if (error) throw error
     },
-    onSuccess: () => { notifySaved('Oficina atualizada.'); invalidateCatalog(qc, orgId) },
+    onSuccess: () => { notifySaved('Oficina atualizada.'); qc.invalidateQueries({ queryKey: ['workshop-edit', orgId] }); qc.invalidateQueries({ queryKey: ['workshops', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const allOn = insts.length > 0 && insts.every((i) => i.has_workshop)
+  if (!cycle.data) return <p className="text-sm text-muted-foreground">Defina o ciclo principal para controlar oficina e vagas.</p>
+  const COLS = 'grid grid-cols-[minmax(0,1fr)_3.5rem_6rem] items-center gap-2 px-2 py-1.5'
   return (
     <div className="space-y-1">
-      <label className="flex items-center gap-2 font-semibold">
-        <input type="checkbox" className="h-4 w-4" checked={allOn} onChange={(e) => setWorkshop.mutate({ ids: insts.map((i) => i.id), on: e.target.checked })} />
-        Tem oficina (todos os instrumentos)
-      </label>
       <div className="overflow-hidden rounded-lg border border-border">
-        <div className="grid grid-cols-[1fr_4.5rem_8rem] items-center gap-2 bg-muted px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-          <span>Instrumento</span><span className="text-center">Oficina</span><span>Vagas{cycle.data ? '' : ''}</span>
+        <div className={cn(COLS, 'bg-muted font-semibold text-muted-foreground')}>
+          <FitText className="text-sm">Instrumento</FitText><FitText className="text-center text-sm">Oficina</FitText><FitText className="text-sm">Vagas</FitText>
         </div>
         {insts.map((i, k) => (
-          <div key={i.id} className={cn('grid grid-cols-[1fr_4.5rem_8rem] items-center gap-2 px-2 py-1.5', k % 2 === 1 ? 'bg-muted/60' : 'bg-card')}>
-            <span className="min-w-0 break-words">{i.name}</span>
-            <span className="text-center"><input type="checkbox" className="h-4 w-4" aria-label={`Oficina de ${i.name}`} checked={!!i.has_workshop} onChange={(e) => setWorkshop.mutate({ ids: [i.id], on: e.target.checked })} /></span>
-            {cycle.data ? (
-              <SaveInput className="w-full" aria-label={`Vagas de ${i.name}`} placeholder="Sem limite" value={caps.data?.has(i.id) ? String(caps.data.get(i.id)) : ''}
-                onSave={(v) => {
-                  const n = Number(v)
-                  if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
-                  return save.mutateAsync({ id: i.id, capacity: n })
-                }} />
-            ) : <span className="text-sm text-muted-foreground">—</span>}
+          <div key={i.id} className={cn(COLS, k % 2 === 1 ? 'bg-muted/60' : 'bg-card')}>
+            <FitText>{i.name}</FitText>
+            <span className="text-center"><input type="checkbox" className="h-4 w-4" aria-label={`Oficina de ${i.name}`} checked={!!workshops.data?.get(i.id)} onChange={(e) => setWorkshop.mutate({ id: i.id, on: e.target.checked })} /></span>
+            <SaveInput className="w-full" aria-label={`Vagas de ${i.name}`} placeholder="Sem limite" value={caps.data?.has(i.id) ? String(caps.data.get(i.id)) : ''}
+              onSave={(v) => {
+                const n = Number(v)
+                if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
+                return save.mutateAsync({ id: i.id, capacity: n })
+              }} />
           </div>
         ))}
       </div>
-      {cycle.data ? <p className="text-xs text-muted-foreground">Vagas do ciclo {cycle.data.name}.</p> : <p className="text-xs text-muted-foreground">Defina o ciclo principal para controlar as vagas.</p>}
+      <p className="text-xs text-muted-foreground">Valem para o ciclo {cycle.data.name}. No próximo ciclo, cada oficina e cada limite de vagas são definidos de novo.</p>
     </div>
   )
 }
@@ -340,7 +339,7 @@ export function NaipesPage() {
                     onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
                 {isEditing(s.id) && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => toggleEdit(s.id)} />}
-                {isEditing(s.id) && insts.length > 0 && <SectionWorkshop sec={s} insts={insts} />}
+                {isEditing(s.id) && insts.length > 0 && <SectionWorkshop insts={insts} />}
 
                 <div className="space-y-1.5">
                   {insts.filter(okI).map((i) => instNode(i, insts, insts, s))}
