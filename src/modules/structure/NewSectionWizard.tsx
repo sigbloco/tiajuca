@@ -53,7 +53,7 @@ function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => 
           {adding === k && (
             <div className="w-full max-w-sm space-y-1.5">
               <CompensationPick value={comp} onChange={setComp} />
-              {comp ? <MemberPicker onlyActive value="" onChange={(id) => { if (id && !value[k].some((x) => x.id === id)) onChange({ ...value, [k]: [...value[k], { id, comp }] }); setAdding(null) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou voluntária.</p>}
+              {comp ? <MemberPicker onlyActive value="" onChange={(id) => { if (id && !value[k].some((x) => x.id === id)) onChange({ ...value, [k]: [...value[k], { id, comp }] }); setAdding(null) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou colaborativa.</p>}
               <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(null)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
             </div>
           )}

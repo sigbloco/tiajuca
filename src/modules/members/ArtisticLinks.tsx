@@ -60,6 +60,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['member-links', orgId, memberId] })
     qc.invalidateQueries({ queryKey: ['capacity', orgId] })
+    qc.invalidateQueries({ queryKey: ['staff-assignments'] })
     qc.invalidateQueries({ queryKey: ['members', orgId] })
   }
   const nn = (v: string) => v || null
