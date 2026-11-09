@@ -15,7 +15,7 @@ import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogTable } from '@/modules/structure/service'
 import {
-  COLOR_BADGE, COLOR_DOT, typeIdForColor, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus,
+  COLOR_BADGE, COLOR_DOT, typeIdForColor, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus, cancelWord,
   type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -96,9 +96,10 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
     },
     onError: (e) => toast.error(/ends_at|check/i.test(String(e)) ? 'O horário final deve ser depois do inicial.' : friendlyError(e)),
   })
+  const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1)
   const changeStatus = useMutation({
-    mutationFn: (s: Activity['status']) => setActivityStatus(orgId, activity!.id, s),
-    onSuccess: (_d, s) => { toast.success(s === 'cancelled' ? 'Evento cancelado.' : 'Evento atualizado.'); refresh(); onClose() },
+    mutationFn: (v: { s: Activity['status']; reason?: string | null }) => setActivityStatus(orgId, activity!.id, v.s, v.reason),
+    onSuccess: (_d, v) => { toast.success(v.s === 'cancelled' ? `${cap(cancelWord(activity?.activity_types?.name))} cancelad${cancelWord(activity?.activity_types?.name) === 'evento' ? 'o' : 'a'}.` : 'Atualizado.'); refresh(); onClose() },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -107,6 +108,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
 
   if (!editing && activity) {
     const t = activity.activity_types
+    const theThing = `${cancelWord(t?.name) === 'evento' ? 'este' : 'esta'} ${cancelWord(t?.name)}`.replace('esta ensaio', 'este ensaio')
     return (
       <SheetContent title={activity.title} description={formatDayLong(activity.activity_date)}>
         <div className="flex flex-wrap items-center gap-2">
@@ -137,12 +139,12 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           {canManage && <Button variant="outline" size="icon" className="self-end" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
           {canManage && activity.status !== 'cancelled' && (
             <Button variant="ghost" className="text-destructive" disabled={changeStatus.isPending}
-              onClick={() => { if (window.confirm('Cancelar este evento? Ele continuará no histórico como cancelado.')) changeStatus.mutate('cancelled') }}>
-              Cancelar evento
+              onClick={() => { const reason = window.prompt(`Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, ''); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
+              Cancelar {cancelWord(activity.activity_types?.name)}
             </Button>
           )}
           {canManage && activity.status === 'cancelled' && (
-            <Button variant="outline" onClick={() => changeStatus.mutate('scheduled')}>Reativar evento</Button>
+            <Button variant="outline" onClick={() => changeStatus.mutate({ s: 'scheduled' })}>Reativar {cancelWord(activity.activity_types?.name)}</Button>
           )}
         </div>
       </SheetContent>

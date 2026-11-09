@@ -27,6 +27,7 @@ export interface Activity {
   location: string | null
   description: string | null
   status: 'scheduled' | 'done' | 'cancelled'
+  cancel_reason?: string | null
   visibility: 'members' | 'staff'
   recurrence_rule_id: string | null
   itinerary: ItineraryStep[] | null
@@ -36,7 +37,7 @@ export interface Activity {
 export const STATUS_LABEL: Record<Activity['status'], string> = { scheduled: 'Agendado', done: 'Realizado', cancelled: 'Cancelado' }
 export const VISIBILITY_LABEL: Record<Activity['visibility'], string> = { members: 'Todos os integrantes', staff: 'Somente equipe' }
 
-const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, activity_types(name, color)'
+const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, cancel_reason, activity_types(name, color)'
 
 export async function listActivities(p: { orgId: string; from: string; to: string; cycleId?: string; typeId?: string }) {
   let q = supabase
@@ -99,8 +100,11 @@ export async function saveActivity(orgId: string, id: string | null, input: Acti
   return data.id as string
 }
 
-export async function setActivityStatus(orgId: string, id: string, status: Activity['status']) {
-  const { error } = await supabase.from('activities').update({ status }).eq('id', id).eq('organization_id', orgId)
+/** Nome do que está sendo cancelado: "aula" (oficina), "ensaio" ou "evento". */
+export const cancelWord = (typeName?: string | null) => (typeName === 'Oficina' ? 'aula' : typeName === 'Ensaio' ? 'ensaio' : 'evento')
+
+export async function setActivityStatus(orgId: string, id: string, status: Activity['status'], reason?: string | null) {
+  const { error } = await supabase.from('activities').update({ status, cancel_reason: status === 'cancelled' ? (reason?.trim() || null) : null }).eq('id', id).eq('organization_id', orgId)
   if (error) throw error
 }
 
