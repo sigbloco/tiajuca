@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Link } from 'react-router-dom'
 import { Badge, Card, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCurrency, formatDate, formatDayLong, formatTime, todayIso } from '@/core/format'
@@ -50,10 +51,12 @@ function UpcomingEvents({ orgId, slug, tz }: { orgId: string; slug: string; tz: 
 
 /** Situação pessoal: ciclo atual, status, frequência e mensalidade (qualquer integrante). */
 function MyStatus({ orgId, memberId, slug }: { orgId: string; memberId: string; slug: string }) {
+  const { cycle: sel } = useSelectedCycle()
   const { data } = useQuery({
-    queryKey: ['my-status', orgId, memberId],
+    queryKey: ['my-status', orgId, memberId, sel?.id],
+    enabled: Boolean(sel),
     queryFn: async () => {
-      const cycle = (await supabase.from('cycles').select('id, name').eq('organization_id', orgId).eq('is_active', true).order('is_current', { ascending: false }).order('starts_on', { ascending: false }).limit(1).maybeSingle()).data
+      const cycle = sel ? { id: sel.id, name: sel.name } : null
       const mc = cycle ? (await supabase.from('member_cycles').select('member_cycle_statuses(name)').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { member_cycle_statuses: { name: string } | null } | null : null
       const att = cycle ? (await supabase.from('v_attendance_member_cycle').select('pct_present, records').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data : null
       const charge = (await supabase.from('monthly_charges').select('competence, final_amount, status, due_on').eq('member_id', memberId).in('status', ['pending']).order('competence').limit(1).maybeSingle()).data
@@ -63,7 +66,7 @@ function MyStatus({ orgId, memberId, slug }: { orgId: string; memberId: string; 
   if (!data) return <Skeleton className="h-24" />
   return (
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-      <Stat label="Ciclo atual" value={data.cycle?.name ?? '—'} />
+      <Stat label="Ciclo" value={data.cycle?.name ?? '—'} />
       <Stat label="Meu status" value={data.status ?? 'Sem registro'} />
       <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />
       <Link to={`/${slug}/cobrancas`}>
