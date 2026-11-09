@@ -33,7 +33,6 @@ interface Rule {
 interface RuleRow extends Rule { id: string; member_id: string; members: { full_name: string; display_name: string | null } | null }
 interface Person { id: string; name: string; kinds: string[] }
 
-const KIND_LABEL: Record<string, string> = { professor: 'Professor', monitor: 'Monitor(a)', regente: 'Regente' }
 const SCOPE_LABEL: Record<Scope, string> = { all: 'Receita total das oficinas', section: 'Um naipe', subsection: 'Um subnaipe', instrument: 'Um instrumento' }
 const EMPTY_RULE: Rule = { kind: 'percent', fixed_amount: null, percent: null, scope: 'all', section_id: null, subsection_id: null, instrument_id: null }
 
@@ -140,13 +139,23 @@ export function TeamPage() {
     },
   })
   const staff = useQuery({
-    queryKey: ['staff-assignments', orgId, 'team', cycleId],
-    enabled: Boolean(cycleId),
+    // Quem tem participação remunerada na ficha neste ciclo (ciclo atual: vínculos vigentes; outro ciclo: a participação daquele ciclo).
+    queryKey: ['member-links', orgId, 'team-paid', cycleId, cycle?.is_current ?? null],
+    enabled: Boolean(cycleId && cycle),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, members(full_name, display_name)')
-        .eq('organization_id', orgId).eq('cycle_id', cycleId).eq('compensation', 'paid').is('valid_to', null).limit(3000)
-      if (error) throw error
-      return (data ?? []) as unknown as { member_id: string; staff_kind: string; members: { full_name: string; display_name: string | null } | null }[]
+      const sel = 'member_id, artistic_functions(name), members(full_name, display_name)'
+      type R = { member_id: string; artistic_functions: { name: string } | null; members: { full_name: string; display_name: string | null } | null }
+      let rows: R[]
+      if (cycle!.is_current) {
+        const { data, error } = await supabase.from('member_artistic_links').select(sel).eq('organization_id', orgId).eq('is_paid', true).not('function_id', 'is', null).is('ended_at', null).limit(3000)
+        if (error) throw error
+        rows = (data ?? []) as unknown as R[]
+      } else {
+        const { data, error } = await supabase.from('cycle_participations').select(sel).eq('organization_id', orgId).eq('cycle_id', cycleId).eq('is_paid', true).not('function_id', 'is', null).limit(3000)
+        if (error) throw error
+        rows = (data ?? []) as unknown as R[]
+      }
+      return rows.map((r) => ({ member_id: r.member_id, staff_kind: r.artistic_functions?.name ?? '', members: r.members }))
     },
   })
   // Base do %: cobranças pagas no mês, por pessoa, e o instrumento de cada uma no ciclo.
@@ -237,14 +246,14 @@ export function TeamPage() {
         de todas as oficinas, de um naipe, de um subnaipe ou de um instrumento. Os valores podem mudar de um ciclo para o seguinte.
       </ReadMore>
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
-      {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque atribuições como remuneradas em Naipes ou na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
+      {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
       <div className="space-y-2">
         {people.map((p) => {
           const mine = (rules.data ?? []).filter((r) => r.member_id === p.id)
           return (
             <Card key={p.id} className="space-y-2 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold"><MemberLink id={p.id}>{p.name}</MemberLink> {p.kinds.map((k) => <Badge key={k} className="ml-1">{KIND_LABEL[k] ?? k}</Badge>)}</p>
+                <p className="font-semibold"><MemberLink id={p.id}>{p.name}</MemberLink> {p.kinds.map((k) => <Badge key={k} className="ml-1">{k}</Badge>)}</p>
                 <p className="font-display text-lg font-bold">{formatCurrency(totalOf(p.id))} <span className="text-sm font-normal text-muted-foreground">previsto no mês</span></p>
               </div>
               {mine.map((r) => (
