@@ -5,7 +5,9 @@ import { Button, Card, EmptyState, Sheet, SheetContent } from '@/components/ui/p
 export interface TrashEntry { id: string; name: string; detail?: string }
 
 /** Botão "Lixeira (n)" que abre a lixeira própria de uma página: restaurar ou (se permitido) excluir de vez. */
-export function TrashDrawer({ title = 'Lixeira', entries, onRestore, onPurge, groups }: {
+export function TrashDrawer({ title = 'Lixeira', entries, onRestore, onPurge, groups, iconOnly }: {
+  /** Só o ícone (com o número de itens ao lado), para cabeçalhos apertados. */
+  iconOnly?: boolean
   title?: string
   entries?: TrashEntry[]
   onRestore?: (id: string) => void
@@ -19,7 +21,7 @@ export function TrashDrawer({ title = 'Lixeira', entries, onRestore, onPurge, gr
   const total = all.reduce((n, g) => n + g.entries.length, 0)
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}><Trash2 className="h-4 w-4" /> Lixeira{total > 0 ? ` (${total})` : ''}</Button>
+      <Button variant="outline" size={iconOnly ? 'icon' : 'default'} className={iconOnly && total > 0 ? 'w-auto gap-1 px-2.5' : undefined} aria-label="Lixeira" title="Lixeira" onClick={() => setOpen(true)}><Trash2 className="h-4 w-4" />{iconOnly ? (total > 0 ? <span className="text-sm font-semibold">{total}</span> : null) : <> Lixeira{total > 0 ? ` (${total})` : ''}</>}</Button>
       <Sheet open={open} onOpenChange={setOpen}>
         {open && (
           <SheetContent title={title} description="Itens removidos ficam aqui até você restaurar ou excluir de vez.">

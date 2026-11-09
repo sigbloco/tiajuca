@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { Lock, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -70,10 +71,10 @@ export function FunctionsPage() {
             onPurge={(id) => { const f = list.find((x) => x.id === id); if (f) del.mutate(f) }} />
         )}
       </div>
-      <p className="text-muted-foreground">
+      <ReadMore>
         Integrantes podem acumular funções (por exemplo, Direção e Regência). Marque <strong>Isento</strong> para garantir a isenção de quem tem a função.
         As categorias de Financeiro → Contribuições refletem estas funções.
-      </p>
+      </ReadMore>
       {canEdit && (
         <Card className="flex flex-wrap items-center gap-3 p-3">
           <Input className="min-w-40 flex-1" aria-label="Nova função" placeholder="Nova função" value={name} onChange={(e) => setName(e.target.value)} />

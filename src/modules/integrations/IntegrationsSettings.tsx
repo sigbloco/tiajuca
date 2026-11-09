@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Input, Label } from '@/components/ui/primitives'
@@ -35,16 +36,16 @@ export function IntegrationsSettings() {
   return (
     <div className="space-y-3">
       <h2>Google Drive: busca de partituras</h2>
-      <p className="text-muted-foreground">
+      <ReadMore>
         Serve só para o <strong>Repertório</strong>: ao cadastrar uma música, a Direção pode buscar o PDF da partitura numa pasta do Drive em vez de colar o link à mão.
         Para <strong>liberar pastas do Drive para as pessoas</strong>, use a página <strong>Google Drive</strong> do menu (lá dá para adicionar quantas pastas quiser).
-      </p>
+      </ReadMore>
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">
           <h3>Google Drive (partituras)</h3>
           <Badge className={cfg.data?.active ? 'bg-success/15 text-success' : ''}>{cfg.data?.active ? 'Ativa' : cfg.data?.configured ? 'Desativada' : 'Não configurada'}</Badge>
         </div>
-        <p className="text-muted-foreground">Permite buscar PDFs e partituras de uma pasta institucional e anexá-los às músicas. É opcional: sem isso, você ainda pode colar links ou enviar arquivos.</p>
+        <ReadMore>Permite buscar PDFs e partituras de uma pasta institucional e anexá-los às músicas. É opcional: sem isso, você ainda pode colar links ou enviar arquivos.</ReadMore>
         <div className="space-y-1.5">
           <Label htmlFor="drive-folder">Link ou ID da pasta do Drive</Label>
           <Input id="drive-folder" placeholder="https://drive.google.com/drive/folders/" value={folder} onChange={(e) => setFolder(e.target.value)} />

@@ -1,4 +1,5 @@
 import { MemberLink } from '@/modules/members/MemberLink'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Crown, Lock } from 'lucide-react'
@@ -145,9 +146,9 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
           {isTitular && <Button size="sm" variant="outline" onClick={onTransfer}>Transferir titularidade</Button>}
         </Card>
       )}
-      <p className="text-muted-foreground">
+      <ReadMore>
         Todo cadastro já é <strong>integrante</strong>; aqui aparece só quem tem um papel além disso. Papéis acumulam (ex.: Professor e Direção). Toda mudança fica na auditoria.
-      </p>
+      </ReadMore>
 
       <Card className="space-y-2 p-3">
         <p className="font-semibold">Dar um papel a alguém</p>

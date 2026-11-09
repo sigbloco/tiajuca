@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { Lock, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -83,10 +84,10 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   return (
     <div className="space-y-3">
       <h2>Valores{cycle ? ` · ${cycle.name}` : ''}</h2>
-      <p className="text-muted-foreground">
+      <ReadMore>
         As categorias refletem as funções (Organização → Funções) e não se editam aqui; só o valor mensal. {cycle && cycle.ends_on < today ? 'Ciclo encerrado: só consulta.' : 'O valor muda daqui para frente (num ciclo futuro, vale desde o início dele); cobranças já geradas não mudam.'}
         Defina a categoria de cada pessoa na ficha do integrante.
-      </p>
+      </ReadMore>
       {(cats.isLoading || funcs.isLoading) && <Skeleton className="h-24" />}
       <div className="grid gap-2">
         <Card className="space-y-1 border-primary/30 bg-primary/5 p-3">
