@@ -70,7 +70,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   const functions = (funcs.data ?? []).filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order)
   const isExempt = (f: CatalogItem) => !!f.is_exempt || !!f.exempt_locked
   const exemptNames = functions.filter(isExempt).map((f) => f.name)
-  const payers = functions.filter((f) => !isExempt(f))
+  const payers = functions.filter((f) => !isExempt(f)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const byName = new Map((cats.data ?? []).map((c) => [c.name.toLowerCase(), c]))
 
   // Função que paga e ainda não tem categoria: cria (só quem pode mexer em contribuições consegue).
