@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Save, X } from 'lucide-react'
+import { Heart, Plus, Save, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Select } from '@/components/ui/primitives'
@@ -16,6 +16,13 @@ export type Compensation = 'paid' | 'collaborative'
 export const COMP_LABEL: Record<Compensation, string> = { paid: 'Remunerada', collaborative: 'Colaborativa' }
 const KIND_LABEL = { professor: 'Professor', monitor: 'Monitor(a)', regente: 'Regente' } as const
 type Kind = keyof typeof KIND_LABEL
+
+/** Símbolo da colaboração: $ (remunerada) ou coração (colaborativa). */
+export function CompMark({ value }: { value: Compensation }) {
+  return value === 'paid'
+    ? <span className="font-bold" title={COMP_LABEL.paid} aria-label={COMP_LABEL.paid}>$</span>
+    : <Heart className="inline h-3.5 w-3.5 text-primary" aria-label={COMP_LABEL.collaborative} role="img"><title>{COMP_LABEL.collaborative}</title></Heart>
+}
 
 /** Escolha obrigatória: a colaboração é remunerada ou colaborativa. */
 export function CompensationPick({ value, onChange }: { value: Compensation | null; onChange: (c: Compensation) => void }) {
