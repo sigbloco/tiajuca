@@ -5,10 +5,10 @@ import { Link, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { addDaysIso, formatDayLong, formatTime, todayIso } from '@/core/format'
+import { addDaysIso, formatDayLong, formatDayShort, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { COLOR_BADGE, listActivities, type Activity } from '@/modules/events/service'
+import { listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
@@ -19,6 +19,7 @@ interface RosterRow {
   status_id: string | null
   notes: string | null
   is_off_roster: boolean
+  sections: string | null
 }
 
 function useStatuses() {
@@ -61,11 +62,10 @@ export function AttendanceListPage() {
             <Card className="flex items-center justify-between gap-3 p-3 hover:bg-muted">
               <div className="min-w-0">
                 <p className="truncate font-semibold">{a.title}</p>
-                <p className="capitalize text-muted-foreground">{formatDayLong(a.activity_date)}{a.start_time ? ` · ${formatTime(a.start_time)}` : ''}</p>
+                <p className="text-muted-foreground"><span className="hidden capitalize md:inline">{formatDayLong(a.activity_date)}</span><span className="md:hidden">{formatDayShort(a.activity_date)}</span>{a.start_time ? ` · ${formatTime(a.start_time)}` : ''}</p>
               </div>
               <div className="flex items-center gap-2">
                 {a.activity_date === today && <Badge className="bg-primary text-primary-foreground">Hoje</Badge>}
-                {a.activity_types && <Badge className={COLOR_BADGE[a.activity_types.color]}>{a.activity_types.name}</Badge>}
               </div>
             </Card>
           </Link>
@@ -83,6 +83,7 @@ export function AttendanceRosterPage() {
   const qc = useQueryClient()
   const statuses = useStatuses()
   const [search, setSearch] = useState('')
+  const [naipe, setNaipe] = useState('')
   const [openNote, setOpenNote] = useState<string | null>(null)
   const [extra, setExtra] = useState('')
   const rosterKey = ['roster', orgId, activityId]
@@ -106,7 +107,12 @@ export function AttendanceRosterPage() {
   })
 
   const mark = useMutation({
-    mutationFn: async (v: { member: string; status: Status; notes?: string }) => {
+    mutationFn: async (v: { member: string; status: Status; notes?: string; clear?: boolean }) => {
+      if (v.clear) {
+        const { error } = await supabase.rpc('clear_attendance', { p_activity: activityId, p_member: v.member })
+        if (error) throw error
+        return
+      }
       const { error } = await supabase.rpc('set_attendance', {
         p_activity: activityId, p_member: v.member, p_status_key: v.status.key, p_notes: v.notes ?? null,
       })
@@ -117,7 +123,7 @@ export function AttendanceRosterPage() {
       await qc.cancelQueries({ queryKey: rosterKey })
       const prev = qc.getQueryData<RosterRow[]>(rosterKey)
       qc.setQueryData<RosterRow[]>(rosterKey, (rows) =>
-        rows?.map((r) => (r.member_id === v.member ? { ...r, status_id: v.status.id, notes: v.notes ?? r.notes } : r)))
+        rows?.map((r) => (r.member_id === v.member ? { ...r, status_id: v.clear ? null : v.status.id, notes: v.clear ? null : (v.notes ?? r.notes) } : r)))
       return { prev }
     },
     onError: (e, _v, ctx) => {
@@ -143,7 +149,9 @@ export function AttendanceRosterPage() {
     for (const r of rows) if (r.status_id) by[r.status_id] = (by[r.status_id] ?? 0) + 1
     return by
   }, [rows])
-  const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase()))
+  const naipes = useMemo(() => [...new Set(rows.flatMap((r) => (r.sections ?? '').split(', ').filter(Boolean)))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows])
+  const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
+    && (!naipe || (r.sections ?? '').split(', ').includes(naipe)))
   const cancelled = activity.data?.status === 'cancelled'
 
   return (
@@ -152,7 +160,7 @@ export function AttendanceRosterPage() {
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/presenca`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <div className="min-w-0">
           <h1 className="truncate">{activity.data?.title ?? 'Chamada'}</h1>
-          {activity.data && <p className="capitalize text-muted-foreground">{formatDayLong(activity.data.activity_date)}</p>}
+          {activity.data && <p className="text-muted-foreground"><span className="hidden capitalize md:inline">{formatDayLong(activity.data.activity_date)}</span><span className="md:hidden">{formatDayShort(activity.data.activity_date)}</span></p>}
         </div>
       </div>
 
@@ -178,6 +186,17 @@ export function AttendanceRosterPage() {
         <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
+      {naipes.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {['', ...naipes].map((n) => (
+            <button key={n || 'todos'} onClick={() => setNaipe(n)}
+              className={cn('h-9 rounded-full border px-3 text-sm font-medium', naipe === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
+              {n || 'Todos'}
+            </button>
+          ))}
+        </div>
+      )}
+
       {roster.isLoading && Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
       {roster.data && rows.length === 0 && (
         <EmptyState>Ninguém elegível para esta atividade. Confira o ciclo, o status “Ativo” e o público do evento.</EmptyState>
@@ -200,7 +219,7 @@ export function AttendanceRosterPage() {
                 <button
                   key={s.id}
                   disabled={cancelled}
-                  onClick={() => mark.mutate({ member: r.member_id, status: s })}
+                  onClick={() => mark.mutate({ member: r.member_id, status: s, clear: r.status_id === s.id })}
                   className={cn('h-12 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, r.status_id === s.id))}
                 >
                   {s.name}

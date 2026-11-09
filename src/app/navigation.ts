@@ -39,8 +39,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },
   { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read' },
 
-  { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group', description: 'Quem está na oficina como aluno.' },
   { to: 'presenca', label: 'Presença', icon: ClipboardCheck, group: 'oficina', permission: 'attendance.record', description: 'Chamada dos ensaios e das aulas.' },
+  { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group', description: 'Quem está na oficina como aluno.' },
   { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, group: 'oficina', permission: 'capacity.read', description: 'Vagas por instrumento e lista de espera.' },
   { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage', description: 'Formulários e novas inscrições para confirmar.' },
   { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },

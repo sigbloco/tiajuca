@@ -56,6 +56,14 @@ export function formatDayLong(iso: string): string {
   )
 }
 
+/** Curto (celular): "SEG 16/11". */
+export function formatDayShort(iso: string): string {
+  const m = /^(d{4})-(d{2})-(d{2})/.exec(iso)
+  if (!m) return iso
+  const wd = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))))
+  return `${wd.replace('.', '').toUpperCase()} ${m[3]}/${m[2]}`
+}
+
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /** Dias exibidos no calendário mensal (semanas completas, domingo a sábado). */
