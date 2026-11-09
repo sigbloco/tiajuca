@@ -36,10 +36,9 @@ function CategoryRow({ item, current, canEdit, from }: { item: CatalogItem; curr
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
-    <Card className="flex flex-wrap items-center gap-2 p-2 pl-3">
-      <span className="min-w-36 flex-1 font-semibold">{item.name}</span>
-      <div className="w-32"><MoneyInput value={value} onChange={setValue} /></div>
-      <span className="text-muted-foreground">/mês</span>
+    <Card className="flex flex-nowrap items-center gap-2 p-2 pl-3">
+      <span className="min-w-0 flex-1"><span className="font-semibold">{item.name}</span><span className="text-muted-foreground">/mês</span></span>
+      <div className="w-28 shrink-0 sm:w-32"><MoneyInput value={value} onChange={setValue} /></div>
       {canEdit && <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>}
     </Card>
   )
