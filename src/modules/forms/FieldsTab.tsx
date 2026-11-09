@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, GitBranch, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, GitBranch, Plus, Save } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -113,7 +113,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
             </Select>
             <p className="text-xs text-muted-foreground">Ao aprovar, o valor vai direto para o cadastro, sem digitar de novo.</p></div>
         )}
-        <Button type="submit" className="w-full" disabled={!f.label.trim() || save.isPending || (needsOptions && !f.options.trim())}>Salvar campo</Button>
+        <Button type="submit" className="w-full" disabled={!f.label.trim() || save.isPending || (needsOptions && !f.options.trim())} aria-label="Salvar campo" title="Salvar campo"><Save className="h-4 w-4" /></Button>
       </form>
     </SheetContent>
   )

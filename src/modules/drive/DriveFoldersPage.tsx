@@ -1,6 +1,6 @@
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, FolderOpen, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { ExternalLink, FolderOpen, Pencil, Plus, RefreshCw, Save } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -126,7 +126,7 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
         <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">
           O app controla quem vê o <strong>atalho</strong>. Quem abrir a pasta ainda precisa ter acesso no próprio Google Drive: compartilhe a pasta lá com quem deve entrar.
         </p>
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending}>Salvar</Button>
+        <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
         {folder && (
           <Button type="button" variant="ghost" className={folder.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
             if (!folder.is_active || window.confirm('Mover esta pasta para a lixeira? Ela some do app, o cadastro é mantido e você pode restaurar depois.')) toggleActive.mutate()

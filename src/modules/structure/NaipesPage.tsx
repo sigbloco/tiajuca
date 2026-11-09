@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Pencil, Network, Plus, Settings, Trash2, UserPlus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -123,8 +123,8 @@ export function Actions({ item, label, idx, total, onUp, onDown, onEdit, onDelet
   )
 }
 
-/** Vagas por instrumento (ciclo principal), editadas junto com o naipe. */
-function SectionVagas({ insts }: { insts: CatalogItem[] }) {
+/** Oficina e vagas por instrumento (ciclo principal), editadas junto com o naipe. Linhas zebradas. */
+function SectionWorkshop({ sec, insts }: { sec: CatalogItem; insts: CatalogItem[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const cycle = useQuery({
@@ -153,21 +153,48 @@ function SectionVagas({ insts }: { insts: CatalogItem[] }) {
     onSuccess: () => { notifySaved('Vagas atualizadas.'); qc.invalidateQueries({ queryKey: ['capacity-edit', orgId] }); qc.invalidateQueries({ queryKey: ['capacity', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  if (!cycle.data) return <p className="text-sm text-muted-foreground">Defina o ciclo principal para controlar as vagas.</p>
+  // Marcar/desmarcar oficina: ajusta o instrumento e deixa o naipe marcado se ao menos um instrumento tiver oficina.
+  const setWorkshop = useMutation({
+    mutationFn: async (v: { ids: string[]; on: boolean }) => {
+      const r1 = await supabase.from('instruments').update({ has_workshop: v.on }).in('id', v.ids).eq('organization_id', orgId)
+      if (r1.error) throw r1.error
+      const others = insts.filter((i) => !v.ids.includes(i.id) && i.has_workshop).length
+      const secOn = v.on || others > 0
+      if (secOn !== !!sec.has_workshop) {
+        const r2 = await supabase.from('sections').update({ has_workshop: secOn }).eq('id', sec.id).eq('organization_id', orgId)
+        if (r2.error) throw r2.error
+      }
+    },
+    onSuccess: () => { notifySaved('Oficina atualizada.'); invalidateCatalog(qc, orgId) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const allOn = insts.length > 0 && insts.every((i) => i.has_workshop)
   return (
-    <div className="space-y-1.5">
-      <p className="text-sm font-semibold text-muted-foreground">Vagas por instrumento ({cycle.data.name})</p>
-      {insts.map((i) => (
-        <div key={i.id} className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate">{i.name}</span>
-          <SaveInput className="w-32 flex-none" aria-label={`Vagas de ${i.name}`} placeholder="Sem limite" value={caps.data?.has(i.id) ? String(caps.data.get(i.id)) : ''}
-            onSave={(v) => {
-              const n = Number(v)
-              if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
-              return save.mutateAsync({ id: i.id, capacity: n })
-            }} />
+    <div className="space-y-1">
+      <label className="flex items-center gap-2 font-semibold">
+        <input type="checkbox" className="h-4 w-4" checked={allOn} onChange={(e) => setWorkshop.mutate({ ids: insts.map((i) => i.id), on: e.target.checked })} />
+        Tem oficina (todos os instrumentos)
+      </label>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="grid grid-cols-[1fr_4.5rem_8rem] items-center gap-2 bg-muted px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+          <span>Instrumento</span><span className="text-center">Oficina</span><span>Vagas{cycle.data ? '' : ''}</span>
         </div>
-      ))}
+        {insts.map((i, k) => (
+          <div key={i.id} className={cn('grid grid-cols-[1fr_4.5rem_8rem] items-center gap-2 px-2 py-1.5', k % 2 === 1 ? 'bg-muted/60' : 'bg-card')}>
+            <span className="min-w-0 truncate">{i.name}</span>
+            <span className="text-center"><input type="checkbox" className="h-4 w-4" aria-label={`Oficina de ${i.name}`} checked={!!i.has_workshop} onChange={(e) => setWorkshop.mutate({ ids: [i.id], on: e.target.checked })} /></span>
+            {cycle.data ? (
+              <SaveInput className="w-full" aria-label={`Vagas de ${i.name}`} placeholder="Sem limite" value={caps.data?.has(i.id) ? String(caps.data.get(i.id)) : ''}
+                onSave={(v) => {
+                  const n = Number(v)
+                  if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
+                  return save.mutateAsync({ id: i.id, capacity: n })
+                }} />
+            ) : <span className="text-sm text-muted-foreground">—</span>}
+          </div>
+        ))}
+      </div>
+      {cycle.data ? <p className="text-xs text-muted-foreground">Vagas do ciclo {cycle.data.name}.</p> : <p className="text-xs text-muted-foreground">Defina o ciclo principal para controlar as vagas.</p>}
     </div>
   )
 }
@@ -181,8 +208,8 @@ function RenameForm({ name, label, onSave, onCancel }: { name: string; label: st
       onCancel()
     }}>
       <Input name="name" aria-label={`Novo nome do ${label}`} defaultValue={name} autoFocus />
-      <Button type="submit" size="sm">Salvar</Button>
-      <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
+      <Button type="submit" size="sm" aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onCancel} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
     </form>
   )
 }
@@ -276,7 +303,10 @@ export function NaipesPage() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Naipes e instrumentos</h1>
+        <div className="flex items-center gap-2">
+          <h1>Naipes e instrumentos</h1>
+          {canEdit && <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Novo naipe" title="Novo naipe" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /></Button>}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="organograma"><Network className="h-4 w-4" /> Organograma</Link></Button>
           {canEdit && <Button asChild variant="outline"><Link to="configuracoes"><Settings className="h-4 w-4" /> Configurações</Link></Button>}
@@ -286,7 +316,6 @@ export function NaipesPage() {
               { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
             ]} />
           )}
-          {canEdit && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>}
         </div>
       </div>
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
@@ -310,13 +339,7 @@ export function NaipesPage() {
                     onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
                 {isEditing(s.id) && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => toggleEdit(s.id)} />}
-                {isEditing(s.id) && (
-                  <label className="flex items-center gap-2 font-semibold">
-                    <input type="checkbox" className="h-4 w-4" checked={!!s.has_workshop} onChange={(e) => secMut.save.mutate({ id: s.id, name: s.name, has_workshop: e.target.checked })} />
-                    Tem oficina
-                  </label>
-                )}
-                {isEditing(s.id) && insts.length > 0 && <SectionVagas insts={insts} />}
+                {isEditing(s.id) && insts.length > 0 && <SectionWorkshop sec={s} insts={insts} />}
 
                 <div className="space-y-1.5">
                   {insts.filter(okI).map((i) => instNode(i, insts, insts, s))}

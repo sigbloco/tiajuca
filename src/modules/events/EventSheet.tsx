@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, Pencil } from 'lucide-react'
+import { ClipboardCheck, Pencil, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -204,7 +204,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!valid || (Boolean(aKind) && !aRef) || save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar'}</Button>
+          <Button type="submit" className="flex-1" disabled={!valid || (Boolean(aKind) && !aRef) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
       </form>

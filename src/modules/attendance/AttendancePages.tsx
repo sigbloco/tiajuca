@@ -40,14 +40,14 @@ const statusClass = (s: Status, active: boolean) =>
     ? s.counts_as_present ? 'border-success bg-success text-white' : s.key === 'justified' ? 'border-warning bg-warning text-white' : 'border-destructive bg-destructive text-white'
     : 'border-border bg-card text-foreground hover:bg-muted'
 
-interface InstrumentInfo { id: string; name: string; section_id: string; subsection_id: string | null; section: string }
+interface InstrumentInfo { id: string; name: string; section_id: string; subsection_id: string | null; section: string; has_workshop: boolean }
 /** Catálogo de instrumentos com o naipe de cada um (para filtrar a chamada e mostrar a equipe). */
 function useInstrumentCatalog() {
   const orgId = useOrgId()
   return useQuery({
     queryKey: ['instrument-catalog', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, sections(name)').eq('organization_id', orgId).limit(1000)
+      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, has_workshop, sections(name)').eq('organization_id', orgId).limit(1000)
       if (error) throw error
       const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string } | null })[]).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
       return { list, byName: new Map(list.map((i) => [i.name, i])) }
@@ -204,8 +204,11 @@ export function AttendanceRosterPage() {
   const catalog = useInstrumentCatalog()
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
   const naipes = [...new Set(rows.flatMap(sectionsOf))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  // Naipe com instrumentos marcados "Oficina": a chamada mostra só quem toca esses instrumentos.
+  const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && i.has_workshop).map((i) => i.name))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
-    && (!naipe || sectionsOf(r).includes(naipe)))
+    && (!naipe || sectionsOf(r).includes(naipe))
+    && (workshopNames.size === 0 || (r.instruments ?? '').split(', ').some((n) => workshopNames.has(n))))
   const cancelled = activity.data?.status === 'cancelled'
 
   return (

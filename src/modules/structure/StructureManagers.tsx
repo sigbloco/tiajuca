@@ -45,7 +45,8 @@ export function useStructureMutations(table: CatalogTable) {
 }
 
 /** Linha editável: nome inline, setas de ordem, ativar/desativar e um slot extra. */
-export function ItemRow({ item, siblings, canEdit, mut, extra }: {
+export function ItemRow({ item, siblings, canEdit, mut, extra, zebra }: {
+  zebra?: boolean
   item: CatalogItem
   siblings: CatalogItem[]
   canEdit: boolean
@@ -57,7 +58,7 @@ export function ItemRow({ item, siblings, canEdit, mut, extra }: {
   const scope = siblings.map((x) => x.id).sort()[0] ?? 'x'
   const onMove = (from: string, to: string) => mut.reorder.mutate({ from, to, list: siblings })
   return (
-    <div {...(canEdit ? drag.row(item.id, onMove, scope) : {})} className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !item.is_active && 'opacity-60', drag.cls(item.id))}>
+    <div {...(canEdit ? drag.row(item.id, onMove, scope) : {})} className={cn('flex flex-wrap items-center gap-1.5 rounded-lg p-1.5', zebra ? 'bg-muted/60' : 'bg-card', !item.is_active && 'opacity-60', drag.cls(item.id))}>
       {canEdit && drag.handle(item.id, onMove, scope)}
       <div className="flex flex-col">
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx <= 0}

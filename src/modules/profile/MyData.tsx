@@ -1,7 +1,7 @@
 import { useUnsaved } from '@/core/unsaved'
 import { socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock, Plus, X } from 'lucide-react'
+import { Lock, Plus, Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
@@ -87,7 +87,7 @@ export function MyData({ memberId }: { memberId: string }) {
           <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.played_other_blocks} onChange={(e) => setF({ ...f, played_other_blocks: e.target.checked })} /> Toco ou já toquei com outros blocos</label>
         {f.played_other_blocks && <div className="space-y-1.5"><Label htmlFor="my-other">Quais blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>}
-        <Button type="submit" disabled={!phoneOk || save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar meus dados'}</Button>
+        <Button type="submit" disabled={!phoneOk || save.isPending} aria-label="Salvar meus dados" title="Salvar meus dados"><Save className="h-4 w-4" /></Button>
       </form>
     </Card>
   )
@@ -172,7 +172,7 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
               </div>
               {f.is_pcd === 'yes' && <div className="space-y-1.5"><Label htmlFor="s-pcd-d">Qual?</Label><Input id="s-pcd-d" value={f.pcd_description} onChange={(e) => setF({ ...f, pcd_description: e.target.value })} /></div>}
               <div className="flex flex-wrap gap-2">
-                <Button type="submit" disabled={save.isPending}>Salvar</Button>
+                <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
                 <Button type="button" variant="ghost" className="text-destructive" disabled={save.isPending}
                   onClick={() => { if (window.confirm(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
                   {admin ? 'Apagar dados sensíveis' : 'Apagar meus dados sensíveis'}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock } from 'lucide-react'
+import { Lock, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
@@ -40,7 +40,7 @@ function CategoryRow({ item, current, canEdit }: { item: CatalogItem; current: n
       <span className="min-w-36 flex-1 font-semibold">{item.name}</span>
       <div className="w-32"><MoneyInput value={value} onChange={setValue} /></div>
       <span className="text-muted-foreground">/mês</span>
-      {canEdit && <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>Salvar</Button>}
+      {canEdit && <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>}
     </Card>
   )
 }

@@ -7,6 +7,7 @@ import { useAuth } from '@/core/auth'
 import { friendlyError } from '@/core/errors'
 import { supabase } from '@/core/supabase'
 import { AuthLayout } from './AuthLayout'
+import { Save } from 'lucide-react'
 
 function Field({ id, label, ...props }: { id: string; label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -161,7 +162,7 @@ export function ResetPasswordPage() {
     <AuthLayout title="Nova senha" subtitle="Escolha uma nova senha para sua conta.">
       <form onSubmit={(e) => { e.preventDefault(); update.mutate() }} className="space-y-3">
         <Field id="password" label="Nova senha (mín. 8 caracteres)" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
-        <Button type="submit" className="w-full" disabled={update.isPending}>Salvar nova senha</Button>
+        <Button type="submit" className="w-full" disabled={update.isPending} aria-label="Salvar nova senha" title="Salvar nova senha"><Save className="h-4 w-4" /></Button>
       </form>
     </AuthLayout>
   )

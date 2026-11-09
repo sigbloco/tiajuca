@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, ExternalLink, Plus, Save, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -161,7 +161,7 @@ export function SiteSettings() {
         <Button disabled={!dirty || save.isPending || f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))} onClick={() => {
           setF((x) => ({ ...x, links: x.links.filter((l) => l.value.trim()), videos: x.videos.filter((v) => v.url.trim()) }))
           save.mutate()
-        }}>{save.isPending ? 'Salvando…' : 'Salvar página'}</Button>
+        }} aria-label="Salvar página" title="Salvar página"><Save className="h-4 w-4" /></Button>
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { notifyChange } from '@/core/undo'
 import { setMemberCycleStatus, useCycles } from '@/modules/cycles/service'
+import { X } from 'lucide-react'
 
 interface Req {
   id: string; member_id: string; cycle_id: string; message: string | null; status: 'pending' | 'approved' | 'rejected'
@@ -58,7 +59,7 @@ export function InactiveNotice() {
             value={message} onChange={(e) => setMessage(e.target.value)} />
           <div className="flex gap-2">
             <Button type="submit" disabled={send.isPending}>Enviar pedido</Button>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
           </div>
         </form>
       )}
