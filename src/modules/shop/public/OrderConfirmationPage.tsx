@@ -104,7 +104,7 @@ export function OrderConfirmationPage() {
             {pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar pelo WhatsApp</a>}
             {pix.mailtoUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.mailtoUrl}>Enviar por e-mail</a>}
           </div>
-          <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando…' : 'Já fiz o pagamento'}</Button>
+          <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
           {order.expires_at && <p className="text-sm text-muted-foreground">Seus itens ficam reservados até {formatDateTime(order.expires_at)}. Se o pagamento não for informado até lá, o pedido é cancelado.</p>}
         </Card>
       )}

@@ -35,7 +35,7 @@ function RuleSheet({ onClose }: { onClose: () => void }) {
     <SheetContent title="Nova regra de distribuição" description="Valores fixos saem primeiro da receita. Percentuais seguem a base escolhida.">
       <div className="space-y-3">
         <Select aria-label="Destino" value={f.destination_id} onChange={(e) => setF({ ...f, destination_id: e.target.value })}>
-          <option value="">Destino…</option>
+          <option value="">Destino</option>
           {dests.data?.filter((d) => d.is_active).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </Select>
         <Select aria-label="Tipo" value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value as 'percent' | 'fixed' })}>

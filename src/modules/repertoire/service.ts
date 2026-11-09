@@ -47,7 +47,7 @@ export interface Attachment {
 
 /** Afinações comuns de instrumentos de sopro; a mesma partitura serve para todos os instrumentos de uma afinação. */
 export const TUNINGS = ['Bb', 'Eb', 'F', 'C']
-/** Instrumento sem afinação (percussão, performance…): anula a afinação. */
+/** Instrumento sem afinação (percussão, performance): anula a afinação. */
 export const NO_PITCH = 'indef'
 export const hasTuning = (t: string | null | undefined): t is string => !!t && t !== NO_PITCH
 
@@ -102,7 +102,7 @@ export async function openAttachment(a: Attachment) {
 
 const safeName = (name: string) => name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(-80)
 
-/** Envia o arquivo para `{organização}/musicas/{música}/…` no bucket privado. */
+/** Envia o arquivo para `{organização}/musicas/{música}/` no bucket privado. */
 export async function uploadSongFile(orgId: string, songId: string, file: File): Promise<{ path: string }> {
   if (file.size > MAX_FILE_BYTES) throw new Error('Arquivo maior que 25 MB.')
   if (!ALLOWED_MIME.includes(file.type)) throw new Error('Tipo de arquivo não permitido. Use PDF, imagem, áudio ou vídeo MP4.')

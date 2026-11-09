@@ -45,7 +45,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
         </div>
       ) : (
         <Select id={id} value={str} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Selecione…</option>
+          <option value="">Selecione</option>
           {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
       )
@@ -94,7 +94,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
         <div className="space-y-2">
           {mine.map((x) => (
             <div key={x.path} className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
-              <span className="truncate">{x.name}</span>
+              <span className="break-words">{x.name}</span>
               <button type="button" className="text-destructive" onClick={() => onFiles((p) => p.filter((y) => y.path !== x.path), null)}>Remover</button>
             </div>
           ))}
@@ -238,7 +238,7 @@ export function PublicFormPage() {
         </div>
 
         <Button type="submit" size="lg" className="w-full" disabled={submit.isPending || uploading || Boolean(missing) || (Boolean(f0?.requires_consent) && !consent)}>
-          {submit.isPending ? 'Enviando…' : uploading ? 'Enviando arquivo…' : 'Enviar inscrição'}
+          {submit.isPending ? 'Enviando' : uploading ? 'Enviando arquivo' : 'Enviar inscrição'}
         </Button>
         {missing && <p className="text-center text-xs text-muted-foreground">Falta preencher: {missing.label}</p>}
       </form>

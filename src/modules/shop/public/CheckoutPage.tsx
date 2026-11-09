@@ -69,7 +69,7 @@ export function CheckoutPage() {
             : (
               <div className="space-y-1.5"><Label htmlFor="ck-pickup">Ponto de retirada</Label>
                 <Select id="ck-pickup" required value={f.pickup} onChange={(e) => setF({ ...f, pickup: e.target.value })}>
-                  <option value="" disabled>Escolha…</option>
+                  <option value="" disabled>Escolha</option>
                   {store.pickup_points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>
                 {f.pickup && (() => { const p = store.pickup_points.find((x) => x.id === f.pickup); return p && (
@@ -98,7 +98,7 @@ export function CheckoutPage() {
           <span>Li e concordo com o <Link className="font-semibold text-primary hover:underline" to={`${basePath}/privacidade`} target="_blank">aviso de privacidade</Link>: usaremos seu nome, telefone e e-mail só para este pedido.</span>
         </label>
         {blockers.map((b) => <p key={b} role="alert" className="text-sm text-destructive">{b}</p>)}
-        <Button type="submit" className="w-full" disabled={disabled}>{submit.isPending ? 'Enviando…' : `Confirmar pedido · ${money(cart.totalCents)}`}</Button>
+        <Button type="submit" className="w-full" disabled={disabled}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${money(cart.totalCents)}`}</Button>
       </form>
 
       <aside className="space-y-2 md:sticky md:top-20 md:self-start">

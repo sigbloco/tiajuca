@@ -48,7 +48,7 @@ export function UnsavedDialog({ open, onSave, onDiscard, onStay }: { open: boole
             <Button disabled={saving} onClick={async () => {
               setSaving(true)
               try { await onSave() } catch { onStay() } finally { setSaving(false) }
-            }}>{saving ? 'Salvando…' : 'Salvar e continuar'}</Button>
+            }}>{saving ? 'Salvando' : 'Salvar e continuar'}</Button>
             <Button variant="outline" onClick={onDiscard}>Descartar</Button>
             <Button variant="ghost" onClick={onStay}>Continuar editando</Button>
           </div>

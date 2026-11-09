@@ -76,8 +76,8 @@ export function ScholarshipsPage() {
           return (
             <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
               <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ memberId: r.member_id, name })}>
-                <p className="truncate font-semibold">{name}</p>
-                <p className="truncate text-muted-foreground">
+                <p className="break-words font-semibold">{name}</p>
+                <p className="break-words text-muted-foreground">
                   {r.scholarship_types?.name ? `${r.scholarship_types.name} · ` : ''}desde {formatDate(r.valid_from)}{r.reason ? ` · ${r.reason}` : ''}
                 </p>
               </button>

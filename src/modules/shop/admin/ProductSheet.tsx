@@ -168,7 +168,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden
             onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ''; if (files.length) upload.mutate(files) }} />
           <Button type="button" variant="outline" className="w-full" disabled={upload.isPending} onClick={() => fileRef.current?.click()}>
-            <ImagePlus className="h-4 w-4" /> {upload.isPending ? 'Enviando…' : 'Adicionar fotos'}
+            <ImagePlus className="h-4 w-4" /> {upload.isPending ? 'Enviando' : 'Adicionar fotos'}
           </Button>
           <Button type="button" variant="ghost" className={product.is_active ? 'w-full text-destructive' : 'w-full'} disabled={toggle.isPending}
             onClick={() => (!product.is_active || window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>

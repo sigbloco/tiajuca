@@ -87,7 +87,7 @@ export function AppShell() {
         <nav className="flex-1 space-y-1">{renderEntries(entries)}</nav>
         <div className="border-t border-border pt-3">
           <Link to="/site" className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
-          <p className="mt-2 truncate px-1 font-semibold">{membership.display_name}</p>
+          <p className="mt-2 break-words px-1 font-semibold">{membership.display_name}</p>
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
             <LogOut className="h-4 w-4" /> Sair
           </Button>

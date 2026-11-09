@@ -36,7 +36,7 @@ function EntrySheet({ kind, onClose }: { kind: 'income' | 'expense'; onClose: ()
       <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="fe-cat">Categoria</Label>
           <Select id="fe-cat" required value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
-            <option value="">Selecione…</option>
+            <option value="">Selecione</option>
             {cats.data?.filter((c) => c.kind === kind && c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select></div>
         <div className="space-y-1.5"><Label htmlFor="fe-desc">Descrição</Label><Input id="fe-desc" required value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
@@ -121,8 +121,8 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
         {rows.map((r) => (
           <Card key={r.ref} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
-              <p className="truncate font-semibold">{r.description}</p>
-              <p className="truncate text-muted-foreground">{formatDate(r.occurred_on)} · {r.category} · <Badge>{SOURCE_LABEL[r.source]}</Badge></p>
+              <p className="break-words font-semibold">{r.description}</p>
+              <p className="break-words text-muted-foreground">{formatDate(r.occurred_on)} · {r.category} · <Badge>{SOURCE_LABEL[r.source]}</Badge></p>
             </div>
             <div className="flex items-center gap-2">
               <span className={cn('font-semibold', kind === 'income' ? 'text-success' : 'text-foreground')}>{formatCurrency(Number(r.amount))}</span>

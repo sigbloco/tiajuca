@@ -20,7 +20,7 @@ export function FormEditorPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/inscricoes`}><ArrowLeft className="h-5 w-5" /></Link></Button>
-        <h1 className="min-w-0 flex-1 truncate">{form.title}</h1>
+        <h1 className="min-w-0 flex-1 break-words">{form.title}</h1>
         <Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge>
       </div>
       <div className="flex gap-1 overflow-x-auto pb-1" role="tablist">

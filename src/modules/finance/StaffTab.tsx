@@ -138,8 +138,8 @@ export function StaffTab({ competence }: { competence: string }) {
         {data?.map((p) => (
           <Card key={p.id} className="flex items-center justify-between gap-3 p-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(p)}>
-              <p className="truncate font-semibold">{shortName(p.members?.full_name, p.members?.display_name)}</p>
-              <p className="truncate text-muted-foreground">{p.distribution_destinations?.name ?? 'Equipe'}{p.due_on ? ` · previsto ${formatDate(p.due_on)}` : ''}</p>
+              <p className="break-words font-semibold">{shortName(p.members?.full_name, p.members?.display_name)}</p>
+              <p className="break-words text-muted-foreground">{p.distribution_destinations?.name ?? 'Equipe'}{p.due_on ? ` · previsto ${formatDate(p.due_on)}` : ''}</p>
             </button>
             <div className="flex flex-col items-end gap-1">
               <span className="font-semibold">{formatCurrency(Number(p.amount))}</span>

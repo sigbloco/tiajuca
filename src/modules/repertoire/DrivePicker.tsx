@@ -27,7 +27,7 @@ export function DrivePicker({ onPick, onPickFolder }: { onPick?: (f: DriveFile) 
     <Card className="space-y-2 p-3">
       <div className="flex items-center gap-2">
         {stack.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Voltar" onClick={() => setStack(stack.slice(0, -1))}><ChevronLeft className="h-4 w-4" /></Button>}
-        <p className="min-w-0 flex-1 truncate font-semibold">{stack.map((s) => s.name).join(' / ')}</p>
+        <p className="min-w-0 flex-1 break-words font-semibold">{stack.map((s) => s.name).join(' / ')}</p>
       </div>
       <Input placeholder="Buscar nesta pasta pelo nome" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault() }} />
       {folderMode && list.data && (
@@ -42,7 +42,7 @@ export function DrivePicker({ onPick, onPickFolder }: { onPick?: (f: DriveFile) 
             <button type="button" className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-2 text-left hover:bg-muted"
               onClick={() => (f.is_folder ? (setStack([...stack, { id: f.id, name: f.name }]), setQ('')) : onPick?.(f))}>
               {f.is_folder ? <Folder className="h-5 w-5 shrink-0 text-warning" /> : <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />}
-              <span className="truncate">{f.name}</span>
+              <span className="break-words">{f.name}</span>
             </button>
             {folderMode && f.is_folder && <Button type="button" size="sm" variant="outline" onClick={() => onPickFolder!({ id: f.id, name: f.name, url: folderUrl(f.id) })}>Escolher</Button>}
           </div>

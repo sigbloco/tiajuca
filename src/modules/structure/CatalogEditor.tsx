@@ -110,7 +110,7 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
           <Input className="min-w-40 flex-1" placeholder={`Novo(a) ${singular.toLowerCase()}`} value={name} onChange={(e) => setName(e.target.value)} />
           {withSection && (
             <Select className="w-44" value={sectionId} aria-label="Naipe" onChange={(e) => { setSectionId(e.target.value); setSubsectionId('') }}>
-              <option value="">Naipe…</option>
+              <option value="">Naipe</option>
               {sections.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           )}

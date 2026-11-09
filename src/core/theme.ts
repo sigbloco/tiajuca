@@ -5,7 +5,7 @@ export type OrgTheme = ThemeJson
 
 const CACHE_KEY = 'sigbloco:theme'
 
-/** Variáveis da área, usando o texto antigo (primaryForeground…) só enquanto a cor não foi trocada na própria área. */
+/** Variáveis da área, usando o texto antigo (primaryForeground) só enquanto a cor não foi trocada na própria área. */
 export function varsForArea(theme: ThemeJson, area: ThemeArea): Record<string, string> {
   const own = areaOverrides(theme, area)
   return themeVars(resolveColors(theme, area), {

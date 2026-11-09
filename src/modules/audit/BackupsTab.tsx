@@ -84,17 +84,17 @@ export function BackupsTab() {
     <div className="space-y-3">
       <Card className="space-y-1 border-warning p-3 text-sm">
         <p className="font-semibold">Como funciona</p>
-        <p>O backup é uma cópia dos dados do bloco (integrantes, mensalidades, ciclos, eventos, loja…). Restaurar devolve as linhas do backup ao que eram, inclusive as que foram apagadas; o que foi criado depois não é removido.
+        <p>O backup é uma cópia dos dados do bloco (integrantes, mensalidades, ciclos, eventos, loja). Restaurar devolve as linhas do backup ao que eram, inclusive as que foram apagadas; o que foi criado depois não é removido.
           Antes de restaurar, e antes de qualquer “apagar tudo isso”, o sistema guarda um backup automático (os 20 mais recentes).</p>
         <p className="text-muted-foreground">O arquivo baixado contém dados pessoais de integrantes (LGPD): guarde em local seguro e não o compartilhe.</p>
       </Card>
 
       <Card className="flex flex-wrap items-center gap-2 p-3">
         <Input className="min-w-48 flex-1" aria-label="Nome do backup" placeholder="Nome do backup (opcional)" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <Button disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? 'Criando…' : 'Criar backup agora'}</Button>
+        <Button disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? 'Criando' : 'Criar backup agora'}</Button>
         <input ref={fileRef} type="file" accept="application/json,.json" className="sr-only" aria-label="Carregar arquivo de backup"
           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload.mutate(f) }} />
-        <Button variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {upload.isPending ? 'Carregando…' : 'Carregar arquivo'}</Button>
+        <Button variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {upload.isPending ? 'Carregando' : 'Carregar arquivo'}</Button>
       </Card>
 
       {list.isLoading && <Skeleton className="h-24" />}
@@ -113,7 +113,7 @@ export function BackupsTab() {
                 <Button size="sm" variant="outline" disabled={download.isPending} onClick={() => download.mutate(b)}><Download className="h-4 w-4" /> Baixar</Button>
                 <Button size="sm" variant="outline" disabled={restore.isPending}
                   onClick={() => { if (window.confirm(`Restaurar “${b.label}”?\n\nOs dados voltam ao que eram neste backup (linhas apagadas ou alteradas depois são recuperadas). Um backup automático do estado atual é guardado antes.`)) restore.mutate(b) }}>
-                  <RotateCcw className="h-4 w-4" /> {restore.isPending ? 'Restaurando…' : 'Restaurar'}
+                  <RotateCcw className="h-4 w-4" /> {restore.isPending ? 'Restaurando' : 'Restaurar'}
                 </Button>
                 <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${b.label}`} title="Excluir o backup"
                   onClick={() => { if (window.confirm(`Excluir o backup “${b.label}”? Isso não pode ser desfeito.`)) remove.mutate(b) }}><Trash2 className="h-4 w-4" /></Button>

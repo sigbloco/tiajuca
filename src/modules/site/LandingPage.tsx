@@ -120,7 +120,7 @@ export function LandingPage() {
               </figure>
             ))}
             {videos.length > shown && (
-              <button type="button" onClick={() => setShown((n) => n + 3)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Carregar mais…</button>
+              <button type="button" onClick={() => setShown((n) => n + 3)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Carregar mais</button>
             )}
           </section>
         )}

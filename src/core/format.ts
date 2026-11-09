@@ -90,7 +90,7 @@ export function addDaysIso(iso: string, days: number): string {
 }
 
 const normName = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
-// Segundos nomes comuns: "Ana Luísa", "João Pedro", "Maria Clara"… (sem acento, minúsculos).
+// Segundos nomes comuns: "Ana Luísa", "João Pedro", "Maria Clara" (sem acento, minúsculos).
 const SECOND_GIVEN = new Set(('ana maria luisa luiza luiz luis clara beatriz paula julia eduarda eduardo fernanda fernando carolina cristina helena laura lucia vitoria victoria gabriela gabriel isabel isabela isabella joao jose pedro paulo carlos antonio augusto henrique felipe miguel rafael rodrigo roberto marcelo vinicius victor marcos andre alexandre daniel lucas matheus guilherme leonardo leandro thiago tiago gustavo renato ricardo sergio valeria elisa eliza rita sofia sophia alice aline amanda bianca camila claudia daniela flavia leticia livia marina mariana patricia renata sara sandra tereza teresa vanessa viviane raquel rosa regina silvia simone stella estela cecilia antonia angela adriana juliana larissa natalia nicole olivia luana lara manuela emilia francisco fabio bruno diego caio davi david samuel jorge mauricio nelson otavio raul ronaldo rogerio').split(' '))
 const PARTICLES = new Set(['de', 'da', 'do', 'dos', 'das', 'e'])
 

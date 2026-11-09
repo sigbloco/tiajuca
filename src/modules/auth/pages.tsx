@@ -56,7 +56,7 @@ export function LoginPage() {
         <Field id="email" label="E-mail" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field id="password" label="Senha" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         <Button type="submit" className="w-full" disabled={login.isPending}>
-          {login.isPending ? 'Entrando…' : 'Entrar'}
+          {login.isPending ? 'Entrando' : 'Entrar'}
         </Button>
       </form>
       <Divider />
@@ -95,7 +95,7 @@ export function SignupPage() {
         <Field id="email" label="E-mail" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field id="password" label="Senha (mín. 8 caracteres)" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
         <Button type="submit" className="w-full" disabled={signup.isPending}>
-          {signup.isPending ? 'Criando…' : 'Criar conta'}
+          {signup.isPending ? 'Criando' : 'Criar conta'}
         </Button>
       </form>
       <Divider />
@@ -202,7 +202,7 @@ export function ClaimInvitePage() {
     <AuthLayout title="Aceitar convite" subtitle="Vincular a conta atual ao seu cadastro de integrante.">
       {claim.isError && <p className="mb-3 text-destructive">{friendlyError(claim.error)}</p>}
       <Button className="w-full" disabled={claim.isPending} onClick={() => claim.mutate()}>
-        {claim.isPending ? 'Vinculando…' : 'Aceitar convite'}
+        {claim.isPending ? 'Vinculando' : 'Aceitar convite'}
       </Button>
     </AuthLayout>
   )

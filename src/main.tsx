@@ -5,10 +5,12 @@ import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { router } from '@/app/routes'
 import { AuthProvider } from '@/core/auth'
+import { startGlueConnectives } from '@/core/glueConnectives'
 import { applyCachedTheme } from '@/core/theme'
 import '@/styles/index.css'
 
 applyCachedTheme()
+startGlueConnectives()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },

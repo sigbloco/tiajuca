@@ -116,7 +116,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const active = <T extends { is_active: boolean }>(items?: T[]) => items?.filter((i) => i.is_active) ?? []
   const instrumentLabel = (id: string) => {
     const i = instruments.data?.find((x) => x.id === id)
-    return i ? `${i.name} · ${sections.data?.find((s) => s.id === i.section_id)?.name ?? ''}` : '…'
+    return i ? `${i.name} · ${sections.data?.find((s) => s.id === i.section_id)?.name ?? ''}` : '—'
   }
   const startEdit = (l: LinkRow) => {
     setEditing(l.id)
@@ -137,7 +137,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
             {f.instrument_id ? (
               <div><Chip label={instrumentLabel(f.instrument_id)} onRemove={() => setF({ ...f, instrument_id: '' })} removeLabel="Trocar atividade" /></div>
             ) : (
-              <AutoComplete aria-label="Atividade" placeholder="Escreva a atividade (ex.: Surdo)…"
+              <AutoComplete aria-label="Atividade" placeholder="Escreva a atividade (ex.: Surdo)"
                 options={active(instruments.data).map((i) => ({ id: i.id, label: i.name, hint: sections.data?.find((s) => s.id === i.section_id)?.name }))}
                 onPick={(o) => setF({ ...f, instrument_id: o.id })} />
             )}
@@ -155,7 +155,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>
           {editing === 'new' ? 'Adicionar' : 'Salvar'}
         </Button>
-        <Button size="sm" variant="ghost" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+        <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
       </div>
     </div>
   )
@@ -169,7 +169,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
       {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l, idx) => (editing === l.id ? <div key={l.id}>{form}</div> : (
         <div key={l.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
           <div className="min-w-0">
-            <p className="truncate font-semibold">
+            <p className="break-words font-semibold">
               {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :[l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
             </p>
             {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name].filter(Boolean).join(' · ')}</p>}

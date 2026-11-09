@@ -209,7 +209,7 @@ function AdminBilling() {
 
       <div className="flex flex-wrap gap-2">
         <Button disabled={gen.isPending} onClick={() => { if (window.confirm(`Gerar cobranças de ${formatCompetence(competence)}? Quem já tem cobrança no mês não será duplicado.`)) gen.mutate() }}>
-          {gen.isPending ? 'Gerando…' : 'Gerar cobranças'}
+          {gen.isPending ? 'Gerando' : 'Gerar cobranças'}
         </Button>
         <Button variant="outline" disabled={copy.isPending} onClick={() => copy.mutate()}><ClipboardCopy className="h-4 w-4" /> Copiar inadimplentes</Button>
       </div>
@@ -249,8 +249,8 @@ function AdminBilling() {
                   <ProgressiveList items={items} resetKey={competence + search + status} render={(c: Charge) => (
               <Card key={c.id} className="flex items-center justify-between gap-3 p-3">
                 <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(c)}>
-                  <p className="truncate font-semibold">{shortName(c.members?.full_name, c.members?.display_name)}</p>
-                  <p className="truncate text-muted-foreground">{c.fee_categories?.name}{c.scholarship_percent > 0 ? ' · bolsa ' + c.scholarship_percent + '%' : ''} · vence {formatDate(c.due_on)}</p>
+                  <p className="break-words font-semibold">{shortName(c.members?.full_name, c.members?.display_name)}</p>
+                  <p className="break-words text-muted-foreground">{c.fee_categories?.name}{c.scholarship_percent > 0 ? ' · bolsa ' + c.scholarship_percent + '%' : ''} · vence {formatDate(c.due_on)}</p>
                 </button>
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-semibold">{formatCurrency(c.final_amount)}</span>

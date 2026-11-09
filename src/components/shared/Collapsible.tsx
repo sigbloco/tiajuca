@@ -11,7 +11,7 @@ export const TONES: Tone[] = ['primary', 'secondary', 'info', 'success', 'warnin
 /** Grupo que abre/fecha. Controlado pelo pai (que decide o estado inicial: todos fechados por padrão).
  *  Nível 0 = faixa colorida; nível 1 = barra lateral colorida (sem caixas dentro de caixas). */
 export function Collapsible({ open, onToggle, title, titleClass, count, countFirst, left, right, below, level = 0, tone = 'primary', expandable = true, children }: {
-  /** Substitui a classe do título (ex.: fonte menor, sem cortar com "…"). */
+  /** Substitui a classe do título (ex.: fonte menor, sem cortar com "—"). */
   titleClass?: string
   open: boolean
   onToggle: () => void
@@ -38,13 +38,13 @@ export function Collapsible({ open, onToggle, title, titleClass, count, countFir
           <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left hover:bg-muted/60">
             <ChevronRight className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-90')} />
             {count !== undefined && countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
-            <span className={cn('truncate', level === 0 ? 'font-display text-lg font-bold' : 'font-semibold', titleClass)}>{title}</span>
+            <span className={cn('break-words', level === 0 ? 'font-display text-lg font-bold' : 'font-semibold', titleClass)}>{title}</span>
             {count !== undefined && !countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
           </button>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-2 p-1">
             {count !== undefined && countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
-            <span className={cn('truncate', level === 0 ? 'font-display text-lg font-bold' : 'font-semibold')}>{title}</span>
+            <span className={cn('break-words', level === 0 ? 'font-display text-lg font-bold' : 'font-semibold')}>{title}</span>
             {count !== undefined && !countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
           </div>
         )}

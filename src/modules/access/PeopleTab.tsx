@@ -1,3 +1,4 @@
+import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Crown, Lock } from 'lucide-react'
@@ -71,7 +72,7 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
     for (const id of extra) {
       if (map.has(id)) continue
       const m = everyone.data?.find((x) => x.id === id)
-      map.set(id, { id, name: m ? (shortName(m?.full_name, m?.display_name)) : '…', user_id: userIdOf.data?.get(id) ?? null, roles: new Set() })
+      map.set(id, { id, name: m ? (shortName(m?.full_name, m?.display_name)) : '—', user_id: userIdOf.data?.get(id) ?? null, roles: new Set() })
     }
     return [...map.values()]
   }, [staff.data, extra, everyone.data, userIdOf.data])
@@ -101,15 +102,15 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
     if (p.roles.has('titular')) {
       return (
         <Card key={p.id} className="p-3">
-          <p className="flex items-center gap-1.5 font-semibold"><Crown className="h-4 w-4 shrink-0 text-primary" aria-label="Titular do bloco" />{p.name}</p>
+          <p className="flex items-center gap-1.5 font-semibold"><Crown className="h-4 w-4 shrink-0 text-primary" aria-label="Titular do bloco" /><MemberLink id={p.id}>{p.name}</MemberLink></p>
         </Card>
       )
     }
     return (
       <Card key={p.id} className={cn('space-y-2 p-3', inactive && 'bg-muted/60 opacity-80')}>
         <div className="flex items-center justify-between gap-2">
-          <p className="flex min-w-0 items-center gap-1.5 truncate font-semibold">
-            {p.name}
+          <p className="flex min-w-0 items-center gap-1.5 font-semibold">
+            <MemberLink id={p.id}>{p.name}</MemberLink>
           </p>
           <div className="flex shrink-0 gap-1">
             {inactive && <Badge>Inativo</Badge>}

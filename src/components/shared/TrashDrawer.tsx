@@ -31,11 +31,11 @@ export function TrashDrawer({ title = 'Lixeira', entries, onRestore, onPurge, gr
                   {g.entries.map((e) => (
                     <Card key={e.id} className="flex items-center justify-between gap-3 p-3">
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">{e.name}</p>
-                        {e.detail && <p className="truncate text-muted-foreground">{e.detail}</p>}
+                        <p className="break-words font-semibold">{e.name}</p>
+                        {e.detail && <p className="break-words text-muted-foreground">{e.detail}</p>}
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
-                        <Button size="sm" variant="outline" onClick={() => g.onRestore(e.id)}><RotateCcw className="h-4 w-4" /> Restaurar</Button>
+                        <Button size="icon" variant="outline" aria-label={`Restaurar ${e.name}`} title="Restaurar" onClick={() => g.onRestore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
                         {g.onPurge && (
                           <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${e.name} de vez`} title="Excluir de vez"
                             onClick={() => { if (window.confirm(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) g.onPurge?.(e.id) }}><Trash2 className="h-4 w-4" /></Button>
