@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { Lock } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -108,7 +109,7 @@ function PermissionsTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground">Defina o que cada papel pode fazer e com qual alcance. A <strong>Direção</strong> sempre tem tudo. Permissões marcadas com cadeado (financeiro, dados sensíveis, papéis, auditoria, inscrições) são exclusivas da Direção. O banco impõe estas regras mesmo que a tela esconda algo.</p>
+      <ReadMore>Defina o que cada papel pode fazer e com qual alcance. A <strong>Direção</strong> sempre tem tudo. Permissões marcadas com cadeado (financeiro, dados sensíveis, papéis, auditoria, inscrições) são exclusivas da Direção. O banco impõe estas regras mesmo que a tela esconda algo.</ReadMore>
       {isLoading && <Skeleton className="h-24" />}
       {data?.roles.filter((r) => r.key !== 'titular').map((role) => {
         const fixed = role.key === 'direcao'

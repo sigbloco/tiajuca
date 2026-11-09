@@ -1,4 +1,5 @@
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FolderOpen, Pencil, Plus, RefreshCw, Save } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -240,9 +241,9 @@ export function DriveFoldersPage() {
           {canManage && <Button onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
         </div>
       </div>
-      <p className="text-muted-foreground">{canManage
+      <ReadMore>{canManage
         ? 'Pastas do Google Drive do bloco: partituras, fotos, documentos, atas Adicione quantas quiser e escolha quem vê cada uma (por papel, naipe ou instrumento). Use “Sincronizar acesso” para compartilhar a pasta no Drive com essas pessoas.'
-        : 'Pastas do Google Drive liberadas para o seu perfil.'}</p>
+        : 'Pastas do Google Drive liberadas para o seu perfil.'}</ReadMore>
       {folders.isLoading && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {folders.data?.length === 0 && <EmptyState>{canManage ? 'Nenhuma pasta ainda. Use “Adicionar pasta”, cole o link e escolha quem pode vê-la.' : 'Nenhuma pasta liberada para o seu perfil.'}</EmptyState>}
       <div className="grid gap-3 sm:grid-cols-2">

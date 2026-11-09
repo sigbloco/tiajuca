@@ -2,12 +2,12 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { MemberLink } from '@/modules/members/MemberLink'
 import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Button, Card, EmptyState, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
-import { useCycles } from '@/modules/cycles/service'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventSheet } from './EventSheet'
@@ -25,11 +25,10 @@ export function EventsPage() {
   const today = todayIso(tz)
 
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 }))
-  const [cycleId, setCycleId] = useState('')
+  const { cycleId, cycle: selCycle } = useSelectedCycle()
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
   const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados'>('agenda')
-  const cycles = useCycles()
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
   const from = days[0].iso
@@ -42,11 +41,19 @@ export function EventsPage() {
   })
   useEffect(() => { if (canManage) gen.mutate() }, [canManage, orgId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['activities', orgId, from, to, cycleId],
+  const { data: raw, isLoading } = useQuery({
+    queryKey: ['activities', orgId, from, to],
     placeholderData: keepPreviousData,
-    queryFn: () => listActivities({ orgId, from, to, cycleId: cycleId || undefined }),
+    queryFn: () => listActivities({ orgId, from, to }),
   })
+  // Só o ciclo escolhido no menu fixo: o marcado na atividade ou, sem marca, o que cobre a data dela.
+  const data = useMemo(() => raw?.filter((a) => (a.cycle_id ? a.cycle_id === cycleId : !selCycle || (a.activity_date >= selCycle.starts_on && a.activity_date <= selCycle.ends_on))), [raw, cycleId, selCycle])
+  // Ao trocar de ciclo, o mês vai para dentro dele.
+  useEffect(() => {
+    if (!selCycle) return
+    const d = today < selCycle.starts_on ? selCycle.starts_on : today > selCycle.ends_on ? selCycle.ends_on : today
+    setYm({ y: Number(d.slice(0, 4)), m: Number(d.slice(5, 7)) - 1 })
+  }, [selCycle?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const holidays = useQuery({
     queryKey: ['holidays-range', orgId, from, to],
@@ -133,13 +140,6 @@ export function EventsPage() {
       {header}
 
       {tabs}
-
-      <div className="sm:max-w-xs">
-        <Select aria-label="Filtrar por ciclo" value={cycleId} onChange={(e) => setCycleId(e.target.value)}>
-          <option value="">Todos os ciclos</option>
-          {cycles.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </Select>
-      </div>
 
       <Card className="p-3">
         <div className="mb-2 flex items-center justify-between">

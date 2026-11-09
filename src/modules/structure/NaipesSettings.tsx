@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -28,10 +29,10 @@ export function SectionNamesPage() {
   return (
     <div className="space-y-3">
       <h2>Nomes de naipes</h2>
-      <p className="text-muted-foreground">
+      <ReadMore>
         Os nomes que “Novo naipe” oferece. Cada um define a altura dos itens (definida, indefinida ou não se aplica) e como eles se chamam (instrumento, atividade, voz).
         O tipo de item é um texto livre. O naipe criado herda essas escolhas.
-      </p>
+      </ReadMore>
       {canEdit && (
         <Card className="flex flex-col gap-2 p-3 sm:flex-row sm:flex-wrap sm:items-end">
           <Input className="sm:min-w-40 sm:flex-1" aria-label="Novo nome de naipe" placeholder="Novo nome de naipe" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

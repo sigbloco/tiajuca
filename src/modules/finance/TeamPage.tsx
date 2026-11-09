@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -231,10 +232,10 @@ export function TeamPage() {
         <h1>Equipe</h1>
         <div className="flex flex-wrap items-center gap-2"><MonthNav value={ym} onChange={setYm} /></div>
       </div>
-      <p className="text-muted-foreground">
+      <ReadMore>
         Quem recebe no ciclo {cycle?.name ?? ''} e como: valor fixo e/ou porcentagem. A porcentagem incide sobre a receita recebida no mês (cobranças pagas)
         de todas as oficinas, de um naipe, de um subnaipe ou de um instrumento. Os valores podem mudar de um ciclo para o seguinte.
-      </p>
+      </ReadMore>
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
       {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Designe professores e monitores em Naipes ou adicione uma pessoa abaixo.</EmptyState>}
       <div className="space-y-2">

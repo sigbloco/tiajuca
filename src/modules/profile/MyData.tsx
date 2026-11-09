@@ -1,4 +1,5 @@
 import { useUnsaved } from '@/core/unsaved'
+import { ReadMore } from '@/components/shared/ReadMore'
 import { socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock, Plus, Save, X } from 'lucide-react'
@@ -153,9 +154,9 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
       {!admin && <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2"><Lock className="h-4 w-4" /> Dados pessoais sensíveis</h3>
       </div>}
-      <p className="text-muted-foreground">{admin
+      <ReadMore>{admin
         ? <>Opcionais (LGPD). Só a própria pessoa e a Direção enxergam; cada consulta fica registrada na auditoria.</>
-        : <>Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</>}</p>
+        : <>Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</>}</ReadMore>
       {open && (
         <>
           {row.isLoading ? <Skeleton className="h-24" /> : (
