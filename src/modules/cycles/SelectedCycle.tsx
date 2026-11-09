@@ -23,7 +23,7 @@ export function useSelectedCycle(): Ctx {
 
 /** Áreas que ficam sob um ciclo (o Calendário tem o seu próprio menu). */
 const CYCLE_AREAS = new Set([
-  'oficina', 'alunos', 'presenca', 'vagas', 'lista-de-espera', 'inscricoes', 'relatorios',
+  '', 'oficina', 'alunos', 'presenca', 'vagas', 'lista-de-espera', 'inscricoes', 'relatorios',
   'repertorio', 'naipes', 'eventos',
   'financeiro', 'equipe', 'valores', 'cobrancas', 'mensalidades', 'bolsas',
 ])
