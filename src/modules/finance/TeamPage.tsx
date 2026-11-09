@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { ChevronRight, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { MoneyInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, EmptyState, Input, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, shortName, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -176,6 +176,7 @@ export function TeamPage() {
   const cycle = (cycles.data ?? []).find((c) => c.id === cycleId)
   const [drafts, setDrafts] = useState<Record<string, number[]>>({})
   const [extra, setExtra] = useState<Person[]>([])
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
   const instruments = useCatalog('instruments')
   const sections = useCatalog('sections')
   const subsections = useCatalog('subsections')
@@ -286,6 +287,8 @@ export function TeamPage() {
       : Math.round(revenueOf(r) * Number(r.percent ?? 0)) / 100)
   const totalOf = (memberId: string) => (rules.data ?? []).filter((r) => r.member_id === memberId).reduce((n, r) => n + amountOf(r), 0)
   const grand = people.reduce((n, p) => n + totalOf(p.id), 0)
+  // Receita do mês: tudo que foi pago em cobranças; cada grupo mostra quanto leva dela.
+  const revenue = (paid.data ?? []).reduce((n, c) => n + Number(c.final_amount), 0)
 
   const targetName = (r: Rule) => r.scope === 'section' ? sections.data?.find((s) => s.id === r.section_id)?.name
     : r.scope === 'subsection' ? subsections.data?.find((s) => s.id === r.subsection_id)?.name : instruments.data?.find((i) => i.id === r.instrument_id)?.name
@@ -297,7 +300,7 @@ export function TeamPage() {
   }
   const detailOf = (r: Rule) => r.kind === 'hourly'
     ? `${lessonsOf(r).length} aula(s) · ${num(hoursFor(r))} h no mês · rende ${formatCurrency(amountOf(r))}`
-    : r.kind === 'percent' ? `Base do mês ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
+    : r.kind === 'percent' ? `Receita recebida no mês ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -351,10 +354,18 @@ export function TeamPage() {
       {GROUPS.map((g) => {
         const list = people.filter((p) => groupOf(p) === g.key)
         if (list.length === 0) return null
+        const open = openGroups.has(g.label)
+        const total = list.reduce((n, p) => n + totalOf(p.id), 0)
+        const pct = revenue > 0 ? Math.round((total / revenue) * 1000) / 10 : 0
         return (
-          <section key={g.label} className="space-y-2">
-            <h2>{g.label}</h2>
-            {list.map(card)}
+          <section key={g.label} className="rounded-lg border border-border">
+            <button type="button" aria-expanded={open} className="flex w-full items-center gap-2 p-2.5 text-left"
+              onClick={() => setOpenGroups((s) => { const n = new Set(s); if (n.has(g.label)) n.delete(g.label); else n.add(g.label); return n })}>
+              <ChevronRight className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-90')} />
+              <span className="font-display text-lg font-bold">{g.label}</span>
+              <span className="min-w-0 flex-1 text-right text-muted-foreground">{formatCurrency(total)} / {formatCurrency(revenue)} ({num(pct)}%)</span>
+            </button>
+            {open && <div className="space-y-2 p-2 pt-0">{list.map(card)}</div>}
           </section>
         )
       })}
