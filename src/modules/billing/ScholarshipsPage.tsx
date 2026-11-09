@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
-import { CycleSelect } from '@/modules/cycles/CycleSelect'
-import { useCycles } from '@/modules/cycles/service'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Badge, Button, Card, EmptyState, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -37,9 +36,7 @@ export function ScholarshipsPage() {
   const orgId = useOrgId()
   const [sheet, setSheet] = useState<{ memberId: string; name: string } | 'new' | null>(null)
   const [newMember, setNewMember] = useState('')
-  const [cycleId, setCycleId] = useState('')
-  const cycles = useCycles()
-  const cycle = (cycles.data ?? []).find((c) => c.id === cycleId)
+  const { cycle } = useSelectedCycle()
 
   const ind = useQuery({
     queryKey: ['scholarships', orgId, 'indicators'],
@@ -69,7 +66,7 @@ export function ScholarshipsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1>Bolsas</h1>
-        <div className="flex flex-wrap items-center gap-2"><CycleSelect value={cycleId} onChange={setCycleId} />
+        <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => { setNewMember(''); setSheet('new') }}><Plus className="h-4 w-4" /> Nova bolsa</Button></div>
       </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">

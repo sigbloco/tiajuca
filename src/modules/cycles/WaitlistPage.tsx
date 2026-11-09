@@ -13,7 +13,7 @@ import { supabase } from '@/core/supabase'
 import { VagasTabs } from '@/modules/capacity/VagasTabs'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { CycleSelect } from './CycleSelect'
+import { useSelectedCycle } from './SelectedCycle'
 import { setMemberCycleStatus } from './service'
 
 interface WaitRow {
@@ -31,7 +31,7 @@ export function WaitlistPage() {
   const canManage = usePermission('member_cycles.manage', 'group')
   const canForce = usePermission('capacity.manage')
   const instruments = useCatalog('instruments')
-  const [cycleId, setCycleId] = useState('')
+  const { cycleId } = useSelectedCycle()
   const [memberId, setMemberId] = useState('')
   const [instrumentId, setInstrumentId] = useState('')
 
@@ -82,7 +82,6 @@ export function WaitlistPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Lista de espera</h1>
-        <CycleSelect value={cycleId} onChange={setCycleId} />
       </div>
       <VagasTabs />
 

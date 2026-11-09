@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
 import { OrgLogo } from '@/components/shared/OrgLogo'
+import { CycleBar, SelectedCycleProvider } from '@/modules/cycles/SelectedCycle'
 import { Button, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/core/supabase'
@@ -94,14 +95,17 @@ export function AppShell() {
         </div>
       </aside>
 
+      <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         <Breadcrumbs crumbs={crumbs} home={base} />
+        <CycleBar base={base} />
         <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">
           <InactiveNotice />
           <Outlet />
         </div>
       </main>
+      </SelectedCycleProvider>
 
       {/* Mobile: barra inferior fixa + "Mais" */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-header text-header-foreground pb-[env(safe-area-inset-bottom)] md:hidden">

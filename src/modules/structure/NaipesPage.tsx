@@ -18,6 +18,7 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { useCycles } from '@/modules/cycles/service'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { usePersonLabeler } from '@/modules/members/personLabel'
 import { NO_PITCH, hasTuning } from '@/modules/repertoire/service'
@@ -130,14 +131,7 @@ export function Actions({ item, label, idx, total, onUp, onDown, onEdit, onDelet
 function SectionWorkshop({ insts }: { insts: CatalogItem[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const cycle = useQuery({
-    queryKey: ['current-cycle', orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('cycles').select('id, name').eq('organization_id', orgId).eq('is_current', true).maybeSingle()
-      if (error) throw error
-      return data as { id: string; name: string } | null
-    },
-  })
+  const cycle = { data: useSelectedCycle().cycle }
   const caps = useQuery({
     queryKey: ['capacity-edit', orgId, cycle.data?.id],
     enabled: Boolean(cycle.data?.id),
@@ -224,7 +218,7 @@ export function NaipesPage() {
   const instruments = useCatalog('instruments')
   // A estrutura vale por ciclo: esta página mostra o ciclo principal. O que saiu dele vai para a Lixeira.
   const cycles = useCycles()
-  const cur = (cycles.data ?? []).find((c) => c.is_current) ?? (cycles.data ?? [])[0]
+  const { cycle: cur } = useSelectedCycle()
   const prev = cur ? (cycles.data ?? []).filter((c) => c.starts_on < cur.starts_on).sort((a, b) => b.starts_on.localeCompare(a.starts_on))[0] : undefined
   const inCycle = useQuery({
     queryKey: ['structure-cycle', orgId, cur?.id],

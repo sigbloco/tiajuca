@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
 import { SaveInput } from '@/components/shared/ConfirmField'
@@ -8,7 +7,7 @@ import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { CycleSelect } from '@/modules/cycles/CycleSelect'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { VagasTabs } from './VagasTabs'
 
 interface Row {
@@ -64,7 +63,7 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
 export function CapacityPage() {
   const orgId = useOrgId()
   const canManage = usePermission('capacity.manage')
-  const [cycleId, setCycleId] = useState('')
+  const { cycleId } = useSelectedCycle()
   const { data, isLoading } = useQuery({
     queryKey: ['capacity', orgId, cycleId],
     enabled: Boolean(cycleId),
@@ -90,7 +89,6 @@ export function CapacityPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Vagas por instrumento</h1>
-        <CycleSelect value={cycleId} onChange={setCycleId} />
       </div>
       <VagasTabs />
       {cycleId && <p className="text-muted-foreground">{full} {full === 1 ? 'instrumento lotado' : 'instrumentos lotados'}. A contagem considera integrantes ativos no ciclo.</p>}

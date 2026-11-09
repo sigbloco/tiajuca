@@ -11,8 +11,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCompetence, formatCurrency, formatDate, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
-import { CycleSelect } from '@/modules/cycles/CycleSelect'
-import { useCycles } from '@/modules/cycles/service'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import {
@@ -118,15 +117,13 @@ function AdminBilling() {
   const qc = useQueryClient()
   const today = todayIso(membership?.timezone)
   const [ym, setYm] = useState({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })
-  const cycles = useCycles()
-  const [cycleId, setCycleId] = useState('')
-  const pickCycle = (id: string) => {
-    setCycleId(id)
-    const c = (cycles.data ?? []).find((x) => x.id === id)
-    if (!c) return
-    const d = today < c.starts_on ? c.starts_on : today > c.ends_on ? c.ends_on : today
+  // Ao trocar o ciclo no menu fixo, o mês vai para dentro dele.
+  const { cycle } = useSelectedCycle()
+  useEffect(() => {
+    if (!cycle) return
+    const d = today < cycle.starts_on ? cycle.starts_on : today > cycle.ends_on ? cycle.ends_on : today
     setYm({ y: Number(d.slice(0, 4)), m: Number(d.slice(5, 7)) - 1 })
-  }
+  }, [cycle?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [status, setStatus] = useState<ChargeStatus | ''>('')
   const [searchInput, setSearchInput] = useState('')
   const search = useDebounced(searchInput)
@@ -203,7 +200,6 @@ function AdminBilling() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Cobranças</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <CycleSelect value={cycleId} onChange={pickCycle} />
           <Button size="icon" variant="outline" aria-label="Mês anterior" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
           <span className="min-w-40 text-center font-display text-lg font-bold">{formatCompetence(competence)}</span>
           <Button size="icon" variant="outline" aria-label="Próximo mês" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
