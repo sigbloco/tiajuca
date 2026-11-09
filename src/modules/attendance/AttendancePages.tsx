@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, MessageSquare, Search } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { addDaysIso, formatDayLong, formatDayShort, formatTime, todayIso } from '@/core/format'
+import { addDaysIso, formatDayShort, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
+import { usePersonLabeler } from '@/modules/members/personLabel'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
 interface RosterRow {
@@ -19,7 +20,6 @@ interface RosterRow {
   status_id: string | null
   notes: string | null
   is_off_roster: boolean
-  sections: string | null
 }
 
 function useStatuses() {
@@ -41,35 +41,103 @@ const statusClass = (s: Status, active: boolean) =>
     ? s.counts_as_present ? 'border-success bg-success text-white' : s.key === 'justified' ? 'border-warning bg-warning text-white' : 'border-destructive bg-destructive text-white'
     : 'border-border bg-card text-foreground hover:bg-muted'
 
-/** Lista de atividades com chamada: últimas 4 semanas e próximas 2. */
+interface InstrumentInfo { id: string; name: string; section_id: string; subsection_id: string | null; section: string }
+/** Catálogo de instrumentos com o naipe de cada um (para filtrar a chamada e mostrar a equipe). */
+function useInstrumentCatalog() {
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['instrument-catalog', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, sections(name)').eq('organization_id', orgId).limit(1000)
+      if (error) throw error
+      const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string } | null })[]).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
+      return { list, byName: new Map(list.map((i) => [i.name, i])) }
+    },
+  })
+}
+
+interface StaffRow { member_id: string; staff_kind: 'professor' | 'monitor' | 'regente'; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+const STAFF_ABBR = { professor: 'Prof.', monitor: 'Monitor', regente: 'Regente' } as const
+
+/** Um horário do dia: título e, por instrumento (ordem alfabética de naipe), a equipe. */
+function ActivityCard({ a, orgId, catalog, staff, slug }: { a: Activity; orgId: string; catalog: InstrumentInfo[]; staff: StaffRow[]; slug?: string }) {
+  const labeler = usePersonLabeler()
+  const roster = useQuery({
+    queryKey: ['roster', orgId, a.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_attendance_roster', { p_activity: a.id })
+      if (error) throw error
+      return (data ?? []) as RosterRow[]
+    },
+    retry: false,
+  })
+  const byName = new Map(catalog.map((i) => [i.name, i]))
+  const names = [...new Set((roster.data ?? []).flatMap((r) => (r.instruments ?? '').split(', ')).filter(Boolean))]
+  const lines = names.map((n) => byName.get(n)).filter((i): i is InstrumentInfo => !!i)
+    .sort((x, y) => x.section.localeCompare(y.section, 'pt-BR') || x.name.localeCompare(y.name, 'pt-BR'))
+    .map((i) => {
+      const own = staff.filter((s) => s.instrument_id === i.id)
+      const inherited = staff.filter((s) => !s.instrument_id && ((s.subsection_id && s.subsection_id === i.subsection_id) || (s.section_id && !s.subsection_id && s.section_id === i.section_id)))
+      return { i, people: own.length > 0 ? own : inherited }
+    })
+  return (
+    <Link to={`/${slug}/presenca/${a.id}`}>
+      <Card className="flex gap-3 p-3 hover:bg-muted">
+        <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{a.title}</p>
+          {lines.map(({ i, people }) => (
+            <p key={i.id} className="truncate text-muted-foreground">
+              {i.name}{people.length > 0 && ' · '}
+              {people.map((p, k) => <span key={p.member_id + p.staff_kind}>{k > 0 && ', '}{STAFF_ABBR[p.staff_kind]} {labeler(p.members ?? { full_name: '', display_name: null })}</span>)}
+            </p>
+          ))}
+        </div>
+      </Card>
+    </Link>
+  )
+}
+
+/** Presença: um dia por vez (o vigente), com setas para o dia anterior/seguinte com atividades. */
 export function AttendanceListPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)
   const { data, isLoading } = useQuery({
     queryKey: ['activities', orgId, 'attendance-list', today],
-    queryFn: () => listActivities({ orgId, from: addDaysIso(today, -28), to: addDaysIso(today, 14) }),
+    queryFn: () => listActivities({ orgId, from: addDaysIso(today, -90), to: addDaysIso(today, 90) }),
   })
-  const items = (data ?? []).filter((a) => a.status !== 'cancelled').sort((a, b) => b.activity_date.localeCompare(a.activity_date))
+  const catalog = useInstrumentCatalog()
+  const staff = useQuery({
+    queryKey: ['staff-assignments', orgId, 'attendance'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name)')
+        .eq('organization_id', orgId).is('valid_to', null).limit(3000)
+      if (error) throw error
+      return (data ?? []) as unknown as StaffRow[]
+    },
+  })
+  const items = (data ?? []).filter((a) => a.status !== 'cancelled')
+  const days = [...new Set(items.map((a) => a.activity_date))].sort()
+  const [picked, setPicked] = useState<string | null>(null)
+  const current = picked ?? days.find((d) => d >= today) ?? days[days.length - 1] ?? null
+  const idx = current ? days.indexOf(current) : -1
+  const dayItems = items.filter((a) => a.activity_date === current)
+    .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '') || a.title.localeCompare(b.title, 'pt-BR'))
   return (
     <div className="space-y-4">
       <h1>Presença</h1>
       {isLoading && <Skeleton className="h-24" />}
-      {data && items.length === 0 && <EmptyState>Nenhuma atividade neste período.</EmptyState>}
+      {data && days.length === 0 && <EmptyState>Nenhuma atividade neste período.</EmptyState>}
+      {current && (
+        <div className="flex items-center justify-between gap-2">
+          <Button size="icon" variant="ghost" aria-label="Dia anterior" disabled={idx <= 0} onClick={() => setPicked(days[idx - 1])}><ChevronLeft className="h-5 w-5" /></Button>
+          <p className="font-display text-lg font-bold">{formatDayShort(current)}{current === today && <Badge className="ml-2 bg-primary text-primary-foreground">Hoje</Badge>}</p>
+          <Button size="icon" variant="ghost" aria-label="Próximo dia" disabled={idx >= days.length - 1} onClick={() => setPicked(days[idx + 1])}><ChevronRight className="h-5 w-5" /></Button>
+        </div>
+      )}
       <div className="grid gap-2">
-        {items.map((a: Activity) => (
-          <Link key={a.id} to={`/${membership?.slug}/presenca/${a.id}`}>
-            <Card className="flex items-center justify-between gap-3 p-3 hover:bg-muted">
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{a.title}</p>
-                <p className="text-muted-foreground"><span className="hidden capitalize md:inline">{formatDayLong(a.activity_date)}</span><span className="md:hidden">{formatDayShort(a.activity_date)}</span>{a.start_time ? ` · ${formatTime(a.start_time)}` : ''}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {a.activity_date === today && <Badge className="bg-primary text-primary-foreground">Hoje</Badge>}
-              </div>
-            </Card>
-          </Link>
-        ))}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} orgId={orgId} catalog={catalog.data?.list ?? []} staff={staff.data ?? []} slug={membership?.slug} />)}
       </div>
     </div>
   )
@@ -149,9 +217,11 @@ export function AttendanceRosterPage() {
     for (const r of rows) if (r.status_id) by[r.status_id] = (by[r.status_id] ?? 0) + 1
     return by
   }, [rows])
-  const naipes = useMemo(() => [...new Set(rows.flatMap((r) => (r.sections ?? '').split(', ').filter(Boolean)))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows])
+  const catalog = useInstrumentCatalog()
+  const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
+  const naipes = [...new Set(rows.flatMap(sectionsOf))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
-    && (!naipe || (r.sections ?? '').split(', ').includes(naipe)))
+    && (!naipe || sectionsOf(r).includes(naipe)))
   const cancelled = activity.data?.status === 'cancelled'
 
   return (
@@ -160,7 +230,7 @@ export function AttendanceRosterPage() {
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/presenca`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <div className="min-w-0">
           <h1 className="truncate">{activity.data?.title ?? 'Chamada'}</h1>
-          {activity.data && <p className="text-muted-foreground"><span className="hidden capitalize md:inline">{formatDayLong(activity.data.activity_date)}</span><span className="md:hidden">{formatDayShort(activity.data.activity_date)}</span></p>}
+          {activity.data && <p className="text-muted-foreground">{formatDayShort(activity.data.activity_date, activity.data.start_time)}</p>}
         </div>
       </div>
 
