@@ -25,6 +25,7 @@ import { FormsPage } from '@/modules/forms/FormsPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { NaipesPage } from '@/modules/structure/NaipesPage'
+import { TrashPage } from '@/modules/structure/TrashPage'
 import { SiteSettings } from '@/modules/site/SiteSettings'
 import { Organogram } from '@/modules/structure/Organogram'
 import { ChecklistsPage, FunctionsPage } from '@/modules/structure/OrgPages'
@@ -164,6 +165,7 @@ export const router = createBrowserRouter(
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
+                { path: 'lixeira', element: <TrashPage /> },
                 { path: 'site', element: <SiteSettings /> },
                 { path: 'interface', element: <InterfacePage /> },
                 { path: 'configuracoes', element: <Navigate to="../organizacao" replace /> },
