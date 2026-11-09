@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy, Rocket } from 'lucide-react'
+import { Copy, Rocket, Save } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
@@ -87,7 +87,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <textarea id="fs-priv" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.privacy} onChange={(e) => setF({ ...f, privacy: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
-        <Button type="submit" disabled={!f.title.trim() || !f.slug || save.isPending}>Salvar configurações</Button>
+        <Button type="submit" disabled={!f.title.trim() || !f.slug || save.isPending} aria-label="Salvar configurações" title="Salvar configurações"><Save className="h-4 w-4" /></Button>
       </form>
 
       <Card className="space-y-2 p-4">

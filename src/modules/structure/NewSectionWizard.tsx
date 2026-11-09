@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
@@ -49,7 +49,7 @@ function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => 
           {adding === k && (
             <div className="w-full max-w-sm">
               <MemberPicker onlyActive value="" onChange={(id) => { if (id && !value[k].includes(id)) onChange({ ...value, [k]: [...value[k], id] }); setAdding(null) }} />
-              <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(null)}>Cancelar</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(null)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
             </div>
           )}
         </div>
@@ -123,7 +123,7 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
         <p className="text-sm text-muted-foreground">A afinação é de cada item (opcional) e só aparece nos naipes de altura definida. Dá para acrescentar mais instrumentos depois, na página Naipes.</p>
         <div className="flex gap-2">
           <Button type="submit" disabled={!name.trim() || create.isPending}>{create.isPending ? 'Criando…' : 'Criar naipe'}</Button>
-          <Button type="button" variant="ghost" onClick={reset}>Cancelar</Button>
+          <Button type="button" variant="ghost" onClick={reset} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       </form>
     </SheetContent>

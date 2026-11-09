@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2, Undo2 } from 'lucide-react'
+import { Pencil, Plus, Save, Trash2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
@@ -105,7 +105,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             </Select>
           </div>
         </div>
-        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || save.isPending}>Salvar</Button>
+        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
       </form>
     </SheetContent>
   )

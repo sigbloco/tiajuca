@@ -155,7 +155,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>
           {editing === 'new' ? 'Adicionar' : 'Salvar'}
         </Button>
-        <Button size="sm" variant="ghost" onClick={close}>Cancelar</Button>
+        <Button size="sm" variant="ghost" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
       </div>
     </div>
   )

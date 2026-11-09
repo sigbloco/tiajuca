@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { ShopNameField } from '@/modules/site/ShopNameField'
 import { Link } from 'react-router-dom'
@@ -151,7 +151,7 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
       </Card>
 
       {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-      <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar'}</Button>
+      <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
     </form>
   )
 }

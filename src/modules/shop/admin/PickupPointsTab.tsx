@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, PhoneInput, TimeInput } from '@/components/ui/masked-inputs'
@@ -114,7 +114,7 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
           Disponível no checkout
         </label>
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-        <Button type="submit" className="w-full" disabled={!valid || save.isPending}>Salvar</Button>
+        <Button type="submit" className="w-full" disabled={!valid || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
       </form>
     </SheetContent>
   )

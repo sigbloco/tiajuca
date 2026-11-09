@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
-import { ArrowDown, ArrowUp, CheckCircle2, Circle, CircleDot, MessageSquare, Trash2, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckCircle2, Circle, CircleDot, MessageSquare, Trash2, UserRound, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, Input, Select, cn } from '@/components/ui/primitives'
@@ -108,7 +108,7 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
                     <MemberPicker value={assignee} onChange={setAssignee} />
                     <div className="flex gap-2">
                       <Button size="sm" disabled={!assignee} onClick={() => { update.mutate({ p_item: i.id, p_assignee: assignee, p_set_assignee: true }); setAssignFor(null); setAssignee('') }}>Definir</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setAssignFor(null)}>Cancelar</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setAssignFor(null)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ) : (

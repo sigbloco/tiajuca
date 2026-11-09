@@ -11,6 +11,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { Save } from 'lucide-react'
 
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
@@ -65,7 +66,7 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
         <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Opcional" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
       </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
-      {!auto && <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()}>Salvar bolsa</Button>}
+      {!auto && <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()} aria-label="Salvar bolsa" title="Salvar bolsa"><Save className="h-4 w-4" /></Button>}
     </div>
   )
 }

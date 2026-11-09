@@ -11,7 +11,7 @@ function ageOf(iso: string | null | undefined): number | null {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toast } from 'sonner'
-import { Cake, Globe, Mail, Pencil, Plus, X } from 'lucide-react'
+import { Cake, Globe, Mail, Pencil, Plus, Save, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Input, Label, Select, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
@@ -180,7 +180,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
               <option value="">Escolha o ciclo</option>
               {missing.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
           </div>
         )}
         {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
@@ -290,8 +290,8 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
         {fld('rd-aff', 'Relação com a Grande Tijuca', <textarea id="rd-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} />)}
         {fld('rd-other', 'Outros blocos', <Input id="rd-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} />)}
         <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={!phoneOk || save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar'}</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button type="submit" size="sm" disabled={!phoneOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       </form>
     </div>

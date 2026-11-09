@@ -5,6 +5,7 @@ import { Button, Input, Label } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
+import { Save } from 'lucide-react'
 
 /** Nome público da loja (botão do site, menu e vitrine). Fica guardado junto das configurações do site. */
 export function ShopNameField() {
@@ -33,7 +34,7 @@ export function ShopNameField() {
       <Label htmlFor="shop-name">Nome da loja</Label>
       <div className="flex gap-2">
         <Input id="shop-name" maxLength={40} value={v} onChange={(e) => setV(e.target.value)} />
-        <Button type="button" disabled={save.isPending || v.trim() === (q.data ?? 'Loja')} onClick={() => save.mutate()}>Salvar nome</Button>
+        <Button type="button" disabled={save.isPending || v.trim() === (q.data ?? 'Loja')} onClick={() => save.mutate()} aria-label="Salvar nome" title="Salvar nome"><Save className="h-4 w-4" /></Button>
       </div>
       <p className="text-sm text-muted-foreground">Aparece no botão do site e no topo da vitrine.</p>
     </div>

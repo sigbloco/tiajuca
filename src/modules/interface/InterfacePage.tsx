@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, ShoppingCart, X } from 'lucide-react'
+import { Plus, Save, ShoppingCart, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { toast } from 'sonner'
 import { OrgLogo } from '@/components/shared/OrgLogo'
@@ -135,7 +135,7 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
-          <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Salvando…' : 'Salvar cores'}</Button>
+          <Button disabled={!dirty || save.isPending} onClick={() => save.mutate()} aria-label="Salvar cores" title="Salvar cores"><Save className="h-4 w-4" /></Button>
           {dirty && <Button variant="ghost" onClick={() => setColors(saved)}>Descartar</Button>}
           <Button variant="outline" onClick={restore}>Restaurar cores de fábrica</Button>
         </div>

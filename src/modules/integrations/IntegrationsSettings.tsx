@@ -6,6 +6,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { driveInvoke, getDriveConfig, type DriveStatus } from '@/modules/repertoire/drive'
+import { Save } from 'lucide-react'
 
 /** Integrações opcionais. Hoje: pasta institucional do Google Drive para buscar partituras. */
 export function IntegrationsSettings() {
@@ -50,7 +51,7 @@ export function IntegrationsSettings() {
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={active} onChange={(e) => setActive(e.target.checked)} /> Ativar busca no Drive</label>
         <div className="flex flex-wrap gap-2">
-          <Button disabled={!folder.trim() || save.isPending} onClick={() => save.mutate()}>Salvar</Button>
+          <Button disabled={!folder.trim() || save.isPending} onClick={() => save.mutate()} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
           <Button variant="outline" disabled={!cfg.data?.configured || test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testando…' : 'Testar conexão'}</Button>
         </div>
         {status && (

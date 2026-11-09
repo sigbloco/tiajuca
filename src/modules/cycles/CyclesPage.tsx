@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
@@ -102,7 +102,7 @@ function BlockersSheet({ cycle, onClose }: { cycle: Cycle; onClose: () => void }
           <p className="rounded-lg bg-warning/15 p-3 text-sm">Para excluir, é preciso apagar tudo isso junto. <strong>Isso não pode ser desfeito</strong> e remove o histórico do ciclo. Se só quiser tirá-lo da vista, edite as datas em vez de excluir.</p>
           <Button variant="destructive" disabled={wipe.isPending}
             onClick={() => { if (window.confirm(`Apagar o ciclo “${cycle.name}” e tudo que depende dele? Isso não pode ser desfeito.`)) wipe.mutate() }}>{wipe.isPending ? 'Apagando…' : 'Apagar tudo isso e o ciclo'}</Button>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" onClick={onClose} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </>
       )}
     </SheetContent>

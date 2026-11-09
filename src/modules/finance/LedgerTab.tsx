@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, MoneyInput } from '@/components/ui/masked-inputs'
@@ -130,7 +130,7 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => {
                   const reason = window.prompt('Motivo do cancelamento (obrigatório):')
                   if (reason?.trim()) cancel.mutate({ id: r.ref.replace('entry:', ''), reason })
-                }}>Cancelar</Button>
+                }} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
               )}
             </div>
           </Card>

@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Download, Eye, EyeOff } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Eye, EyeOff, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -80,7 +80,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
 
       <div className="space-y-2">
         <Input placeholder="Observações da análise" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <Button size="sm" variant="outline" disabled={saveNotes.isPending} onClick={() => saveNotes.mutate()}>Salvar observação</Button>
+        <Button size="sm" variant="outline" disabled={saveNotes.isPending} onClick={() => saveNotes.mutate()} aria-label="Salvar observação" title="Salvar observação"><Save className="h-4 w-4" /></Button>
       </div>
 
       {sub.status === 'pending' && !purged && (

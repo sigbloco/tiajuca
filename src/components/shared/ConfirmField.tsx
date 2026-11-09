@@ -1,4 +1,4 @@
-import { Check, X } from 'lucide-react'
+import { Save, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useUnsaved } from '@/core/unsaved'
 import { Button, Input, Select, cn } from '@/components/ui/primitives'
@@ -7,7 +7,7 @@ import { Button, Input, Select, cn } from '@/components/ui/primitives'
 function Confirm({ label, busy, onConfirm, onCancel }: { label: string; busy: boolean; onConfirm: () => void; onCancel: () => void }) {
   return (
     <span className="inline-flex shrink-0 items-center gap-1">
-      <Button type="button" size="sm" disabled={busy} onClick={onConfirm}><Check className="h-4 w-4" /> {label}</Button>
+      <Button type="button" size="icon" className="h-8 w-8" aria-label={label} title={label} disabled={busy} onClick={onConfirm}><Save className="h-4 w-4" /><span className="sr-only">{label}</span></Button>
       <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="Cancelar" disabled={busy} onClick={onCancel}><X className="h-4 w-4" /></Button>
     </span>
   )
