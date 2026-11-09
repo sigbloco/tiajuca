@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -10,7 +10,6 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
-import { usePersonLabeler } from '@/modules/members/personLabel'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
 interface RosterRow {
@@ -56,45 +55,31 @@ function useInstrumentCatalog() {
   })
 }
 
-interface StaffRow { member_id: string; staff_kind: 'professor' | 'monitor' | 'regente'; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
-const STAFF_ABBR = { professor: 'Prof.', monitor: 'Monitor(a)', regente: 'Regente' } as const
+const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
 
-/** Um horário do dia: título e, por instrumento (ordem alfabética de naipe), a equipe. */
-function ActivityCard({ a, orgId, catalog, staff, slug }: { a: Activity; orgId: string; catalog: InstrumentInfo[]; staff: StaffRow[]; slug?: string }) {
-  const labeler = usePersonLabeler()
-  const roster = useQuery({
-    queryKey: ['roster', orgId, a.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_attendance_roster', { p_activity: a.id })
-      if (error) throw error
-      return (data ?? []) as RosterRow[]
-    },
-    retry: false,
-  })
-  const byName = new Map(catalog.map((i) => [i.name, i]))
-  const names = [...new Set((roster.data ?? []).flatMap((r) => (r.instruments ?? '').split(', ')).filter(Boolean))]
-  const lines = names.map((n) => byName.get(n)).filter((i): i is InstrumentInfo => !!i)
-    .sort((x, y) => x.section.localeCompare(y.section, 'pt-BR') || x.name.localeCompare(y.name, 'pt-BR'))
-    .map((i) => {
-      const own = staff.filter((s) => s.instrument_id === i.id)
-      const inherited = staff.filter((s) => !s.instrument_id && ((s.subsection_id && s.subsection_id === i.subsection_id) || (s.section_id && !s.subsection_id && s.section_id === i.section_id)))
-      return { i, people: own.length > 0 ? own : inherited }
-    })
+/** Um horário do dia: título e os naipes da oficina (cada um abre a chamada só daquele naipe). */
+function ActivityCard({ a, sections, slug }: { a: Activity; sections: { id: string; name: string; has_workshop: boolean }[]; slug?: string }) {
+  const title = plain(a.title)
+  const withWorkshop = sections.filter((s) => s.has_workshop)
+  const pool = withWorkshop.length > 0 ? withWorkshop : sections
+  // Naipes cujo nome aparece no título ("Oficina de Percussão" → Percussão). Sem coincidência, todos com oficina.
+  const matched = pool.filter((s) => title.includes(plain(s.name)))
+  const shown = matched.length > 0 ? matched : withWorkshop
   return (
-    <Link to={`/${slug}/presenca/${a.id}`}>
-      <Card className="flex gap-3 p-3 hover:bg-muted">
-        <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{a.title}</p>
-          {lines.map(({ i, people }) => (
-            <p key={i.id} className="truncate text-muted-foreground">
-              {i.name}{people.length > 0 && ' · '}
-              {people.map((p, k) => <span key={p.member_id + p.staff_kind}>{k > 0 && ', '}{STAFF_ABBR[p.staff_kind]} {labeler(p.members ?? { full_name: '', display_name: null })}</span>)}
-            </p>
-          ))}
-        </div>
-      </Card>
-    </Link>
+    <Card className="flex gap-3 p-3">
+      <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
+      <div className="min-w-0 flex-1 space-y-2">
+        <Link to={`/${slug}/presenca/${a.id}`} className="block truncate font-semibold hover:underline">{a.title}</Link>
+        {shown.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {shown.map((s) => (
+              <Link key={s.id} to={`/${slug}/presenca/${a.id}?naipe=${encodeURIComponent(s.name)}`}
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">{s.name}</Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 
@@ -107,14 +92,12 @@ export function AttendanceListPage() {
     queryKey: ['activities', orgId, 'attendance-list', today],
     queryFn: () => listActivities({ orgId, from: addDaysIso(today, -90), to: addDaysIso(today, 90) }),
   })
-  const catalog = useInstrumentCatalog()
-  const staff = useQuery({
-    queryKey: ['staff-assignments', orgId, 'attendance'],
+  const sections = useQuery({
+    queryKey: ['sections-workshop', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name)')
-        .eq('organization_id', orgId).is('valid_to', null).limit(3000)
+      const { data, error } = await supabase.from('sections').select('id, name, sort_order, has_workshop').eq('organization_id', orgId).eq('is_active', true).order('name')
       if (error) throw error
-      return (data ?? []) as unknown as StaffRow[]
+      return (data ?? []) as { id: string; name: string; sort_order: number; has_workshop: boolean }[]
     },
   })
   const items = (data ?? []).filter((a) => a.status !== 'cancelled')
@@ -137,7 +120,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} orgId={orgId} catalog={catalog.data?.list ?? []} staff={staff.data ?? []} slug={membership?.slug} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} sections={sections.data ?? []} slug={membership?.slug} />)}
       </div>
     </div>
   )
@@ -151,7 +134,8 @@ export function AttendanceRosterPage() {
   const qc = useQueryClient()
   const statuses = useStatuses()
   const [search, setSearch] = useState('')
-  const [naipe, setNaipe] = useState('')
+  const [searchParams] = useSearchParams()
+  const [naipe, setNaipe] = useState(searchParams.get('naipe') ?? '')
   const [openNote, setOpenNote] = useState<string | null>(null)
   const [extra, setExtra] = useState('')
   const rosterKey = ['roster', orgId, activityId]

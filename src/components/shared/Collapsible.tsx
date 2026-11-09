@@ -10,13 +10,17 @@ export const TONES: Tone[] = ['primary', 'secondary', 'info', 'success', 'warnin
 
 /** Grupo que abre/fecha. Controlado pelo pai (que decide o estado inicial: todos fechados por padrão).
  *  Nível 0 = faixa colorida; nível 1 = barra lateral colorida (sem caixas dentro de caixas). */
-export function Collapsible({ open, onToggle, title, titleClass, count, right, below, level = 0, tone = 'primary', expandable = true, children }: {
+export function Collapsible({ open, onToggle, title, titleClass, count, countFirst, left, right, below, level = 0, tone = 'primary', expandable = true, children }: {
   /** Substitui a classe do título (ex.: fonte menor, sem cortar com "…"). */
   titleClass?: string
   open: boolean
   onToggle: () => void
   title: ReactNode
   count?: number
+  /** Número de itens antes do nome (em vez de depois). */
+  countFirst?: boolean
+  /** Conteúdo à esquerda da linha (ex.: alça de arrastar). */
+  left?: ReactNode
   right?: ReactNode
   /** Linha logo abaixo do nome, sempre visível (aberto ou fechado): ex.: equipe do grupo. */
   below?: ReactNode
@@ -29,16 +33,19 @@ export function Collapsible({ open, onToggle, title, titleClass, count, right, b
   return (
     <div className={cn(level === 0 ? 'overflow-hidden rounded-lg border border-border bg-card shadow-card' : cn('border-l-4 pl-1', BAR[tone]))}>
       <div className={cn('flex items-center gap-2 p-1.5 pr-3', level === 0 ? HEAD[tone] : 'rounded-r-md bg-muted/40')}>
+        {left}
         {expandable ? (
           <button type="button" aria-expanded={open} onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left hover:bg-muted/60">
             <ChevronRight className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-90')} />
+            {count !== undefined && countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
             <span className={cn('truncate', level === 0 ? 'font-display text-lg font-bold' : 'font-semibold', titleClass)}>{title}</span>
-            {count !== undefined && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
+            {count !== undefined && !countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
           </button>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-2 p-1">
+            {count !== undefined && countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
             <span className={cn('truncate', level === 0 ? 'font-display text-lg font-bold' : 'font-semibold')}>{title}</span>
-            {count !== undefined && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
+            {count !== undefined && !countFirst && <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-muted-foreground">{count}</span>}
           </div>
         )}
         {right}

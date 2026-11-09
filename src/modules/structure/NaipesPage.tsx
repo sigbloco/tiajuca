@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Ban, CircleCheck, Pencil, Network, Plus, Settings, Trash2, UserPlus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Network, Plus, Settings, Trash2, UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
+import { SaveInput } from '@/components/shared/ConfirmField'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
@@ -26,7 +27,6 @@ import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './Structu
 type Kind = 'professor' | 'monitor' | 'regente'
 type Scope = 'section' | 'subsection' | 'instrument'
 interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
-type Mut = ReturnType<typeof useStructureMutations>
 
 const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsection_id', instrument: 'instrument_id' }
 
@@ -103,21 +103,70 @@ function AddInline({ placeholder, label, onAdd, pending }: { placeholder: string
   )
 }
 
-/** Mesmo padrão em todos os itens: alça (6 bolinhas), seta pra cima, seta pra baixo, lápis, "proibido" (desativar) e lixeira. */
-export function Actions({ item, label, idx, total, handle, onUp, onDown, onEdit, onToggle, onDelete }: {
-  item: CatalogItem; label: string; idx: number; total: number; handle: React.ReactNode
-  onUp: () => void; onDown: () => void; onEdit: () => void; onToggle: () => void; onDelete: () => void
+/** Lápis e lixeira em cima; setas de ordem embaixo. A alça de arrastar fica à esquerda (prop `left` do Collapsible). */
+export function Actions({ item, label, idx, total, onUp, onDown, onEdit, onDelete }: {
+  item: CatalogItem; label: string; idx: number; total: number
+  onUp: () => void; onDown: () => void; onEdit: () => void; onDelete: () => void
 }) {
   return (
-    <div className="flex items-center">
-      {handle}
-      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${item.name}`} disabled={idx <= 0} onClick={onUp}><ArrowUp className="h-4 w-4" /></Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${item.name}`} disabled={idx >= total - 1} onClick={onDown}><ArrowDown className="h-4 w-4" /></Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar ${item.name}`} title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
-      <Button size="icon" variant="ghost" className={cn('h-8 w-8', !item.is_active && 'text-success')} aria-label={`${item.is_active ? 'Desativar' : 'Reativar'} ${label} ${item.name}`} title={item.is_active ? 'Desativar' : 'Reativar'} onClick={onToggle}>
-        {item.is_active ? <Ban className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
-      </Button>
-      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${label} ${item.name}`} title="Excluir" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+    <div className="flex flex-col items-end">
+      <div className="flex items-center">
+        <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar ${item.name}`} title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${label} ${item.name}`} title="Excluir" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+      <div className="flex items-center">
+        <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${item.name}`} disabled={idx <= 0} onClick={onUp}><ArrowUp className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Descer ${item.name}`} disabled={idx >= total - 1} onClick={onDown}><ArrowDown className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  )
+}
+
+/** Vagas por instrumento (ciclo principal), editadas junto com o naipe. */
+function SectionVagas({ insts }: { insts: CatalogItem[] }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const cycle = useQuery({
+    queryKey: ['current-cycle', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cycles').select('id, name').eq('organization_id', orgId).eq('is_current', true).maybeSingle()
+      if (error) throw error
+      return data as { id: string; name: string } | null
+    },
+  })
+  const caps = useQuery({
+    queryKey: ['capacity-edit', orgId, cycle.data?.id],
+    enabled: Boolean(cycle.data?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrument_cycle_capacity').select('instrument_id, capacity').eq('organization_id', orgId).eq('cycle_id', cycle.data!.id)
+      if (error) throw error
+      return new Map((data ?? []).map((r) => [r.instrument_id as string, r.capacity as number]))
+    },
+  })
+  const save = useMutation({
+    mutationFn: async (v: { id: string; capacity: number }) => {
+      const { error } = await supabase.from('instrument_cycle_capacity')
+        .upsert({ organization_id: orgId, instrument_id: v.id, cycle_id: cycle.data!.id, capacity: v.capacity }, { onConflict: 'instrument_id,cycle_id' })
+      if (error) throw error
+    },
+    onSuccess: () => { notifySaved('Vagas atualizadas.'); qc.invalidateQueries({ queryKey: ['capacity-edit', orgId] }); qc.invalidateQueries({ queryKey: ['capacity', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  if (!cycle.data) return <p className="text-sm text-muted-foreground">Defina o ciclo principal para controlar as vagas.</p>
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-semibold text-muted-foreground">Vagas por instrumento ({cycle.data.name})</p>
+      {insts.map((i) => (
+        <div key={i.id} className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate">{i.name}</span>
+          <SaveInput className="w-32 flex-none" aria-label={`Vagas de ${i.name}`} placeholder="Sem limite" value={caps.data?.has(i.id) ? String(caps.data.get(i.id)) : ''}
+            onSave={(v) => {
+              const n = Number(v)
+              if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
+              return save.mutateAsync({ id: i.id, capacity: n })
+            }} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -181,7 +230,6 @@ export function NaipesPage() {
   const confirmDelete = (table: CatalogTable, item: CatalogItem, what: string) => {
     if (window.confirm(`Excluir ${what} “${item.name}”? Isso não pode ser desfeito. Se ele já foi usado, prefira desativar.`)) del.mutate({ table, id: item.id })
   }
-  const toggle = (mut: Mut, item: CatalogItem) => mut.save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })
 
   /** Arrastar um instrumento sobre outro do mesmo naipe reordena. */
   const moveInstrument = (secInsts: CatalogItem[]) => (fromId: string, toId: string) => {
@@ -195,12 +243,12 @@ export function NaipesPage() {
     const scope = `inst:${i.section_id}`
     return (
       <div key={i.id} {...(canEdit ? drag.row(i.id, onMove, scope) : {})} className={drag.cls(i.id)}>
-        <Collapsible below={<StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />} level={1} expandable={isEditing(i.id)} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
+        <Collapsible below={<StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />} left={canEdit ? drag.handle(i.id, onMove, scope) : undefined} level={1} expandable={isEditing(i.id)} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
           right={canEdit && (
-            <Actions item={i} label={lbl} idx={idx} total={group.length} handle={drag.handle(i.id, onMove, scope)}
+            <Actions item={i} label={lbl} idx={idx} total={group.length}
               onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
               onEdit={() => { toggleEdit(i.id); if (!open.isOpen(i.id) && !isEditing(i.id)) open.toggle(i.id) }}
-              onToggle={() => toggle(instMut, i)} onDelete={() => confirmDelete('instruments', i, `o item (${lbl})`)} />
+              onDelete={() => confirmDelete('instruments', i, `o item (${lbl})`)} />
           )}>
           {isEditing(i.id) && <RenameForm name={i.name} label={lbl} onSave={(v) => instMut.save.mutate({ id: i.id, name: v })} onCancel={() => toggleEdit(i.id)} />}
           {isEditing(i.id) && sec.has_tuning !== false && <div className="flex flex-wrap items-center gap-1.5">
@@ -235,14 +283,21 @@ export function NaipesPage() {
           const idx = ordered.findIndex((x) => x.id === s.id)
           return (
             <div key={s.id} {...(canEdit ? drag.row(s.id, onMoveSec, 'sections') : {})} className={drag.cls(s.id)}>
-              <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} expandable={insts.length > 0 || isEditing(s.id)} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
+              <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} left={canEdit ? drag.handle(s.id, onMoveSec, 'sections') : undefined} countFirst expandable={insts.length > 0 || isEditing(s.id)} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
                 right={canEdit && (
-                  <Actions item={s} label="naipe" idx={idx} total={ordered.length} handle={drag.handle(s.id, onMoveSec, 'sections')}
+                  <Actions item={s} label="naipe" idx={idx} total={ordered.length}
                     onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
                     onEdit={() => { toggleEdit(s.id); if (!open.isOpen(s.id) && !isEditing(s.id)) open.toggle(s.id) }}
-                    onToggle={() => toggle(secMut, s)} onDelete={() => confirmDelete('sections', s, 'o naipe')} />
+                    onDelete={() => confirmDelete('sections', s, 'o naipe')} />
                 )}>
                 {isEditing(s.id) && <RenameForm name={s.name} label="naipe" onSave={(v) => secMut.save.mutate({ id: s.id, name: v })} onCancel={() => toggleEdit(s.id)} />}
+                {isEditing(s.id) && (
+                  <label className="flex items-center gap-2 font-semibold">
+                    <input type="checkbox" className="h-4 w-4" checked={!!s.has_workshop} onChange={(e) => secMut.save.mutate({ id: s.id, name: s.name, has_workshop: e.target.checked })} />
+                    Tem oficina
+                  </label>
+                )}
+                {isEditing(s.id) && insts.length > 0 && <SectionVagas insts={insts} />}
 
                 <div className="space-y-1.5">
                   {insts.filter(okI).map((i) => instNode(i, insts, insts, s))}
