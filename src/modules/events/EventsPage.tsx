@@ -1,10 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Ban, Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Ban, Cake, ChevronLeft, ChevronRight, Plus, Undo2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
 import { toast } from 'sonner'
+import { notifyChange } from '@/core/undo'
 import { friendlyError } from '@/core/errors'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -40,7 +41,15 @@ export function EventsPage() {
   // Cancelar uma aula/ensaio direto da lista (ex.: chuva), com o motivo.
   const cancel = useMutation({
     mutationFn: (v: { a: Activity; reason: string }) => setActivityStatus(orgId, v.a.id, 'cancelled', v.reason),
-    onSuccess: () => { toast.success('Cancelado.'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['activities', orgId] })
+      notifyChange('Cancelado.', async () => { await setActivityStatus(orgId, v.a.id, 'scheduled'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) })
+    },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const reopen = useMutation({
+    mutationFn: (a: Activity) => setActivityStatus(orgId, a.id, 'scheduled'),
+    onSuccess: () => { toast.success('Reativado.'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const gen = useMutation({
@@ -207,7 +216,8 @@ export function EventsPage() {
               return (
                 <Card key={a.id} className={cn('flex items-stretch gap-3 p-3', ai % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60')}>
                   <span className={cn('w-1.5 shrink-0 rounded-full', COLOR_DOT[t?.color ?? 'muted'])} />
-                  <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ activity: a })}>
+                  <div className="min-w-0 flex-1">
+                  <button className="w-full text-left" onClick={() => setSheet({ activity: a })}>
                     <p className={cn('font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
                     {a.itinerary && a.itinerary.length > 0 ? (
                       <div className="text-muted-foreground">
@@ -228,17 +238,16 @@ export function EventsPage() {
                       <p className="text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
                     )}
                   </button>
-                  {a.status === 'cancelled' && a.cancel_reason && <p className="sr-only">{a.cancel_reason}</p>}
-                  {(a.status !== 'scheduled' || canManage) && (
-                    <div className="flex flex-col items-end gap-1">
-                      {a.status !== 'scheduled' && <Badge>{STATUS_LABEL[a.status]}{a.status === 'cancelled' && a.cancel_reason ? ` · ${a.cancel_reason}` : ''}</Badge>}
-                      {canManage && a.status === 'scheduled' && (
-                        <Button size="sm" variant="outline" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
-                          onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?
-Motivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate({ a, reason }) }}><Ban className="h-4 w-4" /> Cancelar {cancelWord(t?.name)}</Button>
-                      )}
-                    </div>
+                  {canManage && a.status === 'scheduled' && (
+                    <Button size="sm" variant="outline" className="mt-2" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
+                      onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?
+Motivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate({ a, reason }) }}><Ban className="h-4 w-4" /> Cancelar</Button>
                   )}
+                  {canManage && a.status === 'cancelled' && (
+                    <Button size="sm" variant="outline" className="mt-2" aria-label="Desfazer cancelamento" title="Desfazer cancelamento" onClick={() => reopen.mutate(a)}><Undo2 className="h-4 w-4" /> Desfazer</Button>
+                  )}
+                  </div>
+                  {a.status !== 'scheduled' && <div className="flex flex-col items-end gap-1"><Badge>{STATUS_LABEL[a.status]}{a.status === 'cancelled' && a.cancel_reason ? ` · ${a.cancel_reason}` : ''}</Badge></div>}
                 </Card>
               )
             })}

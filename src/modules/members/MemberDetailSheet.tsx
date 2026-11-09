@@ -17,7 +17,6 @@ import { Button, Input, Label, Select, SheetContent, Skeleton } from '@/componen
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { socialLabel, socialUrl } from '@/core/social'
 import { whatsappUrl } from '@/modules/suppliers/service'
-import { Collapsible } from '@/components/shared/Collapsible'
 import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
@@ -77,18 +76,16 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, st
   onChange: (cycle: string, status: string) => Promise<unknown>; onRemove: (cycle: CycleLite) => void
   statuses: { id: string; key: string; name: string; counts_as_active: boolean; is_waitlist: boolean }[]
 }) {
-  const [open, setOpen] = useState(cycle.is_current)
   const past = isPastCycle(cycle)
   // Ciclo que já passou: "Participou" / "Não participou"; Ativo/Inativo é só do ciclo atual.
   const optionsFor = past ? statuses.filter((x) => !x.is_waitlist) : statuses
   const labelOf = (x: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !x.is_waitlist ? (x.counts_as_active ? 'Participou' : 'Não participou') : x.name)
   return (
-    <Collapsible open={open} onToggle={() => setOpen((o) => !o)} titleClass="overflow-visible whitespace-normal text-[15px] leading-tight" title={<>{cycle.name}{cycle.is_current ? ' · atual' : ''}</>}
-      right={canManage && (
-        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>
-      )}>
-      <div className="space-y-3 p-1">
-        <p className="text-sm"><span className="text-muted-foreground">Início </span><span className="font-semibold">{formatDate(cycle.starts_on)}</span><span className="text-muted-foreground"> · Término </span><span className="font-semibold">{formatDate(cycle.ends_on)}</span></p>
+    <div className="space-y-3 p-1">
+        <div className="flex items-start justify-between gap-2">
+  <p className="text-sm"><span className="text-muted-foreground">Início </span><span className="font-semibold">{formatDate(cycle.starts_on)}</span><span className="text-muted-foreground"> · Término </span><span className="font-semibold">{formatDate(cycle.ends_on)}</span></p>
+          {canManage && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>}
+        </div>
         <div className="flex items-center gap-2">
           <Label className="text-sm">Situação</Label>
           <OkSelect className="w-40" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
@@ -98,8 +95,7 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, st
           </OkSelect>
         </div>
         <ParticipationBlock memberId={memberId} cycle={cycle} />
-      </div>
-    </Collapsible>
+    </div>
   )
 }
 
@@ -189,7 +185,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
           </div>
         )}
         {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
-        {mine.length > 1 && (
+        {mine.length > 0 && (
           <Select aria-label="Ciclo" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
             {mine.map((c) => <option key={c.id} value={c.id}>{c.name}{c.is_current ? ' · atual' : ''}</option>)}
           </Select>
