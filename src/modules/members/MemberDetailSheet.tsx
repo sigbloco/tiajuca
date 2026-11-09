@@ -29,7 +29,6 @@ import { MemberBilling } from '@/modules/billing/MemberBilling'
 import { MySensitiveData } from '@/modules/profile/MyData'
 import { ArtisticLinks } from './ArtisticLinks'
 import { InstagramIcon, MemberSection, WhatsAppIcon } from './MemberSection'
-import { FormAnswers } from './FormAnswers'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import type { MemberRow } from './service'
 
@@ -314,7 +313,9 @@ const Blank = () => <span className="text-xs italic text-muted-foreground/70">em
 /** Respostas da inscrição: relação com a Grande Tijuca e se já tocou com outros blocos. Em branco quando não há resposta. */
 function RelationWithBlock({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
-  const { data } = useQuery({
+  const { cycle } = useSelectedCycle()
+  const [more, setMore] = useState(false)
+  const field = useQuery({
     queryKey: ['member-relation', orgId, memberId],
     queryFn: async () => {
       const { data, error } = await supabase.from('members').select('affective_relation, other_blocks').eq('id', memberId).single()
@@ -322,16 +323,38 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
       return data as { affective_relation: string | null; other_blocks: string | null }
     },
   })
+  const answers = useQuery({
+    queryKey: ['member-form-answers', orgId, memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('member_form_answers').select('id, cycle_id, cycle_label, affective_relation, other_blocks, created_at').eq('member_id', memberId)
+      if (error) throw error
+      return (data ?? []) as { id: string; cycle_id: string | null; cycle_label: string; affective_relation: string | null; other_blocks: string | null; created_at: string }[]
+    },
+  })
+  // Mais recente primeiro (por rótulo do ciclo e, no mesmo ciclo, pela inscrição mais nova).
+  const rows = [...(answers.data ?? [])].sort((x, y) => y.cycle_label.localeCompare(x.cycle_label, 'pt-BR') || y.created_at.localeCompare(x.created_at))
+  const isCurrent = (r: { cycle_id: string | null }) => !!cycle && r.cycle_id === cycle.id
+  const section = (title: string, key: 'affective_relation' | 'other_blocks', fixed: string | null | undefined) => {
+    const list = rows.filter((r) => !!r[key]?.trim())
+    const shown = more ? list : list.filter(isCurrent)
+    const visible = !more && shown.length === 0 && list.length > 0 ? [] : shown // sem resposta no ciclo atual: nada até "Ler mais"
+    return (
+      <div className="space-y-0.5">
+        <h3 className="font-display text-base font-bold">{title}</h3>
+        {list.length === 0 && <p className="min-h-5 whitespace-pre-wrap text-sm">{fixed?.trim() || (field.data ? <Blank /> : '')}</p>}
+        {visible.map((r) => <p key={r.id} className="whitespace-pre-wrap text-sm"><span className="font-semibold">{r.cycle_label}:</span> {r[key]}</p>)}
+        {list.length > 0 && visible.length === 0 && <p className="text-sm text-muted-foreground">Sem resposta neste ciclo.</p>}
+      </div>
+    )
+  }
+  const hasOlder = rows.some((r) => !isCurrent(r) && (r.affective_relation?.trim() || r.other_blocks?.trim()))
   return (
     <section className="space-y-2">
-      <div className="space-y-0.5">
-        <h3 className="font-display text-base font-bold">Relação com a Grande Tijuca</h3>
-        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.affective_relation?.trim() || (data ? <Blank /> : '')}</p>
-      </div>
-      <div className="space-y-0.5">
-        <h3 className="font-display text-base font-bold">Outros blocos</h3>
-        <p className="min-h-5 whitespace-pre-wrap text-sm">{data?.other_blocks?.trim() || (data ? <Blank /> : '')}</p>
-      </div>
+      {section('Relação com a Grande Tijuca', 'affective_relation', field.data?.affective_relation)}
+      {section('Outros blocos', 'other_blocks', field.data?.other_blocks)}
+      {hasOlder && (
+        <button type="button" className="font-semibold text-primary hover:underline" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Ocultar' : 'Ler mais'}</button>
+      )}
     </section>
   )
 }
@@ -350,7 +373,6 @@ export function MemberDetailSheet({ member, category, onChanged = () => {} }: { 
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
       <CyclesSection memberId={member.id} />
       <RelationWithBlock memberId={member.id} />
-      <FormAnswers memberId={member.id} />
     </SheetContent>
   )
 }

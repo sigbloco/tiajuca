@@ -9,6 +9,7 @@ import { shortName } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
+import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useCatalog } from './CatalogEditor'
@@ -47,7 +48,7 @@ function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => 
       {rows.map(([k, label]) => (
         <div key={k} className="flex flex-wrap items-center gap-1.5">
           <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">{label}</span>
-          {value[k].map((p) => <Chip key={p.id} label={<>{name(p.id)} · <CompMark value={p.comp} /></>} onRemove={() => onChange({ ...value, [k]: value[k].filter((x) => x.id !== p.id) })} removeLabel={`Tirar ${name(p.id)}`} />)}
+          {value[k].map((p) => <Chip key={p.id} label={<StaffChipLabel name={name(p.id)} role={<>{k === 'professors' ? 'Professor' : 'Monitor(a)'} · <CompMark value={p.comp} /></>} />} onRemove={() => onChange({ ...value, [k]: value[k].filter((x) => x.id !== p.id) })} removeLabel={`Tirar ${name(p.id)}`} />)}
           {value[k].length === 0 && <span className="text-sm text-muted-foreground">ninguém</span>}
           {adding !== k && <Button type="button" size="sm" variant="outline" onClick={() => { setComp(null); setAdding(k) }}><Plus className="h-4 w-4" /> Adicionar</Button>}
           {adding === k && (
