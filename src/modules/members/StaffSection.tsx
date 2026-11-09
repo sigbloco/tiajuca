@@ -12,16 +12,16 @@ import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberSection } from './MemberSection'
 
-export type Compensation = 'paid' | 'volunteer'
-export const COMP_LABEL: Record<Compensation, string> = { paid: 'Remunerada', volunteer: 'Voluntária' }
+export type Compensation = 'paid' | 'collaborative'
+export const COMP_LABEL: Record<Compensation, string> = { paid: 'Remunerada', collaborative: 'Colaborativa' }
 const KIND_LABEL = { professor: 'Professor', monitor: 'Monitor(a)', regente: 'Regente' } as const
 type Kind = keyof typeof KIND_LABEL
 
-/** Escolha obrigatória: a colaboração é remunerada ou voluntária. */
+/** Escolha obrigatória: a colaboração é remunerada ou colaborativa. */
 export function CompensationPick({ value, onChange }: { value: Compensation | null; onChange: (c: Compensation) => void }) {
   return (
     <div className="inline-flex gap-1" role="radiogroup" aria-label="Tipo de colaboração">
-      {(['paid', 'volunteer'] as const).map((c) => (
+      {(['paid', 'collaborative'] as const).map((c) => (
         <Button key={c} type="button" size="sm" variant={value === c ? 'default' : 'outline'} role="radio" aria-checked={value === c} onClick={() => onChange(c)}>{COMP_LABEL[c]}</Button>
       ))}
     </div>
@@ -30,7 +30,7 @@ export function CompensationPick({ value, onChange }: { value: Compensation | nu
 
 interface Row { id: string; staff_kind: Kind; compensation: Compensation; section_id: string | null; subsection_id: string | null; instrument_id: string | null }
 
-/** Ficha do integrante: as atribuições dele na equipe do ciclo (as mesmas de Naipes e instrumentos), remuneradas ou voluntárias. */
+/** Ficha do integrante: as atribuições dele na equipe do ciclo (as mesmas de Naipes e instrumentos), remuneradas ou colaborativas. */
 export function StaffSection({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -54,7 +54,7 @@ export function StaffSection({ memberId }: { memberId: string }) {
       return (data ?? []) as Row[]
     },
   })
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['staff-assignments'] }) }
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['staff-assignments'] }); qc.invalidateQueries({ queryKey: ['member-links'] }) }
   const nameOf = (r: Row) =>
     r.instrument_id ? instruments.data?.find((i) => i.id === r.instrument_id)?.name
       : r.subsection_id ? subsections.data?.find((s) => s.id === r.subsection_id)?.name

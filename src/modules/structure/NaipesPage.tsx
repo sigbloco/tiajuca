@@ -57,7 +57,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
       return (data ?? []) as unknown as Assignment[]
     },
   })
-  const refresh = () => qc.invalidateQueries({ queryKey: ['staff-assignments'] })
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['staff-assignments'] }); qc.invalidateQueries({ queryKey: ['member-links'] }) }
   const mine = (data ?? []).filter((a) => a[col] === id)
   const add = useMutation({
     mutationFn: async (v: { member: string; kind: Kind }) => {
@@ -88,7 +88,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
       {adding && (
         <div className="max-w-sm space-y-1.5">
           <CompensationPick value={comp} onChange={setComp} />
-          {comp ? <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou voluntária.</p>}
+          {comp ? <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou colaborativa.</p>}
         </div>
       )}
       {mine.length > 0 && (
