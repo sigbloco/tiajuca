@@ -6,9 +6,10 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { addDaysIso, formatDayShort, formatTime, todayIso } from '@/core/format'
+import { formatDayShort, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
 import { listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
@@ -110,9 +111,12 @@ export function AttendanceListPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)
+  // A lista é do ciclo escolhido no menu fixo: as atividades dele, pela data (ou pelo ciclo marcado na atividade).
+  const { cycle: selCycle, cycleId } = useSelectedCycle()
   const { data, isLoading } = useQuery({
-    queryKey: ['activities', orgId, 'attendance-list', today],
-    queryFn: () => listActivities({ orgId, from: addDaysIso(today, -90), to: addDaysIso(today, 90) }),
+    queryKey: ['activities', orgId, 'attendance-list', selCycle?.id],
+    enabled: Boolean(selCycle),
+    queryFn: () => listActivities({ orgId, from: selCycle!.starts_on, to: selCycle!.ends_on }),
   })
   const cycles = useCycles()
   const workshops = useWorkshops()
@@ -125,10 +129,10 @@ export function AttendanceListPage() {
       return (data ?? []) as { id: string; name: string }[]
     },
   })
-  const items = (data ?? []).filter((a) => a.status !== 'cancelled')
+  const items = (data ?? []).filter((a) => a.status !== 'cancelled' && cycleOf(a, cycles.data ?? []) === cycleId)
   const days = [...new Set(items.map((a) => a.activity_date))].sort()
   const [picked, setPicked] = useState<string | null>(null)
-  const current = picked ?? days.find((d) => d >= today) ?? days[days.length - 1] ?? null
+  const current = (picked && days.includes(picked) ? picked : null) ?? days.find((d) => d >= today) ?? days[days.length - 1] ?? null
   const idx = current ? days.indexOf(current) : -1
   const dayItems = items.filter((a) => a.activity_date === current)
     .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '') || a.title.localeCompare(b.title, 'pt-BR'))
@@ -136,7 +140,7 @@ export function AttendanceListPage() {
     <div className="space-y-4">
       <h1>Presença</h1>
       {isLoading && <Skeleton className="h-24" />}
-      {data && days.length === 0 && <EmptyState>Nenhuma atividade neste período.</EmptyState>}
+      {data && days.length === 0 && <EmptyState>Nenhuma atividade neste ciclo.</EmptyState>}
       {current && (
         <div className="flex items-center justify-between gap-2">
           <Button size="icon" variant="ghost" aria-label="Dia anterior" disabled={idx <= 0} onClick={() => setPicked(days[idx - 1])}><ChevronLeft className="h-5 w-5" /></Button>
