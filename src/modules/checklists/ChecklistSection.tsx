@@ -127,7 +127,7 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
         <Card className="space-y-2 p-3">
           <div className="flex gap-2">
             <Select aria-label="Modelo de checklist" value={template} onChange={(e) => setTemplate(e.target.value)}>
-              <option value="">Usar modelo…</option>
+              <option value="">Usar modelo</option>
               {templates.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </Select>
             <Button size="sm" disabled={!template || apply.isPending} onClick={() => apply.mutate()}>Aplicar</Button>

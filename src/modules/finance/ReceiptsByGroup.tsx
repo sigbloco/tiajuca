@@ -13,7 +13,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 const STAFF_ROLES = ['titular', 'direcao', 'professor', 'monitor']
 
 /**
- * Receitas de mensalidades agrupadas: naipe → pessoas, cada uma com a etiqueta da categoria (aluno, sênior, músico, pernalta…).
+ * Receitas de mensalidades agrupadas: naipe → pessoas, cada uma com a etiqueta da categoria (aluno, sênior, músico, pernalta).
  * Quem não contribui por fazer parte da organização (Direção, professores, monitores, regentes e a categoria de equipe) não aparece.
  */
 export function ReceiptsByGroup({ competence }: { competence: string }) {
@@ -77,7 +77,7 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
 
   const row = (c: Charge) => (
     <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-card px-3 py-2">
-      <p className="min-w-0 truncate font-semibold">
+      <p className="min-w-0 break-words font-semibold">
         <MemberLink id={c.member_id}>{labeler(c.members ?? { full_name: '', display_name: null })}</MemberLink> {c.fee_categories?.name && <Badge className="bg-muted">{c.fee_categories.name}</Badge>}
       </p>
       <span className="flex items-center gap-2">

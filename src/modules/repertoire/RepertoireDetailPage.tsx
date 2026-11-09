@@ -58,7 +58,7 @@ export function RepertoireDetailPage() {
       <div className="flex items-center gap-2">
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/repertorio`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">{rep && <span className={cn('h-3 w-3 shrink-0 rounded-full', COLOR_DOT[rep.color])} />}<h1 className="truncate">{rep?.name ?? 'Repertório'}</h1></div>
+          <div className="flex items-center gap-2">{rep && <span className={cn('h-3 w-3 shrink-0 rounded-full', COLOR_DOT[rep.color])} />}<h1 className="break-words">{rep?.name ?? 'Repertório'}</h1></div>
           {rep?.description && <p className="text-muted-foreground">{rep.description}</p>}
         </div>
         {canManage && rep && <Button size="icon" variant="outline" aria-label="Editar" title="Editar" onClick={() => setEditRep(true)}><Pencil className="h-4 w-4" /></Button>}
@@ -79,8 +79,8 @@ export function RepertoireDetailPage() {
           <Card key={s.id} className={cn('flex items-center gap-2 p-2.5', !s.is_active && 'opacity-60')}>
             <span className="w-7 text-center font-display text-lg font-bold text-muted-foreground">{i + 1}</span>
             <button className="min-w-0 flex-1 text-left" onClick={() => setSong({ song: s })}>
-              <p className="truncate font-semibold">{s.title}</p>
-              <p className="truncate text-muted-foreground">{[s.artist, s.musical_key ? `tom ${s.musical_key}` : null, s.genre].filter(Boolean).join(' · ') || '—'}</p>
+              <p className="break-words font-semibold">{s.title}</p>
+              <p className="break-words text-muted-foreground">{[s.artist, s.musical_key ? `tom ${s.musical_key}` : null, s.genre].filter(Boolean).join(' · ') || '—'}</p>
             </button>
             {!s.is_active && <Badge>Inativa</Badge>}
             {canManage && filter.status === 'active' && !filter.search && (

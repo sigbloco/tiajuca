@@ -35,7 +35,7 @@ function usePeople() {
 /** Escolha de professores e monitores (várias pessoas) com chips. */
 function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => void }) {
   const people = usePeople()
-  const name = (id: string) => { const p = people.data?.find((x) => x.id === id); return p ? shortName(p.full_name, p.display_name) : '…' }
+  const name = (id: string) => { const p = people.data?.find((x) => x.id === id); return p ? shortName(p.full_name, p.display_name) : '—' }
   const [adding, setAdding] = useState<keyof Staff | null>(null)
   const rows: [keyof Staff, string][] = [['professors', 'Professores'], ['monitors', 'Monitores']]
   return (
@@ -114,7 +114,7 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate() }}>
         <div className="space-y-1.5"><Label htmlFor="ns-name">Nome do naipe</Label>
           <Select id="ns-name" required value={name} onChange={(e) => setName(e.target.value)}>
-            <option value="">Selecione…</option>
+            <option value="">Selecione</option>
             {available.map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
           </Select>
           {available.length === 0 && <p className="text-sm text-muted-foreground">Todos os nomes já têm naipe. Cadastre mais nomes em Organização → Nomes de naipes.</p>}</div>
@@ -122,8 +122,8 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
         <div className="space-y-1.5"><p className="font-semibold">{itemPlural(label)} do naipe</p><InstrumentsPick value={insts} onChange={setInsts} label={label} tuned={tuned} /></div>
         <p className="text-sm text-muted-foreground">A afinação é de cada item (opcional) e só aparece nos naipes de altura definida. Dá para acrescentar mais instrumentos depois, na página Naipes.</p>
         <div className="flex gap-2">
-          <Button type="submit" disabled={!name.trim() || create.isPending}>{create.isPending ? 'Criando…' : 'Criar naipe'}</Button>
-          <Button type="button" variant="ghost" onClick={reset} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+          <Button type="submit" disabled={!name.trim() || create.isPending}>{create.isPending ? 'Criando' : 'Criar naipe'}</Button>
+          <Button type="button" variant="outline" onClick={reset} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       </form>
     </SheetContent>

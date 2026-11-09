@@ -50,7 +50,7 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
       <Card className="space-y-3 p-4">
         <h3 className="font-bold">Vitrine</h3>
         <ShopNameField />
-        <p className="rounded-lg bg-muted p-3 text-sm">As <strong>cores</strong> (cabeçalho, fundo, botões…) em <Link className="font-semibold text-primary hover:underline" to={`/${membership?.slug}/interface`}>Interface → Loja</Link>.</p>
+        <p className="rounded-lg bg-muted p-3 text-sm">As <strong>cores</strong> (cabeçalho, fundo, botões) em <Link className="font-semibold text-primary hover:underline" to={`/${membership?.slug}/interface`}>Interface → Loja</Link>.</p>
         <div className="space-y-1.5"><Label htmlFor="st-intro">Texto de abertura da vitrine (opcional)</Label>
           <textarea id="st-intro" rows={3} maxLength={400} value={f.introText} onChange={(e) => set({ introText: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
@@ -98,7 +98,7 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
           <p className="text-sm text-muted-foreground">É o nome de usuário da conta InfinitePay do bloco, o mesmo que aparece no app deles com um $ na frente.</p></div>
         <div className="space-y-2">
           <Button type="button" variant="outline" disabled={check.isPending || !cleanHandle(f.handle)} onClick={() => { setTest(null); check.mutate() }}>
-            {check.isPending ? 'Testando…' : 'Testar conexão (cria um link de R$ 1, sem cobrar)'}
+            {check.isPending ? 'Testando' : 'Testar conexão (cria um link de R$ 1, sem cobrar)'}
           </Button>
           {test && <p role="status" className={test.ok ? 'text-sm font-semibold text-primary' : 'text-sm font-semibold text-destructive'}>{test.message}</p>}
         </div>

@@ -91,7 +91,7 @@ export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
         {payers.map((f) => {
           const c = byName.get(f.name.toLowerCase())
           return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={canEdit} /> : (
-            <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria…</Card>
+            <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</Card>
           )
         })}
       </div>

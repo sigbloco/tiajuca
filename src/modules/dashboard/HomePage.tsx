@@ -38,7 +38,7 @@ function UpcomingEvents({ orgId, slug, tz }: { orgId: string; slug: string; tz: 
       {data?.map((a) => (
         <div key={a.id} className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate font-semibold">{a.title}</p>
+            <p className="break-words font-semibold">{a.title}</p>
             <p className="capitalize text-muted-foreground">{formatDayLong(a.activity_date)}{a.start_time ? ` · ${formatTime(a.start_time)}` : ''}</p>
           </div>
           {a.activity_types && <Badge className={COLOR_BADGE[a.activity_types.color]}>{a.activity_types.name}</Badge>}
@@ -89,7 +89,7 @@ function GroupCard({ orgId, slug }: { orgId: string; slug: string }) {
   return (
     <Card className="space-y-2 p-4">
       <div className="flex items-center justify-between"><h3>Meu grupo</h3><Link className="text-primary hover:underline" to={`/${slug}/relatorios`}>Ver relatórios</Link></div>
-      <p className="text-muted-foreground">{data ? `${data.total} integrante(s) acompanhados (incluindo você)` : '…'}</p>
+      <p className="text-muted-foreground">{data ? `${data.total} integrante(s) acompanhados (incluindo você)` : '—'}</p>
       {data?.low.length ? (
         <>
           <p className="text-xs font-semibold uppercase text-muted-foreground">Menor presença nos últimos 60 dias</p>

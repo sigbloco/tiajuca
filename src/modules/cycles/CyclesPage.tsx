@@ -44,7 +44,7 @@ function CycleSheet({ cycle, onClose }: { cycle: Cycle | null; onClose: () => vo
         <div className="space-y-1.5">
           <Label htmlFor="cy-type">Tipo</Label>
           <Select id="cy-type" required value={form.cycle_type_id} onChange={(e) => setForm({ ...form, cycle_type_id: e.target.value })}>
-            <option value="">Selecione…</option>
+            <option value="">Selecione</option>
             {types?.filter((t) => t.is_active || t.id === form.cycle_type_id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </div>
@@ -101,8 +101,8 @@ function BlockersSheet({ cycle, onClose }: { cycle: Cycle; onClose: () => void }
           </ul>
           <p className="rounded-lg bg-warning/15 p-3 text-sm">Para excluir, é preciso apagar tudo isso junto. <strong>Isso não pode ser desfeito</strong> e remove o histórico do ciclo. Se só quiser tirá-lo da vista, edite as datas em vez de excluir.</p>
           <Button variant="destructive" disabled={wipe.isPending}
-            onClick={() => { if (window.confirm(`Apagar o ciclo “${cycle.name}” e tudo que depende dele? Isso não pode ser desfeito.`)) wipe.mutate() }}>{wipe.isPending ? 'Apagando…' : 'Apagar tudo isso e o ciclo'}</Button>
-          <Button variant="ghost" onClick={onClose} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+            onClick={() => { if (window.confirm(`Apagar o ciclo “${cycle.name}” e tudo que depende dele? Isso não pode ser desfeito.`)) wipe.mutate() }}>{wipe.isPending ? 'Apagando' : 'Apagar tudo isso e o ciclo'}</Button>
+          <Button variant="outline" onClick={onClose} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </>
       )}
     </SheetContent>

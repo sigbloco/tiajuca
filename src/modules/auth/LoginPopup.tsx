@@ -43,7 +43,7 @@ export function LoginPopup({ open, onOpenChange, title = 'Entrar', description =
               <Input id="lp-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="space-y-1.5"><Label htmlFor="lp-pass">Senha</Label>
               <Input id="lp-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-            <Button type="submit" className="w-full" disabled={login.isPending}>{login.isPending ? 'Entrando…' : 'Entrar'}</Button>
+            <Button type="submit" className="w-full" disabled={login.isPending}>{login.isPending ? 'Entrando' : 'Entrar'}</Button>
           </form>
           <p className="my-3 text-center text-xs text-muted-foreground">ou</p>
           <Button type="button" variant="outline" className="w-full" onClick={() => signInWithGoogle(returnTo).catch((e) => toast.error(friendlyError(e)))}>Continuar com Google</Button>

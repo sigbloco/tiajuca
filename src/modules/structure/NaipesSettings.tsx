@@ -29,7 +29,7 @@ export function SectionNamesPage() {
     <div className="space-y-3">
       <h2>Nomes de naipes</h2>
       <p className="text-muted-foreground">
-        Os nomes que “Novo naipe” oferece. Cada um define a altura dos itens (definida, indefinida ou não se aplica) e como eles se chamam (instrumento, atividade, voz…).
+        Os nomes que “Novo naipe” oferece. Cada um define a altura dos itens (definida, indefinida ou não se aplica) e como eles se chamam (instrumento, atividade, voz).
         O tipo de item é um texto livre. O naipe criado herda essas escolhas.
       </p>
       {canEdit && (

@@ -56,7 +56,7 @@ export async function saveCatalogItem(
   return (data as { id: string }).id
 }
 
-/** Troca a posição de dois itens. Com a lista na ordem exibida, renumera tudo (1, 2, 3…), então funciona mesmo com ordens repetidas. */
+/** Troca a posição de dois itens. Com a lista na ordem exibida, renumera tudo (1, 2, 3), então funciona mesmo com ordens repetidas. */
 export async function swapOrder(table: CatalogTable, orgId: string, a: CatalogItem, b: CatalogItem, list?: CatalogItem[]) {
   if (!list) {
     await Promise.all([
@@ -73,7 +73,7 @@ export async function swapOrder(table: CatalogTable, orgId: string, a: CatalogIt
   await Promise.all(ordered.map((it, i) => (it.sort_order === i + 1 ? null : saveCatalogItem(table, orgId, { id: it.id, name: it.name, sort_order: i + 1 }))))
 }
 
-/** Depois de mexer em qualquer catálogo (categorias, instrumentos, naipes…), tudo que mostra esses nomes se atualiza sozinho. */
+/** Depois de mexer em qualquer catálogo (categorias, instrumentos, naipes), tudo que mostra esses nomes se atualiza sozinho. */
 export function invalidateCatalog(qc: import('@tanstack/react-query').QueryClient, orgId: string) {
   for (const key of [['catalog'], ['members'], ['member-links'], ['staff-assignments'], ['fee-prices'], ['drive-folders'], ['capacity'], ['waitlist']]) {
     qc.invalidateQueries({ queryKey: key })
@@ -112,7 +112,7 @@ export async function mirrorFunctionToFees(orgId: string, change: { created?: st
   } catch { /* contribuições podem exigir outra permissão */ }
 }
 
-/** Move `fromId` para a posição de `toId` na lista (na ordem exibida) e renumera tudo (1, 2, 3…). */
+/** Move `fromId` para a posição de `toId` na lista (na ordem exibida) e renumera tudo (1, 2, 3). */
 export async function moveItemTo(table: CatalogTable, orgId: string, list: CatalogItem[], fromId: string, toId: string) {
   const ordered = list.slice()
   const from = ordered.findIndex((x) => x.id === fromId)

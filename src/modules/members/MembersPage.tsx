@@ -50,7 +50,7 @@ function NewMemberSheet({ onClose }: { onClose: () => void }) {
           <DateInput id="birth_date" max={adultBirthDateMax()} maxMessage="Apenas maiores de 18 anos podem ser integrantes." value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} />
           <p className="text-xs text-muted-foreground">Apenas maiores de 18 anos podem ser integrantes.</p>
         </div>
-        <Button type="submit" className="w-full" disabled={create.isPending}>{create.isPending ? 'Salvando…' : 'Cadastrar'}</Button>
+        <Button type="submit" className="w-full" disabled={create.isPending}>{create.isPending ? 'Salvando' : 'Cadastrar'}</Button>
       </form>
     </SheetContent>
   )
@@ -245,11 +245,11 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
-              <span className="truncate">{givenName(m.full_name, m.display_name)}</span>
+              <span className="break-words">{givenName(m.full_name, m.display_name)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
               {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{TYPE_LABEL[t] ?? t}</Badge>)}
             </p>
-            {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="truncate text-muted-foreground">{m.display_name.trim()}</p>}
+            {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="break-words text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
           {wa && (
             <a href={wa} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-success" title="Conversar no WhatsApp" aria-label={`Conversar com ${m.full_name} no WhatsApp`}>
@@ -321,7 +321,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input className="pl-9" type="search" aria-label="Buscar integrante pelo nome" placeholder="Buscar pelo nome…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input className="pl-9" type="search" aria-label="Buscar integrante pelo nome" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       <ReactivationRequests />

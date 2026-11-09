@@ -22,9 +22,9 @@ export const LINK_KINDS: Record<LinkKind, { label: string; placeholder: string; 
   youtube: { label: 'YouTube', placeholder: 'https://youtube.com/@canal', icon: (c) => <YoutubeIcon className={c} /> },
   facebook: { label: 'Facebook', placeholder: 'https://facebook.com/pagina', icon: (c) => <FacebookIcon className={c} /> },
   tiktok: { label: 'TikTok', placeholder: '@usuario', icon: (c) => <Music className={c} aria-hidden /> },
-  spotify: { label: 'Spotify', placeholder: 'https://open.spotify.com/…', icon: (c) => <SpotifyIcon className={c} /> },
+  spotify: { label: 'Spotify', placeholder: 'https://open.spotify.com/', icon: (c) => <SpotifyIcon className={c} /> },
   telefone: { label: 'Telefone', placeholder: '(21) 3333-3333', icon: (c) => <Phone className={c} aria-hidden /> },
-  site: { label: 'Site', placeholder: 'https://…', icon: (c) => <Globe className={c} aria-hidden /> },
+  site: { label: 'Site', placeholder: 'https://', icon: (c) => <Globe className={c} aria-hidden /> },
 }
 
 const digits = (s: string) => s.replace(/\D/g, '')

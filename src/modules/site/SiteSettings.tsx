@@ -82,7 +82,7 @@ export function SiteSettings() {
       <UnsavedGuard dirty={dirty} onSave={() => save.mutateAsync()} />
       <p className="text-muted-foreground">É a página que as pessoas veem ao abrir o endereço do site (antes de entrar): foto, descrição, redes e contatos, menu e vídeos.</p>
 
-      <Card className="p-4 text-sm">As <strong>cores</strong> do sistema, da página inicial e da loja (cabeçalho, fundo, botões…) agora ficam em <Link className="font-semibold text-primary underline" to={`/${membership?.slug}/interface`}>Interface</Link>.</Card>
+      <Card className="p-4 text-sm">As <strong>cores</strong> do sistema, da página inicial e da loja (cabeçalho, fundo, botões) agora ficam em <Link className="font-semibold text-primary underline" to={`/${membership?.slug}/interface`}>Interface</Link>.</Card>
 
       <Card className="space-y-3 p-4">
         <h3>Cabeçalho</h3>
@@ -91,7 +91,7 @@ export function SiteSettings() {
           <div className="space-y-2">
             <input ref={fileRef} type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" className="sr-only" aria-label="Escolher foto"
               onChange={(e) => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} />
-            <Button type="button" variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {upload.isPending ? 'Enviando…' : 'Trocar foto'}</Button>
+            <Button type="button" variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {upload.isPending ? 'Enviando' : 'Trocar foto'}</Button>
             {f.photo_url && <Button type="button" variant="ghost" onClick={() => setF({ ...f, photo_url: null })}>Usar a logo do bloco</Button>}
             <p className="text-xs text-muted-foreground">SVG, PNG, JPG ou WebP, até 5 MB. Aparece em círculo.</p>
           </div>
@@ -146,7 +146,7 @@ export function SiteSettings() {
           return (
             <div key={i} className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <Input className="min-w-56 flex-1" aria-label="Endereço do vídeo" placeholder="https://www.youtube.com/watch?v=…" value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} />
+                <Input className="min-w-56 flex-1" aria-label="Endereço do vídeo" placeholder="https://www.youtube.com/watch?v=" value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} />
                 <Input className="w-56" aria-label="Título (opcional)" placeholder="Título (opcional)" value={v.title} onChange={(e) => setVideo(i, { title: e.target.value })} />
                 <Button type="button" size="icon" variant="ghost" aria-label="Remover vídeo" onClick={() => setF({ ...f, videos: f.videos.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
               </div>

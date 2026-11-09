@@ -180,8 +180,8 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
         {list.data?.rows.map((s) => (
           <Card key={s.id} className="flex items-center justify-between gap-3 p-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(s)}>
-              <p className="truncate font-semibold">{s.purged_at ? 'Resposta removida (retenção)' : nameOf(s)}</p>
-              <p className="truncate text-muted-foreground">{formatDateTime(s.submitted_at, membership?.timezone)}{s.applicant_email && !s.purged_at ? ` · ${s.applicant_email}` : ''}</p>
+              <p className="break-words font-semibold">{s.purged_at ? 'Resposta removida (retenção)' : nameOf(s)}</p>
+              <p className="break-words text-muted-foreground">{formatDateTime(s.submitted_at, membership?.timezone)}{s.applicant_email && !s.purged_at ? ` · ${s.applicant_email}` : ''}</p>
             </button>
             <Badge className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Badge>
           </Card>

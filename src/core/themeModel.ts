@@ -1,6 +1,6 @@
 /**
  * Modelo de cores da interface. Três ÁREAS:
- *   • geral  → o sistema todo (admin, inscrições, login…); guardado no topo de `organizations.theme`;
+ *   • geral  → o sistema todo (admin, inscrições, login); guardado no topo de `organizations.theme`;
  *   • site   → a página inicial pública; sobrepõe o geral só onde tiver cor própria (`theme.site`);
  *   • loja   → a vitrine pública; idem (`theme.shop`).
  * Cada área tem cinco cores editáveis; o texto sobre cada uma (e fundos de apoio, bordas) é calculado para ficar legível.

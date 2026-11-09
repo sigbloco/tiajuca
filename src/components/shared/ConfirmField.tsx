@@ -8,7 +8,7 @@ function Confirm({ label, busy, onConfirm, onCancel }: { label: string; busy: bo
   return (
     <span className="inline-flex shrink-0 items-center gap-1">
       <Button type="button" size="icon" className="h-8 w-8" aria-label={label} title={label} disabled={busy} onClick={onConfirm}><Save className="h-4 w-4" /><span className="sr-only">{label}</span></Button>
-      <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="Cancelar" disabled={busy} onClick={onCancel}><X className="h-4 w-4" /></Button>
+      <Button type="button" size="icon" variant="outline" className="h-8 w-8" aria-label="Cancelar" disabled={busy} onClick={onCancel}><X className="h-4 w-4" /></Button>
     </span>
   )
 }

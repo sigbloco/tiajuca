@@ -76,7 +76,7 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
           <Input id="sp-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="sp-cat">Categoria</Label>
           <Select id="sp-cat" required value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })}>
-            <option value="" disabled>Escolha…</option>
+            <option value="" disabled>Escolha</option>
             {categories.filter((c) => c.is_active || c.id === f.category_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select></div>
         <div className="space-y-1.5"><Label htmlFor="sp-phone">Telefone</Label><PhoneInput id="sp-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} /></div>

@@ -41,7 +41,7 @@ export interface VariantInput { id?: string; label: string; stock: number | null
 
 const isUniqueViolation = (e: { code?: string } | null) => e?.code === '23505'
 
-/** Cria o produto gerando o slug a partir do nome (acrescenta -2, -3… se já existir). */
+/** Cria o produto gerando o slug a partir do nome (acrescenta -2, -3 se já existir). */
 export async function createProduct(orgId: string, input: ProductInput, variants: VariantInput[]): Promise<string> {
   const base = slugify(input.name)
   for (let n = 1; n <= 20; n++) {

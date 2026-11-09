@@ -198,7 +198,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
               {(Object.keys(AUDIENCE_LABEL) as ('section' | 'instrument')[]).map((k) => <option key={k} value={k}>{AUDIENCE_LABEL[k]}</option>)}
             </Select>
             <Select aria-label="Público" disabled={!aKind} value={aRef} onChange={(e) => setARef(e.target.value)}>
-              <option value="">{aKind ? 'Selecione…' : '—'}</option>
+              <option value="">{aKind ? 'Selecione' : '—'}</option>
               {aKind && audienceOptions.data?.filter((o) => o.is_active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
             </Select>
           </div>

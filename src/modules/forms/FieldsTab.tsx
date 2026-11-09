@@ -90,7 +90,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
         )}
 
         <Card className="space-y-2 p-3">
-          <p className="flex items-center gap-1.5 font-semibold"><GitBranch className="h-4 w-4" /> Mostrar somente se…</p>
+          <p className="flex items-center gap-1.5 font-semibold"><GitBranch className="h-4 w-4" /> Mostrar somente se</p>
           <Select aria-label="Campo da condição" value={f.condField} onChange={(e) => setF({ ...f, condField: e.target.value, condValue: '' })}>
             <option value="">Sempre mostrar</option>
             {earlier.map((x) => <option key={x.id} value={x.field_key}>{x.label}</option>)}
@@ -99,7 +99,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
             <div className="grid grid-cols-2 gap-2">
               <Select aria-label="Operador" value={f.condOp} onChange={(e) => setF({ ...f, condOp: e.target.value as 'eq' | 'neq' })}><option value="eq">for igual a</option><option value="neq">for diferente de</option></Select>
               <Select aria-label="Valor" value={f.condValue} onChange={(e) => setF({ ...f, condValue: e.target.value })}>
-                <option value="">Valor…</option>{parentOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                <option value="">Valor</option>{parentOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </Select>
             </div>
           )}
@@ -151,7 +151,7 @@ export function FieldsTab({ formId }: { formId: string }) {
               <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === fields.length - 1} onClick={() => move.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-3.5 w-3.5" /></Button>
             </div>
             <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ field: x })}>
-              <p className="truncate font-semibold">{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
+              <p className="break-words font-semibold">{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
               <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                 <Badge>{FIELD_TYPE_LABEL[x.field_type]}</Badge>
                 {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}

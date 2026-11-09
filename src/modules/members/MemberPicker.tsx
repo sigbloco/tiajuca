@@ -37,7 +37,7 @@ export function MemberPicker({ value, onChange, onlyActive }: { value: string; o
   if (selected) {
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
-        <span className="min-w-0 truncate font-semibold">{label(selected)}</span>
+        <span className="min-w-0 break-words font-semibold">{label(selected)}</span>
         <Button type="button" size="sm" variant="ghost" aria-label="Trocar integrante" onClick={() => { onChange(''); setText('') }}><X className="h-4 w-4" /> Trocar</Button>
       </div>
     )
@@ -45,7 +45,7 @@ export function MemberPicker({ value, onChange, onlyActive }: { value: string; o
   return (
     <div className="relative">
       <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-      <Input className="pl-9" placeholder="Buscar integrante pelo nome ou e-mail…" value={text} autoComplete="off"
+      <Input className="pl-9" placeholder="Buscar integrante pelo nome ou e-mail" value={text} autoComplete="off"
         onFocus={() => setOpen(true)} onChange={(e) => { setText(e.target.value); setOpen(true) }} />
       {open && (
         <ul role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-border bg-card shadow-card">

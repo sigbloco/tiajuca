@@ -50,7 +50,7 @@ export function AutoComplete({ options, onPick, placeholder, disabled, 'aria-lab
 }
 
 /** Chip simples (rótulo + X opcional). */
-export function Chip({ label, onRemove, removeLabel, className }: { label: string; onRemove?: () => void; removeLabel?: string; className?: string }) {
+export function Chip({ label, onRemove, removeLabel, className }: { label: React.ReactNode; onRemove?: () => void; removeLabel?: string; className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-1 rounded-full bg-muted py-1 pl-3 text-sm font-semibold', onRemove ? 'pr-1' : 'pr-3', className)}>
       {label}

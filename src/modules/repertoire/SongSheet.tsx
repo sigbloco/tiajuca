@@ -119,7 +119,7 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
       {shown.map((a) => (
         <Card key={a.id} className="flex items-center justify-between gap-2 p-2.5">
           <button className="min-w-0 flex-1 text-left" onClick={() => open.mutate(a)}>
-            <p className="flex items-center gap-1.5 truncate font-semibold"><ExternalLink className="h-4 w-4 shrink-0" />{a.description || a.file_name || a.url}</p>
+            <p className="flex items-center gap-1.5 break-words font-semibold"><ExternalLink className="h-4 w-4 shrink-0" />{a.description || a.file_name || a.url}</p>
             <p className="text-muted-foreground"><Badge>{KIND_LABEL[a.kind]}</Badge> {label(a)}{a.source === 'storage' ? ' · arquivo' : ' · link'}</p>
           </button>
           {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (window.confirm('Remover este anexo?')) remove.mutate(a.id) }}>Remover</Button>}
@@ -142,13 +142,13 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
           </div>
           <Input placeholder="Descrição (ex.: Partitura Trompete Bb)" value={description} onChange={(e) => setDescription(e.target.value)} />
           <div className="flex gap-2">
-            <Input placeholder="Colar link (https://…)" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <Input placeholder="Colar link (https://)" value={url} onChange={(e) => setUrl(e.target.value)} />
             <Button size="sm" disabled={!/^https?:\/\//i.test(url.trim()) || addUrl.isPending} onClick={() => addUrl.mutate()}><Link2 className="h-4 w-4" /> Adicionar</Button>
           </div>
           <input ref={fileRef} type="file" hidden accept="application/pdf,image/*,audio/*,video/mp4"
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload.mutate(f) }} />
           <Button size="sm" variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}>
-            <FileUp className="h-4 w-4" /> {upload.isPending ? 'Enviando…' : 'Enviar arquivo (PDF, imagem, áudio; até 25 MB)'}
+            <FileUp className="h-4 w-4" /> {upload.isPending ? 'Enviando' : 'Enviar arquivo (PDF, imagem, áudio; até 25 MB)'}
           </Button>
           {drive.data?.active && (
             <Button size="sm" variant="outline" onClick={() => setDriveOpen(!driveOpen)}>{driveOpen ? 'Fechar busca no Drive' : 'Buscar no Google Drive'}</Button>
@@ -180,7 +180,7 @@ function DriveFolderField({ value, onChange }: { value: string; onChange: (v: st
       <Label htmlFor="s-drive-root">Pasta da música no Drive (opcional)</Label>
       {value && (
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-          <span className="min-w-0 flex-1 truncate text-sm">{picked || value}</span>
+          <span className="min-w-0 flex-1 break-words text-sm">{picked || value}</span>
           <Button asChild size="sm" variant="outline"><a href={value} target="_blank" rel="noreferrer noopener">Abrir</a></Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => { onChange(''); setPicked(''); setRootId('') }}>Tirar</Button>
         </div>
@@ -188,7 +188,7 @@ function DriveFolderField({ value, onChange }: { value: string; onChange: (v: st
       {!value && (
         <>
           <Select id="s-drive-root" aria-label="Pasta cadastrada" value={rootId} onChange={(e) => setRootId(e.target.value)}>
-            <option value="">{roots.length === 0 ? 'Nenhuma pasta cadastrada em Google Drive' : 'Escolha primeiro uma pasta cadastrada…'}</option>
+            <option value="">{roots.length === 0 ? 'Nenhuma pasta cadastrada em Google Drive' : 'Escolha primeiro uma pasta cadastrada'}</option>
             {roots.map((r) => <option key={r.id} value={r.drive_folder_id!}>{r.name}</option>)}
           </Select>
           {rootId && <DriveRootTree rootId={rootId} onPick={(fo) => { onChange(fo.url); setPicked(fo.name) }} />}
@@ -235,7 +235,7 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
           <div className="space-y-1.5"><Label htmlFor="s-artist">Artista</Label><Input id="s-artist" required value={f.artist} onChange={set('artist')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-genre">Gênero</Label><Input id="s-genre" value={f.genre} onChange={set('genre')} /></div>
           <DriveFolderField value={f.drive_folder_url} onChange={(v) => setF({ ...f, drive_folder_url: v })} />
-          <div className="space-y-1.5"><Label htmlFor="s-guide">Link da guia (opcional)</Label><Input id="s-guide" type="url" placeholder="https://…" value={f.guide_url} onChange={set('guide_url')} /></div>
+          <div className="space-y-1.5"><Label htmlFor="s-guide">Link da guia (opcional)</Label><Input id="s-guide" type="url" placeholder="https://" value={f.guide_url} onChange={set('guide_url')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-notes">Observações</Label>
             <textarea id="s-notes" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.notes} onChange={set('notes')} /></div>
           <Button type="submit" className="w-full" disabled={!valid || save.isPending} aria-label="Salvar música" title="Salvar música"><Save className="h-4 w-4" /></Button>

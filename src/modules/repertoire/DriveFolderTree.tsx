@@ -20,7 +20,7 @@ function useSubfolders(rootId: string, id: string, enabled: boolean) {
   })
 }
 
-const Loading = ({ depth }: { depth: number }) => <p className="animate-pulse py-1 text-xs text-muted-foreground" style={{ paddingLeft: depth * 16 + 8 }}>Carregando…</p>
+const Loading = ({ depth }: { depth: number }) => <p className="animate-pulse py-1 text-xs text-muted-foreground" style={{ paddingLeft: depth * 16 + 8 }}>Carregando</p>
 
 /** Um nível da árvore: carrega as subpastas só quando é aberto (uma consulta ao Drive por pasta aberta; o resultado fica guardado por 5 minutos). */
 function Node({ id, name, rootId, depth, onPick }: { id: string; name: string; rootId: string; depth: number; onPick: (f: PickedFolder) => void }) {
@@ -32,8 +32,8 @@ function Node({ id, name, rootId, depth, onPick }: { id: string; name: string; r
         <button type="button" aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-1.5 p-1.5 text-left" onClick={() => setOpen(!open)}>
           <ChevronRight className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-90')} aria-hidden />
           <Folder className="h-4 w-4 shrink-0 text-warning" aria-hidden />
-          <span className="truncate">{name}</span>
-          {open && kids.isFetching && <span className="shrink-0 animate-pulse text-xs text-muted-foreground">carregando…</span>}
+          <span className="break-words">{name}</span>
+          {open && kids.isFetching && <span className="shrink-0 animate-pulse text-xs text-muted-foreground">carregando</span>}
         </button>
         <Button type="button" size="sm" variant="outline" onClick={() => onPick({ id, name, url: folderUrl(id) })}>Escolher</Button>
       </div>

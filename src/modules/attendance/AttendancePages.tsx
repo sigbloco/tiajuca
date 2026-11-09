@@ -1,3 +1,4 @@
+import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -69,7 +70,7 @@ function ActivityCard({ a, sections, slug }: { a: Activity; sections: { id: stri
     <Card className="flex gap-3 p-3">
       <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
       <div className="min-w-0 flex-1 space-y-2">
-        <Link to={`/${slug}/presenca/${a.id}`} className="block truncate font-semibold hover:underline">{a.title}</Link>
+        <Link to={`/${slug}/presenca/${a.id}`} className="block break-words font-semibold hover:underline">{a.title}</Link>
         {shown.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {shown.map((s) => (
@@ -216,7 +217,7 @@ export function AttendanceRosterPage() {
       <div className="flex items-center gap-2">
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/presenca`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <div className="min-w-0">
-          <h1 className="truncate">{activity.data?.title ?? 'Chamada'}</h1>
+          <h1 className="break-words">{activity.data?.title ?? 'Chamada'}</h1>
           {activity.data && <p className="text-muted-foreground">{formatDayShort(activity.data.activity_date, activity.data.start_time)}</p>}
         </div>
       </div>
@@ -264,8 +265,8 @@ export function AttendanceRosterPage() {
           <Card key={r.member_id} className="p-3">
             <div className="mb-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate font-semibold">{r.display_name}</p>
-                <p className="truncate text-muted-foreground">{r.instruments ?? '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
+                <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
+                <p className="break-words text-muted-foreground">{r.instruments ?? '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
               </div>
               <Button size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpenNote(openNote === r.member_id ? null : r.member_id)}>
                 <MessageSquare className={cn('h-4 w-4', r.notes && 'text-primary')} />

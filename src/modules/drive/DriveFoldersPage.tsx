@@ -109,7 +109,7 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
       <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim() && urlOk) save.mutate() }} className="space-y-4">
         <div className="space-y-1.5"><Label htmlFor="df-name">Nome</Label><Input id="df-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="df-url">Link da pasta no Google Drive</Label>
-          <Input id="df-url" required placeholder="https://drive.google.com/drive/folders/…" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} />
+          <Input id="df-url" required placeholder="https://drive.google.com/drive/folders/" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} />
           {f.url && !urlOk && <p className="text-xs text-destructive">Use o link da pasta (drive.google.com ou docs.google.com).</p>}</div>
         <div className="space-y-1.5"><Label htmlFor="df-desc">Descrição</Label><Input id="df-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
 
@@ -165,7 +165,7 @@ function SyncSheet({ folder, onClose }: { folder: Folder; onClose: () => void })
             {d.remove.length > 0 && <div><p className="mb-1 font-semibold">Vão perder o acesso</p>{list(d.remove)}</div>}
             <p className="text-xs text-muted-foreground">Ninguém recebe e-mail do Google por esta ação. Donos e compartilhamentos feitos à mão no Drive nunca são alterados. Só entram pessoas com e-mail cadastrado e ativas no ciclo atual (ou equipe).</p>
             <Button className="w-full" disabled={apply.isPending || (d.add.length === 0 && d.remove.length === 0)} onClick={() => apply.mutate()}>
-              {apply.isPending ? 'Aplicando…' : d.add.length + d.remove.length === 0 ? 'Nada a fazer' : 'Aplicar no Drive'}
+              {apply.isPending ? 'Aplicando' : d.add.length + d.remove.length === 0 ? 'Nada a fazer' : 'Aplicar no Drive'}
             </Button>
           </>
         )}
@@ -229,7 +229,7 @@ export function DriveFoldersPage() {
     return m
   }, [roles.data, sections.data, instruments.data])
   const whoSees = (id: string) => (rules.data ?? []).filter((r) => r.folder_id === id).map((r) =>
-    names.get(r.access_role_id ? `role:${r.access_role_id}` : r.section_id ? `section:${r.section_id}` : `instrument:${r.instrument_id}`) ?? '…')
+    names.get(r.access_role_id ? `role:${r.access_role_id}` : r.section_id ? `section:${r.section_id}` : `instrument:${r.instrument_id}`) ?? '—')
 
   return (
     <div className="space-y-4">
@@ -241,7 +241,7 @@ export function DriveFoldersPage() {
         </div>
       </div>
       <p className="text-muted-foreground">{canManage
-        ? 'Pastas do Google Drive do bloco: partituras, fotos, documentos, atas… Adicione quantas quiser e escolha quem vê cada uma (por papel, naipe ou instrumento). Use “Sincronizar acesso” para compartilhar a pasta no Drive com essas pessoas.'
+        ? 'Pastas do Google Drive do bloco: partituras, fotos, documentos, atas Adicione quantas quiser e escolha quem vê cada uma (por papel, naipe ou instrumento). Use “Sincronizar acesso” para compartilhar a pasta no Drive com essas pessoas.'
         : 'Pastas do Google Drive liberadas para o seu perfil.'}</p>
       {folders.isLoading && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {folders.data?.length === 0 && <EmptyState>{canManage ? 'Nenhuma pasta ainda. Use “Adicionar pasta”, cole o link e escolha quem pode vê-la.' : 'Nenhuma pasta liberada para o seu perfil.'}</EmptyState>}
@@ -251,7 +251,7 @@ export function DriveFoldersPage() {
           return (
             <Card key={f.id} className={`space-y-2 p-4 ${f.is_active ? '' : 'opacity-60'}`}>
               <div className="flex items-start justify-between gap-2">
-                <h2 className="flex min-w-0 items-center gap-2"><FolderOpen className="h-5 w-5 shrink-0 text-primary" /><span className="truncate">{f.name}</span></h2>
+                <h2 className="flex min-w-0 items-center gap-2"><FolderOpen className="h-5 w-5 shrink-0 text-primary" /><span className="break-words">{f.name}</span></h2>
                 {canManage && <Button size="icon" variant="ghost" aria-label={`Editar ${f.name}`} onClick={() => setSheet({ folder: f })}><Pencil className="h-4 w-4" /></Button>}
               </div>
               {f.description && <p className="text-muted-foreground">{f.description}</p>}

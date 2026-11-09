@@ -1,3 +1,4 @@
+import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -85,7 +86,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
       {mine.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {[...mine].sort((a, b) => KIND_LABEL[a.staff_kind].localeCompare(KIND_LABEL[b.staff_kind], 'pt-BR') || labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR')).map((a) => (
-            <Chip key={a.id} label={`${labeler(a.members ?? { full_name: '', display_name: null })} · ${KIND_LABEL[a.staff_kind]}`} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
+            <Chip key={a.id} label={<><MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {KIND_LABEL[a.staff_kind]}</>} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
           ))}
         </div>
       )}
@@ -181,7 +182,7 @@ function SectionWorkshop({ sec, insts }: { sec: CatalogItem; insts: CatalogItem[
         </div>
         {insts.map((i, k) => (
           <div key={i.id} className={cn('grid grid-cols-[1fr_4.5rem_8rem] items-center gap-2 px-2 py-1.5', k % 2 === 1 ? 'bg-muted/60' : 'bg-card')}>
-            <span className="min-w-0 truncate">{i.name}</span>
+            <span className="min-w-0 break-words">{i.name}</span>
             <span className="text-center"><input type="checkbox" className="h-4 w-4" aria-label={`Oficina de ${i.name}`} checked={!!i.has_workshop} onChange={(e) => setWorkshop.mutate({ ids: [i.id], on: e.target.checked })} /></span>
             {cycle.data ? (
               <SaveInput className="w-full" aria-label={`Vagas de ${i.name}`} placeholder="Sem limite" value={caps.data?.has(i.id) ? String(caps.data.get(i.id)) : ''}
@@ -209,7 +210,7 @@ function RenameForm({ name, label, onSave, onCancel }: { name: string; label: st
     }}>
       <Input name="name" aria-label={`Novo nome do ${label}`} defaultValue={name} autoFocus />
       <Button type="submit" size="sm" aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
-      <Button type="button" size="sm" variant="ghost" onClick={onCancel} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+      <Button type="button" size="sm" variant="outline" onClick={onCancel} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
     </form>
   )
 }

@@ -95,7 +95,7 @@ export function ProductsTab() {
             ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
             : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{p.name} {!p.is_active && <Badge>Oculto</Badge>}</p>
+            <p className="break-words font-semibold">{p.name} {!p.is_active && <Badge>Oculto</Badge>}</p>
             <p className="text-sm">
               {formatCurrency(fromCents(p.price_cents))}
               {p.member_discount_pct > 0 && <span className="text-muted-foreground"> · integrante {formatCurrency(fromCents(memberPriceCents(p.price_cents, p.member_discount_pct)))}</span>}

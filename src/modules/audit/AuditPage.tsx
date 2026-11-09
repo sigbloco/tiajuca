@@ -115,8 +115,8 @@ export function AuditLogTab() {
           <Card key={r.id} className="p-3">
             <button className="flex w-full items-center justify-between gap-2 text-left" onClick={() => setOpen(open === r.id ? null : r.id)}>
               <div className="min-w-0">
-                <p className="truncate font-semibold">{ENTITY_LABEL[r.entity_type] ?? r.entity_type}</p>
-                <p className="truncate text-muted-foreground">{actors.data?.[r.actor_member_id ?? ''] ?? (r.actor_member_id ? '…' : 'Sistema')} · {formatDateTime(r.created_at, membership?.timezone)}</p>
+                <p className="break-words font-semibold">{ENTITY_LABEL[r.entity_type] ?? r.entity_type}</p>
+                <p className="break-words text-muted-foreground">{actors.data?.[r.actor_member_id ?? ''] ?? (r.actor_member_id ? '—' : 'Sistema')} · {formatDateTime(r.created_at, membership?.timezone)}</p>
               </div>
               <Badge className={r.action === 'sensitive_read' ? 'bg-warning/15 text-warning' : ''}>{ACTION_LABEL[r.action] ?? r.action}</Badge>
             </button>

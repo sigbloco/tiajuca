@@ -47,12 +47,12 @@ export function IntegrationsSettings() {
         <p className="text-muted-foreground">Permite buscar PDFs e partituras de uma pasta institucional e anexá-los às músicas. É opcional: sem isso, você ainda pode colar links ou enviar arquivos.</p>
         <div className="space-y-1.5">
           <Label htmlFor="drive-folder">Link ou ID da pasta do Drive</Label>
-          <Input id="drive-folder" placeholder="https://drive.google.com/drive/folders/…" value={folder} onChange={(e) => setFolder(e.target.value)} />
+          <Input id="drive-folder" placeholder="https://drive.google.com/drive/folders/" value={folder} onChange={(e) => setFolder(e.target.value)} />
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={active} onChange={(e) => setActive(e.target.checked)} /> Ativar busca no Drive</label>
         <div className="flex flex-wrap gap-2">
           <Button disabled={!folder.trim() || save.isPending} onClick={() => save.mutate()} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
-          <Button variant="outline" disabled={!cfg.data?.configured || test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testando…' : 'Testar conexão'}</Button>
+          <Button variant="outline" disabled={!cfg.data?.configured || test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testando' : 'Testar conexão'}</Button>
         </div>
         {status && (
           <Card className={status.ok ? 'space-y-1 border-success p-3' : 'space-y-1 border-warning p-3'}>

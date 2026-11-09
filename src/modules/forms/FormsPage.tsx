@@ -30,7 +30,7 @@ function NewFormSheet() {
         <div className="space-y-1.5"><Label htmlFor="nf-title">Título</Label><Input id="nf-title" required value={title} onChange={(e) => { setTitle(e.target.value); setSlug(slugify(e.target.value)) }} /></div>
         <div className="space-y-1.5"><Label htmlFor="nf-slug">Endereço (final do link)</Label>
           <Input id="nf-slug" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} />
-          <p className="text-xs text-muted-foreground">{membership ? publicUrl(membership.slug, slug || '…') : ''}</p></div>
+          <p className="text-xs text-muted-foreground">{membership ? publicUrl(membership.slug, slug || '—') : ''}</p></div>
         <Button type="submit" className="w-full" disabled={!title.trim() || create.isPending}>Criar</Button>
       </form>
     </SheetContent>
@@ -71,8 +71,8 @@ export function FormsPage() {
           <Card key={f.id} className="space-y-2 p-3">
             <div className="flex items-start justify-between gap-2">
               <Link to={`/${membership?.slug}/inscricoes/${f.id}`} className="min-w-0 flex-1">
-                <p className="truncate font-display text-lg font-bold">{f.title}</p>
-                <p className="truncate text-muted-foreground">/f/{membership?.slug}/{f.slug}</p>
+                <p className="break-words font-display text-lg font-bold">{f.title}</p>
+                <p className="break-words text-muted-foreground">/f/{membership?.slug}/{f.slug}</p>
               </Link>
               <div className="flex flex-col items-end gap-1">
                 <Badge className={FORM_STATUS_CLASS[f.status]}>{FORM_STATUS_LABEL[f.status]}</Badge>

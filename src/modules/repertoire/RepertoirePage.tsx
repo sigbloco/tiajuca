@@ -101,8 +101,8 @@ export function RepertoirePage() {
             <div className={cn('h-2', COLOR_DOT[r.color])} />
             <div className="space-y-2 p-4">
               <Link to={`/${membership?.slug}/repertorio/${r.id}`} className="block">
-                <h2 className="flex items-center gap-2"><Music2 className="h-5 w-5 shrink-0" /><span className="truncate">{r.name}</span></h2>
-                {r.description && <p className="line-clamp-2 text-muted-foreground">{r.description}</p>}
+                <h2 className="flex items-center gap-2"><Music2 className="h-5 w-5 shrink-0" /><span className="break-words">{r.name}</span></h2>
+                {r.description && <p className=" text-muted-foreground">{r.description}</p>}
               </Link>
               <div className="flex items-center justify-between">
                 <Badge>{r.songs[0]?.count ?? 0} {(r.songs[0]?.count ?? 0) === 1 ? 'música' : 'músicas'}</Badge>

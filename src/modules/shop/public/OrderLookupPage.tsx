@@ -103,7 +103,7 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
             {pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar comprovante pelo WhatsApp</a>}
             {pix.mailtoUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.mailtoUrl}>Enviar por e-mail</a>}
           </div>
-          <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando…' : 'Já fiz o pagamento'}</Button>
+          <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
           {order.expires_at && <p className="text-sm text-muted-foreground">Itens reservados até {formatDateTime(order.expires_at)}.</p>}
         </Card>
       )}
@@ -188,7 +188,7 @@ export function OrderLookupPage() {
           <div className="space-y-1.5"><Label htmlFor="lk-code">Código do pedido</Label>
             <Input id="lk-code" autoCapitalize="characters" autoComplete="off" maxLength={12} className="uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} /></div>
           <div className="space-y-1.5"><Label htmlFor="lk-phone">Telefone</Label><PhoneInput id="lk-phone" value={phone} onChange={setPhone} /></div>
-          <Button type="submit" className="w-full" disabled={search.isPending || code.trim().length < 6 || phone.replace(/\D/g, '').length < 10}>{search.isPending ? 'Buscando…' : 'Consultar pedido'}</Button>
+          <Button type="submit" className="w-full" disabled={search.isPending || code.trim().length < 6 || phone.replace(/\D/g, '').length < 10}>{search.isPending ? 'Buscando' : 'Consultar pedido'}</Button>
         </form>
       </Card>
       {data && <OrderView data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
