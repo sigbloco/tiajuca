@@ -1,4 +1,5 @@
 import { MemberLink } from '@/modules/members/MemberLink'
+import { COMP_LABEL, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
@@ -31,7 +32,7 @@ import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './Structu
 
 type Kind = 'professor' | 'monitor' | 'regente'
 type Scope = 'section' | 'subsection' | 'instrument'
-interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+interface Assignment { compensation: Compensation; id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
 
 const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsection_id', instrument: 'instrument_id' }
 
@@ -41,26 +42,34 @@ const KIND_LABEL: Record<Kind, string> = { professor: 'Professor', monitor: 'Mon
 function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit: boolean; kinds?: Kind[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
+  const { cycleId } = useSelectedCycle()
   const [adding, setAdding] = useState<Kind | null>(null)
+  const [comp, setComp] = useState<Compensation | null>(null)
   const labeler = usePersonLabeler()
   const col = COL[scope] as 'section_id' | 'subsection_id' | 'instrument_id'
   const { data } = useQuery({
-    queryKey: ['staff-assignments', orgId],
+    queryKey: ['staff-assignments', orgId, 'naipes', cycleId],
+    enabled: Boolean(cycleId),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name), cycles!inner(is_current)')
-        .eq('organization_id', orgId).is('valid_to', null).eq('cycles.is_current', true).limit(3000)
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, compensation, section_id, subsection_id, instrument_id, members(full_name, display_name)')
+        .eq('organization_id', orgId).is('valid_to', null).eq('cycle_id', cycleId).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]
     },
   })
-  const refresh = () => qc.invalidateQueries({ queryKey: ['staff-assignments', orgId] })
+  const refresh = () => qc.invalidateQueries({ queryKey: ['staff-assignments'] })
   const mine = (data ?? []).filter((a) => a[col] === id)
   const add = useMutation({
     mutationFn: async (v: { member: string; kind: Kind }) => {
-      const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: v.member, staff_kind: v.kind, [col]: id })
+      const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: v.member, staff_kind: v.kind, [col]: id, compensation: comp, cycle_id: cycleId })
       if (error) throw error
     },
-    onSuccess: () => { refresh(); setAdding(null); toast.success('Pessoa designada.') },
+    onSuccess: () => { refresh(); setAdding(null); setComp(null); toast.success('Pessoa designada.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const setCompensation = useMutation({
+    mutationFn: async (v: { id: string; compensation: Compensation }) => { const { error } = await supabase.from('staff_assignments').update({ compensation: v.compensation }).eq('id', v.id); if (error) throw error },
+    onSuccess: () => refresh(),
     onError: (e) => toast.error(friendlyError(e)),
   })
   const end = useMutation({
@@ -82,14 +91,15 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
         </div>
       )}
       {adding && (
-        <div className="max-w-sm">
-          <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} />
+        <div className="max-w-sm space-y-1.5">
+          <CompensationPick value={comp} onChange={setComp} />
+          {comp ? <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou voluntária.</p>}
         </div>
       )}
       {mine.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {[...mine].sort((a, b) => KIND_LABEL[a.staff_kind].localeCompare(KIND_LABEL[b.staff_kind], 'pt-BR') || labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR')).map((a) => (
-            <Chip key={a.id} label={<><MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {KIND_LABEL[a.staff_kind]}</>} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
+            <Chip key={a.id} label={<><MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {KIND_LABEL[a.staff_kind]} · {canEdit ? <button type="button" className="underline" title="Trocar entre remunerada e voluntária" onClick={() => setCompensation.mutate({ id: a.id, compensation: a.compensation === 'paid' ? 'volunteer' : 'paid' })}>{COMP_LABEL[a.compensation]}</button> : COMP_LABEL[a.compensation]}</>} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
           ))}
         </div>
       )}

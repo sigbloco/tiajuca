@@ -144,7 +144,7 @@ export function TeamPage() {
     enabled: Boolean(cycleId),
     queryFn: async () => {
       const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, members(full_name, display_name)')
-        .eq('organization_id', orgId).eq('cycle_id', cycleId).is('valid_to', null).limit(3000)
+        .eq('organization_id', orgId).eq('cycle_id', cycleId).eq('compensation', 'paid').is('valid_to', null).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as { member_id: string; staff_kind: string; members: { full_name: string; display_name: string | null } | null }[]
     },
@@ -237,7 +237,7 @@ export function TeamPage() {
         de todas as oficinas, de um naipe, de um subnaipe ou de um instrumento. Os valores podem mudar de um ciclo para o seguinte.
       </ReadMore>
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
-      {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Designe professores e monitores em Naipes ou adicione uma pessoa abaixo.</EmptyState>}
+      {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque atribuições como remuneradas em Naipes ou na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
       <div className="space-y-2">
         {people.map((p) => {
           const mine = (rules.data ?? []).filter((r) => r.member_id === p.id)
