@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency } from '@/core/format'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, productAvailability } from '../catalog'
 import { ProductSheet } from './ProductSheet'
-import { imageUrl, listProducts, reorderProducts, type ShopProduct } from './service'
+import { imageUrl, listProducts, reorderProducts, setProductActive, type ShopProduct } from './service'
 import { getSettings } from './settings'
 
 function stockSummary(p: ShopProduct): string {
@@ -28,12 +29,17 @@ export function ProductsTab() {
   const [local, setLocal] = useState<string[] | null>(null) // ordem provisória enquanto arrasta
   const [dragId, setDragId] = useState<string | null>(null)
   const items = (() => {
-    const list = q.data ?? []
+    const list = (q.data ?? []).filter((p) => p.is_active)
     if (!local) return list
     const byId = new Map(list.map((p) => [p.id, p]))
     const ordered = local.map((id) => byId.get(id)).filter((p): p is ShopProduct => Boolean(p))
     return [...ordered, ...list.filter((p) => !local.includes(p.id))]
   })()
+  const restore = useMutation({
+    mutationFn: (id: string) => setProductActive(id, true),
+    onSuccess: () => { toast.success('Produto restaurado na loja.'); qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const save = useMutation({
     mutationFn: (ids: string[]) => reorderProducts(orgId, ids),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }).then(() => setLocal(null)),
@@ -69,7 +75,10 @@ export function ProductsTab() {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Produtos</h2>
-        <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
+        <div className="flex gap-2">
+          <TrashDrawer entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
+          <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
+        </div>
       </div>
       {q.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}

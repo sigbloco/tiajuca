@@ -69,7 +69,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
 
   const toggle = useMutation({
     mutationFn: () => setProductActive(product!.id, !product!.is_active),
-    onSuccess: () => { refresh(); toast.success(product!.is_active ? 'Produto escondido da loja.' : 'Produto publicado na loja.'); onClose() },
+    onSuccess: () => { refresh(); toast.success(product!.is_active ? 'Produto movido para a lixeira.' : 'Produto restaurado na loja.'); onClose() },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -171,8 +171,8 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
             <ImagePlus className="h-4 w-4" /> {upload.isPending ? 'Enviando…' : 'Adicionar fotos'}
           </Button>
           <Button type="button" variant="ghost" className={product.is_active ? 'w-full text-destructive' : 'w-full'} disabled={toggle.isPending}
-            onClick={() => (!product.is_active || window.confirm('Esconder da loja? Pedidos já feitos não mudam.')) && toggle.mutate()}>
-            {product.is_active ? 'Esconder da loja' : 'Publicar na loja'}
+            onClick={() => (!product.is_active || window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>
+            {product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'}
           </Button>
         </div>
       ) : (

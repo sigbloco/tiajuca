@@ -1,3 +1,4 @@
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FolderOpen, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -83,7 +84,7 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
     onSuccess: () => {
       const was = folder!.is_active
       qc.invalidateQueries({ queryKey: ['drive-folders', orgId] }); onClose()
-      notifyChange(was ? 'Pasta desativada.' : 'Pasta reativada.', async () => {
+      notifyChange(was ? 'Pasta movida para a lixeira.' : 'Pasta restaurada.', async () => {
         const { error } = await supabase.from('drive_folders').update({ is_active: was }).eq('id', folder!.id)
         if (error) throw error
         qc.invalidateQueries({ queryKey: ['drive-folders', orgId] })
@@ -128,8 +129,8 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
         <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending}>Salvar</Button>
         {folder && (
           <Button type="button" variant="ghost" className={folder.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
-            if (!folder.is_active || window.confirm('Desativar esta pasta? Ela some do app, mas o cadastro é mantido.')) toggleActive.mutate()
-          }}>{folder.is_active ? 'Desativar pasta' : 'Reativar pasta'}</Button>
+            if (!folder.is_active || window.confirm('Mover esta pasta para a lixeira? Ela some do app, o cadastro é mantido e você pode restaurar depois.')) toggleActive.mutate()
+          }}>{folder.is_active ? 'Mover para a lixeira' : 'Restaurar pasta'}</Button>
         )}
       </form>
     </SheetContent>
@@ -190,6 +191,12 @@ export function DriveFoldersPage() {
   const orgId = useOrgId()
   const canManage = usePermission('drive.manage')
   const folders = useFolders(orgId)
+  const pageQc = useQueryClient()
+  const restoreFolder = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('drive_folders').update({ is_active: true }).eq('id', id); if (error) throw error },
+    onSuccess: () => { toast.success('Pasta restaurada.'); pageQc.invalidateQueries({ queryKey: ['drive-folders', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
   const [sheet, setSheet] = useState<{ folder: Folder | null } | null>(null)
@@ -228,7 +235,10 @@ export function DriveFoldersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1>Google Drive</h1>
-        {canManage && <Button onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
+        <div className="flex gap-2">
+          {canManage && <TrashDrawer entries={(folders.data ?? []).filter((f) => !f.is_active).map((f) => ({ id: f.id, name: f.name, detail: f.description ?? undefined }))} onRestore={(id) => restoreFolder.mutate(id)} />}
+          {canManage && <Button onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
+        </div>
       </div>
       <p className="text-muted-foreground">{canManage
         ? 'Pastas do Google Drive do bloco: partituras, fotos, documentos, atas… Adicione quantas quiser e escolha quem vê cada uma (por papel, naipe ou instrumento). Use “Sincronizar acesso” para compartilhar a pasta no Drive com essas pessoas.'
@@ -236,7 +246,7 @@ export function DriveFoldersPage() {
       {folders.isLoading && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {folders.data?.length === 0 && <EmptyState>{canManage ? 'Nenhuma pasta ainda. Use “Adicionar pasta”, cole o link e escolha quem pode vê-la.' : 'Nenhuma pasta liberada para o seu perfil.'}</EmptyState>}
       <div className="grid gap-3 sm:grid-cols-2">
-        {folders.data?.map((f) => {
+        {folders.data?.filter((f) => f.is_active).map((f) => {
           const who = canManage ? whoSees(f.id) : []
           return (
             <Card key={f.id} className={`space-y-2 p-4 ${f.is_active ? '' : 'opacity-60'}`}>

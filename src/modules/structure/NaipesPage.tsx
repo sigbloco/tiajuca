@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
 import { SaveInput } from '@/components/shared/ConfirmField'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
@@ -220,6 +221,24 @@ export function NaipesPage() {
     onSuccess: () => { notifySaved('Criado.'); invalidateCatalog(qc, orgId) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const secName = new Map((sections.data ?? []).map((s) => [s.id, s]))
+  const restore = useMutation({
+    mutationFn: async (v: { table: CatalogTable; id: string }) => {
+      const { error } = await supabase.from(v.table).update({ is_active: true }).eq('id', v.id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { notifySaved('Restaurado.'); invalidateCatalog(qc, orgId) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const purge = useMutation({
+    mutationFn: async (v: { table: CatalogTable; id: string }) => {
+      const { error } = await supabase.from(v.table).delete().eq('id', v.id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { notifySaved('Excluído de vez.'); invalidateCatalog(qc, orgId) },
+    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e))
+      ? 'Não dá para excluir de vez: há itens dentro, pessoas, vagas ou músicas ligadas a ele. Deixe na lixeira.' : friendlyError(e)),
+  })
   /** A lixeira move para a Lixeira (menu): dá para restaurar ou excluir de vez por lá. */
   const confirmDelete = (table: CatalogTable, item: CatalogItem, what: string) => {
     if (window.confirm(`Mover ${what} “${item.name}” para a Lixeira? Você pode restaurar depois.`)) (table === 'sections' ? secMut : instMut).save.mutate({ id: item.id, name: item.name, is_active: false })
@@ -261,6 +280,12 @@ export function NaipesPage() {
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="organograma"><Network className="h-4 w-4" /> Organograma</Link></Button>
           {canEdit && <Button asChild variant="outline"><Link to="configuracoes"><Settings className="h-4 w-4" /> Configurações</Link></Button>}
+          {canEdit && (
+            <TrashDrawer groups={[
+              { label: 'Naipes', entries: (sections.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
+              { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
+            ]} />
+          )}
           {canEdit && <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>}
         </div>
       </div>
