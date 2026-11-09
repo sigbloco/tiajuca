@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { BalancedGrid } from '@/components/shared/BalancedGrid'
 import { ArrowDown, ArrowUp, Music2, Pencil, Plus, Save } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -95,7 +96,7 @@ export function RepertoirePage() {
       </div>
       {isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {data?.length === 0 && <EmptyState>Nenhum repertório ainda.{canManage ? ' Crie o primeiro para começar a cadastrar músicas.' : ''}</EmptyState>}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <BalancedGrid>
         {data?.filter((r) => r.is_active).map((r, i) => (
           <Card key={r.id} className={cn('overflow-hidden', !r.is_active && 'opacity-60')}>
             <div className={cn('h-2', COLOR_DOT[r.color])} />
@@ -118,7 +119,7 @@ export function RepertoirePage() {
             </div>
           </Card>
         ))}
-      </div>
+      </BalancedGrid>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <RepertoireSheet key={sheet.rep?.id ?? 'new'} rep={sheet.rep} onClose={() => setSheet(null)} />}
       </Sheet>

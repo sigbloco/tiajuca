@@ -1,4 +1,5 @@
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { BalancedGrid } from '@/components/shared/BalancedGrid'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FolderOpen, Pencil, Plus, RefreshCw, Save } from 'lucide-react'
@@ -246,7 +247,7 @@ export function DriveFoldersPage() {
         : 'Pastas do Google Drive liberadas para o seu perfil.'}</ReadMore>
       {folders.isLoading && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {folders.data?.length === 0 && <EmptyState>{canManage ? 'Nenhuma pasta ainda. Use “Adicionar pasta”, cole o link e escolha quem pode vê-la.' : 'Nenhuma pasta liberada para o seu perfil.'}</EmptyState>}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <BalancedGrid max={2}>
         {folders.data?.filter((f) => f.is_active).map((f) => {
           const who = canManage ? whoSees(f.id) : []
           return (
@@ -282,7 +283,7 @@ export function DriveFoldersPage() {
             </Card>
           )
         })}
-      </div>
+      </BalancedGrid>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && (
           <FolderSheet key={sheet.folder?.id ?? 'new'} folder={sheet.folder} onClose={() => setSheet(null)}
