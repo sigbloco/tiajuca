@@ -42,6 +42,8 @@ import { ShopLayout } from '@/modules/shop/public/ShopLayout'
 import { LandingPage } from '@/modules/site/LandingPage'
 import { AppShell } from './AppShell'
 import { FinanceHome, HubHome, HubLayout } from './Hub'
+import { TeamPage } from '@/modules/finance/TeamPage'
+import { ValuesPage } from '@/modules/billing/ValuesPage'
 
 const Loading = () => <div className="p-8"><Skeleton className="h-10 w-64" /></div>
 
@@ -140,7 +142,10 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="financeiro" />,
                   children: [
-                    { path: 'mensalidades', element: <BillingPage /> },
+                    { path: 'equipe', element: <TeamPage /> },
+                    { path: 'valores', element: <ValuesPage /> },
+                    { path: 'cobrancas', element: <BillingPage /> },
+                    { path: 'mensalidades', element: <Navigate to="../cobrancas" replace relative="path" /> },
                     { path: 'bolsas', element: <ScholarshipsPage /> },
                   ],
                 },

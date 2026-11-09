@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { CycleSelect } from '@/modules/cycles/CycleSelect'
+import { useCycles } from '@/modules/cycles/service'
 import { Badge, Button, Card, EmptyState, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -15,6 +17,7 @@ interface Row {
   percent: number
   reason: string | null
   valid_from: string
+  valid_to: string | null
   members: { full_name: string; display_name: string | null } | null
   scholarship_types: { name: string } | null
 }
@@ -34,6 +37,9 @@ export function ScholarshipsPage() {
   const orgId = useOrgId()
   const [sheet, setSheet] = useState<{ memberId: string; name: string } | 'new' | null>(null)
   const [newMember, setNewMember] = useState('')
+  const [cycleId, setCycleId] = useState('')
+  const cycles = useCycles()
+  const cycle = (cycles.data ?? []).find((c) => c.id === cycleId)
 
   const ind = useQuery({
     queryKey: ['scholarships', orgId, 'indicators'],
@@ -47,31 +53,36 @@ export function ScholarshipsPage() {
     queryKey: ['scholarships', orgId, 'list'],
     queryFn: async () => {
       const { data, error } = await supabase.from('scholarships')
-        .select('id, member_id, percent, reason, valid_from, members(full_name, display_name), scholarship_types(name)')
-        .eq('organization_id', orgId).is('valid_to', null).order('percent', { ascending: false })
+        .select('id, member_id, percent, reason, valid_from, valid_to, members(full_name, display_name), scholarship_types(name)')
+        .eq('organization_id', orgId).order('percent', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as Row[]
     },
   })
-  const i = ind.data
+  // Bolsas do ciclo: as que valem em algum momento dele.
+  const rows = (list.data ?? []).filter((r) => !cycle || (r.valid_from <= cycle.ends_on && (!r.valid_to || r.valid_to >= cycle.starts_on)))
+  const i = cycle && !cycle.is_current
+    ? { bolsistas: rows.length, soma_percentual: rows.reduce((n, r) => n + Number(r.percent), 0), equivalente_integrais: rows.reduce((n, r) => n + Number(r.percent), 0) / 100, impacto_estimado: null as number | null }
+    : ind.data
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1>Bolsas</h1>
-        <Button onClick={() => { setNewMember(''); setSheet('new') }}><Plus className="h-4 w-4" /> Nova bolsa</Button>
+        <div className="flex flex-wrap items-center gap-2"><CycleSelect value={cycleId} onChange={setCycleId} />
+        <Button onClick={() => { setNewMember(''); setSheet('new') }}><Plus className="h-4 w-4" /> Nova bolsa</Button></div>
       </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Pessoas bolsistas" value={String(i?.bolsistas ?? 0)} />
         <Stat label="Soma dos percentuais" value={`${Number(i?.soma_percentual ?? 0).toLocaleString('pt-BR')}%`} />
         <Stat label="Equivalente em bolsas integrais" value={Number(i?.equivalente_integrais ?? 0).toLocaleString('pt-BR')} hint="soma ÷ 100" />
-        <Stat label="Impacto mensal estimado" value={formatCurrency(Number(i?.impacto_estimado ?? 0))} hint="pelo valor atual de cada categoria" />
+        <Stat label="Impacto mensal estimado" value={i?.impacto_estimado == null ? '—' : formatCurrency(Number(i.impacto_estimado))} hint="pelo valor atual de cada categoria" />
       </div>
 
       {list.isLoading && <Skeleton className="h-24" />}
-      {list.data?.length === 0 && <EmptyState>Nenhuma bolsa ativa.</EmptyState>}
+      {rows.length === 0 && !list.isLoading && <EmptyState>Nenhuma bolsa ativa.</EmptyState>}
       <div className="grid gap-2">
-        {list.data?.map((r) => {
+        {rows.map((r) => {
           const name = shortName(r.members?.full_name, r.members?.display_name) ?? ''
           return (
             <Card key={r.id} className="flex items-center justify-between gap-3 p-3">

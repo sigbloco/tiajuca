@@ -66,7 +66,7 @@ function MyStatus({ orgId, memberId, slug }: { orgId: string; memberId: string; 
       <Stat label="Ciclo atual" value={data.cycle?.name ?? '—'} />
       <Stat label="Meu status" value={data.status ?? 'Sem registro'} />
       <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />
-      <Link to={`/${slug}/mensalidades`}>
+      <Link to={`/${slug}/cobrancas`}>
         <Stat label="Mensalidade" value={data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
           hint={data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
       </Link>

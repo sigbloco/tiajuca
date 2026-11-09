@@ -1,5 +1,5 @@
 import {
-  Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
+  Award, Banknote, BarChart3, CircleDollarSign, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
   Globe, Home, ListChecks, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
@@ -8,7 +8,7 @@ import type { PermissionKey, PermissionScope } from '@/core/permissions'
 export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
 export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
   oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, vagas e novas inscrições.' },
-  financeiro: { label: 'Financeiro', icon: Banknote, description: 'Receitas, despesas, mensalidades e bolsas.', homePermission: 'finance.read' },
+  financeiro: { label: 'Financeiro', icon: Banknote, description: 'Equipe, valores, cobranças e bolsas, por ciclo.', homePermission: 'finance.read' },
   organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, checklists, funções e Google Drive.' },
 }
 export const HUB_ORDER: HubKey[] = ['oficina', 'financeiro', 'organizacao']
@@ -45,7 +45,9 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage', description: 'Formulários e novas inscrições para confirmar.' },
   { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
-  { to: 'mensalidades', label: 'Mensalidades', icon: Wallet, group: 'financeiro', permission: 'billing.read', description: 'Cobranças do mês e pagamentos.' },
+  { to: 'equipe', label: 'Equipe', icon: Users, group: 'financeiro', permission: 'finance.read', description: 'Quem recebe no ciclo e como: fixo e/ou porcentagem.' },
+  { to: 'valores', label: 'Valores', icon: CircleDollarSign, group: 'financeiro', permission: 'finance.read', description: 'Valor mensal de cada categoria, por ciclo.' },
+  { to: 'cobrancas', label: 'Cobranças', icon: Wallet, group: 'financeiro', permission: 'billing.read', description: 'Cobranças do mês e pagamentos.' },
   { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'financeiro', permission: 'scholarships.manage', description: 'Quem tem bolsa e quanto isso pesa.' },
 
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage', description: 'Períodos do bloco (ex.: Carnaval 2026/27).' },
