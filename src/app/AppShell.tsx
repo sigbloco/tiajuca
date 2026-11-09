@@ -1,4 +1,4 @@
-import { Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
@@ -12,7 +12,7 @@ import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
-import { HUBS, NAV_ITEMS, crumbsFor, type HubKey, type NavItem } from './navigation'
+import { HUBS, NAV_ITEMS, crumbsFor, type CameFrom, type HubKey, type NavItem } from './navigation'
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { ViewAsBar } from './ViewAsBar'
 
@@ -24,7 +24,8 @@ const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
 export function AppShell() {
   const { membership } = useOrganization()
   const { signOut } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, state } = useLocation()
+  const cameFrom = (state as { from?: CameFrom } | null)?.from
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
   const brandLogo = membership?.logo_path ?? null
@@ -97,6 +98,9 @@ export function AppShell() {
 
       <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
+        {cameFrom && (
+          <Link to={cameFrom.path} className="mb-1 inline-flex items-center gap-1 font-semibold text-primary hover:underline"><ArrowLeft className="h-4 w-4" /> Voltar para {cameFrom.label}</Link>
+        )}
         <Breadcrumbs crumbs={crumbs} home={base} />
         <CycleBar base={base} />
         <div id="edit-slot" className="-mx-4 md:-mx-8" />

@@ -65,6 +65,16 @@ export const NAV_ITEMS: NavItem[] = [
 
 const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Funções' }
 
+/** De onde o usuário saiu: guardado no estado da navegação para o "Voltar". */
+export interface CameFrom { path: string; label: string }
+
+/** Nome da página para o "Voltar para …" (o último item do caminho de navegação; "Início" na raiz). */
+export function pageLabel(pathname: string, base: string): string {
+  const segs = pathname.slice(base.length).split('/').filter(Boolean)
+  const c = crumbsFor(segs, base)
+  return c.length ? c[c.length - 1].label : 'Início'
+}
+
 /** Caminho de navegação (breadcrumb) a partir das partes da URL depois do slug. O último item é a página atual (sem link). */
 export function crumbsFor(segs: string[], base: string): { label: string; to?: string }[] {
   if (segs.length === 0) return []

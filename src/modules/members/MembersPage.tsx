@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
 import { Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import type { CameFrom } from '@/app/navigation'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
@@ -109,7 +110,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     void supabase.from('members').select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at').eq('id', wantedId).maybeSingle()
       .then(({ data }) => { if (data) setSelected(data as MemberRow) })
   }, [wantedId]) // eslint-disable-line react-hooks/exhaustive-deps
-  const closeSheet = () => { setSelected(null); if (wantedId) setParams({}, { replace: true }) }
+  const navigate = useNavigate()
+  const cameFrom = (useLocation().state as { from?: CameFrom } | null)?.from
+  // O "x" da ficha leva de volta à página de onde a pessoa veio (se veio de outra); senão só fecha a ficha.
+  const closeSheet = () => {
+    setSelected(null)
+    if (wantedId && cameFrom) navigate(cameFrom.path)
+    else if (wantedId) setParams({}, { replace: true })
+  }
   const { data: cycles } = useCycles()
   const { data: statuses } = useCycleStatuses()
 
