@@ -56,12 +56,14 @@ export function formatDayLong(iso: string): string {
   )
 }
 
-/** Curto (celular): "SEG 16/11". */
-export function formatDayShort(iso: string): string {
-  const m = /^(d{4})-(d{2})-(d{2})/.exec(iso)
+const WD3 = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
+
+/** Curto: "SEG · 16/11" (com horário: "SEG · 16/11 · 19:30"). */
+export function formatDayShort(iso: string, time?: string | null): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
   if (!m) return iso
-  const wd = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))))
-  return `${wd.replace('.', '').toUpperCase()} ${m[3]}/${m[2]}`
+  const wd = WD3[new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay()]
+  return `${wd} · ${m[3]}/${m[2]}${time ? ` · ${time.slice(0, 5)}` : ''}`
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
