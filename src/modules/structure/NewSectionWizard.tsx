@@ -9,13 +9,16 @@ import { shortName } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
+import { COMP_LABEL, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useCatalog } from './CatalogEditor'
 import { NO_PITCH } from '@/modules/repertoire/service'
 import { TuningChips } from './TuningChips'
 import { invalidateCatalog, itemPlural, saveCatalogItem } from './service'
 import { nextOrder } from './StructureManagers'
 
-type Staff = { professors: string[]; monitors: string[] }
+type StaffPerson = { id: string; comp: Compensation }
+type Staff = { professors: StaffPerson[]; monitors: StaffPerson[] }
 const EMPTY_STAFF: Staff = { professors: [], monitors: [] }
 type Inst = { name: string; tuning: string | null }
 interface Person { id: string; full_name: string; display_name: string | null }
@@ -37,18 +40,20 @@ function StaffPick({ value, onChange }: { value: Staff; onChange: (v: Staff) => 
   const people = usePeople()
   const name = (id: string) => { const p = people.data?.find((x) => x.id === id); return p ? shortName(p.full_name, p.display_name) : '—' }
   const [adding, setAdding] = useState<keyof Staff | null>(null)
+  const [comp, setComp] = useState<Compensation | null>(null)
   const rows: [keyof Staff, string][] = [['professors', 'Professores'], ['monitors', 'Monitores']]
   return (
     <div className="space-y-2">
       {rows.map(([k, label]) => (
         <div key={k} className="flex flex-wrap items-center gap-1.5">
           <span className="w-24 shrink-0 text-sm font-semibold text-muted-foreground">{label}</span>
-          {value[k].map((id) => <Chip key={id} label={name(id)} onRemove={() => onChange({ ...value, [k]: value[k].filter((x) => x !== id) })} removeLabel={`Tirar ${name(id)}`} />)}
+          {value[k].map((p) => <Chip key={p.id} label={`${name(p.id)} · ${COMP_LABEL[p.comp]}`} onRemove={() => onChange({ ...value, [k]: value[k].filter((x) => x.id !== p.id) })} removeLabel={`Tirar ${name(p.id)}`} />)}
           {value[k].length === 0 && <span className="text-sm text-muted-foreground">ninguém</span>}
-          {adding !== k && <Button type="button" size="sm" variant="outline" onClick={() => setAdding(k)}><Plus className="h-4 w-4" /> Adicionar</Button>}
+          {adding !== k && <Button type="button" size="sm" variant="outline" onClick={() => { setComp(null); setAdding(k) }}><Plus className="h-4 w-4" /> Adicionar</Button>}
           {adding === k && (
-            <div className="w-full max-w-sm">
-              <MemberPicker onlyActive value="" onChange={(id) => { if (id && !value[k].includes(id)) onChange({ ...value, [k]: [...value[k], id] }); setAdding(null) }} />
+            <div className="w-full max-w-sm space-y-1.5">
+              <CompensationPick value={comp} onChange={setComp} />
+              {comp ? <MemberPicker onlyActive value="" onChange={(id) => { if (id && !value[k].some((x) => x.id === id)) onChange({ ...value, [k]: [...value[k], { id, comp }] }); setAdding(null) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou voluntária.</p>}
               <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(null)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
             </div>
           )}
@@ -84,10 +89,11 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
   const [insts, setInsts] = useState<Inst[]>([])
   const [staff, setStaff] = useState<Staff>(EMPTY_STAFF)
   const instruments = useCatalog('instruments')
+  const { cycleId } = useSelectedCycle()
 
   const reset = () => onClose()
-  const assign = async (member: string, kind: 'professor' | 'monitor', col: 'section_id', id: string) => {
-    const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: member, staff_kind: kind, [col]: id })
+  const assign = async (member: StaffPerson, kind: 'professor' | 'monitor', col: 'section_id', id: string) => {
+    const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: member.id, staff_kind: kind, [col]: id, compensation: member.comp, cycle_id: cycleId })
     if (error) throw error
   }
   const create = useMutation({

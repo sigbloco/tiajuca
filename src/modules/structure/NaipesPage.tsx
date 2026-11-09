@@ -1,5 +1,5 @@
 import { MemberLink } from '@/modules/members/MemberLink'
-import { COMP_LABEL, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
+import { CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
@@ -67,11 +67,6 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
     onSuccess: () => { refresh(); setAdding(null); setComp(null); toast.success('Pessoa designada.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const setCompensation = useMutation({
-    mutationFn: async (v: { id: string; compensation: Compensation }) => { const { error } = await supabase.from('staff_assignments').update({ compensation: v.compensation }).eq('id', v.id); if (error) throw error },
-    onSuccess: () => refresh(),
-    onError: (e) => toast.error(friendlyError(e)),
-  })
   const end = useMutation({
     mutationFn: async (a: string) => {
       const { error } = await supabase.from('staff_assignments').update({ valid_to: new Date().toISOString().slice(0, 10) }).eq('id', a)
@@ -99,7 +94,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
       {mine.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {[...mine].sort((a, b) => KIND_LABEL[a.staff_kind].localeCompare(KIND_LABEL[b.staff_kind], 'pt-BR') || labeler(a.members ?? { full_name: '', display_name: null }).localeCompare(labeler(b.members ?? { full_name: '', display_name: null }), 'pt-BR')).map((a) => (
-            <Chip key={a.id} label={<><MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {KIND_LABEL[a.staff_kind]} · {canEdit ? <button type="button" className="underline" title="Trocar entre remunerada e voluntária" onClick={() => setCompensation.mutate({ id: a.id, compensation: a.compensation === 'paid' ? 'volunteer' : 'paid' })}>{COMP_LABEL[a.compensation]}</button> : COMP_LABEL[a.compensation]}</>} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
+            <Chip key={a.id} label={<><MemberLink id={a.member_id}>{labeler(a.members ?? { full_name: '', display_name: null })}</MemberLink> · {KIND_LABEL[a.staff_kind]}</>} onRemove={canEdit ? () => end.mutate(a.id) : undefined} removeLabel={`Tirar ${a.members?.full_name ?? ''}`} />
           ))}
         </div>
       )}
