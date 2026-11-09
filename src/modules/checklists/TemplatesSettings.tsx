@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Button, Card, EmptyState, Input, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
@@ -70,7 +71,15 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-3">
-      <h2>Modelos de checklist</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2>Modelos de checklist</h2>
+        {canEdit && (
+          <TrashDrawer groups={[
+            { label: 'Modelos', entries: (templates.data ?? []).filter((t) => !t.is_active).map((t) => ({ id: t.id, name: t.name })), onRestore: (id) => patchTemplate.mutate({ id, patch: { is_active: true } }) },
+            { label: 'Tarefas', entries: (items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.title, detail: templates.data?.find((t) => t.id === i.template_id)?.name })), onRestore: (id) => patchItem.mutate({ id, patch: { is_active: true } }) },
+          ]} />
+        )}
+      </div>
       <p className="text-muted-foreground">Ao usar um modelo num evento, as tarefas são copiadas para ele. Depois, cada evento pode ter tarefas próprias.</p>
       {canEdit && (
         <Card className="flex gap-2 p-3">
@@ -80,11 +89,11 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
       )}
       {templates.data?.length === 0 && <EmptyState>Nenhum modelo.</EmptyState>}
       <div className="space-y-2">
-        {templates.data?.map((t) => {
-          const list = (items.data ?? []).filter((i) => i.template_id === t.id)
+        {templates.data?.filter((t) => t.is_active).map((t) => {
+          const list = (items.data ?? []).filter((i) => i.template_id === t.id && i.is_active)
           return (
-            <Collapsible key={t.id} open={open.has(t.id)} onToggle={() => toggle(t.id)} title={<span className={cn(!t.is_active && 'opacity-60')}>{t.name}</span>} count={list.filter((i) => i.is_active).length}
-              right={canEdit ? <Button size="sm" variant="outline" onClick={() => patchTemplate.mutate({ id: t.id, patch: { is_active: !t.is_active } })}>{t.is_active ? 'Desativar' : 'Ativar'}</Button> : undefined}>
+            <Collapsible key={t.id} open={open.has(t.id)} onToggle={() => toggle(t.id)} title={<span className={cn(!t.is_active && 'opacity-60')}>{t.name}</span>} count={list.length}
+              right={canEdit ? <Button size="sm" variant="outline" onClick={() => patchTemplate.mutate({ id: t.id, patch: { is_active: !t.is_active } })}>Mover para a lixeira</Button> : undefined}>
               {list.map((i, idx) => (
                 <div key={i.id} className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !i.is_active && 'opacity-60')}>
                   <div className="flex flex-col">
@@ -93,7 +102,7 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
                   </div>
                   <Input className="h-9 flex-1 border-transparent bg-transparent font-semibold" defaultValue={i.title} disabled={!canEdit}
                     onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== i.title) patchItem.mutate({ id: i.id, patch: { title: v } }); else e.target.value = i.title }} />
-                  {canEdit && <Button size="sm" variant="outline" onClick={() => patchItem.mutate({ id: i.id, patch: { is_active: !i.is_active } })}>{i.is_active ? 'Remover' : 'Restaurar'}</Button>}
+                  {canEdit && <Button size="sm" variant="outline" onClick={() => patchItem.mutate({ id: i.id, patch: { is_active: !i.is_active } })}>Mover para a lixeira</Button>}
                 </div>
               ))}
               {canEdit && (

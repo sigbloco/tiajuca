@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Music2, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -31,7 +32,7 @@ export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onCl
       const { error } = await supabase.from('repertoires').update({ is_active: !rep!.is_active }).eq('id', rep!.id)
       if (error) throw error
     },
-    onSuccess: () => { toast.success(rep!.is_active ? 'Repertório desativado.' : 'Repertório reativado.'); qc.invalidateQueries({ queryKey: ['repertoires', orgId] }); onClose() },
+    onSuccess: () => { toast.success(rep!.is_active ? 'Repertório movido para a lixeira.' : 'Repertório restaurado.'); qc.invalidateQueries({ queryKey: ['repertoires', orgId] }); onClose() },
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
@@ -42,8 +43,8 @@ export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onCl
         <Button type="submit" className="w-full" disabled={!f.name.trim() || save.isPending}>Salvar</Button>
         {rep && (
           <Button type="button" variant="ghost" className={rep.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
-            if (!rep.is_active || window.confirm('Desativar este repertório? As músicas e o histórico são mantidos.')) toggle.mutate()
-          }}>{rep.is_active ? 'Desativar repertório' : 'Reativar repertório'}</Button>
+            if (!rep.is_active || window.confirm('Mover este repertório para a lixeira? As músicas e o histórico são mantidos e você pode restaurar depois.')) toggle.mutate()
+          }}>{rep.is_active ? 'Mover para a lixeira' : 'Restaurar repertório'}</Button>
         )}
       </form>
     </SheetContent>
@@ -74,18 +75,28 @@ export function RepertoirePage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const restoreRep = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('repertoires').update({ is_active: true }).eq('id', id); if (error) throw error },
+    onSuccess: () => { toast.success('Repertório restaurado.'); qc.invalidateQueries({ queryKey: ['repertoires', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1>Repertório</h1>
         <div className="flex flex-wrap gap-2">
+          {canManage && (
+            <TrashDrawer entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
+              onRestore={(id) => restoreRep.mutate(id)} />
+          )}
           {canManage && <Button onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
         </div>
       </div>
       {isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {data?.length === 0 && <EmptyState>Nenhum repertório ainda.{canManage ? ' Crie o primeiro para começar a cadastrar músicas.' : ''}</EmptyState>}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {data?.map((r, i) => (
+        {data?.filter((r) => r.is_active).map((r, i) => (
           <Card key={r.id} className={cn('overflow-hidden', !r.is_active && 'opacity-60')}>
             <div className={cn('h-2', COLOR_DOT[r.color])} />
             <div className="space-y-2 p-4">

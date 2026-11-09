@@ -3,7 +3,8 @@ import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Pencil, Plus, Share2 } fr
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { EMPTY_FILTER, FilterBar, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -41,11 +42,16 @@ export function RepertoireDetailPage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const restoreSong = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('songs').update({ is_active: true }).eq('id', id); if (error) throw error },
+    onSuccess: () => { toast.success('Música restaurada.'); qc.invalidateQueries({ queryKey: ['songs', orgId, repertoireId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const text = rep && songs.data ? shareText(rep, songs.data) : ''
   const copy = async () => { try { await navigator.clipboard.writeText(text); toast.success('Repertório copiado. Cole onde quiser.') } catch { toast.error('Não foi possível copiar.') } }
   const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
 
-  const visible = (songs.data ?? []).filter((s) => matchesStatus(s.is_active, filter.status) && matchesText(`${s.title} ${s.artist ?? ''}`, filter.search))
+  const visible = (songs.data ?? []).filter((s) => s.is_active && matchesText(`${s.title} ${s.artist ?? ''}`, filter.search))
 
   return (
     <div className="space-y-4">
@@ -61,6 +67,7 @@ export function RepertoireDetailPage() {
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" disabled={!text} onClick={copy}><Share2 className="h-4 w-4" /> Copiar lista</Button>
         <Button variant="outline" disabled={!text} onClick={whatsapp}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
+        {canManage && <TrashDrawer entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} />}
         {canManage && <Button onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
       </div>
 

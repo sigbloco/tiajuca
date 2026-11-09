@@ -5,8 +5,9 @@ import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
 import { ProgressiveList } from '@/components/shared/LoadMore'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { EMPTY_FILTER, FilterBar, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
+import { EMPTY_FILTER, FilterBar, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
@@ -60,7 +61,7 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
     onSuccess: () => {
       const was = sup!.is_active
       refresh(); onClose()
-      notifyChange(was ? 'Fornecedor desativado.' : 'Fornecedor reativado.', async () => {
+      notifyChange(was ? 'Fornecedor movido para a lixeira.' : 'Fornecedor restaurado.', async () => {
         const { error } = await supabase.from('suppliers').update({ is_active: was }).eq('id', sup!.id)
         if (error) throw error
         refresh()
@@ -88,8 +89,8 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
         <Button type="submit" className="w-full" disabled={!f.name.trim() || !f.category_id || save.isPending}>Salvar</Button>
         {sup && (
           <Button type="button" variant="ghost" className={sup.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
-            if (!sup.is_active || window.confirm('Desativar este fornecedor? Ele some da lista, mas o cadastro é mantido.')) toggle.mutate()
-          }}>{sup.is_active ? 'Desativar fornecedor' : 'Reativar fornecedor'}</Button>
+            if (!sup.is_active || window.confirm('Mover este fornecedor para a lixeira? Você pode restaurar depois.')) toggle.mutate()
+          }}>{sup.is_active ? 'Mover para a lixeira' : 'Restaurar fornecedor'}</Button>
         )}
       </form>
     </SheetContent>
@@ -125,11 +126,11 @@ function CategoriesSheet({ categories, onClose }: { categories: SupplierCategory
           <Button type="submit" disabled={!name.trim() || add.isPending}>Adicionar</Button>
         </form>
         <ul className="space-y-2">
-          {categories.map((c) => (
+          {categories.filter((c) => c.is_active).map((c) => (
             <li key={c.id} className="flex items-center gap-2">
               <Input aria-label={`Nome da categoria ${c.name}`} defaultValue={c.name} disabled={!c.is_active}
                 onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== c.name) patch.mutate({ id: c.id, name: v }) }} />
-              <Button size="sm" variant="outline" onClick={() => patch.mutate({ id: c.id, is_active: !c.is_active })}>{c.is_active ? 'Desativar' : 'Reativar'}</Button>
+              <Button size="sm" variant="outline" onClick={() => patch.mutate({ id: c.id, is_active: !c.is_active })}>Mover para a lixeira</Button>
             </li>
           ))}
         </ul>
@@ -175,12 +176,23 @@ export function SuppliersPage() {
     const searching = filter.search.trim() !== ''
     return (cats.data ?? []).map((c) => ({
       cat: c,
-      items: (sups.data ?? []).filter((s) => s.category_id === c.id && matchesStatus(s.is_active, filter.status === 'all' ? 'active' : filter.status)
+      items: (sups.data ?? []).filter((s) => s.category_id === c.id && s.is_active
         && matchesText(`${s.name} ${s.notes ?? ''} ${s.phone ?? ''} ${c.name}`, filter.search)),
       searching,
-    })).filter((g) => g.items.length > 0 || (!g.searching && filter.status === 'all' && g.cat.is_active))
+    })).filter((g) => g.items.length > 0 || (!g.searching && g.cat.is_active))
   }, [cats.data, sups.data, filter])
 
+  const qc = useQueryClient()
+  const refreshAll = () => qc.invalidateQueries({ queryKey: ['suppliers', orgId] })
+  const trashOp = useMutation({
+    mutationFn: async (v: { table: 'suppliers' | 'supplier_categories'; id: string; purge?: boolean }) => {
+      const { error } = v.purge ? await supabase.from(v.table).delete().eq('id', v.id) : await supabase.from(v.table).update({ is_active: true }).eq('id', v.id)
+      if (error) throw error
+    },
+    onSuccess: (_d, v) => { toast.success(v.purge ? 'Excluído de vez.' : 'Restaurado.'); refreshAll() },
+    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Não dá para excluir de vez: há itens ligados a ele. Deixe na lixeira.' : friendlyError(e)),
+  })
+  const catName = new Map((cats.data ?? []).map((c) => [c.id, c.name]))
   const loading = cats.isLoading || sups.isLoading
   return (
     <div className="space-y-4">
@@ -188,6 +200,12 @@ export function SuppliersPage() {
         <h1>Fornecedores</h1>
         <div className="flex gap-2">
           <FilterBar value={filter} onChange={setFilter} />
+          {canManage && (
+            <TrashDrawer groups={[
+              { label: 'Fornecedores', entries: (sups.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.name, detail: catName.get(s.category_id) })), onRestore: (id) => trashOp.mutate({ table: 'suppliers', id }), onPurge: (id) => trashOp.mutate({ table: 'suppliers', id, purge: true }) },
+              { label: 'Categorias', entries: (cats.data ?? []).filter((c) => !c.is_active).map((c) => ({ id: c.id, name: c.name })), onRestore: (id) => trashOp.mutate({ table: 'supplier_categories', id }), onPurge: (id) => trashOp.mutate({ table: 'supplier_categories', id, purge: true }) },
+            ]} />
+          )}
           {canManage && <Button variant="outline" onClick={() => setCatSheet(true)}><Tags className="h-4 w-4" /> Categorias</Button>}
           {canManage && <Button onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo</Button>}
         </div>

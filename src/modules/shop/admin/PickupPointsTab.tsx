@@ -3,10 +3,12 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, PhoneInput, TimeInput } from '@/components/ui/masked-inputs'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
 import { useOrgId } from '@/core/organization'
+import { supabase } from '@/core/supabase'
 import { WEEKDAYS_PLURAL, cleanSchedule, hasFutureSlot, scheduleText, validateSchedule, type ScheduleSlot } from './schedule'
 import { deletePickupPoint, listPickupPoints, savePickupPoint, type PickupPoint } from './service'
 
@@ -124,21 +126,34 @@ export function PickupPointsTab() {
   const q = useQuery({ queryKey: ['shop', orgId, 'pickup'], queryFn: () => listPickupPoints(orgId) })
   const today = todayIso()
   const qc = useQueryClient()
+  const refresh = () => qc.invalidateQueries({ queryKey: ['shop', orgId, 'pickup'] })
+  const setActive = useMutation({
+    mutationFn: async (v: { id: string; active: boolean }) => {
+      const { error } = await supabase.from('shop_pickup_points').update({ is_active: v.active }).eq('id', v.id)
+      if (error) throw error
+    },
+    onSuccess: (_d, v) => { refresh(); toast.success(v.active ? 'Ponto restaurado.' : 'Ponto movido para a lixeira.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const del = useMutation({
-    mutationFn: (p: PickupPoint) => deletePickupPoint(p.id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'pickup'] }); toast.success('Ponto de retirada excluído.') },
-    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Já existem pedidos com este ponto. Desative-o (Editar) em vez de excluir.' : friendlyError(e)),
+    mutationFn: (id: string) => deletePickupPoint(id),
+    onSuccess: () => { refresh(); toast.success('Ponto de retirada excluído de vez.') },
+    onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Já existem pedidos com este ponto. Deixe-o na lixeira.' : friendlyError(e)),
   })
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Pontos de retirada</h2>
-        <Button onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
+        <div className="flex gap-2">
+          <TrashDrawer entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: p.address }))}
+            onRestore={(id) => setActive.mutate({ id, active: true })} onPurge={(id) => del.mutate(id)} />
+          <Button onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
+        </div>
       </div>
       {q.isLoading && <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-16" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os pontos de retirada.</EmptyState>}
       {q.data?.length === 0 && <EmptyState>Nenhum ponto de retirada ainda.</EmptyState>}
-      {q.data?.map((p) => {
+      {q.data?.filter((p) => p.is_active).map((p) => {
         const when = scheduleText(p.schedule, p.opening_hours, today).text
         const expired = !hasFutureSlot(p.schedule, today)
         return (
@@ -150,7 +165,7 @@ export function PickupPointsTab() {
             </div>
             <div className="flex shrink-0">
               <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet({ point: p })}><Pencil className="h-4 w-4" /></Button>
-              <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${p.name}`} onClick={() => { if (window.confirm(`Excluir o ponto “${p.name}”? Isso não pode ser desfeito.`)) del.mutate(p) }}><Trash2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" onClick={() => { if (window.confirm(`Mover o ponto “${p.name}” para a lixeira? Você pode restaurar depois.`)) setActive.mutate({ id: p.id, active: false }) }}><Trash2 className="h-4 w-4" /></Button>
             </div>
           </Card>
         )

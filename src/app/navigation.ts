@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
-  Globe, Home, ListChecks, Music2, Palette, ShieldCheck, Store, Tags, Trash2, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Globe, Home, ListChecks, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -58,7 +58,6 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'gerenciar-loja', label: 'Loja', icon: Store, admin: true, permission: 'shop.manage', description: 'Produtos, estoque e pedidos da loja.' },
   { to: 'interface', label: 'Interface', icon: Palette, admin: true, permission: 'org.manage' },
   { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, admin: true, permission: 'roles.manage' },
-  { to: 'lixeira', label: 'Lixeira', icon: Trash2, admin: true, permission: 'structure.manage', description: 'Naipes e instrumentos removidos: restaurar ou excluir de vez.' },
   { to: 'auditoria', label: 'Auditoria e backups', icon: History, admin: true, permission: 'audit.read' },
 ]
 

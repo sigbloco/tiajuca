@@ -255,8 +255,8 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
       )}
       {song && <Attachments song={song} canManage={canManage} />}
       {song && canManage && (
-        <Button variant="ghost" className={song.is_active ? 'text-destructive' : ''} onClick={() => { if (!song.is_active || window.confirm('Desativar esta música? Ela some da lista, mas os anexos são mantidos.')) toggle.mutate() }}>
-          {song.is_active ? 'Desativar música' : 'Reativar música'}
+        <Button variant="ghost" className={song.is_active ? 'text-destructive' : ''} onClick={() => { if (!song.is_active || window.confirm('Mover esta música para a lixeira? Os anexos são mantidos e você pode restaurar depois.')) toggle.mutate() }}>
+          {song.is_active ? 'Mover para a lixeira' : 'Restaurar música'}
         </Button>
       )}
     </SheetContent>
