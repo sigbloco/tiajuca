@@ -11,7 +11,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
-import { CycleSelect } from '@/modules/cycles/CycleSelect'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useCycles } from '@/modules/cycles/service'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { MemberPicker } from '@/modules/members/MemberPicker'
@@ -119,7 +119,7 @@ export function TeamPage() {
   const qc = useQueryClient()
   const canEdit = usePermission('finance.manage')
   const today = todayIso(membership?.timezone)
-  const [cycleId, setCycleId] = useState('')
+  const { cycleId } = useSelectedCycle()
   const [ym, setYm] = useState<YearMonth>({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })
   const competence = toCompetence(ym)
   const cycles = useCycles()
@@ -229,7 +229,7 @@ export function TeamPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Equipe</h1>
-        <div className="flex flex-wrap items-center gap-2"><CycleSelect value={cycleId} onChange={setCycleId} /><MonthNav value={ym} onChange={setYm} /></div>
+        <div className="flex flex-wrap items-center gap-2"><MonthNav value={ym} onChange={setYm} /></div>
       </div>
       <p className="text-muted-foreground">
         Quem recebe no ciclo {cycle?.name ?? ''} e como: valor fixo e/ou porcentagem. A porcentagem incide sobre a receita recebida no mês (cobranças pagas)
