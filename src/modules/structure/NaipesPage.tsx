@@ -1,6 +1,6 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -17,6 +17,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
+import { useCycles } from '@/modules/cycles/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { usePersonLabeler } from '@/modules/members/personLabel'
 import { NO_PITCH, hasTuning } from '@/modules/repertoire/service'
@@ -221,6 +222,26 @@ export function NaipesPage() {
   const qc = useQueryClient()
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
+  // A estrutura vale por ciclo: esta página mostra o ciclo principal. O que saiu dele vai para a Lixeira.
+  const cycles = useCycles()
+  const cur = (cycles.data ?? []).find((c) => c.is_current) ?? (cycles.data ?? [])[0]
+  const prev = cur ? (cycles.data ?? []).filter((c) => c.starts_on < cur.starts_on).sort((a, b) => b.starts_on.localeCompare(a.starts_on))[0] : undefined
+  const inCycle = useQuery({
+    queryKey: ['structure-cycle', orgId, cur?.id],
+    enabled: Boolean(cur?.id),
+    queryFn: async () => {
+      const [s, i] = await Promise.all([
+        supabase.from('section_cycles').select('section_id').eq('organization_id', orgId).eq('cycle_id', cur!.id).limit(5000),
+        supabase.from('instrument_cycles').select('instrument_id').eq('organization_id', orgId).eq('cycle_id', cur!.id).limit(5000),
+      ])
+      if (s.error) throw s.error
+      if (i.error) throw i.error
+      return { sections: new Set((s.data ?? []).map((r) => r.section_id as string)), instruments: new Set((i.data ?? []).map((r) => r.instrument_id as string)) }
+    },
+  })
+  const loaded = !!inCycle.data
+  const secOn = (s: CatalogItem) => s.is_active && (inCycle.data?.sections.has(s.id) ?? false)
+  const instOn = (i: CatalogItem) => i.is_active && (inCycle.data?.instruments.has(i.id) ?? false)
   const instMut = useStructureMutations('instruments')
   const drag = useHoldReorder()
   const open = useOpenSet()
@@ -233,14 +254,14 @@ export function NaipesPage() {
   const secMut = useStructureMutations('sections')
   const [creating, setCreating] = useState(false)
   // Itens desativados ficam na Lixeira (menu), não aqui.
-  const ordered = (sections.data ?? []).filter((s) => s.is_active).sort(byOrder)
+  const ordered = (sections.data ?? []).filter(secOn).sort(byOrder)
 
-  const view = useMemo(() => (sections.data ?? []).filter((s) => s.is_active).sort(byOrder).map((s) => {
-    const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id && i.is_active).sort(byOrder)
+  const view = useMemo(() => (sections.data ?? []).filter(secOn).sort(byOrder).map((s) => {
+    const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id && instOn(i)).sort(byOrder)
     const okI = (i: CatalogItem) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search)
     const visible = matchesText(s.name, filter.search) || insts.some(okI)
     return { s, insts, okI, show: matchesStatus(s.is_active, filter.status) && visible }
-  }).filter((g) => g.show), [sections.data, instruments.data, filter])
+  }).filter((g) => g.show), [sections.data, instruments.data, filter, inCycle.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const addNode = useMutation({
     mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; sort_order: number; tuning?: string | null }) =>
@@ -253,22 +274,42 @@ export function NaipesPage() {
     mutationFn: async (v: { table: CatalogTable; id: string }) => {
       const { error } = await supabase.from(v.table).update({ is_active: true }).eq('id', v.id).eq('organization_id', orgId)
       if (error) throw error
+      const link = v.table === 'sections' ? { table: 'section_cycles', col: 'section_id' } : { table: 'instrument_cycles', col: 'instrument_id' }
+      const r = await supabase.from(link.table).upsert({ organization_id: orgId, [link.col]: v.id, cycle_id: cur!.id }, { onConflict: `${link.col},cycle_id`, ignoreDuplicates: true })
+      if (r.error) throw r.error
     },
-    onSuccess: () => { notifySaved('Restaurado.'); invalidateCatalog(qc, orgId) },
+    onSuccess: () => { notifySaved('Restaurado neste ciclo.'); invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const purge = useMutation({
     mutationFn: async (v: { table: CatalogTable; id: string }) => {
+      const link = v.table === 'sections' ? { table: 'section_cycles', col: 'section_id' } : { table: 'instrument_cycles', col: 'instrument_id' }
+      const r = await supabase.from(link.table).delete().eq(link.col, v.id).eq('organization_id', orgId)
+      if (r.error) throw r.error
       const { error } = await supabase.from(v.table).delete().eq('id', v.id).eq('organization_id', orgId)
       if (error) throw error
     },
-    onSuccess: () => { notifySaved('Excluído de vez.'); invalidateCatalog(qc, orgId) },
+    onSuccess: () => { notifySaved('Excluído de vez.'); invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
     onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e))
       ? 'Não dá para excluir de vez: há itens dentro, pessoas, vagas ou músicas ligadas a ele. Deixe na lixeira.' : friendlyError(e)),
   })
+  const leave = useMutation({
+    mutationFn: async (v: { table: CatalogTable; id: string }) => {
+      const link = v.table === 'sections' ? { table: 'section_cycles', col: 'section_id' } : { table: 'instrument_cycles', col: 'instrument_id' }
+      const { error } = await supabase.from(link.table).delete().eq(link.col, v.id).eq('cycle_id', cur!.id)
+      if (error) throw error
+    },
+    onSuccess: () => { notifySaved('Movido para a lixeira.'); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const copyFromPrev = useMutation({
+    mutationFn: async () => { const { error } = await supabase.rpc('copy_cycle_setup', { p_from: prev!.id, p_to: cur!.id }); if (error) throw error },
+    onSuccess: () => { notifySaved('Organização copiada.'); invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }); qc.invalidateQueries({ queryKey: ['workshop-edit', orgId] }); qc.invalidateQueries({ queryKey: ['capacity-edit', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   /** A lixeira move para a Lixeira (menu): dá para restaurar ou excluir de vez por lá. */
   const confirmDelete = (table: CatalogTable, item: CatalogItem, what: string) => {
-    if (window.confirm(`Mover ${what} “${item.name}” para a Lixeira? Você pode restaurar depois.`)) (table === 'sections' ? secMut : instMut).save.mutate({ id: item.id, name: item.name, is_active: false })
+    if (window.confirm(`Tirar ${what} “${item.name}” do ciclo ${cur?.name ?? ''} e mover para a Lixeira? Os outros ciclos não mudam e você pode restaurar depois.`)) leave.mutate({ table, id: item.id })
   }
 
   /** Arrastar um instrumento sobre outro do mesmo naipe reordena. */
@@ -310,10 +351,14 @@ export function NaipesPage() {
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="organograma"><Network className="h-4 w-4" /> Organograma</Link></Button>
           {canEdit && <Button asChild variant="outline"><Link to="configuracoes"><Settings className="h-4 w-4" /> Configurações</Link></Button>}
+          {canEdit && prev && cur && (
+            <Button variant="outline" size="icon" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
+              onClick={() => { if (window.confirm(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
+          )}
           {canEdit && (
             <TrashDrawer groups={[
-              { label: 'Naipes', entries: (sections.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
-              { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
+              { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
+              { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => loaded && !instOn(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
             ]} />
           )}
         </div>
