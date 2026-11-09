@@ -13,19 +13,18 @@ import { useUnsaved } from '@/core/unsaved'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { invalidateCatalog, mirrorFunctionToFees, type CatalogItem } from '@/modules/structure/service'
 
-function useSetPrice() {
-  const { membership } = useOrganization()
+function useSetPrice(from: string) {
   return async (category: string, amount: number) => {
-    const { error } = await supabase.rpc('set_fee_price', { p_category: category, p_amount: amount, p_from: todayIso(membership?.timezone) })
+    const { error } = await supabase.rpc('set_fee_price', { p_category: category, p_amount: amount, p_from: from })
     if (error) throw error
   }
 }
 
 /** Categoria que reflete uma função: o nome não se edita; só o valor mensal (versionado: vale daqui para frente). */
-function CategoryRow({ item, current, canEdit }: { item: CatalogItem; current: number | null; canEdit: boolean }) {
+function CategoryRow({ item, current, canEdit, from }: { item: CatalogItem; current: number | null; canEdit: boolean; from: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const setPrice = useSetPrice()
+  const setPrice = useSetPrice(from)
   const [value, setValue] = useState<number | null>(current)
   useEffect(() => setValue(current), [current])
   const dirty = value !== null && value !== current
@@ -49,15 +48,21 @@ function CategoryRow({ item, current, canEdit }: { item: CatalogItem; current: n
  * Contribuições: as categorias refletem as funções. "Isento" vem primeiro e não se edita (Direção, Professor, Monitor e as funções marcadas como isentas).
  * Cada função não isenta tem uma categoria com o valor mensal; o nome vem da função.
  */
-export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
+export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycle?: { id: string; name: string; starts_on: string; ends_on: string } }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const cats = useCatalog('fee_categories')
   const funcs = useCatalog('artistic_functions')
+  const { membership } = useOrganization()
+  const today = todayIso(membership?.timezone)
+  // Valor do ciclo: o que vale na data de referência (hoje, se o ciclo está em andamento; senão o início ou o fim dele).
+  const ref = cycle ? (today < cycle.starts_on ? cycle.starts_on : today > cycle.ends_on ? cycle.ends_on : today) : today
+  const editable = canEdit && (!cycle || cycle.ends_on >= today)
+  const from = cycle && today < cycle.starts_on ? cycle.starts_on : today
   const prices = useQuery({
-    queryKey: ['fee-prices', orgId],
+    queryKey: ['fee-prices', orgId, ref],
     queryFn: async () => {
-      const { data, error } = await supabase.from('fee_category_prices').select('fee_category_id, amount').eq('organization_id', orgId).is('valid_to', null)
+      const { data, error } = await supabase.from('fee_category_prices').select('fee_category_id, amount').eq('organization_id', orgId).lte('valid_from', ref).or(`valid_to.is.null,valid_to.gte.${ref}`)
       if (error) throw error
       return Object.fromEntries((data ?? []).map((p) => [p.fee_category_id as string, Number(p.amount)]))
     },
@@ -77,9 +82,9 @@ export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-3">
-      <h2>Contribuições</h2>
+      <h2>Valores{cycle ? ` · ${cycle.name}` : ''}</h2>
       <p className="text-muted-foreground">
-        As categorias refletem as funções (Organização → Funções) e não se editam aqui; só o valor mensal. O valor muda daqui para frente; cobranças já geradas não mudam.
+        As categorias refletem as funções (Organização → Funções) e não se editam aqui; só o valor mensal. {cycle && cycle.ends_on < today ? 'Ciclo encerrado: só consulta.' : 'O valor muda daqui para frente (num ciclo futuro, vale desde o início dele); cobranças já geradas não mudam.'}
         Defina a categoria de cada pessoa na ficha do integrante.
       </p>
       {(cats.isLoading || funcs.isLoading) && <Skeleton className="h-24" />}
@@ -90,7 +95,7 @@ export function ContributionsEditor({ canEdit }: { canEdit: boolean }) {
         </Card>
         {payers.map((f) => {
           const c = byName.get(f.name.toLowerCase())
-          return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={canEdit} /> : (
+          return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={editable} from={from} /> : (
             <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</Card>
           )
         })}

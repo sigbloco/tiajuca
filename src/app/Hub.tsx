@@ -54,7 +54,7 @@ export function HubHome({ hub }: { hub: HubKey }) {
   )
 }
 
-/** Financeiro: as subpáginas (mensalidades, bolsas) em cartões e, embaixo, receitas, despesas, distribuição, equipe e contribuições. */
+/** Financeiro: as subpáginas (mensalidades, bolsas) em cartões e, embaixo, receitas, despesas e distribuição. */
 export function FinanceHome() {
   return (
     <div className="space-y-6">

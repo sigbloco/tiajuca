@@ -13,7 +13,7 @@ import { PeopleTab } from './PeopleTab'
 const SCOPE_LABEL: Record<string, string> = { org: 'Toda a organização', group: 'Seu grupo', own: 'Apenas o próprio' }
 const MODULE_LABEL: Record<string, string> = {
   organizacao: 'Organização', configuracoes: 'Configurações', acesso: 'Acesso', membros: 'Integrantes', auditoria: 'Auditoria', estrutura: 'Estrutura',
-  ciclos: 'Ciclos', vagas: 'Vagas', eventos: 'Eventos', presenca: 'Presença', mensalidades: 'Mensalidades', financeiro: 'Financeiro',
+  ciclos: 'Ciclos', vagas: 'Vagas', eventos: 'Eventos', presenca: 'Presença', cobrancas: 'Cobranças', mensalidades: 'Mensalidades', financeiro: 'Financeiro',
   repertorio: 'Repertório', inscricoes: 'Inscrições',
 }
 
