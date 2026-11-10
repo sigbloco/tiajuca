@@ -71,34 +71,34 @@ export interface ActivityInput {
 export type AudienceKind = 'section' | 'instrument'
 export interface AudienceInput { kind: AudienceKind; ref_id: string }
 
-export async function getAudience(activityId: string): Promise<AudienceInput | null> {
-  const { data, error } = await supabase.from('activity_audiences').select('kind, ref_id').eq('activity_id', activityId).limit(1)
+/** Público da chamada de um evento: vários itens (naipe ou instrumento). */
+export async function getAudiences(activityId: string): Promise<AudienceInput[]> {
+  const { data, error } = await supabase.from('activity_audiences').select('kind, ref_id').eq('activity_id', activityId)
   if (error) throw error
-  const row = data?.[0] as AudienceInput | undefined
-  return row ?? null
+  return ((data ?? []) as AudienceInput[]).filter((a) => a.kind === 'section' || a.kind === 'instrument')
 }
 
-async function replaceAudience(orgId: string, activityId: string, audience: AudienceInput | null) {
+async function replaceAudience(orgId: string, activityId: string, audiences: AudienceInput[]) {
   const del = await supabase.from('activity_audiences').delete().eq('activity_id', activityId)
   if (del.error) throw del.error
-  if (audience) {
-    const ins = await supabase.from('activity_audiences').insert({ organization_id: orgId, activity_id: activityId, ...audience })
+  if (audiences.length > 0) {
+    const ins = await supabase.from('activity_audiences').insert(audiences.map((a) => ({ organization_id: orgId, activity_id: activityId, ...a })))
     if (ins.error) throw ins.error
   }
 }
 
-export async function saveActivity(orgId: string, id: string | null, input: ActivityInput, audience: AudienceInput | null) {
+export async function saveActivity(orgId: string, id: string | null, input: ActivityInput, audiences: AudienceInput[]) {
   if (id) {
     // Ocorrência de recorrência editada à mão fica "personalizada": a sincronização da regra não a sobrescreve.
     const { data: cur } = await supabase.from('activities').select('recurrence_rule_id').eq('id', id).maybeSingle()
     const { error } = await supabase.from('activities').update(cur?.recurrence_rule_id ? { ...input, customized: true } : input).eq('id', id).eq('organization_id', orgId)
     if (error) throw error
-    await replaceAudience(orgId, id, audience)
+    await replaceAudience(orgId, id, audiences)
     return id
   }
   const { data, error } = await supabase.from('activities').insert({ ...input, organization_id: orgId }).select('id').single()
   if (error) throw error
-  await replaceAudience(orgId, data.id as string, audience)
+  await replaceAudience(orgId, data.id as string, audiences)
   return data.id as string
 }
 

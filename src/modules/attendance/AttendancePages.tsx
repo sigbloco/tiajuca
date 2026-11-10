@@ -12,7 +12,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
-import { getAudience, listActivities, type Activity } from '@/modules/events/service'
+import { getAudiences, listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
@@ -184,8 +184,8 @@ export function AttendanceRosterPage() {
     },
   })
   // Evento com público definido (ex.: ensaio de um naipe): a chamada segue esse público, sem filtros de naipe/instrumento nem regra de alunos.
-  const audience = useQuery({ queryKey: ['audience', activityId], queryFn: () => getAudience(activityId) })
-  const hasAudience = Boolean(audience.data)
+  const audience = useQuery({ queryKey: ['audience', activityId], queryFn: () => getAudiences(activityId) })
+  const hasAudience = (audience.data?.length ?? 0) > 0
   const roster = useQuery({
     queryKey: rosterKey,
     queryFn: async () => {

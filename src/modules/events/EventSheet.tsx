@@ -12,15 +12,11 @@ import { usePermission } from '@/core/permissions'
 import { ChecklistSection } from '@/modules/checklists/ChecklistSection'
 import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
 import { useCycles } from '@/modules/cycles/service'
-import { useCatalog } from '@/modules/structure/CatalogEditor'
-import type { CatalogTable } from '@/modules/structure/service'
+import { AudiencePicker, type AudRow } from './AudiencePicker'
 import {
-  COLOR_BADGE, COLOR_DOT, typeIdForColor, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudience, saveActivity, setActivityStatus, cancelWord,
-  type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
+  COLOR_BADGE, COLOR_DOT, typeIdForColor, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord,
+  type Activity, type ItineraryStep, type TypeColor,
 } from './service'
-
-const AUDIENCE_TABLE: Record<AudienceKind, CatalogTable> = { section: 'sections', instrument: 'instruments' }
-const AUDIENCE_LABEL: Record<'section' | 'instrument', string> = { section: 'Naipe', instrument: 'Instrumento' }
 
 interface Props {
   activity: Activity | null
@@ -63,17 +59,14 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     const pick = byDate ?? cycles.data.find((c) => c.is_current) ?? cycles.data.find((c) => c.is_active)
     if (pick) setF((x) => ({ ...x, cycle_id: pick.id }))
   }, [cycles.data]) // eslint-disable-line react-hooks/exhaustive-deps
-  const [aKind, setAKind] = useState<AudienceKind | ''>('')
-  const [aRef, setARef] = useState('')
-  const audienceOptions = useCatalog(aKind ? AUDIENCE_TABLE[aKind] : 'sections')
-
+  const [auds, setAuds] = useState<AudRow[]>([])
   const audience = useQuery({
     queryKey: ['audience', activity?.id],
     enabled: Boolean(activity) && canManage,
-    queryFn: () => getAudience(activity!.id),
+    queryFn: () => getAudiences(activity!.id),
   })
   useEffect(() => {
-    if (audience.data) { setAKind(audience.data.kind); setARef(audience.data.ref_id) }
+    if (audience.data) setAuds(audience.data.map((a) => ({ kind: a.kind, ref: a.ref_id })))
   }, [audience.data])
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['activities', orgId] })
@@ -96,7 +89,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         cycle_id: f.cycle_id || null,
         visibility: f.visibility,
         itinerary: cleanSteps(steps),
-      }, aKind && aRef ? { kind: aKind, ref_id: aRef } : null)
+      }, auds.filter((a) => a.ref).map((a) => ({ kind: a.kind, ref_id: a.ref })))
     },
     onSuccess: () => {
       toast.success(isNew ? 'Evento criado.' : 'Evento atualizado.')
@@ -208,21 +201,9 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
             </Select>
           </div>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ev-aud">Público da chamada</Label>
-          <div className="space-y-2">
-            <Select id="ev-aud" value={aKind} onChange={(e) => { setAKind(e.target.value as AudienceKind | ''); setARef('') }}>
-              <option value="">Todos os ativos no ciclo</option>
-              {(Object.keys(AUDIENCE_LABEL) as ('section' | 'instrument')[]).map((k) => <option key={k} value={k}>{AUDIENCE_LABEL[k]}</option>)}
-            </Select>
-            <Select aria-label="Público" disabled={!aKind} value={aRef} onChange={(e) => setARef(e.target.value)}>
-              <option value="">{aKind ? 'Selecione' : '—'}</option>
-              {aKind && audienceOptions.data?.filter((o) => o.is_active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </Select>
-          </div>
-        </div>
+        <AudiencePicker value={auds} onChange={setAuds} />
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!valid || (Boolean(aKind) && !aRef) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <Button type="submit" className="flex-1" disabled={!valid || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
       </form>

@@ -10,8 +10,9 @@ import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/f
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { AudiencePicker, type AudRow } from './AudiencePicker'
 import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
-import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, syncOccurrences, typeIdForColor, type AudienceKind, type ItineraryStep, type TypeColor } from './service'
+import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, syncOccurrences, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
 
 interface Rule {
   id: string
@@ -27,7 +28,7 @@ interface Rule {
   until: string | null
   is_active: boolean
   itinerary: ItineraryStep[] | null
-  audiences: { kind: AudienceKind; ref: string }[]
+  audiences: { kind: 'section' | 'instrument'; ref: string }[]
 }
 
 function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }) {
@@ -44,9 +45,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
     until: rule?.until ?? '',
   })
   // Público da chamada: vários itens (ex.: Flauta e Sax alto). Vazio = todos os ativos no ciclo.
-  const [auds, setAuds] = useState<{ kind: AudienceKind; ref: string }[]>(rule?.audiences ?? [])
-  const catalogs = { section: useCatalog('sections'), instrument: useCatalog('instruments') }
-  const setAud = (i: number, patch: Partial<{ kind: AudienceKind; ref: string }>) => setAuds((l) => l.map((a, k) => (k === i ? { ...a, ...patch } : a)))
+  const [auds, setAuds] = useState<AudRow[]>(rule?.audiences ?? [])
   // Recorrência antiga, sem roteiro: o horário, o local e a descrição dela viram o primeiro item.
   const [steps, setSteps] = useState<ItineraryStep[]>(() => (rule?.itinerary?.length || !rule?.start_time
     ? loadSteps(rule?.itinerary)
@@ -60,7 +59,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
         location: items.find((x) => x.location)?.location ?? null, description: items.map((x) => x.description).filter(Boolean).join('\n') || null,
         starts_on: f.starts_on, until: f.until || null, itinerary: items,
-        audiences: auds.filter((a) => a.ref),
+        audiences: auds.filter((a) => a.ref).map((a) => ({ kind: a.kind, ref: a.ref })),
       }
       const q = rule
         ? supabase.from('recurrence_rules').update(row).eq('id', rule.id)
@@ -106,28 +105,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
             <div className="space-y-1.5"><Label htmlFor="r-until">Até</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
           </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Label>Público da chamada</Label>
-              <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar público" title="Adicionar público" onClick={() => setAuds((l) => [...l, { kind: 'instrument', ref: '' }])}><Plus className="h-3.5 w-3.5" /></button>
-            </div>
-            {auds.length === 0 && <p className="text-sm text-muted-foreground">Todos os ativos no ciclo.</p>}
-            {auds.map((a, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-                  <Select aria-label="Tipo de público" value={a.kind} onChange={(e) => setAud(i, { kind: e.target.value as AudienceKind, ref: '' })}>
-                    <option value="section">Naipe</option>
-                    <option value="instrument">Instrumento</option>
-                  </Select>
-                  <Select aria-label="Público" value={a.ref} onChange={(e) => setAud(i, { ref: e.target.value })}>
-                    <option value="">Selecione</option>
-                    {catalogs[a.kind].data?.filter((o) => o.is_active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </Select>
-                </div>
-                <button type="button" className="shrink-0 rounded px-1.5 text-lg leading-none text-muted-foreground hover:text-destructive" aria-label="Remover público" title="Remover" onClick={() => setAuds((l) => l.filter((_, k) => k !== i))}>×</button>
-              </div>
-            ))}
-          </div>
+          <AudiencePicker value={auds} onChange={setAuds} />
           <div className="space-y-1.5">
             <Label htmlFor="r-vis">Quem vê</Label>
             <Select id="r-vis" value={f.visibility} onChange={(e) => setF({ ...f, visibility: e.target.value as Rule['visibility'] })}>
