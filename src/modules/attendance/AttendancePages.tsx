@@ -242,6 +242,8 @@ export function AttendanceRosterPage() {
       return new Set((data ?? []).map((r) => r.member_id as string))
     },
   })
+  const cycles = cyclesAll
+  const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
   // Aula/oficina: só alunos (categoria Aluno no ciclo); quem foi adicionado fora da lista continua.
   const onlyStudents = /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
   const rows = (roster.data ?? []).filter((r) => !staffIds.data?.has(r.member_id) && (!onlyStudents || r.is_off_roster || !students.data || students.data.members.has(r.member_id)))
@@ -253,8 +255,6 @@ export function AttendanceRosterPage() {
   const catalog = useInstrumentCatalog()
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
   // Naipe com instrumentos marcados "Oficina": a chamada mostra só quem toca esses instrumentos.
-  const cycles = useCycles()
-  const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
   const sectionNames = useQuery({
     queryKey: ['sections-names', orgId],
     queryFn: async () => {
