@@ -44,20 +44,6 @@ const statusClass = (s: Status, active: boolean) =>
     ? s.counts_as_present ? 'border-success bg-success text-white' : s.key === 'justified' ? 'border-warning bg-warning text-white' : 'border-destructive bg-destructive text-white'
     : 'border-border bg-card text-foreground hover:bg-muted'
 
-/** Oficina por instrumento e por ciclo: instrumentos com oficina em cada ciclo. */
-function useWorkshops() {
-  const orgId = useOrgId()
-  return useQuery({
-    queryKey: ['workshops', orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('instrument_cycle_workshop').select('instrument_id, cycle_id').eq('organization_id', orgId).eq('has_workshop', true)
-      if (error) throw error
-      const by = new Map<string, Set<string>>()
-      for (const r of data ?? []) { const k = r.cycle_id as string; if (!by.has(k)) by.set(k, new Set()); by.get(k)!.add(r.instrument_id as string) }
-      return by
-    },
-  })
-}
 /** Ciclo da atividade: o dela, senão o que cobre a data, senão o principal. */
 function cycleOf(a: { cycle_id: string | null; activity_date: string }, cycles: Cycle[]) {
   return a.cycle_id ?? cycles.find((c) => a.activity_date >= c.starts_on && a.activity_date <= c.ends_on)?.id ?? cycles.find((c) => c.is_current)?.id ?? null
@@ -80,36 +66,32 @@ function useInstrumentCatalog() {
 
 const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
 
-/** Naipes que têm professor ou monitor no ciclo (direto, por subnaipe ou por instrumento). */
-function useStaffedSections(cycleId: string | null | undefined) {
+/** Instrumentos que têm alunos (categoria Aluno, principal ou acumulada) participando no ciclo. */
+function useStudentInstruments(cycleId: string | null | undefined) {
   const orgId = useOrgId()
   return useQuery({
-    queryKey: ['staffed-sections', orgId, cycleId],
+    queryKey: ['student-instruments', orgId, cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const [a, sub, ins] = await Promise.all([
-        supabase.from('staff_assignments').select('staff_kind, section_id, subsection_id, instrument_id').eq('organization_id', orgId).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).limit(2000),
-        supabase.from('subsections').select('id, section_id').eq('organization_id', orgId).limit(1000),
-        supabase.from('instruments').select('id, section_id').eq('organization_id', orgId).limit(1000),
+      const [cats, parts] = await Promise.all([
+        supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: cycleId }),
+        supabase.from('cycle_participations').select('member_id, instrument_id').eq('cycle_id', cycleId!).not('instrument_id', 'is', null).limit(5000),
       ])
-      if (a.error) throw a.error
-      const subMap = new Map((sub.data ?? []).map((x) => [x.id as string, x.section_id as string]))
-      const insMap = new Map((ins.data ?? []).map((x) => [x.id as string, x.section_id as string]))
-      const out = new Set<string>()
-      for (const r of a.data ?? []) {
-        const sid = r.section_id ?? (r.subsection_id ? subMap.get(r.subsection_id) : undefined) ?? (r.instrument_id ? insMap.get(r.instrument_id) : undefined)
-        if (sid) out.add(sid as string)
-      }
-      return out
+      if (cats.error) throw cats.error
+      if (parts.error) throw parts.error
+      const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[]).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
+      return new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string))
     },
   })
 }
 
-/** Um horário do dia: título e os naipes da oficina (cada um abre a chamada só daquele naipe). */
-function ActivityCard({ a, sections, withWorkshop: wsIds, instruments, staffed, slug }: { a: Activity; sections: { id: string; name: string }[]; withWorkshop: Set<string>; instruments: InstrumentInfo[]; staffed: Set<string>; slug?: string }) {
-  const wsSections = new Set(instruments.filter((i) => wsIds.has(i.id)).map((i) => i.section_id))
-  // Todo naipe com professor ou monitor no ciclo (ou com oficina), mesmo sem alunos.
-  const shown = sections.filter((s) => staffed.has(s.id) || wsSections.has(s.id))
+/** Um horário do dia: título e os subnaipes (instrumentos) com alunos; cada um abre a chamada só daquele instrumento. */
+function ActivityCard({ a, instruments, studentIds, slug }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string }) {
+  // Naipe pelo título ("Oficina de percussão" → Percussão); sem coincidência única, todos.
+  const title = plain(a.title)
+  const hit = [...new Set(instruments.map((i) => i.section))].filter((n) => title.includes(plain(n)))
+  const shown = instruments.filter((i) => studentIds.has(i.id) && (hit.length === 1 ? i.section === hit[0] : true))
+    .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
   return (
     <Card className="flex gap-3 p-3">
       <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
@@ -117,9 +99,9 @@ function ActivityCard({ a, sections, withWorkshop: wsIds, instruments, staffed, 
         <Link to={`/${slug}/presenca/${a.id}`} className="block break-words font-semibold hover:underline">{a.title}</Link>
         {shown.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {shown.map((s) => (
-              <Link key={s.id} to={`/${slug}/presenca/${a.id}?naipe=${encodeURIComponent(s.name)}`}
-                className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">{s.name}</Link>
+            {shown.map((i) => (
+              <Link key={i.id} to={`/${slug}/presenca/${a.id}?naipe=${encodeURIComponent(i.section)}&inst=${encodeURIComponent(i.name)}`}
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">{i.name}</Link>
             ))}
           </div>
         )}
@@ -141,17 +123,8 @@ export function AttendanceListPage() {
     queryFn: () => listActivities({ orgId, from: selCycle!.starts_on, to: selCycle!.ends_on }),
   })
   const cycles = useCycles()
-  const workshops = useWorkshops()
   const catalog = useInstrumentCatalog()
-  const staffed = useStaffedSections(cycleId)
-  const sections = useQuery({
-    queryKey: ['sections-workshop', orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('sections').select('id, name').eq('organization_id', orgId).eq('is_active', true).order('name')
-      if (error) throw error
-      return (data ?? []) as { id: string; name: string }[]
-    },
-  })
+  const students = useStudentInstruments(cycleId)
   const items = (data ?? []).filter((a) => a.status !== 'cancelled' && cycleOf(a, cycles.data ?? []) === cycleId)
   const days = [...new Set(items.map((a) => a.activity_date))].sort()
   const [picked, setPicked] = useState<string | null>(null)
@@ -172,7 +145,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} sections={sections.data ?? []} withWorkshop={workshops.data?.get(cycleOf(a, cycles.data ?? []) ?? '') ?? new Set()} instruments={catalog.data?.list ?? []} staffed={staffed.data ?? new Set()} slug={membership?.slug} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data ?? new Set()} slug={membership?.slug} />)}
       </div>
     </div>
   )
@@ -188,7 +161,7 @@ export function AttendanceRosterPage() {
   const [searchParams] = useSearchParams()
   const { membership } = useOrganization()
   const [naipeSel, setNaipe] = useState<string | null>(searchParams.get('naipe'))
-  const [instSel, setInst] = useState<string | null>(null)
+  const [instSel, setInst] = useState<string | null>(searchParams.get('inst'))
   const [openNote, setOpenNote] = useState<string | null>(null)
   const [extra, setExtra] = useState('')
   const rosterKey = ['roster', orgId, activityId]
@@ -272,8 +245,7 @@ export function AttendanceRosterPage() {
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
   // Naipe com instrumentos marcados "Oficina": a chamada mostra só quem toca esses instrumentos.
   const cycles = useCycles()
-  const workshops = useWorkshops()
-  const staffed = useStaffedSections(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
+  const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
   const sectionNames = useQuery({
     queryKey: ['sections-names', orgId],
     queryFn: async () => {
@@ -282,8 +254,9 @@ export function AttendanceRosterPage() {
       return new Map((data ?? []).map((x) => [x.id as string, x.name as string]))
     },
   })
-  // Naipes dos presentes + os que têm professor/monitor (mesmo sem alunos: continuam clicáveis).
-  const naipes = [...new Set([...rows.flatMap(sectionsOf), ...[...(staffed.data ?? [])].map((id) => sectionNames.data?.get(id)).filter((x): x is string => !!x)])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  // Naipes com alunos (subnaipes = instrumentos com alunos).
+  const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.has(i.id))
+  const naipes = [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
   const lockedNaipe = (() => {
     if (naipeSel !== null || !activity.data) return ''
@@ -316,13 +289,10 @@ export function AttendanceRosterPage() {
   })()
   const naipe = naipeSel ?? (lockedNaipe || myScope.section)
   const inst = instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
-  const wsIds = activity.data ? workshops.data?.get(cycleOf(activity.data, cycles.data ?? []) ?? '') : undefined
-  const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && wsIds?.has(i.id)).map((i) => i.name))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
-    && (workshopNames.size === 0 || (r.instruments ?? '').split(', ').some((n) => workshopNames.has(n)))
     && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
-  const instOptions = [...new Set([...(workshopNames.size > 0 ? workshopNames : (catalog.data?.list ?? []).filter((i) => i.section === naipe).map((i) => i.name))])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const instOptions = [...new Set(studentInsts.filter((i) => i.section === naipe).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const cancelled = activity.data?.status === 'cancelled'
 
   return (
