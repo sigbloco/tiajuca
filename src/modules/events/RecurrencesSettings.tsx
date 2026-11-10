@@ -104,7 +104,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
-            <div className="space-y-1.5"><Label htmlFor="r-until">Até</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /><p className="text-xs text-muted-foreground">Em branco: até o fim do ciclo.</p></div>
+            <div className="space-y-1.5"><Label htmlFor="r-until">Até</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
