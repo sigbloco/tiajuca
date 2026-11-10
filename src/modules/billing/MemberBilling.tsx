@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Button, Input, Label, cn } from '@/components/ui/primitives'
+import { Button, Input, Label, Select, cn } from '@/components/ui/primitives'
+import { useCycles } from '@/modules/cycles/service'
 import { MemberSection } from '@/modules/members/MemberSection'
 import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
@@ -11,10 +12,67 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { Save } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
+
+/** Categorias extras do ciclo (ex.: Aluno + Sênior): só marcações; a cobrança segue a categoria principal. Botão "+" abre a escolha. */
+function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; cycleId: string; primaryId: string }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const categories = useCatalog('fee_categories')
+  const [adding, setAdding] = useState(false)
+  const key = ['extra-categories', orgId, memberId, cycleId]
+  const extras = useQuery({
+    queryKey: key,
+    enabled: Boolean(cycleId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cycle_extra_categories').select('fee_category_id').eq('member_id', memberId).eq('cycle_id', cycleId)
+      if (error) throw error
+      return (data ?? []).map((r) => r.fee_category_id as string)
+    },
+  })
+  const refresh = () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['members'] }) }
+  const add = useMutation({
+    mutationFn: async (cat: string) => {
+      const { error } = await supabase.from('cycle_extra_categories').insert({ organization_id: orgId, member_id: memberId, cycle_id: cycleId, fee_category_id: cat })
+      if (error) throw error
+    },
+    onSuccess: () => { setAdding(false); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const remove = useMutation({
+    mutationFn: async (cat: string) => {
+      const { error } = await supabase.from('cycle_extra_categories').delete().eq('member_id', memberId).eq('cycle_id', cycleId).eq('fee_category_id', cat)
+      if (error) throw error
+    },
+    onSuccess: refresh,
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const name = (id: string) => categories.data?.find((c) => c.id === id)?.name ?? '—'
+  const taken = new Set([primaryId, ...(extras.data ?? [])])
+  const options = (categories.data ?? []).filter((c) => MEMBER_CATEGORIES.includes(c.name) && !taken.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  return (
+    <div className="flex flex-wrap items-center gap-2 pl-0">
+      {(extras.data ?? []).map((id) => (
+        <span key={id} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-sm">
+          {name(id)}
+          <button type="button" aria-label={`Remover ${name(id)}`} title="Remover" disabled={remove.isPending} className="rounded-full px-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(id)}>×</button>
+        </span>
+      ))}
+      {adding ? (
+        <Select aria-label="Outra categoria" autoFocus defaultValue="" disabled={add.isPending} onChange={(e) => { if (e.target.value) add.mutate(e.target.value) }} onBlur={() => setAdding(false)}>
+          <option value="">Escolha</option>
+          {options.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </Select>
+      ) : options.length > 0 && (
+        <button type="button" aria-label="Acumular outra categoria" title="Acumular outra categoria" onClick={() => setAdding(true)}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card hover:bg-muted"><Plus className="h-4 w-4" /></button>
+      )}
+    </div>
+  )
+}
 
 /** Formulário de bolsa (0–100%). 0% encerra a bolsa. Usado na ficha do integrante e na página de Bolsas. */
 export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: { memberId: string; onSaved?: () => void; /** Avisa o percentual válido a cada digitação (o valor da mensalidade acompanha). */ onPercent?: (n: number) => void; /** Grava ao sair do campo (sem botão): usado na ficha do integrante. */ auto?: boolean }) {
@@ -155,6 +213,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </div>
+      {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
       {canSchol && catId && catName !== 'Isento' && (
         <div className="space-y-1.5 pt-1">
           <p className="text-sm font-semibold">Bolsa</p>
@@ -179,6 +238,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
   const [livePct, setLivePct] = useState(0)
+  const currentCycleId = useCycles().data?.find((c) => c.is_current)?.id ?? ''
   // Quem tem atividade remunerada não contribui: a seção some.
   const paid = useQuery({
     queryKey: ['member-links', orgId, memberId, 'has-paid'],
@@ -236,6 +296,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </div>
+      {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
       {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && (
         <div className="space-y-1.5 pt-1">
           <p className="text-sm font-semibold">Bolsa</p>

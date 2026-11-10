@@ -95,8 +95,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   })
   const typesOf = (memberId: string) => {
     const out = new Set<string>(staffKinds.data?.get(memberId) ?? [])
-    const cat = categoryOf.get(memberId)?.category_name
-    if (cat === 'Aluno') out.add('aluno'); else if (cat === 'Senior') out.add('senior'); else if (cat === 'Músico') out.add('musico'); else if (cat === 'Monitor') out.add('monitor')
+    for (const cat of allCategories(memberId)) {
+      if (cat === 'Aluno') out.add('aluno'); else if (cat === 'Senior') out.add('senior'); else if (cat === 'Músico') out.add('musico'); else if (cat === 'Monitor') out.add('monitor')
+    }
     return out
   }
   const [cycleSel, setCycleSel] = useState('')
@@ -146,10 +147,12 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     queryFn: async () => {
       const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: activeCycleId })
       if (error) throw error
-      return (data ?? []) as { member_id: string; category_id: string; category_name: string }[]
+      return (data ?? []) as { member_id: string; category_id: string; category_name: string; is_extra?: boolean }[]
     },
   })
-  const categoryOf = new Map((cats.data ?? []).map((c) => [c.member_id, c]))
+  // Principal (define a cobrança) e todas as categorias acumuladas de cada pessoa.
+  const categoryOf = new Map((cats.data ?? []).filter((c) => !c.is_extra).map((c) => [c.member_id, c]))
+  const allCategories = (id: string) => (cats.data ?? []).filter((c) => c.member_id === id).map((c) => c.category_name)
   const parts = useQuery({
     queryKey: ['members', orgId, 'cycle-participations', activeCycleId],
     enabled: !!activeCycleId,
@@ -214,7 +217,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         const mine = typesOf(m.id)
         if (![...types].some((t) => mine.has(t))) continue
       }
-      if (wantedCategory && categoryOf.get(m.id)?.category_name !== wantedCategory) continue
+      if (wantedCategory && !allCategories(m.id).includes(wantedCategory)) continue
       if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
       // Instrumento/função NAQUELE ciclo (participação do próprio ciclo).
       const links = parts.data?.get(m.id) ?? []
