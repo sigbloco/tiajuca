@@ -61,6 +61,8 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         : supabase.from('recurrence_rules').insert({ ...row, organization_id: orgId })
       const { error } = await q
       if (error) throw error
+      // Gera já as próximas datas no calendário (12 semanas), sem esperar reabrir a página.
+      await materialize(orgId, addDaysIso(todayIso(membership?.timezone), 84))
       if (rule) await syncOccurrences(orgId, todayIso(membership?.timezone), rule.id)
     },
     onSuccess: () => {
