@@ -37,7 +37,7 @@ export function FilterBar({ value, onChange, extraCount = 0, onClearExtra, child
         )}
       </div>
       {open && (
-        <Card className="grid gap-2 p-3 sm:grid-cols-3">
+        <Card className="grid gap-2 p-3 sm:grid-cols-[minmax(0,1fr)_10.5rem_minmax(0,1fr)]">
           <Input placeholder="Buscar pelo nome" aria-label="Buscar" value={value.search} onChange={(e) => onChange({ ...value, search: e.target.value })} />
           <Select aria-label="Situação" value={value.status} onChange={(e) => onChange({ ...value, status: e.target.value as StatusFilter })}>
             <option value="all">Ativos e inativos</option>
