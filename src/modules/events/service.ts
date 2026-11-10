@@ -89,7 +89,9 @@ async function replaceAudience(orgId: string, activityId: string, audience: Audi
 
 export async function saveActivity(orgId: string, id: string | null, input: ActivityInput, audience: AudienceInput | null) {
   if (id) {
-    const { error } = await supabase.from('activities').update(input).eq('id', id).eq('organization_id', orgId)
+    // Ocorrência de recorrência editada à mão fica "personalizada": a sincronização da regra não a sobrescreve.
+    const { data: cur } = await supabase.from('activities').select('recurrence_rule_id').eq('id', id).maybeSingle()
+    const { error } = await supabase.from('activities').update(cur?.recurrence_rule_id ? { ...input, customized: true } : input).eq('id', id).eq('organization_id', orgId)
     if (error) throw error
     await replaceAudience(orgId, id, audience)
     return id
@@ -124,7 +126,7 @@ export async function syncOccurrences(orgId: string, today: string, ruleId?: str
   for (const r of rules ?? []) {
     const { data, error: e2 } = await supabase.from('activities')
       .update({ title: r.title, start_time: r.start_time, end_time: r.end_time, location: r.location, description: r.description, itinerary: r.itinerary })
-      .eq('recurrence_rule_id', r.id).eq('status', 'scheduled').gte('activity_date', today).select('id')
+      .eq('recurrence_rule_id', r.id).eq('status', 'scheduled').eq('customized', false).gte('activity_date', today).select('id')
     if (e2) throw e2
     n += data?.length ?? 0
   }
