@@ -1,22 +1,19 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Ban, Cake, ClipboardCheck, Pencil, ChevronLeft, ChevronRight, Plus, Undo2 } from 'lucide-react'
+import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
-import { toast } from 'sonner'
-import { notifyChange } from '@/core/undo'
-import { friendlyError } from '@/core/errors'
+import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
-import { Link } from 'react-router-dom'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
+import { EventCard } from './EventCard'
 import { EventSheet } from './EventSheet'
 import { RecurrencesSettings } from './RecurrencesSettings'
-import { COLOR_DOT, STATUS_LABEL, cancelWord, listActivities, materialize, setActivityStatus, type Activity } from './service'
+import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -26,7 +23,6 @@ export function EventsPage() {
   const qc = useQueryClient()
   const tz = membership?.timezone
   const canManage = usePermission('events.manage')
-  const canRecord = usePermission('attendance.record', 'group')
   const today = todayIso(tz)
 
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 }))
@@ -40,20 +36,6 @@ export function EventsPage() {
   const to = days[days.length - 1].iso
 
   // Direção: garante as ocorrências das recorrências (idempotente) para as próximas 12 semanas.
-  // Cancelar uma aula/ensaio direto da lista (ex.: chuva), com o motivo.
-  const cancel = useMutation({
-    mutationFn: (v: { a: Activity; reason: string }) => setActivityStatus(orgId, v.a.id, 'cancelled', v.reason),
-    onSuccess: (_d, v) => {
-      qc.invalidateQueries({ queryKey: ['activities', orgId] })
-      notifyChange('Cancelado.', async () => { await setActivityStatus(orgId, v.a.id, 'scheduled'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) })
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const reopen = useMutation({
-    mutationFn: (a: Activity) => setActivityStatus(orgId, a.id, 'scheduled'),
-    onSuccess: () => { toast.success('Reativado.'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
   const gen = useMutation({
     mutationFn: () => materialize(orgId, addDaysIso(today, 84)),
     onSuccess: (n) => { if (n > 0) qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
@@ -212,51 +194,7 @@ export function EventsPage() {
         {selectedDay && listDays.map((day) => (
           <section key={day} className="space-y-2">
             <h3 className="capitalize">{formatDayLong(day)}</h3>
-            {byDay[day].map((a, ai) => {
-              const t = a.activity_types
-              const time = [formatTime(a.start_time), formatTime(a.end_time)].filter(Boolean).join(' – ')
-              return (
-                <Card key={a.id} className={cn('flex items-stretch gap-3 p-3', ai % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60')}>
-                  <span className={cn('w-1.5 shrink-0 rounded-full', COLOR_DOT[t?.color ?? 'muted'])} />
-                  <div className="min-w-0 flex-1">
-                  <button className="w-full text-left" onClick={() => setSheet({ activity: a })}>
-                    <p className={cn('font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
-                    {a.itinerary && a.itinerary.length > 0 ? (
-                      <div className="text-muted-foreground">
-                        {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k, list) => {
-                          const loc = x.location?.trim()
-                          const lastLoc = list.slice(0, k).reverse().find((y) => y.location?.trim())?.location?.trim().toLowerCase()
-                          const showLoc = !!loc && loc.toLowerCase() !== lastLoc
-                          return (
-                            <div key={k}>
-                              {showLoc && <p className="font-medium text-foreground">{loc}</p>}
-                              <p>{x.time.slice(0, 5)}{x.end ? ' – ' + x.end.slice(0, 5) : ''} · {x.label}</p>
-                              {x.description && <p className="whitespace-pre-wrap text-sm">{x.description}</p>}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
-                    )}
-                  </button>
-                  {a.status === 'scheduled' && (canRecord || canManage) && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {canRecord && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>}
-                      {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={() => setSheet({ activity: a, edit: true })}><Pencil className="h-4 w-4" /></Button>}
-                      {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
-                        onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?
-Motivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate({ a, reason }) }}><Ban className="h-4 w-4" /> Cancelar</Button>}
-                    </div>
-                  )}
-                  {canManage && a.status === 'cancelled' && (
-                    <Button size="sm" variant="outline" className="mt-2" aria-label="Desfazer cancelamento" title="Desfazer cancelamento" onClick={() => reopen.mutate(a)}><Undo2 className="h-4 w-4" /> Desfazer</Button>
-                  )}
-                  </div>
-                  {a.status !== 'scheduled' && <div className="flex flex-col items-end gap-1"><Badge>{STATUS_LABEL[a.status]}{a.status === 'cancelled' && a.cancel_reason ? ` · ${a.cancel_reason}` : ''}</Badge></div>}
-                </Card>
-              )
-            })}
+            {byDay[day].map((a, ai) => <EventCard key={a.id} a={a} index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
           </section>
         ))}
       </div>
