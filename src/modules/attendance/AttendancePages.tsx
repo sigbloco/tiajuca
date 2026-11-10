@@ -184,6 +184,7 @@ export function AttendanceRosterPage() {
   const [search, setSearch] = useState('')
   const [searchParams] = useSearchParams()
   const [naipe, setNaipe] = useState(searchParams.get('naipe') ?? '')
+  const [inst, setInst] = useState('')
   const [openNote, setOpenNote] = useState<string | null>(null)
   const [extra, setExtra] = useState('')
   const rosterKey = ['roster', orgId, activityId]
@@ -269,7 +270,9 @@ export function AttendanceRosterPage() {
   const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && wsIds?.has(i.id)).map((i) => i.name))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
-    && (workshopNames.size === 0 || (r.instruments ?? '').split(', ').some((n) => workshopNames.has(n))))
+    && (workshopNames.size === 0 || (r.instruments ?? '').split(', ').some((n) => workshopNames.has(n)))
+    && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
+  const instOptions = [...new Set([...(workshopNames.size > 0 ? workshopNames : (catalog.data?.list ?? []).filter((i) => i.section === naipe).map((i) => i.name))])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const cancelled = activity.data?.status === 'cancelled'
 
   return (
@@ -303,7 +306,18 @@ export function AttendanceRosterPage() {
         <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {naipes.length > 0 && (
+      {naipe && instOptions.length > 0 ? (
+        // Dentro de um naipe (ex.: Oficina de percussão): filtra por instrumento (agogô, caixa de guerra…).
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>
+          {['', ...instOptions].map((n) => (
+            <button key={n || 'todos'} onClick={() => setInst(n)}
+              className={cn('h-9 rounded-full border px-3 text-sm font-medium', inst === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
+              {n || 'Todos'}
+            </button>
+          ))}
+        </div>
+      ) : naipes.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {['', ...naipes].map((n) => (
             <button key={n || 'todos'} onClick={() => setNaipe(n)}
