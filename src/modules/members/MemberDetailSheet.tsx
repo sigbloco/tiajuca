@@ -36,7 +36,7 @@ type CycleLite = { id: string; name: string; starts_on: string; ends_on: string;
 /** Participação (artística, colaborativa, remunerada) e contribuição de um ciclo. Sem ciclo: o que vale hoje. */
 function ParticipationBlock({ memberId, cycle }: { memberId: string; cycle?: CycleLite }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 [&>*+*]:border-t [&>*+*]:border-border [&>*+*]:pt-3">
       <MemberSection title="Participação">
         <div className="space-y-3">
           <ArtisticLinks memberId={memberId} cycle={cycle} />
@@ -345,7 +345,7 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   }
   const hasOlder = rows.some((r) => !isCurrent(r) && (r.affective_relation?.trim() || r.other_blocks?.trim()))
   return (
-    <section className="space-y-2">
+    <section className="space-y-3 border-t border-border pt-3 [&>div+div]:border-t [&>div+div]:border-border [&>div+div]:pt-3">
       {section('Relação com a Grande Tijuca', 'affective_relation', field.data?.affective_relation)}
       {section('Outros blocos', 'other_blocks', field.data?.other_blocks)}
       {hasOlder && (
