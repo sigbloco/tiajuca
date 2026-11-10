@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Cake } from 'lucide-react'
 import { useState } from 'react'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Link } from 'react-router-dom'
@@ -7,6 +8,7 @@ import { addDaysIso, formatCurrency, formatDate, formatDayLong, todayIso } from 
 import { useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { MemberLink } from '@/modules/members/MemberLink'
 import { EventCard } from '@/modules/events/EventCard'
 import { EventSheet } from '@/modules/events/EventSheet'
 import { listActivities, type Activity } from '@/modules/events/service'
@@ -48,6 +50,28 @@ function useMySections(orgId: string, memberId: string, cycleId: string | undefi
       return { mine: new Set(all.filter((x) => ids.has(x.id)).map((x) => x.plain)), all: all.map((x) => x.plain) }
     },
   })
+}
+
+/** Aniversariantes do dia: visível a todos (só nome). */
+function BirthdaysToday({ orgId, tz }: { orgId: string; tz: string }) {
+  const today = todayIso(tz)
+  const { data } = useQuery({
+    queryKey: ['birthdays-today', orgId, today],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('todays_birthdays', { p_org: orgId, p_date: today })
+      if (error) throw error
+      return (data ?? []) as { member_id: string; name: string }[]
+    },
+  })
+  if (!data || data.length === 0) return null
+  return (
+    <Card className="space-y-1 p-3">
+      <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> Aniversariante(s) do dia:</p>
+      <p className="text-muted-foreground">
+        {data.map((p, i) => <span key={p.member_id}>{i > 0 && ', '}<MemberLink id={p.member_id} className="font-semibold text-foreground">{p.name}</MemberLink></span>)}
+      </p>
+    </Card>
+  )
 }
 
 function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: string; memberId: string; slug: string; tz: string; filterByMine: boolean }) {
@@ -210,6 +234,7 @@ export function HomePage() {
         <p className="text-muted-foreground">{membership.roles.length ? membership.roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') : 'Sem papel de acesso atribuído.'} em {membership.name}</p>
       </div>
       <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} />
+      <BirthdaysToday orgId={membership.organization_id} tz={membership.timezone} />
       <UpcomingEvents orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} tz={membership.timezone} filterByMine={!isDirection} />
       {isStaff && !isDirection && <GroupCard orgId={membership.organization_id} slug={membership.slug} />}
       {isDirection && <DirectionDashboard orgId={membership.organization_id} />}
