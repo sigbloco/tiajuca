@@ -83,11 +83,11 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, statuses, se
   const labelOf = (x: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !x.is_waitlist ? (x.counts_as_active ? 'Participou' : 'Não participou') : x.name)
   return (
     <div className="space-y-3 p-1">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-2">
           {selector && <div className="min-w-0 space-y-1"><Label className="text-xs">Ciclo</Label>{selector}</div>}
           <div className="min-w-0 space-y-1">
             <Label className="text-xs">Situação</Label>
-            <OkSelect className="w-full min-w-0" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
+            <OkSelect className="w-full min-w-0 px-2 text-sm" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
               {!status && <option value="">Sem registro</option>}
               {status && past && status.is_waitlist && <option value={status.key}>{status.name}</option>}
               {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
@@ -174,7 +174,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
         {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
         {(chosen ? [chosen] : []).map((c) => (
           <CycleGroup key={c.id} cycle={c} selector={
-            <Select aria-label="Ciclo" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
+            <Select aria-label="Ciclo" className="px-2 text-sm" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
               {mine.map((m) => <option key={m.id} value={m.id}>{m.name}{m.is_current ? ' · atual' : ''}</option>)}
             </Select>} status={statusOfCycle(c.id)} memberId={memberId} canManage={canManage} statuses={statuses ?? []}
             onChange={(cycle, status) => change.mutateAsync({ cycle, status })} />
