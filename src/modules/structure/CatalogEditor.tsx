@@ -17,10 +17,8 @@ interface Props {
   table: CatalogTable
   title: string
   singular: string
-  /** Exige escolher o naipe (subnaipes e instrumentos). */
+  /** Exige escolher o naipe (instrumentos). */
   withSection?: boolean
-  /** Permite escolher um subnaipe opcional (instrumentos). */
-  withSubsection?: boolean
   hint?: string
   /** Mostra seletor de cor (tipos de evento). */
   withColor?: boolean
@@ -39,15 +37,13 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withSubsection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const [name, setName] = useState('')
   const [sectionId, setSectionId] = useState('')
-  const [subsectionId, setSubsectionId] = useState('')
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const visible = (items ?? []).filter((i) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search))
     .sort((a, b) => (alphabetical ? a.name.localeCompare(b.name, 'pt-BR') : 0))
@@ -62,7 +58,6 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
         name: name.trim(),
         sort_order: (items?.reduce((m, i) => Math.max(m, i.sort_order), 0) ?? 0) + 1,
         ...(withSection ? { section_id: sectionId } : {}),
-        ...(withSubsection && subsectionId ? { subsection_id: subsectionId } : {}),
       }),
     onSuccess: (id) => {
       if (mirrorFees) void mirrorFunctionToFees(orgId, { created: name.trim() }).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
@@ -109,15 +104,9 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
         <Card className="flex flex-wrap items-end gap-2 p-3">
           <Input className="min-w-40 flex-1" placeholder={`Novo(a) ${singular.toLowerCase()}`} value={name} onChange={(e) => setName(e.target.value)} />
           {withSection && (
-            <Select className="w-44" value={sectionId} aria-label="Naipe" onChange={(e) => { setSectionId(e.target.value); setSubsectionId('') }}>
+            <Select className="w-44" value={sectionId} aria-label="Naipe" onChange={(e) => setSectionId(e.target.value)}>
               <option value="">Naipe</option>
               {sections.data?.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
-          )}
-          {withSubsection && (
-            <Select className="w-44" value={subsectionId} aria-label="Subnaipe" disabled={!sectionId} onChange={(e) => setSubsectionId(e.target.value)}>
-              <option value="">Subnaipe (opcional)</option>
-              {subsections.data?.filter((s) => s.is_active && s.section_id === sectionId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           )}
           <Button disabled={!canAdd || add.isPending} onClick={() => add.mutate()}><Plus className="h-4 w-4" /> Adicionar</Button>
@@ -140,19 +129,6 @@ export function CatalogEditor({ table, title, singular, withSection, withSubsect
             <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`}
               onSave={(v) => save.mutateAsync({ id: item.id, name: v })} />
             {withSection && <Badge className="hidden sm:inline-flex">{nameOf(sections.data, item.section_id)}</Badge>}
-            {withSubsection && (
-              <OkSelect
-                className="h-9 w-36"
-                aria-label="Subnaipe do instrumento"
-                disabled={!canEdit}
-                value={item.subsection_id ?? ''}
-                onSave={(v) => save.mutateAsync({ id: item.id, name: item.name, subsection_id: v || null })}
-              >
-                <option value="">Sem subnaipe</option>
-                {subsections.data?.filter((x) => x.section_id === item.section_id && (x.is_active || x.id === item.subsection_id))
-                  .map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-              </OkSelect>
-            )}
             {withColor && (
               <OkSelect className="h-9 w-40" aria-label="Cor" disabled={!canEdit} value={item.color ?? 'primary'}
                 onSave={(v) => save.mutateAsync({ id: item.id, name: item.name, color: v })}>

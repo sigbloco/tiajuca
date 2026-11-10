@@ -32,10 +32,10 @@ import { Sheet } from '@/components/ui/primitives'
 import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './StructureManagers'
 
 type Kind = 'professor' | 'monitor' | 'regente'
-type Scope = 'section' | 'subsection' | 'instrument'
-interface Assignment { compensation: Compensation; id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+type Scope = 'section' | 'instrument'
+interface Assignment { compensation: Compensation; id: string; member_id: string; staff_kind: Kind; section_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
 
-const COL: Record<Scope, string> = { section: 'section_id', subsection: 'subsection_id', instrument: 'instrument_id' }
+const COL: Record<Scope, string> = { section: 'section_id', instrument: 'instrument_id' }
 
 const KIND_LABEL: Record<Kind, string> = { professor: 'Professor', monitor: 'Monitor', regente: 'Regente' }
 
@@ -47,12 +47,12 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
   const [adding, setAdding] = useState<Kind | null>(null)
   const [comp, setComp] = useState<Compensation | null>(null)
   const labeler = usePersonLabeler()
-  const col = COL[scope] as 'section_id' | 'subsection_id' | 'instrument_id'
+  const col = COL[scope] as 'section_id' | 'instrument_id'
   const { data } = useQuery({
     queryKey: ['staff-assignments', orgId, 'naipes', cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, compensation, section_id, subsection_id, instrument_id, members(full_name, display_name)')
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, compensation, section_id, instrument_id, members(full_name, display_name)')
         .eq('organization_id', orgId).is('valid_to', null).eq('cycle_id', cycleId).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]

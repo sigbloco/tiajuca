@@ -45,7 +45,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   })
   // Público da chamada: vários itens (ex.: Flauta e Sax alto). Vazio = todos os ativos no ciclo.
   const [auds, setAuds] = useState<{ kind: AudienceKind; ref: string }[]>(rule?.audiences ?? [])
-  const catalogs = { section: useCatalog('sections'), subsection: useCatalog('subsections'), instrument: useCatalog('instruments') }
+  const catalogs = { section: useCatalog('sections'), instrument: useCatalog('instruments') }
   const setAud = (i: number, patch: Partial<{ kind: AudienceKind; ref: string }>) => setAuds((l) => l.map((a, k) => (k === i ? { ...a, ...patch } : a)))
   // Recorrência antiga, sem roteiro: o horário, o local e a descrição dela viram o primeiro item.
   const [steps, setSteps] = useState<ItineraryStep[]>(() => (rule?.itinerary?.length || !rule?.start_time
@@ -117,7 +117,6 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
                 <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
                   <Select aria-label="Tipo de público" value={a.kind} onChange={(e) => setAud(i, { kind: e.target.value as AudienceKind, ref: '' })}>
                     <option value="section">Naipe</option>
-                    <option value="subsection">Subnaipe</option>
                     <option value="instrument">Instrumento</option>
                   </Select>
                   <Select aria-label="Público" value={a.ref} onChange={(e) => setAud(i, { ref: e.target.value })}>

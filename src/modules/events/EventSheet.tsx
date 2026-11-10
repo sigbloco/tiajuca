@@ -19,7 +19,7 @@ import {
   type Activity, type AudienceKind, type ItineraryStep, type TypeColor,
 } from './service'
 
-const AUDIENCE_TABLE: Record<AudienceKind, CatalogTable> = { section: 'sections', subsection: 'sections', instrument: 'instruments' }
+const AUDIENCE_TABLE: Record<AudienceKind, CatalogTable> = { section: 'sections', instrument: 'instruments' }
 const AUDIENCE_LABEL: Record<'section' | 'instrument', string> = { section: 'Naipe', instrument: 'Instrumento' }
 
 interface Props {

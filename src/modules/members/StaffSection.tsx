@@ -35,7 +35,7 @@ export function CompensationPick({ value, onChange }: { value: Compensation | nu
   )
 }
 
-interface Row { id: string; staff_kind: Kind; compensation: Compensation; section_id: string | null; subsection_id: string | null; instrument_id: string | null }
+interface Row { id: string; staff_kind: Kind; compensation: Compensation; section_id: string | null; instrument_id: string | null }
 
 /** Ficha do integrante: as atribuições dele na equipe do ciclo (as mesmas de Naipes e instrumentos), remuneradas ou colaborativas. */
 export function StaffSection({ memberId }: { memberId: string }) {
@@ -44,7 +44,6 @@ export function StaffSection({ memberId }: { memberId: string }) {
   const canManage = usePermission('structure.manage')
   const { cycle } = useSelectedCycle()
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const [adding, setAdding] = useState(false)
   const [kind, setKind] = useState<Kind>('professor')
@@ -55,7 +54,7 @@ export function StaffSection({ memberId }: { memberId: string }) {
     queryKey: ['staff-assignments', orgId, 'member', memberId, cycle?.id],
     enabled: Boolean(cycle),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, staff_kind, compensation, section_id, subsection_id, instrument_id')
+      const { data, error } = await supabase.from('staff_assignments').select('id, staff_kind, compensation, section_id, instrument_id')
         .eq('organization_id', orgId).eq('member_id', memberId).eq('cycle_id', cycle!.id).is('valid_to', null)
       if (error) throw error
       return (data ?? []) as Row[]
@@ -64,13 +63,12 @@ export function StaffSection({ memberId }: { memberId: string }) {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['staff-assignments'] }); qc.invalidateQueries({ queryKey: ['member-links'] }) }
   const nameOf = (r: Row) =>
     r.instrument_id ? instruments.data?.find((i) => i.id === r.instrument_id)?.name
-      : r.subsection_id ? subsections.data?.find((s) => s.id === r.subsection_id)?.name
-        : sections.data?.find((s) => s.id === r.section_id)?.name
+      : sections.data?.find((s) => s.id === r.section_id)?.name
 
   const add = useMutation({
     mutationFn: async () => {
       const [type, id] = target.split(':')
-      const col = type === 'i' ? 'instrument_id' : type === 's' ? 'subsection_id' : 'section_id'
+      const col = type === 'i' ? 'instrument_id' : 'section_id'
       const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: memberId, staff_kind: kind, [col]: id, compensation: comp, cycle_id: cycle!.id })
       if (error) throw error
     },
@@ -113,7 +111,6 @@ export function StaffSection({ memberId }: { memberId: string }) {
             <Select aria-label="Naipe ou instrumento" value={target} onChange={(e) => setTarget(e.target.value)}>
               <option value="">Escolha o naipe ou instrumento</option>
               <optgroup label="Naipes">{(sections.data ?? []).filter((s) => s.is_active).map((s) => <option key={s.id} value={`n:${s.id}`}>{s.name}</option>)}</optgroup>
-              <optgroup label="Subnaipes">{(subsections.data ?? []).filter((s) => s.is_active).map((s) => <option key={s.id} value={`s:${s.id}`}>{s.name}</option>)}</optgroup>
               <optgroup label="Instrumentos">{(instruments.data ?? []).filter((i) => i.is_active).map((i) => <option key={i.id} value={`i:${i.id}`}>{i.name}</option>)}</optgroup>
             </Select>
             <CompensationPick value={comp} onChange={setComp} />

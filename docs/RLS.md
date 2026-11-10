@@ -48,7 +48,7 @@ Testes: `supabase/tests/rls_phase2_smoke.sql`.
 **Regra:** em funções de permissão, nunca depender de booleano que possa ser NULL; sempre `coalesce(..., false)`.
 
 ## Reestruturação de naipes (migration `…000006`)
-Naipe (Percussão/Sopro/Performance) → Subnaipe (opcional, interno) → Instrumento. Vagas (`instrument_cycle_capacity`) e acompanhamento (`staff_assignments`, aceita naipe, subnaipe ou instrumento) valem por instrumento; `is_in_my_group` expande. `subsections` só é legível pela equipe (`is_staff`): aluno/integrante comum nunca vê subnaipe. Subnaipe do instrumento deve pertencer ao mesmo naipe (FK composta).
+Naipe (Percussão/Sopro/Performance) → Instrumento. Vagas (`instrument_cycle_capacity`) e acompanhamento (`staff_assignments`, aceita naipe ou instrumento) valem por instrumento; `is_in_my_group` expande.
 
 ## Fase 4 — contribuições, bolsas, mensalidades (migration `…000008`)
 | Tabela | SELECT | Escrita |
