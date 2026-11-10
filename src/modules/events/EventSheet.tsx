@@ -51,7 +51,11 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     cycle_id: activity?.cycle_id ?? '',
     visibility: activity?.visibility ?? ('members' as Activity['visibility']),
   })
-  const [steps, setSteps] = useState<ItineraryStep[]>(() => loadSteps(activity?.itinerary))
+  // Ocorrência de recorrência: horário, local e descrição vêm do roteiro (como na recorrência), então esses campos não aparecem.
+  const fromRule = Boolean(activity?.recurrence_rule_id)
+  const [steps, setSteps] = useState<ItineraryStep[]>(() => (fromRule && !activity?.itinerary?.length && activity?.start_time
+    ? loadSteps([{ time: activity.start_time, end: activity.end_time ?? undefined, label: activity.title, location: activity.location ?? undefined, description: activity.description ?? undefined }])
+    : loadSteps(activity?.itinerary)))
   // Ciclo sempre definido: o que contém a data ou, na falta, o ciclo atual.
   useEffect(() => {
     if (f.cycle_id || !cycles.data) return
@@ -76,14 +80,19 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
   const save = useMutation({
     mutationFn: async () => {
       const typeId = await typeIdForColor(orgId, f.color)
+      const items = cleanSteps(steps) ?? []
+      const fromSteps = fromRule ? {
+        start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
+        location: items.find((x) => x.location)?.location ?? null, description: items.map((x) => x.description).filter(Boolean).join('\n') || null,
+      } : null
       return saveActivity(orgId, activity?.id ?? null, {
         title: f.title.trim(),
         activity_type_id: typeId,
         activity_date: f.activity_date,
-        start_time: f.start_time || null,
-        end_time: f.end_time || null,
-        location: f.location.trim() || null,
-        description: f.description.trim() || null,
+        start_time: fromSteps ? fromSteps.start_time : f.start_time || null,
+        end_time: fromSteps ? fromSteps.end_time : f.end_time || null,
+        location: fromSteps ? fromSteps.location : f.location.trim() || null,
+        description: fromSteps ? fromSteps.description : f.description.trim() || null,
         cycle_id: f.cycle_id || null,
         visibility: f.visibility,
         itinerary: cleanSteps(steps),
@@ -170,6 +179,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           </div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="ev-date">Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
+        {!fromRule && (
+          <>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="ev-start">Início</Label><TimeInput id="ev-start" value={f.start_time} onChange={(v) => setF({ ...f, start_time: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ev-end">Fim</Label><TimeInput id="ev-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
@@ -180,6 +191,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           <textarea id="ev-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
         </div>
+          </>
+        )}
         <ItineraryEditor steps={steps} onChange={setSteps} />
         <div className="space-y-3">
           <div className="space-y-1.5">
