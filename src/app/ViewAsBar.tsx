@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Eye, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import { Button, Select, cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
@@ -26,6 +26,16 @@ export function ViewAsBar() {
   const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const { isInactive } = useMemberStatus()
+  const barRef = useRef<HTMLDivElement>(null)
+  // Altura da barra, para o topo fixo do app ficar logo abaixo dela (sem sobrepor).
+  useEffect(() => {
+    const el = barRef.current
+    document.documentElement.style.setProperty('--viewas-h', (el?.offsetHeight ?? 0) + 'px')
+    if (!el) return
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--viewas-h', el.offsetHeight + 'px'))
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
 
   const people = useQuery({
     queryKey: ['view-as-people', orgId],
@@ -108,7 +118,7 @@ export function ViewAsBar() {
   if (!allowed) return null
   const selected = profiles.find((p) => p.id === viewAs?.member_id || (!!viewAs?.virtual && p.key === viewAs.virtual.key))
   return (
-    <div className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted')}>
+    <div ref={barRef} className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted')}>
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4 shrink-0" aria-hidden />
         <span className="hidden shrink-0 font-semibold sm:inline">{viewAs ? 'Visualizando como' : 'Visualizar como'}</span>
