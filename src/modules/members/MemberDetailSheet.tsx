@@ -82,8 +82,7 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, st
   const labelOf = (x: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !x.is_waitlist ? (x.counts_as_active ? 'Participou' : 'Não participou') : x.name)
   return (
     <div className="space-y-3 p-1">
-        <div className="flex items-start justify-between gap-2">
-  <p className="text-sm"><span className="text-muted-foreground">Início </span><span className="font-semibold">{formatDate(cycle.starts_on)}</span><span className="text-muted-foreground"> · Término </span><span className="font-semibold">{formatDate(cycle.ends_on)}</span></p>
+        <div className="flex items-start justify-end gap-2">
           {canManage && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>}
         </div>
         <div className="flex items-center gap-2">
@@ -94,7 +93,7 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, st
             {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
           </OkSelect>
         </div>
-        <ParticipationBlock memberId={memberId} cycle={cycle} />
+        <div className="border-t border-border pt-3"><ParticipationBlock memberId={memberId} cycle={cycle} /></div>
     </div>
   )
 }
@@ -345,7 +344,7 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   }
   const hasOlder = rows.some((r) => !isCurrent(r) && (r.affective_relation?.trim() || r.other_blocks?.trim()))
   return (
-    <section className="space-y-3 border-t border-border pt-3 [&>div+div]:border-t [&>div+div]:border-border [&>div+div]:pt-3">
+    <section className="space-y-3 border-t border-border pt-3">
       {section('Relação com a Grande Tijuca', 'affective_relation', field.data?.affective_relation)}
       {section('Outros blocos', 'other_blocks', field.data?.other_blocks)}
       {hasOlder && (
