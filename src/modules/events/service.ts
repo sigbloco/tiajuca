@@ -118,7 +118,7 @@ export async function materialize(orgId: string, until: string): Promise<number>
 
 /** Leva o horário, local, descrição e roteiro das recorrências (ativas, ou só a indicada) para as próximas ocorrências já geradas e ainda agendadas. */
 export async function syncOccurrences(orgId: string, today: string, ruleId?: string): Promise<number> {
-  let q = supabase.from('recurrence_rules').select('id, title, start_time, end_time, location, description, itinerary, audience_kind, audience_ref').eq('organization_id', orgId).eq('is_active', true)
+  let q = supabase.from('recurrence_rules').select('id, title, start_time, end_time, location, description, itinerary, audiences').eq('organization_id', orgId).eq('is_active', true)
   if (ruleId) q = q.eq('id', ruleId)
   const { data: rules, error } = await q
   if (error) throw error
@@ -134,8 +134,9 @@ export async function syncOccurrences(orgId: string, today: string, ruleId?: str
     if (ids.length > 0) {
       const del = await supabase.from('activity_audiences').delete().in('activity_id', ids)
       if (del.error) throw del.error
-      if (r.audience_kind && r.audience_ref) {
-        const ins = await supabase.from('activity_audiences').insert(ids.map((id) => ({ organization_id: orgId, activity_id: id, kind: r.audience_kind, ref_id: r.audience_ref })))
+      const auds = (r.audiences ?? []) as { kind: string; ref: string }[]
+      if (auds.length > 0) {
+        const ins = await supabase.from('activity_audiences').insert(ids.flatMap((id) => auds.map((a) => ({ organization_id: orgId, activity_id: id, kind: a.kind, ref_id: a.ref }))))
         if (ins.error) throw ins.error
       }
     }
