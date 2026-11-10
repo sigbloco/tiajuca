@@ -1,4 +1,4 @@
--- Teste de fumaça da Fase 2 (naipe → subnaipe → instrumento, grupos, vagas, histórico, isolamento).
+-- Teste de fumaça da Fase 2 (naipe → instrumento, grupos, vagas, histórico, isolamento).
 -- Rodar APÓS migrations 0004-0006. Sempre termina desfazendo tudo.
 -- Resultado esperado no SQL Editor: erro "TESTES_OK_ROLLBACK" (sentinela = todas as verificações passaram).
 -- Qualquer outra mensagem ("FALHOU: ...") indica problema.
@@ -35,8 +35,7 @@ begin
 
   insert into public.sections (organization_id, name) values (org_a, 'Percussão') returning id into sec_p;
   insert into public.sections (organization_id, name) values (org_a, 'Sopro') returning id into sec_s;
-  insert into public.subsections (organization_id, section_id, name) values (org_a, sec_p, 'Leves') returning id into sub_leves;
-  insert into public.instruments (organization_id, section_id, subsection_id, name) values (org_a, sec_p, sub_leves, 'Tamborim') returning id into i1;
+  insert into public.instruments (organization_id, section_id, name) values (org_a, sec_p, 'Tamborim') returning id into i1;
   insert into public.instruments (organization_id, section_id, name) values (org_a, sec_p, 'Surdo') returning id into i2;
   insert into public.instruments (organization_id, section_id, name) values (org_a, sec_s, 'Flauta') returning id into i3;
   select id into ctype from public.cycle_types where organization_id=org_a and key='carnaval';
@@ -44,20 +43,18 @@ begin
     values (org_a, ctype, 'Carnaval 2026/2027', '2026-10-01', '2027-03-31') returning id into cyc;
   insert into public.member_artistic_links (organization_id, member_id, instrument_id) values
     (org_a, m_st1, i1), (org_a, m_st2, i1), (org_a, m_st3, i2);
-  -- Professor acompanha apenas o subnaipe "Leves" (→ instrumento Tamborim)
-  insert into public.staff_assignments (organization_id, member_id, staff_kind, subsection_id)
-    values (org_a, m_prof, 'professor', sub_leves);
+  -- Professor acompanha apenas o instrumento Tamborim
+  insert into public.staff_assignments (organization_id, member_id, staff_kind, instrument_id)
+    values (org_a, m_prof, 'professor', i1);
   insert into public.instrument_cycle_capacity (organization_id, instrument_id, cycle_id, capacity) values (org_a, i1, cyc, 1);
 
-  -- ── Professor: grupo expandido do subnaipe ──
+  -- ── Professor: grupo do instrumento ──
   perform set_config('request.jwt.claims', json_build_object('sub', u_prof, 'role','authenticated')::text, true);
   set local role authenticated;
   select count(*) into n from public.members;
   if n <> 3 then raise exception 'FALHOU: Professor deveria ver 3 (Tamborim x2 + si), viu %', n; end if;
   select count(*) into n from public.members where full_name = 'Aluno3';
-  if n <> 0 then raise exception 'FALHOU: Professor viu aluno fora do subnaipe'; end if;
-  select count(*) into n from public.subsections;
-  if n <> 1 then raise exception 'FALHOU: equipe deveria ver o subnaipe (viu %)', n; end if;
+  if n <> 0 then raise exception 'FALHOU: Professor viu aluno fora do instrumento'; end if;
 
   perform public.set_member_cycle_status(m_st1, cyc, 'active');
   begin
@@ -91,11 +88,6 @@ begin
   select public.instrument_occupied(i1, cyc) into n;
   if n <> 2 then raise exception 'FALHOU: ocupação esperada 2, veio %', n; end if;
   perform public.create_member_invite(m_st2);
-  -- subnaipe de outro naipe é rejeitado (integridade)
-  begin
-    insert into public.instruments (organization_id, section_id, subsection_id, name) values (org_a, sec_s, sub_leves, 'Invalido');
-    raise exception 'FALHOU: instrumento aceitou subnaipe de outro naipe' using errcode = 'XX999';
-  exception when foreign_key_violation then null; end;
   -- atribuição por naipe inteiro passa a incluir também o Surdo
   insert into public.staff_assignments (organization_id, member_id, staff_kind, section_id)
     values (org_a, m_prof, 'professor', sec_p);
@@ -106,12 +98,10 @@ begin
   select count(*) into n from public.members;
   if n <> 4 then raise exception 'FALHOU: com naipe inteiro Professor deveria ver 4, viu %', n; end if;
 
-  -- ── Integrante (aluno): nunca vê subnaipes; não altera status; não convida ──
+  -- ── Integrante (aluno): não altera status; não convida ──
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', u_st1, 'role','authenticated')::text, true);
   set local role authenticated;
-  select count(*) into n from public.subsections;
-  if n <> 0 then raise exception 'FALHOU: aluno enxergou subnaipe (%)', n; end if;
   select count(*) into n from public.instruments;
   if n <> 3 then raise exception 'FALHOU: aluno deveria ver instrumentos (viu %)', n; end if;
   begin

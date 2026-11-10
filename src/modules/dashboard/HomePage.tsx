@@ -31,18 +31,16 @@ function useMySections(orgId: string, memberId: string, cycleId: string | undefi
     queryKey: ['my-sections', orgId, memberId, cycleId],
     enabled: enabled && Boolean(cycleId),
     queryFn: async () => {
-      const [secs, inst, sub, staff, parts] = await Promise.all([
+      const [secs, inst, staff, parts] = await Promise.all([
         supabase.from('sections').select('id, name').eq('organization_id', orgId).eq('is_active', true),
         supabase.from('instruments').select('id, section_id').eq('organization_id', orgId).limit(1000),
-        supabase.from('subsections').select('id, section_id').eq('organization_id', orgId).limit(1000),
-        supabase.from('staff_assignments').select('section_id, subsection_id, instrument_id').eq('organization_id', orgId).eq('member_id', memberId).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']),
+        supabase.from('staff_assignments').select('section_id, instrument_id').eq('organization_id', orgId).eq('member_id', memberId).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']),
         supabase.from('cycle_participations').select('instrument_id').eq('member_id', memberId).eq('cycle_id', cycleId!).not('instrument_id', 'is', null),
       ])
       const insMap = new Map((inst.data ?? []).map((x) => [x.id as string, x.section_id as string]))
-      const subMap = new Map((sub.data ?? []).map((x) => [x.id as string, x.section_id as string]))
       const ids = new Set<string>()
       for (const r of staff.data ?? []) {
-        const sid = r.section_id ?? (r.subsection_id ? subMap.get(r.subsection_id) : undefined) ?? (r.instrument_id ? insMap.get(r.instrument_id) : undefined)
+        const sid = r.section_id ?? (r.instrument_id ? insMap.get(r.instrument_id) : undefined)
         if (sid) ids.add(sid as string)
       }
       for (const r of parts.data ?? []) { const sid = insMap.get(r.instrument_id as string); if (sid) ids.add(sid) }

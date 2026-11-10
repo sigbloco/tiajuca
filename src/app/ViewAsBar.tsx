@@ -14,7 +14,7 @@ interface Row {
   member_access_roles: { revoked_at: string | null; access_roles: { key: string } | null }[]
   member_artistic_links: { instrument_id: string | null; ended_at: string | null }[]
 }
-interface Staff { member_id: string; staff_kind: 'professor' | 'monitor'; section_id: string | null; subsection_id: string | null; instrument_id: string | null }
+interface Staff { member_id: string; staff_kind: 'professor' | 'monitor'; section_id: string | null; instrument_id: string | null }
 interface Cat { member_id: string; category_name: string }
 
 /** Barra fixa no topo (só Titular/Direção): escolhe um PERFIL de exemplo e a interface passa a mostrar o que ele veria. */
@@ -23,7 +23,6 @@ export function ViewAsBar() {
   const allowed = !!realMembership && hasPermission(realMembership.permissions, 'roles.manage')
   const orgId = realMembership?.organization_id
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const { isInactive } = useMemberStatus()
   const barRef = useRef<HTMLDivElement>(null)
@@ -52,7 +51,7 @@ export function ViewAsBar() {
     queryKey: ['view-as-staff', orgId],
     enabled: allowed,
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, section_id, subsection_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId!).is('valid_to', null).eq('cycles.is_current', true)
+      const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, section_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId!).is('valid_to', null).eq('cycles.is_current', true)
       if (error) throw error
       return (data ?? []) as Staff[]
     },
@@ -75,9 +74,8 @@ export function ViewAsBar() {
     const nameOf = (r: Row) => shortName(r?.full_name, r?.display_name)
     const rolesOf = (r: Row) => new Set(r.member_access_roles.filter((x) => !x.revoked_at && x.access_roles).map((x) => x.access_roles!.key))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
-    const subById = new Map((subsections.data ?? []).map((s) => [s.id, s]))
     const secList = (sections.data ?? []).filter((s) => s.is_active)
-    const sectionOfStaff = (a: Staff) => a.section_id ?? (a.subsection_id ? subById.get(a.subsection_id)?.section_id : null) ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id : null) ?? null
+    const sectionOfStaff = (a: Staff) => a.section_id ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id : null) ?? null
     const sectionOfLinks = (r: Row) => r.member_artistic_links.filter((l) => !l.ended_at).map((l) => (l.instrument_id ? instById.get(l.instrument_id)?.section_id : null)).filter(Boolean) as string[]
     // Sem ninguém no perfil, dá para visualizar mesmo assim: simula só os papéis (os dados continuam os seus).
     const rolesFor = (key: string) => (key === 'direcao' ? ['direcao', 'integrante'] : key.startsWith('professor:') ? ['professor', 'integrante'] : key.startsWith('monitor:') ? ['monitor', 'integrante'] : ['integrante'])
@@ -113,7 +111,7 @@ export function ViewAsBar() {
     const ina = pick(rows.filter((x) => isInactive(x.id) && !rolesOf(x).has('direcao') && !rolesOf(x).has('titular')))
     add('inativo', 'Inativo', ina)
     return out
-  }, [people.data, staff.data, cats.data, sections.data, subsections.data, instruments.data, isInactive, realMembership?.member_id])
+  }, [people.data, staff.data, cats.data, sections.data, instruments.data, isInactive, realMembership?.member_id])
 
   if (!allowed) return null
   const selected = profiles.find((p) => p.id === viewAs?.member_id || (!!viewAs?.virtual && p.key === viewAs.virtual.key))

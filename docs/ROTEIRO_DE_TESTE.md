@@ -22,7 +22,7 @@ Use o site publicado: **https://tiajuca.cordaodatiajuca.workers.dev** (ou `npm r
 - [ ] Tente remover a Direção de si mesmo sendo o único diretor: o app recusa. Só o **Titular** concede/remove Direção.
 
 ## 2. Estrutura, ciclos e vagas
-- [ ] **Configurações → Naipes** (fechados por padrão) e **Instrumentos** agrupados por naipe/subnaipe, com o **filtro (funil)**. Os instrumentos da planilha existem; "Mestre de bateria" é **função**.
+- [ ] **Configurações → Naipes** (fechados por padrão) e **Instrumentos** agrupados por naipe, com o **filtro (funil)**. Os instrumentos da planilha existem; "Mestre de bateria" é **função**.
 - [ ] **Ciclos**: existe o ciclo atual "Carnaval 2026/27". **Vagas**: defina um limite para um instrumento (ex.: Tamborim) e veja ocupados × vagas.
 - [ ] **Integrantes → ficha**: troque o status de uma pessoa **TESTE** no ciclo (Ativo/Inativo/Lista de espera). Com vaga lotada aparece "Vaga lotada" e *Autorizar exceção*.
 - [ ] Tente cadastrar alguém **menor de 18**: recusado.

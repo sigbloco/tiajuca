@@ -19,7 +19,7 @@ import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { StaffTab } from './StaffTab'
 
-type Scope = 'all' | 'section' | 'subsection' | 'instrument'
+type Scope = 'all' | 'section' | 'instrument'
 type Kind = 'fixed' | 'percent' | 'hourly'
 interface Rule {
   id?: string
@@ -29,15 +29,14 @@ interface Rule {
   hourly_rate: number | null
   scope: Scope
   section_id: string | null
-  subsection_id: string | null
   instrument_id: string | null
 }
 interface RuleRow extends Rule { id: string; member_id: string; members: { full_name: string; display_name: string | null } | null }
 interface Person { id: string; name: string; kinds: string[] }
 interface Lesson { id: string; title: string; activity_date: string; start_time: string | null; end_time: string | null; status: string; activity_types: { name: string } | null }
 
-const SCOPE_LABEL: Record<Scope, string> = { all: 'Receita total das oficinas', section: 'Um naipe', subsection: 'Um subnaipe', instrument: 'Um instrumento' }
-const EMPTY_RULE: Rule = { kind: 'percent', fixed_amount: null, percent: null, hourly_rate: null, scope: 'all', section_id: null, subsection_id: null, instrument_id: null }
+const SCOPE_LABEL: Record<Scope, string> = { all: 'Receita total das oficinas', section: 'Um naipe', instrument: 'Um instrumento' }
+const EMPTY_RULE: Rule = { kind: 'percent', fixed_amount: null, percent: null, hourly_rate: null, scope: 'all', section_id: null, instrument_id: null }
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
 const hoursOf = (l: Lesson) => {
@@ -52,17 +51,16 @@ const GROUPS: { key: string; label: string }[] = [
   { key: 'Direção', label: 'Direção' }, { key: 'Professor', label: 'Professores' }, { key: 'Monitor', label: 'Monitores' }, { key: 'Regência', label: 'Regência' }, { key: '', label: 'Outros' },
 ]
 
-/** Formulário de uma regra: fixo, % (de tudo, naipe, subnaipe ou instrumento) ou valor por hora de aula. */
+/** Formulário de uma regra: fixo, % (de tudo, naipe ou instrumento) ou valor por hora de aula. */
 function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; memberId: string; cycleId: string; canEdit: boolean; onDone: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
   const instruments = useCatalog('instruments')
   const [r, setR] = useState<Rule>(rule)
   const [pct, setPct] = useState(rule.percent === null ? '' : String(rule.percent).replace('.', ','))
   const percent = Number(pct.replace(',', '.'))
-  const target = r.scope === 'section' ? r.section_id : r.scope === 'subsection' ? r.subsection_id : r.instrument_id
+  const target = r.scope === 'section' ? r.section_id : r.instrument_id
   const valid = r.kind === 'fixed' ? r.fixed_amount !== null && r.fixed_amount >= 0
     : r.kind === 'hourly' ? r.hourly_rate !== null && r.hourly_rate >= 0 && (r.scope === 'all' || !!r.section_id)
       : Number.isFinite(percent) && percent > 0 && percent <= 100 && (r.scope === 'all' || !!target)
@@ -74,7 +72,6 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
         kind: r.kind, scope: r.kind === 'fixed' ? 'all' : r.kind === 'hourly' ? (r.scope === 'section' ? 'section' : 'all') : r.scope,
         fixed_amount: r.kind === 'fixed' ? r.fixed_amount : null, percent: pctRule ? percent : null, hourly_rate: r.kind === 'hourly' ? r.hourly_rate : null,
         section_id: (pctRule || r.kind === 'hourly') && r.scope === 'section' ? r.section_id : null,
-        subsection_id: pctRule && r.scope === 'subsection' ? r.subsection_id : null,
         instrument_id: pctRule && r.scope === 'instrument' ? r.instrument_id : null,
       }
       const q = rule.id ? supabase.from('staff_pay_rules').update(row).eq('id', rule.id)
@@ -92,22 +89,17 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
   )
   return (
     <div className="space-y-1.5 rounded-lg bg-muted/50 p-2">
-      <Select aria-label="Tipo" disabled={!canEdit} value={r.kind} onChange={(e) => setR({ ...r, kind: e.target.value as Kind, scope: 'all', section_id: null, subsection_id: null, instrument_id: null })}>
+      <Select aria-label="Tipo" disabled={!canEdit} value={r.kind} onChange={(e) => setR({ ...r, kind: e.target.value as Kind, scope: 'all', section_id: null, instrument_id: null })}>
         <option value="percent">Porcentagem</option><option value="fixed">Valor fixo</option><option value="hourly">Por hora de aula</option>
       </Select>
       {r.kind === 'fixed' && <MoneyInput value={r.fixed_amount} onChange={(v) => setR({ ...r, fixed_amount: v })} />}
       {r.kind === 'percent' && (
         <>
           <div className="flex items-center gap-1"><Input aria-label="Porcentagem" inputMode="decimal" disabled={!canEdit} placeholder="0" value={pct} onChange={(e) => setPct(e.target.value)} /><span className="font-semibold">%</span></div>
-          <Select aria-label="Sobre" disabled={!canEdit} value={r.scope} onChange={(e) => setR({ ...r, scope: e.target.value as Scope, section_id: null, subsection_id: null, instrument_id: null })}>
+          <Select aria-label="Sobre" disabled={!canEdit} value={r.scope} onChange={(e) => setR({ ...r, scope: e.target.value as Scope, section_id: null, instrument_id: null })}>
             {(Object.keys(SCOPE_LABEL) as Scope[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}
           </Select>
           {r.scope === 'section' && naipeSelect}
-          {r.scope === 'subsection' && (
-            <Select aria-label="Subnaipe" disabled={!canEdit} value={r.subsection_id ?? ''} onChange={(e) => setR({ ...r, subsection_id: e.target.value || null })}>
-              <option value="">Escolha o subnaipe</option>{(subsections.data ?? []).filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
-          )}
           {r.scope === 'instrument' && (
             <Select aria-label="Instrumento" disabled={!canEdit} value={r.instrument_id ?? ''} onChange={(e) => setR({ ...r, instrument_id: e.target.value || null })}>
               <option value="">Escolha o instrumento</option>{(instruments.data ?? []).filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -179,13 +171,12 @@ export function TeamPage() {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
   const instruments = useCatalog('instruments')
   const sections = useCatalog('sections')
-  const subsections = useCatalog('subsections')
 
   const rules = useQuery({
     queryKey: ['staff-pay-rules', orgId, cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_pay_rules').select('id, member_id, kind, fixed_amount, percent, hourly_rate, scope, section_id, subsection_id, instrument_id, members(full_name, display_name)')
+      const { data, error } = await supabase.from('staff_pay_rules').select('id, member_id, kind, fixed_amount, percent, hourly_rate, scope, section_id, instrument_id, members(full_name, display_name)')
         .eq('organization_id', orgId).eq('cycle_id', cycleId).order('created_at')
       if (error) throw error
       return (data ?? []) as unknown as RuleRow[]
@@ -271,7 +262,7 @@ export function TeamPage() {
       const ids = byMember.get(c.member_id) ?? []
       const hit = ids.some((id) => {
         const i = inst.get(id)
-        return !!i && (rule.scope === 'instrument' ? i.id === rule.instrument_id : rule.scope === 'section' ? i.section_id === rule.section_id : i.subsection_id === rule.subsection_id)
+        return !!i && (rule.scope === 'instrument' ? i.id === rule.instrument_id : i.section_id === rule.section_id)
       })
       return hit ? sum + Number(c.final_amount) : sum
     }, 0)
@@ -291,11 +282,11 @@ export function TeamPage() {
   const revenue = (paid.data ?? []).reduce((n, c) => n + Number(c.final_amount), 0)
 
   const targetName = (r: Rule) => r.scope === 'section' ? sections.data?.find((s) => s.id === r.section_id)?.name
-    : r.scope === 'subsection' ? subsections.data?.find((s) => s.id === r.subsection_id)?.name : instruments.data?.find((i) => i.id === r.instrument_id)?.name
+    : instruments.data?.find((i) => i.id === r.instrument_id)?.name
   const summaryOf = (r: Rule) => {
     if (r.kind === 'fixed') return `${formatCurrency(Number(r.fixed_amount ?? 0))} fixo por mês`
     if (r.kind === 'hourly') return `${formatCurrency(Number(r.hourly_rate ?? 0))} por hora de aula${r.scope === 'section' ? ` · oficinas de ${targetName(r) ?? ''}` : ''}`
-    const of = r.scope === 'all' ? 'da receita total das oficinas' : r.scope === 'section' ? `da receita do naipe ${targetName(r) ?? ''}` : r.scope === 'subsection' ? `da receita do subnaipe ${targetName(r) ?? ''}` : `da receita do instrumento ${targetName(r) ?? ''}`
+    const of = r.scope === 'all' ? 'da receita total das oficinas' : r.scope === 'section' ? `da receita do naipe ${targetName(r) ?? ''}` : `da receita do instrumento ${targetName(r) ?? ''}`
     return `${num(Number(r.percent ?? 0))}% ${of}`
   }
   const detailOf = (r: Rule) => r.kind === 'hourly'
@@ -347,7 +338,7 @@ export function TeamPage() {
       </div>
       <ReadMore>
         Quem recebe no ciclo {cycle?.name ?? ''} e como: valor fixo, porcentagem ou valor por hora de aula. A porcentagem incide sobre a receita recebida no mês (cobranças pagas)
-        de todas as oficinas, de um naipe, de um subnaipe ou de um instrumento. No pagamento por hora, só contam as aulas que não foram canceladas. Os valores podem mudar de um ciclo para o seguinte.
+        de todas as oficinas, de um naipe ou de um instrumento. No pagamento por hora, só contam as aulas que não foram canceladas. Os valores podem mudar de um ciclo para o seguinte.
       </ReadMore>
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
       {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}

@@ -68,7 +68,7 @@ export interface ActivityInput {
   itinerary: ItineraryStep[] | null
 }
 
-export type AudienceKind = 'section' | 'subsection' | 'instrument'
+export type AudienceKind = 'section' | 'instrument'
 export interface AudienceInput { kind: AudienceKind; ref_id: string }
 
 export async function getAudience(activityId: string): Promise<AudienceInput | null> {

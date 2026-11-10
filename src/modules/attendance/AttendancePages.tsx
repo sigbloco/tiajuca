@@ -49,14 +49,14 @@ function cycleOf(a: { cycle_id: string | null; activity_date: string }, cycles: 
   return a.cycle_id ?? cycles.find((c) => a.activity_date >= c.starts_on && a.activity_date <= c.ends_on)?.id ?? cycles.find((c) => c.is_current)?.id ?? null
 }
 
-interface InstrumentInfo { id: string; name: string; section_id: string; subsection_id: string | null; section: string }
+interface InstrumentInfo { id: string; name: string; section_id: string; section: string }
 /** Catálogo de instrumentos com o naipe de cada um (para filtrar a chamada e mostrar a equipe). */
 function useInstrumentCatalog() {
   const orgId = useOrgId()
   return useQuery({
     queryKey: ['instrument-catalog', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, is_active, sections(name, is_active)').eq('organization_id', orgId).eq('is_active', true).limit(1000)
+      const { data, error } = await supabase.from('instruments').select('id, name, section_id, is_active, sections(name, is_active)').eq('organization_id', orgId).eq('is_active', true).limit(1000)
       if (error) throw error
       const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string; is_active: boolean } | null })[]).filter((i) => i.sections?.is_active).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
       return { list, byName: new Map(list.map((i) => [i.name, i])) }
@@ -93,7 +93,7 @@ function useStudentInstruments(cycleId: string | null | undefined) {
   })
 }
 
-/** Um horário do dia: título e os subnaipes (instrumentos) com alunos; cada um abre a chamada só daquele instrumento. */
+/** Um horário do dia: título e os instrumentos com alunos; cada um abre a chamada só daquele instrumento. */
 function ActivityCard({ a, instruments, studentIds, slug }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string }) {
   // Naipe pelo título ("Oficina de percussão" → Percussão); sem coincidência única, todos.
   const title = plain(a.title)
@@ -267,7 +267,7 @@ export function AttendanceRosterPage() {
       return new Map((data ?? []).map((x) => [x.id as string, x.name as string]))
     },
   })
-  // Naipes com alunos (subnaipes = instrumentos com alunos).
+  // Naipes com alunos.
   const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.instruments.has(i.id))
   const naipes = hasAudience ? [] : [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
@@ -283,18 +283,18 @@ export function AttendanceRosterPage() {
     enabled: Boolean(activity.data) && Boolean(cyclesAll.data) && Boolean(membership?.member_id),
     queryFn: async () => {
       const cid = cycleOf(activity.data!, cyclesAll.data ?? [])
-      let q = supabase.from('staff_assignments').select('section_id, subsection_id, instrument_id').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
+      let q = supabase.from('staff_assignments').select('section_id, instrument_id').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
       if (cid) q = q.eq('cycle_id', cid)
       const { data, error } = await q.limit(200)
       if (error) throw error
-      return (data ?? []) as { section_id: string | null; subsection_id: string | null; instrument_id: string | null }[]
+      return (data ?? []) as { section_id: string | null; instrument_id: string | null }[]
     },
   })
   const myScope = (() => {
     const list = catalog.data?.list ?? []
     const a = myStaff.data ?? []
     if (a.length === 0) return { section: '', inst: '' }
-    const mine = list.filter((i) => a.some((x) => x.instrument_id === i.id || (x.subsection_id && x.subsection_id === i.subsection_id) || (x.section_id && x.section_id === i.section_id)))
+    const mine = list.filter((i) => a.some((x) => x.instrument_id === i.id || (x.section_id && x.section_id === i.section_id)))
     const secs = new Set(mine.map((i) => i.section))
     const direct = a.filter((x) => x.instrument_id)
     const only = a.length === 1 && direct.length === 1 ? list.find((i) => i.id === direct[0].instrument_id) : undefined

@@ -27,7 +27,7 @@ interface LinkRow {
 interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_student: boolean; is_paid: boolean }
 const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false, is_paid: false }
 
-/** Vínculos artísticos do integrante: naipe → instrumento (subnaipe nunca aparece aqui) e/ou função. Editáveis. */
+/** Vínculos artísticos do integrante: naipe → instrumento e/ou função. Editáveis. */
 export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo atual: vínculos vigentes hoje. Outro ciclo (passado ou futuro): os do próprio ciclo, editáveis. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
   const collab = mode !== 'artistic' // colaborativa e remunerada só têm função
   const paid = mode === 'paid'

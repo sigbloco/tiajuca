@@ -10,11 +10,11 @@ import { useCatalog } from './CatalogEditor'
 import { byOrder } from './StructureManagers'
 
 type Kind = 'regente' | 'professor' | 'monitor'
-interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; subsection_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+interface Assignment { id: string; member_id: string; staff_kind: Kind; section_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
 const ORDER: Kind[] = ['regente', 'professor', 'monitor']
 const LABEL: Record<Kind, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor' }
 
-/** Naipes → Organograma: naipes, subnaipes e instrumentos com seus regentes, professores e monitores. Só leitura. */
+/** Naipes → Organograma: naipes e instrumentos com seus regentes, professores e monitores. Só leitura. */
 export function Organogram() {
   const orgId = useOrgId()
   const labeler = usePersonLabeler()
@@ -23,7 +23,7 @@ export function Organogram() {
   const staff = useQuery({
     queryKey: ['staff-assignments', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, subsection_id, instrument_id, members(full_name, display_name), cycles!inner(is_current)')
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, section_id, instrument_id, members(full_name, display_name), cycles!inner(is_current)')
         .eq('organization_id', orgId).is('valid_to', null).eq('cycles.is_current', true).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]
