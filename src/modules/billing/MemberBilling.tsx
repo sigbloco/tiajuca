@@ -54,9 +54,11 @@ function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; c
   const taken = new Set([primaryId, ...(extras.data ?? [])])
   const options = (categories.data ?? []).filter((c) => MEMBER_CATEGORIES.includes(c.name) && !taken.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   return (
-    <div className="flex flex-wrap items-center gap-2 pl-0">
+    <div className="space-y-1">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="font-semibold">Também é:</span>
       {(extras.data ?? []).map((id) => (
-        <span key={id} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-sm">
+        <span key={id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-sm text-muted-foreground">
           {name(id)}
           <button type="button" aria-label={`Remover ${name(id)}`} title="Remover" disabled={remove.isPending} className="rounded-full px-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(id)}>×</button>
         </span>
@@ -70,6 +72,8 @@ function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; c
         <button type="button" aria-label="Acumular outra categoria" title="Acumular outra categoria" onClick={() => setAdding(true)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card hover:bg-muted"><Plus className="h-4 w-4" /></button>
       )}
+    </div>
+    <p className="text-xs text-muted-foreground">Marcações para filtros e listas; não alteram o valor.</p>
     </div>
   )
 }
@@ -207,12 +211,13 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
       <div className="flex items-center gap-2">
-        <Label htmlFor={'cc-cat-' + cycle.id}>Categoria</Label>
+        <Label htmlFor={'cc-cat-' + cycle.id}>Categoria principal</Label>
         <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
           <option value="">Não contribui</option>
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </div>
+      <p className="-mt-1 text-xs text-muted-foreground">Só ela define o valor cobrado.</p>
       {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
       {canSchol && catId && catName !== 'Isento' && (
         <div className="space-y-1.5 pt-1">
@@ -290,12 +295,13 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="flex items-center gap-2">
-        <Label htmlFor="fee-cat">Categoria</Label>
+        <Label htmlFor="fee-cat">Categoria principal</Label>
         <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
           <option value="">Não contribui</option>
           {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </OkSelect>
       </div>
+      <p className="-mt-1 text-xs text-muted-foreground">Só ela define o valor cobrado.</p>
       {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
       {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && (
         <div className="space-y-1.5 pt-1">
