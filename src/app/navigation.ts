@@ -93,7 +93,7 @@ export function crumbsFor(segs: string[], base: string): { label: string; to?: s
     segs.slice(1).forEach((seg, i, rest) => {
       path += `/${seg}`
       const last = i === rest.length - 1
-      out.push({ label: SUB_LABEL[seg] ?? 'Detalhe', to: last ? undefined : path })
+      out.push({ label: SUB_LABEL[seg] ?? (first === 'presenca' ? 'Chamada' : 'Detalhe'), to: last ? undefined : path })
     })
   }
   return out
