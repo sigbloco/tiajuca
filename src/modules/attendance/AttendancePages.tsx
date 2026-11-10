@@ -77,6 +77,8 @@ function useInstrumentCatalog() {
   })
 }
 
+const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
+
 /** Naipes que têm professor ou monitor no ciclo (direto, por subnaipe ou por instrumento). */
 function useStaffedSections(cycleId: string | null | undefined) {
   const orgId = useOrgId()
@@ -183,7 +185,7 @@ export function AttendanceRosterPage() {
   const statuses = useStatuses()
   const [search, setSearch] = useState('')
   const [searchParams] = useSearchParams()
-  const [naipe, setNaipe] = useState(searchParams.get('naipe') ?? '')
+  const [naipeSel, setNaipe] = useState(searchParams.get('naipe') ?? '')
   const [inst, setInst] = useState('')
   const [openNote, setOpenNote] = useState<string | null>(null)
   const [extra, setExtra] = useState('')
@@ -244,7 +246,21 @@ export function AttendanceRosterPage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const rows = roster.data ?? []
+  // Professores e monitores do ciclo não fazem parte da chamada.
+  const cyclesAll = useCycles()
+  const staffIds = useQuery({
+    queryKey: ['staff-ids', orgId, activity.data?.id, cyclesAll.data?.length],
+    enabled: Boolean(activity.data) && Boolean(cyclesAll.data),
+    queryFn: async () => {
+      const cid = cycleOf(activity.data!, cyclesAll.data ?? [])
+      let q = supabase.from('staff_assignments').select('member_id').eq('organization_id', orgId).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
+      if (cid) q = q.eq('cycle_id', cid)
+      const { data, error } = await q.limit(3000)
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.member_id as string))
+    },
+  })
+  const rows = (roster.data ?? []).filter((r) => !staffIds.data?.has(r.member_id))
   const counts = useMemo(() => {
     const by: Record<string, number> = {}
     for (const r of rows) if (r.status_id) by[r.status_id] = (by[r.status_id] ?? 0) + 1
@@ -266,6 +282,14 @@ export function AttendanceRosterPage() {
   })
   // Naipes dos presentes + os que têm professor/monitor (mesmo sem alunos: continuam clicáveis).
   const naipes = [...new Set([...rows.flatMap(sectionsOf), ...[...(staffed.data ?? [])].map((id) => sectionNames.data?.get(id)).filter((x): x is string => !!x)])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
+  const lockedNaipe = (() => {
+    if (naipeSel || !activity.data) return ''
+    const t = plain(activity.data.title)
+    const hit = [...(sectionNames.data?.values() ?? [])].filter((n) => t.includes(plain(n)))
+    return hit.length === 1 ? hit[0] : ''
+  })()
+  const naipe = naipeSel || lockedNaipe
   const wsIds = activity.data ? workshops.data?.get(cycleOf(activity.data, cycles.data ?? []) ?? '') : undefined
   const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && wsIds?.has(i.id)).map((i) => i.name))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
@@ -309,7 +333,7 @@ export function AttendanceRosterPage() {
       {naipe && instOptions.length > 0 ? (
         // Dentro de um naipe (ex.: Oficina de percussão): filtra por instrumento (agogô, caixa de guerra…).
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>
+          {!lockedNaipe && <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>}
           {['', ...instOptions].map((n) => (
             <button key={n || 'todos'} onClick={() => setInst(n)}
               className={cn('h-9 rounded-full border px-3 text-sm font-medium', inst === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
