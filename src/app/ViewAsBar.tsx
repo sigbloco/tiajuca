@@ -108,6 +108,9 @@ export function ViewAsBar() {
       add(`aluno:sopro:${t}`, `Aluno (Sopro: ${t})`, sopro ? pick(alunos.filter((x) => linkInsts(x).some((i) => i.section_id === sopro.id && i.tuning === t))) : undefined)
     }
     add('aluno:percussao', 'Aluno (Percussão)', percussao ? pick(alunos.filter((x) => sectionOfLinks(x).includes(percussao.id))) : undefined)
+    // Pernalta: quem está vinculado à atividade Pernalta (naipe Performance).
+    const pernalta = (instruments.data ?? []).find((i) => /pernalta/i.test(i.name))
+    add('pernalta', 'Pernalta', pernalta ? pick(rows.filter((x) => active(x) && !isStaff(x) && !rolesOf(x).has('direcao') && x.member_artistic_links.some((l) => !l.ended_at && l.instrument_id === pernalta.id))) : undefined)
     const ina = pick(rows.filter((x) => isInactive(x.id) && !rolesOf(x).has('direcao') && !rolesOf(x).has('titular')))
     add('inativo', 'Inativo', ina)
     return out
