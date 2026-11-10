@@ -11,7 +11,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
-import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, syncOccurrences, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
+import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, syncOccurrences, typeIdForColor, type AudienceKind, type ItineraryStep, type TypeColor } from './service'
 
 interface Rule {
   id: string
@@ -27,6 +27,8 @@ interface Rule {
   until: string | null
   is_active: boolean
   itinerary: ItineraryStep[] | null
+  audience_kind: AudienceKind | null
+  audience_ref: string | null
 }
 
 function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }) {
@@ -42,6 +44,9 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
     starts_on: rule?.starts_on ?? todayIso(membership?.timezone),
     until: rule?.until ?? '',
   })
+  const [aKind, setAKind] = useState<AudienceKind | ''>(rule?.audience_kind ?? '')
+  const [aRef, setARef] = useState(rule?.audience_ref ?? '')
+  const audienceOptions = useCatalog(aKind === 'instrument' ? 'instruments' : aKind === 'subsection' ? 'subsections' : 'sections')
   // Recorrência antiga, sem roteiro: o horário, o local e a descrição dela viram o primeiro item.
   const [steps, setSteps] = useState<ItineraryStep[]>(() => (rule?.itinerary?.length || !rule?.start_time
     ? loadSteps(rule?.itinerary)
@@ -55,6 +60,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
         location: items.find((x) => x.location)?.location ?? null, description: items.map((x) => x.description).filter(Boolean).join('\n') || null,
         starts_on: f.starts_on, until: f.until || null, itinerary: items,
+        audience_kind: aKind && aRef ? aKind : null, audience_ref: aKind && aRef ? aRef : null,
       }
       const q = rule
         ? supabase.from('recurrence_rules').update(row).eq('id', rule.id)
@@ -98,7 +104,22 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
-            <div className="space-y-1.5"><Label htmlFor="r-until">Até (opcional)</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
+            <div className="space-y-1.5"><Label htmlFor="r-until">Até</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /><p className="text-xs text-muted-foreground">Em branco: até o fim do ciclo.</p></div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="r-aud">Público da chamada</Label>
+            <div className="space-y-2">
+              <Select id="r-aud" value={aKind} onChange={(e) => { setAKind(e.target.value as AudienceKind | ''); setARef('') }}>
+                <option value="">Todos os ativos no ciclo</option>
+                <option value="section">Naipe</option>
+                <option value="subsection">Subnaipe</option>
+                <option value="instrument">Instrumento</option>
+              </Select>
+              <Select aria-label="Público" disabled={!aKind} value={aRef} onChange={(e) => setARef(e.target.value)}>
+                <option value="">{aKind ? 'Selecione' : '—'}</option>
+                {aKind && audienceOptions.data?.filter((o) => o.is_active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </Select>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="r-vis">Quem vê</Label>
@@ -107,7 +128,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             </Select>
           </div>
         </div>
-        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || (Boolean(aKind) && !aRef) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
       </form>
     </SheetContent>
   )
