@@ -12,7 +12,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
-import { listActivities, type Activity } from '@/modules/events/service'
+import { getAudience, listActivities, type Activity } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
@@ -183,6 +183,9 @@ export function AttendanceRosterPage() {
       return data as unknown as Pick<Activity, 'id' | 'title' | 'activity_date' | 'start_time' | 'status' | 'cycle_id' | 'activity_types'>
     },
   })
+  // Evento com público definido (ex.: ensaio de um naipe): a chamada segue esse público, sem filtros de naipe/instrumento nem regra de alunos.
+  const audience = useQuery({ queryKey: ['audience', activityId], queryFn: () => getAudience(activityId) })
+  const hasAudience = Boolean(audience.data)
   const roster = useQuery({
     queryKey: rosterKey,
     queryFn: async () => {
@@ -246,7 +249,7 @@ export function AttendanceRosterPage() {
   const cycles = cyclesAll
   const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
   // Aula/oficina: só alunos (categoria Aluno no ciclo); quem foi adicionado fora da lista continua.
-  const onlyStudents = /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
+  const onlyStudents = !hasAudience && /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
   const rows = (roster.data ?? []).filter((r) => !staffIds.data?.has(r.member_id) && (!onlyStudents || r.is_off_roster || !students.data || students.data.members.has(r.member_id)))
   const counts = useMemo(() => {
     const by: Record<string, number> = {}
@@ -266,7 +269,7 @@ export function AttendanceRosterPage() {
   })
   // Naipes com alunos (subnaipes = instrumentos com alunos).
   const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.instruments.has(i.id))
-  const naipes = [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const naipes = hasAudience ? [] : [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
   const lockedNaipe = (() => {
     if (!activity.data) return ''
@@ -297,8 +300,8 @@ export function AttendanceRosterPage() {
     const only = a.length === 1 && direct.length === 1 ? list.find((i) => i.id === direct[0].instrument_id) : undefined
     return { section: secs.size === 1 ? [...secs][0] : '', inst: only?.name ?? '' }
   })()
-  const naipe = lockedNaipe || (naipeSel ?? myScope.section)
-  const inst = instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
+  const naipe = hasAudience ? '' : lockedNaipe || (naipeSel ?? myScope.section)
+  const inst = hasAudience ? '' : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
     && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
