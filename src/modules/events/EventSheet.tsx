@@ -26,10 +26,11 @@ interface Props {
   activity: Activity | null
   defaultDate: string
   onClose: () => void
+  startEditing?: boolean
 }
 
 /** Detalhes + criação/edição de evento em drawer (mantém o contexto da agenda). */
-export function EventSheet({ activity, defaultDate, onClose }: Props) {
+export function EventSheet({ activity, defaultDate, onClose, startEditing }: Props) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -38,7 +39,7 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
   const cycles = useCycles()
 
   const isNew = activity === null
-  const [editing, setEditing] = useState(isNew)
+  const [editing, setEditing] = useState(isNew || Boolean(startEditing))
   const [f, setF] = useState({
     title: activity?.title ?? '',
     color: (activity?.activity_types?.color ?? 'primary') as TypeColor,
@@ -133,13 +134,13 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
         )}
         <ChecklistSection activityId={activity.id} />
         <div className="mt-auto flex flex-col gap-2">
-          {canManage && <Button variant="outline" size="icon" className="self-end" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
           <div className="flex gap-2">
             {canRecord && activity.status !== 'cancelled' && (
               <Button asChild variant="outline" className="flex-1"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>
             )}
+            {canManage && <Button variant="outline" size="icon" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
             {canManage && activity.status !== 'cancelled' && (
-              <Button variant="ghost" className="flex-1 text-destructive" disabled={changeStatus.isPending}
+              <Button variant="outline" className="flex-1 text-destructive" disabled={changeStatus.isPending}
                 onClick={() => { const reason = window.prompt(`Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, ''); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
                 Cancelar {cancelWord(activity.activity_types?.name)}
               </Button>
