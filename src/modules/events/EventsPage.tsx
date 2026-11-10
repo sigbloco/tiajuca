@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Ban, Cake, ChevronLeft, ChevronRight, Plus, Undo2 } from 'lucide-react'
+import { Ban, Cake, ClipboardCheck, Pencil, ChevronLeft, ChevronRight, Plus, Undo2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatTime, monthGridDays, todayIso } from '@/core/format'
@@ -10,6 +10,7 @@ import { friendlyError } from '@/core/errors'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
+import { Link } from 'react-router-dom'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
@@ -25,12 +26,13 @@ export function EventsPage() {
   const qc = useQueryClient()
   const tz = membership?.timezone
   const canManage = usePermission('events.manage')
+  const canRecord = usePermission('attendance.record', 'group')
   const today = todayIso(tz)
 
   const [ym, setYm] = useState(() => ({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 }))
   const { cycleId, cycle: selCycle } = useSelectedCycle()
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
-  const [sheet, setSheet] = useState<{ activity: Activity | null } | null>(null)
+  const [sheet, setSheet] = useState<{ activity: Activity | null; edit?: boolean } | null>(null)
   const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados'>('agenda')
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
@@ -139,7 +141,7 @@ export function EventsPage() {
   )
   const sheetEl = (
     <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-      {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
+      {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} startEditing={sheet.edit} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
     </Sheet>
   )
   if (tab !== 'agenda' && canManage) {
@@ -238,10 +240,14 @@ export function EventsPage() {
                       <p className="text-muted-foreground">{[time, a.location].filter(Boolean).join(' · ') || 'Horário a definir'}</p>
                     )}
                   </button>
-                  {canManage && a.status === 'scheduled' && (
-                    <Button size="sm" variant="outline" className="mt-2" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
-                      onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?
-Motivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate({ a, reason }) }}><Ban className="h-4 w-4" /> Cancelar</Button>
+                  {a.status === 'scheduled' && (canRecord || canManage) && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {canRecord && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>}
+                      {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={() => setSheet({ activity: a, edit: true })}><Pencil className="h-4 w-4" /></Button>}
+                      {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
+                        onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?
+Motivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate({ a, reason }) }}><Ban className="h-4 w-4" /> Cancelar</Button>}
+                    </div>
                   )}
                   {canManage && a.status === 'cancelled' && (
                     <Button size="sm" variant="outline" className="mt-2" aria-label="Desfazer cancelamento" title="Desfazer cancelamento" onClick={() => reopen.mutate(a)}><Undo2 className="h-4 w-4" /> Desfazer</Button>
