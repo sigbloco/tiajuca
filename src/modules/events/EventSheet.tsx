@@ -133,16 +133,18 @@ export function EventSheet({ activity, defaultDate, onClose }: Props) {
         )}
         <ChecklistSection activityId={activity.id} />
         <div className="mt-auto flex flex-col gap-2">
-          {canRecord && activity.status !== 'cancelled' && (
-            <Button asChild><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /> Abrir chamada</Link></Button>
-          )}
           {canManage && <Button variant="outline" size="icon" className="self-end" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
-          {canManage && activity.status !== 'cancelled' && (
-            <Button variant="ghost" className="text-destructive" disabled={changeStatus.isPending}
-              onClick={() => { const reason = window.prompt(`Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, ''); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
-              Cancelar {cancelWord(activity.activity_types?.name)}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {canRecord && activity.status !== 'cancelled' && (
+              <Button asChild variant="outline" className="flex-1"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>
+            )}
+            {canManage && activity.status !== 'cancelled' && (
+              <Button variant="ghost" className="flex-1 text-destructive" disabled={changeStatus.isPending}
+                onClick={() => { const reason = window.prompt(`Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, ''); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
+                Cancelar {cancelWord(activity.activity_types?.name)}
+              </Button>
+            )}
+          </div>
           {canManage && activity.status === 'cancelled' && (
             <Button variant="outline" onClick={() => changeStatus.mutate({ s: 'scheduled' })}>Reativar {cancelWord(activity.activity_types?.name)}</Button>
           )}

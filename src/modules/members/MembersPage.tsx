@@ -302,7 +302,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </Can>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+      <div className="grid grid-cols-[minmax(0,1fr)_9.5rem] gap-2 sm:max-w-lg">
         <div className="space-y-1">
           <Label htmlFor="mb-cycle" className="text-xs">Ciclo</Label>
           <Select id="mb-cycle" value={activeCycleId} onChange={(e) => setCycleSel(e.target.value)}>

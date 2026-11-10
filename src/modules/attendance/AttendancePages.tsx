@@ -1,6 +1,6 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -77,17 +77,36 @@ function useInstrumentCatalog() {
   })
 }
 
-const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
+/** Naipes que têm professor ou monitor no ciclo (direto, por subnaipe ou por instrumento). */
+function useStaffedSections(cycleId: string | null | undefined) {
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['staffed-sections', orgId, cycleId],
+    enabled: Boolean(cycleId),
+    queryFn: async () => {
+      const [a, sub, ins] = await Promise.all([
+        supabase.from('staff_assignments').select('staff_kind, section_id, subsection_id, instrument_id').eq('organization_id', orgId).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).limit(2000),
+        supabase.from('subsections').select('id, section_id').eq('organization_id', orgId).limit(1000),
+        supabase.from('instruments').select('id, section_id').eq('organization_id', orgId).limit(1000),
+      ])
+      if (a.error) throw a.error
+      const subMap = new Map((sub.data ?? []).map((x) => [x.id as string, x.section_id as string]))
+      const insMap = new Map((ins.data ?? []).map((x) => [x.id as string, x.section_id as string]))
+      const out = new Set<string>()
+      for (const r of a.data ?? []) {
+        const sid = r.section_id ?? (r.subsection_id ? subMap.get(r.subsection_id) : undefined) ?? (r.instrument_id ? insMap.get(r.instrument_id) : undefined)
+        if (sid) out.add(sid as string)
+      }
+      return out
+    },
+  })
+}
 
 /** Um horário do dia: título e os naipes da oficina (cada um abre a chamada só daquele naipe). */
-function ActivityCard({ a, sections, withWorkshop: wsIds, instruments, slug }: { a: Activity; sections: { id: string; name: string }[]; withWorkshop: Set<string>; instruments: InstrumentInfo[]; slug?: string }) {
-  const title = plain(a.title)
+function ActivityCard({ a, sections, withWorkshop: wsIds, instruments, staffed, slug }: { a: Activity; sections: { id: string; name: string }[]; withWorkshop: Set<string>; instruments: InstrumentInfo[]; staffed: Set<string>; slug?: string }) {
   const wsSections = new Set(instruments.filter((i) => wsIds.has(i.id)).map((i) => i.section_id))
-  const withWorkshop = sections.filter((s) => wsSections.has(s.id))
-  const pool = withWorkshop.length > 0 ? withWorkshop : sections
-  // Naipes cujo nome aparece no título ("Oficina de Percussão" → Percussão). Sem coincidência, todos com oficina.
-  const matched = pool.filter((s) => title.includes(plain(s.name)))
-  const shown = matched.length > 0 ? matched : withWorkshop
+  // Todo naipe com professor ou monitor no ciclo (ou com oficina), mesmo sem alunos.
+  const shown = sections.filter((s) => staffed.has(s.id) || wsSections.has(s.id))
   return (
     <Card className="flex gap-3 p-3">
       <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
@@ -121,6 +140,7 @@ export function AttendanceListPage() {
   const cycles = useCycles()
   const workshops = useWorkshops()
   const catalog = useInstrumentCatalog()
+  const staffed = useStaffedSections(cycleId)
   const sections = useQuery({
     queryKey: ['sections-workshop', orgId],
     queryFn: async () => {
@@ -149,7 +169,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} sections={sections.data ?? []} withWorkshop={workshops.data?.get(cycleOf(a, cycles.data ?? []) ?? '') ?? new Set()} instruments={catalog.data?.list ?? []} slug={membership?.slug} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} sections={sections.data ?? []} withWorkshop={workshops.data?.get(cycleOf(a, cycles.data ?? []) ?? '') ?? new Set()} instruments={catalog.data?.list ?? []} staffed={staffed.data ?? new Set()} slug={membership?.slug} />)}
       </div>
     </div>
   )
@@ -159,7 +179,6 @@ export function AttendanceListPage() {
 export function AttendanceRosterPage() {
   const { activityId = '' } = useParams()
   const orgId = useOrgId()
-  const { membership } = useOrganization()
   const qc = useQueryClient()
   const statuses = useStatuses()
   const [search, setSearch] = useState('')
@@ -232,10 +251,20 @@ export function AttendanceRosterPage() {
   }, [rows])
   const catalog = useInstrumentCatalog()
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
-  const naipes = [...new Set(rows.flatMap(sectionsOf))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Naipe com instrumentos marcados "Oficina": a chamada mostra só quem toca esses instrumentos.
   const cycles = useCycles()
   const workshops = useWorkshops()
+  const staffed = useStaffedSections(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
+  const sectionNames = useQuery({
+    queryKey: ['sections-names', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sections').select('id, name').eq('organization_id', orgId)
+      if (error) throw error
+      return new Map((data ?? []).map((x) => [x.id as string, x.name as string]))
+    },
+  })
+  // Naipes dos presentes + os que têm professor/monitor (mesmo sem alunos: continuam clicáveis).
+  const naipes = [...new Set([...rows.flatMap(sectionsOf), ...[...(staffed.data ?? [])].map((id) => sectionNames.data?.get(id)).filter((x): x is string => !!x)])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const wsIds = activity.data ? workshops.data?.get(cycleOf(activity.data, cycles.data ?? []) ?? '') : undefined
   const workshopNames = new Set((catalog.data?.list ?? []).filter((i) => i.section === naipe && wsIds?.has(i.id)).map((i) => i.name))
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
@@ -246,7 +275,6 @@ export function AttendanceRosterPage() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/presenca`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <div className="min-w-0">
           <h1 className="break-words">{activity.data?.title ?? 'Chamada'}</h1>
           {activity.data && <p className="text-muted-foreground">{formatDayShort(activity.data.activity_date, activity.data.start_time)}</p>}
