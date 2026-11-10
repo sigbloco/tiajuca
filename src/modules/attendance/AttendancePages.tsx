@@ -85,9 +85,10 @@ function useStudentInstruments(cycleId: string | null | undefined) {
       if (parts.error) throw parts.error
       const activeIds = new Set((sts.data ?? []).map((x) => x.id as string))
       const activeMembers = new Set((mc.data ?? []).filter((m) => activeIds.has(m.status_id as string)).map((m) => m.member_id as string))
-      // Só alunos ATIVOS no ciclo (aluno inativo não conta).
+      // Instrumentos: só com alunos ATIVOS. Lista da chamada: todo aluno (o servidor decide quem estava ativo na data).
+      const allStudents = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[]).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
       const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[])  .filter((c) => c.category_name === 'Aluno' && activeMembers.has(c.member_id)).map((c) => c.member_id))
-      return { members: students, instruments: new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string)) }
+      return { members: allStudents, instruments: new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string)) }
     },
   })
 }
