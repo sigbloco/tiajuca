@@ -80,7 +80,7 @@ function useStudentInstruments(cycleId: string | null | undefined) {
       if (cats.error) throw cats.error
       if (parts.error) throw parts.error
       const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[]).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
-      return new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string))
+      return { members: students, instruments: new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string)) }
     },
   })
 }
@@ -145,7 +145,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data ?? new Set()} slug={membership?.slug} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data?.instruments ?? new Set()} slug={membership?.slug} />)}
       </div>
     </div>
   )
@@ -235,7 +235,9 @@ export function AttendanceRosterPage() {
       return new Set((data ?? []).map((r) => r.member_id as string))
     },
   })
-  const rows = (roster.data ?? []).filter((r) => !staffIds.data?.has(r.member_id))
+  // Aula/oficina: só alunos (categoria Aluno no ciclo); quem foi adicionado fora da lista continua.
+  const onlyStudents = /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
+  const rows = (roster.data ?? []).filter((r) => !staffIds.data?.has(r.member_id) && (!onlyStudents || r.is_off_roster || !students.data || students.data.members.has(r.member_id)))
   const counts = useMemo(() => {
     const by: Record<string, number> = {}
     for (const r of rows) if (r.status_id) by[r.status_id] = (by[r.status_id] ?? 0) + 1
@@ -255,7 +257,7 @@ export function AttendanceRosterPage() {
     },
   })
   // Naipes com alunos (subnaipes = instrumentos com alunos).
-  const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.has(i.id))
+  const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.instruments.has(i.id))
   const naipes = [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
   const lockedNaipe = (() => {
@@ -305,7 +307,7 @@ export function AttendanceRosterPage() {
       </div>
 
       {/* Contadores fixos no topo */}
-      <div className="sticky top-0 z-10 -mx-4 grid grid-cols-4 gap-2 border-b border-border bg-background px-4 py-2 md:mx-0 md:px-0">
+      <div className="sticky top-[calc(var(--viewas-h,0px)+var(--topbar-h,0px))] z-10 -mx-4 grid grid-cols-4 gap-2 border-b border-border bg-background px-4 py-2 md:mx-0 md:px-0">
         {statuses.data?.map((s) => (
           <div key={s.id} className="rounded-lg bg-card p-2 text-center shadow-card">
             <p className="font-display text-xl font-bold leading-none">{counts[s.id] ?? 0}</p>
