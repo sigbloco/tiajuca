@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Link } from 'react-router-dom'
-import { Badge, Card, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCurrency, formatDate, formatDayLong, formatTime, todayIso } from '@/core/format'
+import { Badge, Button, Card, Sheet, Skeleton, cn } from '@/components/ui/primitives'
+import { addDaysIso, formatCurrency, formatDate, formatDayLong, todayIso } from '@/core/format'
 import { useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { COLOR_BADGE, listActivities } from '@/modules/events/service'
+import { EventCard } from '@/modules/events/EventCard'
+import { EventSheet } from '@/modules/events/EventSheet'
+import { listActivities, type Activity } from '@/modules/events/service'
 
 const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
 
@@ -20,37 +23,76 @@ function Stat({ label, value, hint, tone }: { label: string; value: string | num
   )
 }
 
-function UpcomingEvents({ orgId, slug, tz }: { orgId: string; slug: string; tz: string }) {
+const plain = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/s$/, '')
+
+/** Naipes da pessoa no ciclo (equipe ou aluno/participante): usados para esconder a oficina dos outros naipes. */
+function useMySections(orgId: string, memberId: string, cycleId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['my-sections', orgId, memberId, cycleId],
+    enabled: enabled && Boolean(cycleId),
+    queryFn: async () => {
+      const [secs, inst, sub, staff, parts] = await Promise.all([
+        supabase.from('sections').select('id, name').eq('organization_id', orgId).eq('is_active', true),
+        supabase.from('instruments').select('id, section_id').eq('organization_id', orgId).limit(1000),
+        supabase.from('subsections').select('id, section_id').eq('organization_id', orgId).limit(1000),
+        supabase.from('staff_assignments').select('section_id, subsection_id, instrument_id').eq('organization_id', orgId).eq('member_id', memberId).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']),
+        supabase.from('cycle_participations').select('instrument_id').eq('member_id', memberId).eq('cycle_id', cycleId!).not('instrument_id', 'is', null),
+      ])
+      const insMap = new Map((inst.data ?? []).map((x) => [x.id as string, x.section_id as string]))
+      const subMap = new Map((sub.data ?? []).map((x) => [x.id as string, x.section_id as string]))
+      const ids = new Set<string>()
+      for (const r of staff.data ?? []) {
+        const sid = r.section_id ?? (r.subsection_id ? subMap.get(r.subsection_id) : undefined) ?? (r.instrument_id ? insMap.get(r.instrument_id) : undefined)
+        if (sid) ids.add(sid as string)
+      }
+      for (const r of parts.data ?? []) { const sid = insMap.get(r.instrument_id as string); if (sid) ids.add(sid) }
+      const all = (secs.data ?? []).map((x) => ({ id: x.id as string, plain: plain(x.name as string) }))
+      return { mine: new Set(all.filter((x) => ids.has(x.id)).map((x) => x.plain)), all: all.map((x) => x.plain) }
+    },
+  })
+}
+
+function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: string; memberId: string; slug: string; tz: string; filterByMine: boolean }) {
   const today = todayIso(tz)
+  const { cycleId } = useSelectedCycle()
+  const [shown, setShown] = useState(3)
+  const [sheet, setSheet] = useState<{ activity: Activity; edit?: boolean } | null>(null)
+  const my = useMySections(orgId, memberId, cycleId, filterByMine)
   const { data, isLoading } = useQuery({
     queryKey: ['activities', orgId, 'upcoming', today],
-    queryFn: async () => (await listActivities({ orgId, from: today, to: addDaysIso(today, 60) })).filter((a) => a.status !== 'cancelled').slice(0, 5),
+    queryFn: async () => (await listActivities({ orgId, from: today, to: addDaysIso(today, 90) })).filter((a) => a.status !== 'cancelled'),
   })
-  const next = data?.find((a) => a.activity_types?.name === 'Ensaio')
+  // Oficina de outro naipe não aparece (vale para professor, monitor e aluno). Sem naipe no título, aparece para todos.
+  const visible = (data ?? []).filter((a) => {
+    if (!filterByMine || !my.data || my.data.mine.size === 0) return true
+    const t = plain(a.title)
+    const hits = my.data.all.filter((n) => t.includes(n))
+    return hits.length === 0 || hits.some((n) => my.data!.mine.has(n))
+  })
+  const todayCount = visible.filter((a) => a.activity_date === today).length
+  const list = visible.slice(0, todayCount + shown)
+  const days = [...new Set(list.map((a) => a.activity_date))]
   return (
-    <Card className="space-y-2 p-4">
-      <div className="flex items-center justify-between">
-        <h3>Próximos eventos</h3>
-        <Link className="text-primary hover:underline" to={`/${slug}/eventos`}>Ver agenda</Link>
-      </div>
-      {next && <p className="rounded-lg bg-primary/10 p-2 text-primary">Próximo ensaio: <strong className="capitalize">{formatDayLong(next.activity_date)}</strong>{next.start_time ? ` às ${formatTime(next.start_time)}` : ''}</p>}
-      {isLoading && <Skeleton className="h-16" />}
-      {data?.length === 0 && <p className="text-muted-foreground">Nenhum evento agendado.</p>}
-      {data?.map((a) => (
-        <div key={a.id} className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="break-words font-semibold">{a.title}</p>
-            <p className="capitalize text-muted-foreground">{formatDayLong(a.activity_date)}{a.start_time ? ` · ${formatTime(a.start_time)}` : ''}</p>
-          </div>
-          {a.activity_types && <Badge className={COLOR_BADGE[a.activity_types.color]}>{a.activity_types.name}</Badge>}
-        </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between"><h3>Próximos eventos</h3><Link className="text-primary hover:underline" to={`/${slug}/eventos`}>Ver agenda</Link></div>
+      {(isLoading || (filterByMine && my.isLoading)) && <Skeleton className="h-16" />}
+      {data && visible.length === 0 && <p className="text-muted-foreground">Nenhum evento agendado.</p>}
+      {days.map((day) => (
+        <section key={day} className="space-y-2">
+          <h4 className="capitalize">{day === today ? 'Hoje · ' : ''}{formatDayLong(day)}</h4>
+          {list.filter((a) => a.activity_date === day).map((a, i) => <EventCard key={a.id} a={a} index={i} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+        </section>
       ))}
-    </Card>
+      {visible.length > list.length && <Button variant="outline" className="w-full" onClick={() => setShown((n) => n + 3)}>Carregar mais...</Button>}
+      <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
+        {sheet && <EventSheet key={sheet.activity.id} startEditing={sheet.edit} activity={sheet.activity} defaultDate={today} onClose={() => setSheet(null)} />}
+      </Sheet>
+    </div>
   )
 }
 
 /** Situação pessoal: ciclo atual, status, frequência e mensalidade (qualquer integrante). */
-function MyStatus({ orgId, memberId, slug }: { orgId: string; memberId: string; slug: string }) {
+function MyStatus({ orgId, memberId, slug, staff }: { orgId: string; memberId: string; slug: string; staff: boolean }) {
   const { cycle: sel } = useSelectedCycle()
   const { data } = useQuery({
     queryKey: ['my-status', orgId, memberId, sel?.id],
@@ -60,7 +102,8 @@ function MyStatus({ orgId, memberId, slug }: { orgId: string; memberId: string; 
       const mc = cycle ? (await supabase.from('member_cycles').select('member_cycle_statuses(name)').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { member_cycle_statuses: { name: string } | null } | null : null
       const att = cycle ? (await supabase.from('v_attendance_member_cycle').select('pct_present, records').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data : null
       const charge = (await supabase.from('monthly_charges').select('competence, final_amount, status, due_on').eq('member_id', memberId).in('status', ['pending']).order('competence').limit(1).maybeSingle()).data
-      return { cycle, status: mc?.member_cycle_statuses?.name ?? null, att, charge }
+      const sch = cycle ? (await supabase.from('cycle_scholarships').select('percent').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { percent: number } | null : null
+      return { cycle, status: mc?.member_cycle_statuses?.name ?? null, att, charge, exempt: Number(sch?.percent ?? 0) >= 100 }
     },
   })
   if (!data) return <Skeleton className="h-24" />
@@ -68,11 +111,11 @@ function MyStatus({ orgId, memberId, slug }: { orgId: string; memberId: string; 
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
       <Stat label="Ciclo" value={data.cycle?.name ?? '—'} />
       <Stat label="Meu status" value={data.status ?? 'Sem registro'} />
-      <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />
-      <Link to={`/${slug}/cobrancas`}>
-        <Stat label="Mensalidade" value={data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
-          hint={data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
-      </Link>
+      {!staff && <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
+      {!staff && <Link to={`/${slug}/cobrancas`}>
+        <Stat label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
+          hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
+      </Link>}
     </div>
   )
 }
@@ -168,8 +211,8 @@ export function HomePage() {
         <h1>Olá, {membership.display_name.trim().split(/s+/)[0]}!</h1>
         <p className="text-muted-foreground">{membership.roles.length ? membership.roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') : 'Sem papel de acesso atribuído.'} em {membership.name}</p>
       </div>
-      <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} />
-      <UpcomingEvents orgId={membership.organization_id} slug={membership.slug} tz={membership.timezone} />
+      <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} />
+      <UpcomingEvents orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} tz={membership.timezone} filterByMine={!isDirection} />
       {isStaff && !isDirection && <GroupCard orgId={membership.organization_id} slug={membership.slug} />}
       {isDirection && <DirectionDashboard orgId={membership.organization_id} />}
     </div>
