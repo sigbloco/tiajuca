@@ -71,7 +71,8 @@ async function copyFromPrevious(orgId: string, memberId: string, target: CycleLi
 }
 
 /** Um ciclo da pessoa: situação, e como filhos a participação e a contribuição daquele ciclo. */
-function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, statuses }: {
+function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, statuses, selector }: {
+  selector?: ReactNode
   cycle: CycleLite; status?: { key: string; name: string; counts_as_active: boolean; is_waitlist: boolean }; memberId: string; canManage: boolean
   onChange: (cycle: string, status: string) => Promise<unknown>; onRemove: (cycle: CycleLite) => void
   statuses: { id: string; key: string; name: string; counts_as_active: boolean; is_waitlist: boolean }[]
@@ -82,16 +83,17 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, onRemove, st
   const labelOf = (x: { name: string; counts_as_active: boolean; is_waitlist: boolean }) => (past && !x.is_waitlist ? (x.counts_as_active ? 'Participou' : 'Não participou') : x.name)
   return (
     <div className="space-y-3 p-1">
-        <div className="flex items-start justify-end gap-2">
-          {canManage && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>}
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-sm">Situação</Label>
-          <OkSelect className="w-40" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
-            {!status && <option value="">Sem registro</option>}
-            {status && past && status.is_waitlist && <option value={status.key}>{status.name}</option>}
-            {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
-          </OkSelect>
+        <div className="flex flex-wrap items-center gap-2">
+          {selector && <div className="min-w-0 flex-1 basis-44">{selector}</div>}
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Situação</Label>
+            <OkSelect className="w-40" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
+              {!status && <option value="">Sem registro</option>}
+              {status && past && status.is_waitlist && <option value={status.key}>{status.name}</option>}
+              {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
+            </OkSelect>
+            {canManage && <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive" aria-label={'Tirar do ciclo ' + cycle.name} title="Tirar deste ciclo" onClick={() => onRemove(cycle)}><X className="h-4 w-4" /></Button>}
+          </div>
         </div>
         <div className="border-t border-border pt-3"><ParticipationBlock memberId={memberId} cycle={cycle} /></div>
     </div>
@@ -184,13 +186,11 @@ function CyclesSection({ memberId }: { memberId: string }) {
           </div>
         )}
         {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
-        {mine.length > 0 && (
-          <Select aria-label="Ciclo" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
-            {mine.map((c) => <option key={c.id} value={c.id}>{c.name}{c.is_current ? ' · atual' : ''}</option>)}
-          </Select>
-        )}
         {(chosen ? [chosen] : []).map((c) => (
-          <CycleGroup key={c.id} cycle={c} status={statusOfCycle(c.id)} memberId={memberId} canManage={canManage} statuses={statuses ?? []}
+          <CycleGroup key={c.id} cycle={c} selector={
+            <Select aria-label="Ciclo" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
+              {mine.map((m) => <option key={m.id} value={m.id}>{m.name}{m.is_current ? ' · atual' : ''}</option>)}
+            </Select>} status={statusOfCycle(c.id)} memberId={memberId} canManage={canManage} statuses={statuses ?? []}
             onChange={(cycle, status) => change.mutateAsync({ cycle, status })}
             onRemove={(cy) => { if (window.confirm('Tirar a pessoa do ciclo “' + cy.name + '”? A participação e a contribuição dela não são apagadas.')) remove.mutate(cy) }} />
         ))}

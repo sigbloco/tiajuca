@@ -55,23 +55,22 @@ function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; c
   const options = (categories.data ?? []).filter((c) => MEMBER_CATEGORIES.includes(c.name) && !taken.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   return (
     <div className="space-y-1">
-    <span className="block w-full font-semibold">Também é:</span>
     <div className="flex flex-wrap items-center gap-2">
-      {(extras.data ?? []).map((id) => (
-        <span key={id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-sm text-muted-foreground">
-          {name(id)}
-          <button type="button" aria-label={`Remover ${name(id)}`} title="Remover" disabled={remove.isPending} className="rounded-full px-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(id)}>×</button>
-        </span>
-      ))}
+      <span className="font-semibold">Também é:</span>
       {adding ? (
         <Select aria-label="Outra categoria" autoFocus defaultValue="" disabled={add.isPending} onChange={(e) => { if (e.target.value) add.mutate(e.target.value) }} onBlur={() => setAdding(false)}>
           <option value="">Escolha</option>
           {options.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
       ) : options.length > 0 && (
-        <button type="button" aria-label="Acumular outra categoria" title="Acumular outra categoria" onClick={() => setAdding(true)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card hover:bg-muted"><Plus className="h-4 w-4" /></button>
+        <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Acumular outra categoria" title="Acumular outra categoria" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
       )}
+      {(extras.data ?? []).map((id) => (
+        <span key={id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-sm text-muted-foreground">
+          {name(id)}
+          <button type="button" aria-label={`Remover ${name(id)}`} title="Remover" disabled={remove.isPending} className="rounded-full px-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(id)}>×</button>
+        </span>
+      ))}
     </div>
     <p className="text-xs text-muted-foreground">Marcações para filtros e listas; não alteram o valor.</p>
     </div>
