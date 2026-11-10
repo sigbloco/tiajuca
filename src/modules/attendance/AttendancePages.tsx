@@ -69,9 +69,9 @@ function useInstrumentCatalog() {
   return useQuery({
     queryKey: ['instrument-catalog', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, sections(name)').eq('organization_id', orgId).limit(1000)
+      const { data, error } = await supabase.from('instruments').select('id, name, section_id, subsection_id, is_active, sections(name, is_active)').eq('organization_id', orgId).eq('is_active', true).limit(1000)
       if (error) throw error
-      const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string } | null })[]).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
+      const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string; is_active: boolean } | null })[]).filter((i) => i.sections?.is_active).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
       return { list, byName: new Map(list.map((i) => [i.name, i])) }
     },
   })
@@ -259,7 +259,7 @@ export function AttendanceRosterPage() {
   const sectionNames = useQuery({
     queryKey: ['sections-names', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sections').select('id, name').eq('organization_id', orgId)
+      const { data, error } = await supabase.from('sections').select('id, name').eq('organization_id', orgId).eq('is_active', true)
       if (error) throw error
       return new Map((data ?? []).map((x) => [x.id as string, x.name as string]))
     },
