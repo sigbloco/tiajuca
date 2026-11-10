@@ -80,7 +80,9 @@ function CrumbRegistrar({ title, close }: { title: string; close: () => void }) 
   return null
 }
 
-export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer }: {
+export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer, onCrumbClick }: {
+  /** Ao clicar no item da página no caminho de navegação (breadcrumb): troca o "fechar" padrão (ex.: ficar na lista em vez de voltar de onde veio). */
+  onCrumbClick?: () => void
   title: string
   /** Complemento ao lado do título (ex.: categoria), em fonte mais clara. */
   titleExtra?: React.ReactNode
@@ -133,7 +135,7 @@ export function SheetContent({ title, titleExtra, titleAction, description, chil
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         </div>
-        {inline && <CrumbRegistrar title={title} close={() => closeRef.current?.click()} />}
+        {inline && <CrumbRegistrar title={title} close={() => (onCrumbClick ? onCrumbClick() : closeRef.current?.click())} />}
         {children}
         {asking && (
           <div role="alertdialog" aria-label="Salvar as alterações?" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">

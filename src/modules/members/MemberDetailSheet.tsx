@@ -339,13 +339,13 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   )
 }
 
-export function MemberDetailSheet({ member, category, onChanged = () => {} }: { member: MemberRow; category?: string; onChanged?: (p: Partial<MemberRow>) => void }) {
+export function MemberDetailSheet({ member, category, onChanged = () => {}, onCrumbClick }: { member: MemberRow; category?: string; onCrumbClick?: () => void; onChanged?: (p: Partial<MemberRow>) => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   const [editing, setEditing] = useState(false)
   void category
   return (
-    <SheetContent title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
+    <SheetContent onCrumbClick={onCrumbClick} title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
       <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
     )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />

@@ -119,6 +119,11 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     if (wantedId && cameFrom) navigate(cameFrom.path)
     else if (wantedId) setParams({}, { replace: true })
   }
+  // "Integrantes" no caminho de navegação: fica na lista de integrantes (sem voltar de onde veio).
+  const stayOnList = () => {
+    setSelected(null)
+    if (wantedId) navigate(`${window.location.pathname}`, { replace: true, state: null })
+  }
   const { data: cycles } = useCycles()
   const { data: statuses } = useCycleStatuses()
 
@@ -343,7 +348,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && closeSheet()}>
-        {selected && <MemberDetailSheet member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
+        {selected && <MemberDetailSheet onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
       </Sheet>
 
     </div>
