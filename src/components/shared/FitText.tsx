@@ -3,7 +3,7 @@ import { cn } from '@/components/ui/primitives'
 
 /**
  * Palavra que nunca quebra no meio: se não couber na largura, a fonte diminui até caber
- * (mínimo 9px; abaixo disso volta a poder quebrar entre palavras).
+ * (mínimo 9px; só em último caso quebra em duas linhas, separando por sílaba com hífen).
  */
 export function FitText({ children, className, min = 9 }: { children: ReactNode; className?: string; min?: number }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -16,7 +16,7 @@ export function FitText({ children, className, min = 9 }: { children: ReactNode;
       const base = parseFloat(getComputedStyle(el).fontSize)
       let size = base
       while (el.scrollWidth > el.clientWidth + 0.5 && size > min) { size -= 0.5; el.style.fontSize = `${size}px` }
-      if (el.scrollWidth > el.clientWidth + 0.5) el.style.whiteSpace = 'normal'
+      if (el.scrollWidth > el.clientWidth + 0.5) { el.style.whiteSpace = 'normal'; el.style.hyphens = 'auto'; el.lang = 'pt-BR' }
     }
     fit()
     const ro = new ResizeObserver(fit)

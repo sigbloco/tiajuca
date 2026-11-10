@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { FitText } from '@/components/shared/FitText'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDayShort, formatTime, todayIso } from '@/core/format'
@@ -313,12 +314,12 @@ export function AttendanceRosterPage() {
         {statuses.data?.map((s) => (
           <div key={s.id} className="rounded-lg bg-card p-2 text-center shadow-card">
             <p className="font-display text-xl font-bold leading-none">{counts[s.id] ?? 0}</p>
-            <p className="text-xs text-muted-foreground">{s.name}s</p>
+            <FitText className="text-xs text-muted-foreground" min={9}>{s.name}s</FitText>
           </div>
         ))}
         <div className="rounded-lg bg-card p-2 text-center shadow-card">
           <p className="font-display text-xl font-bold leading-none">{rows.length}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <FitText className="text-xs text-muted-foreground" min={9}>Total</FitText>
         </div>
       </div>
 
