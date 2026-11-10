@@ -32,7 +32,7 @@ export function Breadcrumbs({ crumbs, home }: { crumbs: Crumb[]; home: string })
   }
   for (const e of extra) all.push({ label: e.title })
   return (
-    <nav ref={navRef} aria-label="Você está em" className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <nav ref={navRef} aria-label="Você está em" className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <Link to={home} className="font-semibold text-primary hover:underline">Início</Link>
       {all.map((c, i) => {
         const last = i === all.length - 1

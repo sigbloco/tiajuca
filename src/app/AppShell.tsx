@@ -1,5 +1,5 @@
 import { ArrowLeft, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
@@ -22,6 +22,17 @@ interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos 
 const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
 
 export function AppShell() {
+  const topRef = useRef<HTMLDivElement>(null)
+  // Altura do topo fixo, para outros elementos fixos da página (ex.: contadores da chamada) ficarem logo abaixo.
+  useEffect(() => {
+    const el = topRef.current
+    if (!el) return
+    const set = () => document.documentElement.style.setProperty('--topbar-h', el.offsetHeight + 'px')
+    set()
+    const ro = new ResizeObserver(set)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
   const { membership } = useOrganization()
   const { signOut } = useAuth()
   const { pathname, state } = useLocation()
@@ -98,11 +109,14 @@ export function AppShell() {
 
       <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
-        {cameFrom && (
-          <Link to={cameFrom.path} className="mb-1 inline-flex items-center gap-1 font-semibold text-primary hover:underline"><ArrowLeft className="h-4 w-4" /> Voltar para {cameFrom.label}</Link>
-        )}
-        <Breadcrumbs crumbs={crumbs} home={base} />
-        <CycleBar base={base} />
+        {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
+        <div ref={topRef} className="sticky top-0 z-30 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
+          {cameFrom && (
+            <Link to={cameFrom.path} className="mb-1 inline-flex items-center gap-1 font-semibold text-primary hover:underline"><ArrowLeft className="h-4 w-4" /> Voltar para {cameFrom.label}</Link>
+          )}
+          <Breadcrumbs crumbs={crumbs} home={base} />
+          <CycleBar base={base} />
+          </div>
         <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">
           <InactiveNotice />
