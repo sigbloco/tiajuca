@@ -73,13 +73,20 @@ function useStudentInstruments(cycleId: string | null | undefined) {
     queryKey: ['student-instruments', orgId, cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const [cats, parts] = await Promise.all([
+      const [cats, parts, mc, sts] = await Promise.all([
         supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: cycleId }),
         supabase.from('cycle_participations').select('member_id, instrument_id').eq('cycle_id', cycleId!).not('instrument_id', 'is', null).limit(5000),
+        supabase.from('member_cycles').select('member_id, status_id').eq('cycle_id', cycleId!).limit(5000),
+        supabase.from('member_cycle_statuses').select('id').eq('organization_id', orgId).eq('counts_as_active', true),
       ])
+      if (mc.error) throw mc.error
+      if (sts.error) throw sts.error
       if (cats.error) throw cats.error
       if (parts.error) throw parts.error
-      const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[]).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
+      const activeIds = new Set((sts.data ?? []).map((x) => x.id as string))
+      const activeMembers = new Set((mc.data ?? []).filter((m) => activeIds.has(m.status_id as string)).map((m) => m.member_id as string))
+      // Só alunos ATIVOS no ciclo (aluno inativo não conta).
+      const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[])  .filter((c) => c.category_name === 'Aluno' && activeMembers.has(c.member_id)).map((c) => c.member_id))
       return { members: students, instruments: new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string)) }
     },
   })
@@ -261,7 +268,7 @@ export function AttendanceRosterPage() {
   const naipes = [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
   const lockedNaipe = (() => {
-    if (naipeSel !== null || !activity.data) return ''
+    if (!activity.data) return ''
     const t = plain(activity.data.title)
     const hit = [...(sectionNames.data?.values() ?? [])].filter((n) => t.includes(plain(n)))
     return hit.length === 1 ? hit[0] : ''
@@ -289,7 +296,7 @@ export function AttendanceRosterPage() {
     const only = a.length === 1 && direct.length === 1 ? list.find((i) => i.id === direct[0].instrument_id) : undefined
     return { section: secs.size === 1 ? [...secs][0] : '', inst: only?.name ?? '' }
   })()
-  const naipe = naipeSel ?? (lockedNaipe || myScope.section)
+  const naipe = lockedNaipe || (naipeSel ?? myScope.section)
   const inst = instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
