@@ -7,6 +7,7 @@ import { useAuth } from '@/core/auth'
 import { MAX_QTY_PER_LINE, maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
 import { Price } from './Price'
+import { MinUnitsBar, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
 export function ProductPage() {
@@ -59,6 +60,7 @@ export function ProductPage() {
               ? <Badge>Sob encomenda · produção em {product.lead_time_days}</Badge>
               : <Badge>Pronta entrega</Badge>}
           </div>
+          <MinUnitsBar product={product} />
           {product.description && <p className="whitespace-pre-line">{product.description}</p>}
 
           {soldOut ? <Badge>Esgotado</Badge> : (
@@ -96,6 +98,7 @@ export function ProductPage() {
           <p className="text-sm text-muted-foreground">Retirada combinada em um dos pontos de retirada. Pagamento antecipado.</p>
         </div>
       </div>
+      <SuggestedProducts from={[product]} exclude={[product.id]} />
     </div>
   )
 }

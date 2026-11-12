@@ -21,13 +21,13 @@ const swapped = (imgs: { id: string }[], i: number, d: -1 | 1) => {
 
 const SIZES = ['P', 'M', 'G', 'GG']
 
-export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
+export function ProductSheet({ product, others = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; others?: ShopProduct[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
     name: product?.name ?? '', description: product?.description ?? '', kind: (product?.kind ?? 'stock') as ProductKind,
     price: product ? fromCents(product.price_cents) : (null as number | null),
-    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '',
+    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '', minUnits: product?.min_units ? String(product.min_units) : '', suggested: product?.suggested_ids ?? ([] as string[]),
     is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
   const [variants, setVariants] = useState<VariantRow[]>(
@@ -60,7 +60,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
       if (errs.length) return null
       const input = {
         name: f.name.trim(), description: f.description.trim(), price_cents: draft.priceCents!, member_discount_pct: discount,
-        lead_time_days: isStock ? null : draft.leadTimeDays, is_active: f.is_active, is_featured: f.is_featured,
+        lead_time_days: isStock ? null : draft.leadTimeDays, min_units: isStock || !f.minUnits ? null : Number(f.minUnits), suggested_ids: f.suggested.filter((id) => id !== product?.id), is_active: f.is_active, is_featured: f.is_featured,
       }
       const rows = variants.map((v, i) => ({ id: v.id, label: v.label, stock: isStock ? stockToDb(draft.variants[i].stock as number) : null, is_active: v.is_active }))
       if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); return product.id }
@@ -164,6 +164,24 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
         {!isStock && (
           <div className="space-y-1.5"><Label htmlFor="pr-lead">Prazo de produção</Label>
             <Input id="pr-lead" placeholder="Ex.: 10-15 dias úteis" value={f.leadTime} onChange={(e) => setF({ ...f, leadTime: e.target.value })} /></div>
+        )}
+        {!isStock && (
+          <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir (opcional)</Label>
+            <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
+            <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p></div>
+        )}
+        {others.length > 0 && (
+          <fieldset className="space-y-1 rounded-lg border border-border p-3">
+            <legend className="px-1 font-semibold">Produtos sugeridos</legend>
+            <p className="text-xs text-muted-foreground">Aparecem pequenos embaixo da página deste produto e do carrinho.</p>
+            {others.filter((o) => o.is_active).map((o) => (
+              <label key={o.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="h-4 w-4" checked={f.suggested.includes(o.id)}
+                  onChange={(e) => setF({ ...f, suggested: e.target.checked ? [...f.suggested, o.id] : f.suggested.filter((id) => id !== o.id) })} />
+                {o.name}
+              </label>
+            ))}
+          </fieldset>
         )}
 
         <fieldset className="space-y-2 rounded-lg border border-border p-3">
