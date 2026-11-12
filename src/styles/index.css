@@ -52,3 +52,9 @@ main, [role='dialog'], [role='alertdialog'] { overflow-wrap: anywhere; }
 /* Itens de grade (ex.: um <select> com opção longa) não podem esticar a coluna além do espaço. */
 :where(.grid) > * { min-width: 0; }
 input, select, textarea { max-width: 100%; min-width: 0; }
+
+/* Jeito de aplicativo: sem zoom da página (a pinça só amplia fotos), sem "puxar para atualizar" nem brilho azul ao tocar. */
+html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }
+body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+button, [role="button"], a, label, summary { user-select: none; -webkit-user-select: none; }
+input, textarea, select { font-size: max(16px, 1em); }
