@@ -110,8 +110,8 @@ export function ProductsTab() {
         </Card>
       ))}
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
-        {current && <ProductSheet key={current.id} product={current} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {current && <ProductSheet key={current.id} product={current} others={(q.data ?? []).filter((x) => x.id !== current.id)} onSaved={setSheet} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )
