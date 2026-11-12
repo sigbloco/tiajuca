@@ -202,7 +202,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
           <div className="grid grid-cols-3 gap-2">
             {product.shop_product_images.map((img, i, all) => (
               <div key={img.id} {...dnd.row(img.id, dragImage, 'images')} className={`relative rounded-lg ${dnd.cls(img.id)}`}>
-                <img src={imageUrl(img.storage_path)} alt={img.alt || product.name} draggable={false} className="aspect-square w-full rounded-lg object-cover" />
+                <img src={imageUrl(img.storage_path)} alt={img.alt || product.name} draggable={false} className="aspect-square w-full rounded-lg object-contain bg-muted" />
                 <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 h-7 w-7 bg-card" aria-label="Remover foto"
                   onClick={() => window.confirm('Remover esta foto?') && removeImage.mutate(img)}><Trash2 className="h-4 w-4" /></Button>
                 <div className="absolute bottom-1 left-1 flex gap-1">

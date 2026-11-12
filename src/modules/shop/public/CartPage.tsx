@@ -30,7 +30,7 @@ export function CartPage() {
           return (
             <li key={l.variantId}>
               <Card className="flex gap-3 p-3">
-                {l.image ? <img src={imageUrl(l.image)} alt="" className="h-20 w-20 shrink-0 rounded-lg object-cover" /> : <div aria-hidden className="h-20 w-20 shrink-0 rounded-lg bg-muted" />}
+                {l.image ? <img src={imageUrl(l.image)} alt="" className="h-20 w-20 shrink-0 rounded-lg object-contain bg-muted" /> : <div aria-hidden className="h-20 w-20 shrink-0 rounded-lg bg-muted" />}
                 <div className="min-w-0 flex-1 space-y-1">
                   <Link to={`${basePath}/produto/${l.slug}`} className="font-semibold hover:underline">{l.name}</Link>
                   <p className="text-sm text-muted-foreground">{l.variantLabel}{l.kind === 'made_to_order' ? ' · sob encomenda' : ''}</p>

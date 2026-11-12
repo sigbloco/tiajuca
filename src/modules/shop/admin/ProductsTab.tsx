@@ -92,7 +92,7 @@ export function ProductsTab() {
             <GripVertical className="h-5 w-5" />
           </button>
           {p.shop_product_images[0]
-            ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+            ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
             : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
           <div className="min-w-0 flex-1">
             <p className="break-words font-semibold">{p.name} {!p.is_active && <Badge>Oculto</Badge>}</p>
