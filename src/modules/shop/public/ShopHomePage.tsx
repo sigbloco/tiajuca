@@ -62,7 +62,7 @@ export function ShopHomePage() {
                     <p className="font-semibold leading-tight">{p.name}</p>
                     <Price product={p} isMember={isMember} />
                     <div>
-                      {soldOut ? <Badge>Esgotado</Badge> : p.kind === 'made_to_order' ? <Badge>Sob encomenda · {p.lead_time_days} dias</Badge> : <Badge>Pronta entrega</Badge>}
+                      {soldOut ? <Badge>Esgotado</Badge> : p.kind === 'made_to_order' ? <Badge>Sob encomenda · {p.lead_time_days}</Badge> : <Badge>Pronta entrega</Badge>}
                     </div>
                   </div>
                 </Card>

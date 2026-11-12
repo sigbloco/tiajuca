@@ -9,7 +9,7 @@ export interface CartLine { variantId: string; quantity: number }
 export interface StoreVariant { id: string; label: string; available: number | null } // null = sob encomenda
 export interface StoreProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
-  price_cents: number; member_discount_pct: number; lead_time_days: number | null; is_featured?: boolean
+  price_cents: number; member_discount_pct: number; lead_time_days: string | null; is_featured?: boolean
   images: string[]; variants: StoreVariant[]
 }
 export interface CatalogEntry { product: StoreProduct; variant: StoreVariant }

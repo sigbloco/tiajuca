@@ -7,7 +7,7 @@ export interface ShopVariant { id: string; product_id: string; label: string; st
 export interface ShopImage { id: string; product_id: string; storage_path: string; alt: string; sort_order: number }
 export interface ShopProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
-  price_cents: number; member_discount_pct: number; lead_time_days: number | null; is_active: boolean; is_featured: boolean; sort_order: number
+  price_cents: number; member_discount_pct: number; lead_time_days: string | null; is_active: boolean; is_featured: boolean; sort_order: number
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
 export interface PickupPoint {
@@ -35,7 +35,7 @@ export async function listProducts(orgId: string) {
 
 export interface ProductInput {
   name: string; description: string; kind: ProductKind; price_cents: number; member_discount_pct: number
-  lead_time_days: number | null; is_active: boolean; is_featured: boolean
+  lead_time_days: string | null; is_active: boolean; is_featured: boolean
 }
 export interface VariantInput { id?: string; label: string; stock: number | null; is_active: boolean }
 

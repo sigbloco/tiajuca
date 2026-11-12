@@ -56,7 +56,7 @@ export function ProductPage() {
           )}
           <div className="flex flex-wrap gap-2">
             {product.kind === 'made_to_order'
-              ? <Badge>Sob encomenda · produção em {product.lead_time_days} dias</Badge>
+              ? <Badge>Sob encomenda · produção em {product.lead_time_days}</Badge>
               : <Badge>Pronta entrega</Badge>}
           </div>
           {product.description && <p className="whitespace-pre-line">{product.description}</p>}

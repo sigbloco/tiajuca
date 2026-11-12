@@ -13,7 +13,7 @@ import { imageUrl, listProducts, reorderProducts, setProductActive, type ShopPro
 import { getSettings } from './settings'
 
 function stockSummary(p: ShopProduct): string {
-  if (p.kind === 'made_to_order') return `Sob encomenda · ${p.lead_time_days ?? '?'} dia(s)`
+  if (p.kind === 'made_to_order') return `Sob encomenda · ${p.lead_time_days ?? '?'}`
   const a = productAvailability(p.kind, p.shop_product_variants)
   if (a.status === 'sold_out') return 'Esgotado'
   return a.units === Infinity ? 'Estoque ilimitado' : `${a.units} em estoque`

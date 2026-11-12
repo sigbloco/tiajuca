@@ -36,7 +36,7 @@ export function slugify(name: string): string {
 }
 
 export interface ProductDraft {
-  name: string; kind: ProductKind; priceCents: number | null; discountPct: number; leadTimeDays: number | null
+  name: string; kind: ProductKind; priceCents: number | null; discountPct: number; leadTimeDays: string | null
   variants: { label: string; stock: number | null }[]
 }
 
@@ -47,7 +47,7 @@ export function validateProductDraft(d: ProductDraft): string[] {
   else if (!slugify(d.name)) errors.push('O nome precisa ter letras ou números.')
   if (!d.priceCents || d.priceCents <= 0) errors.push('Informe o preço público.')
   if (!(d.discountPct >= 0 && d.discountPct <= 100)) errors.push('O desconto de integrante deve ficar entre 0% e 100%.')
-  if (d.kind === 'made_to_order' && (!d.leadTimeDays || d.leadTimeDays <= 0)) errors.push('Informe o prazo de produção (em dias).')
+  if (d.kind === 'made_to_order' && !d.leadTimeDays?.trim()) errors.push('Informe o prazo de produção (ex.: 10-15 dias úteis).')
   const labels = d.variants.map((v) => v.label.trim().toLowerCase())
   if (d.variants.length === 0) errors.push('Cadastre ao menos uma variação (ex.: Único, ou os tamanhos).')
   else {
