@@ -34,14 +34,14 @@ export function ProductPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           {product.images.length > 0
-            ? <img src={imageUrl(product.images[photo] ?? product.images[0])} alt={product.name} className={cn('aspect-square w-full rounded-xl object-cover', soldOut && 'grayscale')} />
+            ? <img src={imageUrl(product.images[photo] ?? product.images[0])} alt={product.name} className={cn('aspect-square w-full rounded-xl object-contain bg-muted', soldOut && 'grayscale')} />
             : <div aria-hidden className="aspect-square w-full rounded-xl bg-muted" />}
           {product.images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {product.images.map((img, i) => (
                 <button key={img} type="button" aria-label={`Foto ${i + 1}`} aria-current={i === photo} onClick={() => setPhoto(i)}
                   className={cn('h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2', i === photo ? 'border-primary' : 'border-transparent')}>
-                  <img src={imageUrl(img)} alt="" className={cn('h-full w-full object-cover', soldOut && 'grayscale')} />
+                  <img src={imageUrl(img)} alt="" className={cn('h-full w-full object-contain bg-muted', soldOut && 'grayscale')} />
                 </button>
               ))}
             </div>
