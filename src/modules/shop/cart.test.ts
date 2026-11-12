@@ -6,7 +6,7 @@ const camisa: StoreProduct = {
   variants: [{ id: 'v-m', label: 'M', available: 3 }, { id: 'v-g', label: 'G', available: 0 }],
 }
 const bone: StoreProduct = {
-  id: 'p2', slug: 'bone', name: 'Boné', description: '', kind: 'made_to_order', price_cents: 3500, member_discount_pct: 0, lead_time_days: 15, images: [],
+  id: 'p2', slug: 'bone', name: 'Boné', description: '', kind: 'made_to_order', price_cents: 3500, member_discount_pct: 0, lead_time_days: '15 dias', images: [],
   variants: [{ id: 'v-u', label: 'Único', available: null }],
 }
 const idx = indexCatalog([camisa, bone])

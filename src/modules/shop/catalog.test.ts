@@ -51,8 +51,8 @@ describe('validação do produto', () => {
     expect(validateProductDraft({ ...draft, name: '  ', priceCents: null, variants: [] })).toHaveLength(3)
   })
   it('encomenda exige prazo; estoque exige quantidade', () => {
-    expect(validateProductDraft({ ...draft, kind: 'made_to_order', leadTimeDays: null, variants: [{ label: 'Único', stock: null }] })).toEqual(['Informe o prazo de produção (em dias).'])
-    expect(validateProductDraft({ ...draft, kind: 'made_to_order', leadTimeDays: 15, variants: [{ label: 'Único', stock: null }] })).toEqual([])
+    expect(validateProductDraft({ ...draft, kind: 'made_to_order', leadTimeDays: null, variants: [{ label: 'Único', stock: null }] })).toEqual(['Informe o prazo de produção (ex.: 10-15 dias úteis).'])
+    expect(validateProductDraft({ ...draft, kind: 'made_to_order', leadTimeDays: '10-15 dias úteis', variants: [{ label: 'Único', stock: null }] })).toEqual([])
     expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: null }] })).toEqual(['Informe o estoque de cada variação (de -1 a 99; -1 = ilimitado, 0 = esgotado).'])
     expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: -2 }] })).toHaveLength(1)
     expect(validateProductDraft({ ...draft, variants: [{ label: 'M', stock: 100 }] })).toHaveLength(1)

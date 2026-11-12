@@ -27,7 +27,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
   const [f, setF] = useState({
     name: product?.name ?? '', description: product?.description ?? '', kind: (product?.kind ?? 'stock') as ProductKind,
     price: product ? fromCents(product.price_cents) : (null as number | null),
-    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ? String(product.lead_time_days) : '',
+    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '',
     is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
   const [variants, setVariants] = useState<VariantRow[]>(
@@ -45,7 +45,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
     mutationFn: async () => {
       const draft = {
         name: f.name, kind: f.kind, priceCents: f.price === null ? null : toCents(f.price), discountPct: discount,
-        leadTimeDays: f.leadTime ? Number(f.leadTime) : null,
+        leadTimeDays: f.leadTime.trim() || null,
         variants: variants.map((v) => ({ label: v.label, stock: v.stock === '' ? null : Number(v.stock) })),
       }
       const errs = validateProductDraft(draft)
@@ -162,8 +162,8 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
           Produto em destaque (aparece na seção do alto da loja)
         </label>
         {!isStock && (
-          <div className="space-y-1.5"><Label htmlFor="pr-lead">Prazo de produção (dias)</Label>
-            <Input id="pr-lead" inputMode="numeric" value={f.leadTime} onChange={(e) => setF({ ...f, leadTime: e.target.value.replace(/\D/g, '') })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="pr-lead">Prazo de produção</Label>
+            <Input id="pr-lead" placeholder="Ex.: 10-15 dias úteis" value={f.leadTime} onChange={(e) => setF({ ...f, leadTime: e.target.value })} /></div>
         )}
 
         <fieldset className="space-y-2 rounded-lg border border-border p-3">
