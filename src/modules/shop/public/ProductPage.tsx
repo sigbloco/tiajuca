@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Label, cn } from '@/components/ui/primitives'
+import { PinchZoomImage } from '@/components/shared/PinchZoomImage'
 import { useAuth } from '@/core/auth'
 import { MAX_QTY_PER_LINE, maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
@@ -34,7 +35,7 @@ export function ProductPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           {product.images.length > 0
-            ? <img src={imageUrl(product.images[photo] ?? product.images[0])} alt={product.name} className={cn('aspect-square w-full rounded-xl object-contain bg-muted', soldOut && 'grayscale')} />
+            ? <PinchZoomImage key={photo} src={imageUrl(product.images[photo] ?? product.images[0])} alt={product.name} className={cn('aspect-square w-full object-contain bg-muted', soldOut && 'grayscale')} />
             : <div aria-hidden className="aspect-square w-full rounded-xl bg-muted" />}
           {product.images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
