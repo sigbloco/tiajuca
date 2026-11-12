@@ -1,4 +1,4 @@
-import { ArrowLeft, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Construction, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
@@ -33,7 +33,7 @@ export function AppShell() {
     ro.observe(el)
     return () => ro.disconnect()
   })
-  const { membership } = useOrganization()
+  const { membership, realMembership } = useOrganization()
   const { signOut } = useAuth()
   const { pathname, state } = useLocation()
   const cameFrom = (state as { from?: CameFrom } | null)?.from
@@ -49,6 +49,22 @@ export function AppShell() {
   }, [orgIdForCycles]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
   if (!membership) return null
+  // Área dos integrantes em construção: só Titular e Direção entram (vale pelo acesso real, não pela simulação).
+  const realRoles = (realMembership ?? membership).roles
+  if (!realRoles.includes('titular') && !realRoles.includes('direcao')) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+        <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-20 w-20" />
+        <Construction className="h-10 w-10 text-primary" />
+        <h1 className="font-display text-2xl font-extrabold">Área em construção</h1>
+        <p className="max-w-sm text-muted-foreground">A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.</p>
+        <div className="flex gap-2">
+          <Link to="/site"><Button variant="outline"><Globe className="h-4 w-4" /> Ver o site</Button></Link>
+          <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+        </div>
+      </div>
+    )
+  }
   const base = `/${membership.slug}`
   const isTitular = membership.roles.includes('titular') // usuário institucional do bloco: não é uma pessoa, então não tem perfil
   const visible = (i: NavItem) => !(i.to === 'perfil' && isTitular) && (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
