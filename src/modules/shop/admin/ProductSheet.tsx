@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ImagePlus, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
@@ -8,7 +8,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, stockFromDb, stockToDb, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { createProduct, deleteProductImage, imageUrl, setProductActive, updateProduct, uploadProductImage, type ShopProduct } from './service'
+import { createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, updateProduct, uploadProductImage, type ShopProduct } from './service'
 
 interface VariantRow { id?: string; label: string; stock: string; reserved: number; is_active: boolean }
 
@@ -87,6 +87,24 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const moveVariant = (i: number, d: -1 | 1) => setVariants((vs) => {
+    const j = i + d
+    if (j < 0 || j >= vs.length) return vs
+    const next = [...vs];
+    [next[i], next[j]] = [next[j], next[i]]
+    return next
+  })
+  const moveImage = useMutation({
+    mutationFn: async ({ i, d }: { i: number; d: -1 | 1 }) => {
+      const ids = product!.shop_product_images.map((x) => x.id)
+      const j = i + d
+      if (j < 0 || j >= ids.length) return
+      ;[ids[i], ids[j]] = [ids[j], ids[i]]
+      await reorderProductImages(ids)
+    },
+    onSuccess: refresh,
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const setVariant = (i: number, patch: Partial<VariantRow>) => setVariants((vs) => vs.map((v, j) => (j === i ? { ...v, ...patch } : v)))
   const addSizes = () => setVariants((vs) => {
     const have = new Set(vs.map((v) => v.label.trim().toLowerCase()))
@@ -134,6 +152,10 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
           {isStock && <p className="text-xs text-muted-foreground">Estoque de -1 a 99: -1 = ilimitado · 0 = esgotado.</p>}
           {variants.map((v, i) => (
             <div key={v.id ?? `n${i}`} className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir variação" disabled={i === 0} onClick={() => moveVariant(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer variação" disabled={i === variants.length - 1} onClick={() => moveVariant(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+              </div>
               <Input aria-label="Nome da variação" placeholder="Ex.: M" value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} />
               {isStock && <Input aria-label={`Estoque de ${v.label || 'variação'}`} className="w-24" type="number" min={-1} max={99} step={1} title="-1 = ilimitado · 0 = esgotado" value={v.stock}
                 onChange={(e) => setVariant(i, { stock: e.target.value === '' ? '' : String(Math.min(99, Math.max(-1, Math.trunc(Number(e.target.value))))) })} />}
@@ -157,11 +179,15 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
         <div className="space-y-2">
           <p className="font-semibold">Fotos</p>
           <div className="grid grid-cols-3 gap-2">
-            {product.shop_product_images.map((img) => (
+            {product.shop_product_images.map((img, i, all) => (
               <div key={img.id} className="relative">
                 <img src={imageUrl(img.storage_path)} alt={img.alt || product.name} className="aspect-square w-full rounded-lg object-cover" />
                 <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 h-7 w-7 bg-card" aria-label="Remover foto"
                   onClick={() => window.confirm('Remover esta foto?') && removeImage.mutate(img)}><Trash2 className="h-4 w-4" /></Button>
+                <div className="absolute bottom-1 left-1 flex gap-1">
+                  <Button type="button" size="icon" variant="outline" className="h-7 w-7 bg-card" aria-label="Mover foto para antes" disabled={i === 0 || moveImage.isPending} onClick={() => moveImage.mutate({ i, d: -1 })}><ArrowLeft className="h-4 w-4" /></Button>
+                  <Button type="button" size="icon" variant="outline" className="h-7 w-7 bg-card" aria-label="Mover foto para depois" disabled={i === all.length - 1 || moveImage.isPending} onClick={() => moveImage.mutate({ i, d: 1 })}><ArrowRight className="h-4 w-4" /></Button>
+                </div>
               </div>
             ))}
           </div>
