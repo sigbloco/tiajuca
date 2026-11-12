@@ -119,6 +119,13 @@ export async function savePickupPoint(orgId: string, id: string | null, row: Omi
 }
 
 
+/** Grava a nova ordem das fotos de um produto (índice na lista = sort_order). */
+export async function reorderProductImages(ids: string[]) {
+  const results = await Promise.all(ids.map((id, i) => supabase.from('shop_product_images').update({ sort_order: i }).eq('id', id)))
+  const failed = results.find((r) => r.error)
+  if (failed?.error) throw failed.error
+}
+
 /** Grava a nova ordem de exibição dos produtos (índice na lista = sort_order). */
 export async function reorderProducts(orgId: string, ids: string[]) {
   const results = await Promise.all(ids.map((id, i) => supabase.from('shop_products').update({ sort_order: i }).eq('id', id).eq('organization_id', orgId)))
