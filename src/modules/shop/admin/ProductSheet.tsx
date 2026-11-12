@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
+import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useHoldReorder } from '@/core/holdReorder'
 import { toast } from 'sonner'
@@ -34,6 +34,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
     product?.shop_product_variants.map((v) => ({ id: v.id, label: v.label, stock: String(stockFromDb(v.stock)), reserved: v.reserved, is_active: v.is_active }))
       ?? [{ label: 'Único', stock: '0', reserved: 0, is_active: true }],
   )
+  const [removed, setRemoved] = useState<string[]>([])
   const [errors, setErrors] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] })
@@ -62,7 +63,7 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
         lead_time_days: isStock ? null : draft.leadTimeDays, is_active: f.is_active, is_featured: f.is_featured,
       }
       const rows = variants.map((v, i) => ({ id: v.id, label: v.label, stock: isStock ? stockToDb(draft.variants[i].stock as number) : null, is_active: v.is_active }))
-      if (product) { await updateProduct(orgId, product.id, input, product.kind, rows); return product.id }
+      if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); return product.id }
       return createProduct(orgId, { ...input, kind: f.kind }, rows)
     },
     onSuccess: (id) => {
@@ -169,19 +170,20 @@ export function ProductSheet({ product, defaultDiscount = 0, onSaved, onClose }:
           <legend className="px-1 font-semibold">{isStock ? 'Variações e estoque' : 'Variações'}</legend>
           {isStock && <p className="text-xs text-muted-foreground">Estoque de -1 a 99: -1 = ilimitado · 0 = esgotado.</p>}
           {variants.map((v, i) => (
-            <div key={vKey(v, i)} {...dnd.row(vKey(v, i), dragVariant, 'variants')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(vKey(v, i))}`}>
+            <div key={vKey(v, i)} {...dnd.row(vKey(v, i), dragVariant, 'variants')} className={`flex items-center gap-2 rounded-lg ${v.is_active ? '' : 'bg-muted/60 opacity-60'} ${dnd.cls(vKey(v, i))}`}>
               {dnd.handle(vKey(v, i), dragVariant, 'variants')}
               <div className="flex flex-col">
                 <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir variação" disabled={i === 0} onClick={() => moveVariant(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
                 <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer variação" disabled={i === variants.length - 1} onClick={() => moveVariant(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
               </div>
-              <Input aria-label="Nome da variação" placeholder="Ex.: M" value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} />
+              <Input aria-label="Nome da variação" placeholder="Ex.: M" className={v.is_active ? '' : 'line-through'} value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} />
               {isStock && <Input aria-label={`Estoque de ${v.label || 'variação'}`} className="w-24" type="number" min={-1} max={99} step={1} title="-1 = ilimitado · 0 = esgotado" value={v.stock}
                 onChange={(e) => setVariant(i, { stock: e.target.value === '' ? '' : String(Math.min(99, Math.max(-1, Math.trunc(Number(e.target.value))))) })} />}
               {product && isStock && v.reserved > 0 && <Badge title="Reservado em pedidos em andamento">{v.reserved} res.</Badge>}
-              {v.id
-                ? <Button type="button" size="sm" variant="outline" onClick={() => setVariant(i, { is_active: !v.is_active })}>{v.is_active ? 'Ativa' : 'Oculta'}</Button>
-                : <Button type="button" size="icon" variant="ghost" aria-label="Remover variação" onClick={() => setVariants((vs) => vs.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>}
+              <Button type="button" size="icon" variant={v.is_active ? 'ghost' : 'outline'} aria-pressed={!v.is_active} title={v.is_active ? 'Desativar variação' : 'Variação desativada: clique para reativar'}
+                aria-label={v.is_active ? 'Desativar variação' : 'Reativar variação'} className={v.is_active ? '' : 'border-destructive text-destructive'} onClick={() => setVariant(i, { is_active: !v.is_active })}><Ban className="h-4 w-4" /></Button>
+              <Button type="button" size="icon" variant="ghost" aria-label="Excluir variação" title="Excluir variação"
+                onClick={() => { if (v.id) setRemoved((r) => [...r, v.id!]); setVariants((vs) => vs.filter((_, j) => j !== i)) }}><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
           <div className="flex flex-wrap gap-2">

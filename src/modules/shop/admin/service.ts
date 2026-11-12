@@ -56,9 +56,16 @@ export async function createProduct(orgId: string, input: ProductInput, variants
   throw new Error('Não foi possível gerar um endereço único para o produto. Mude o nome.')
 }
 
-export async function updateProduct(orgId: string, id: string, input: Omit<ProductInput, 'kind'>, kind: ProductKind, variants: VariantInput[]) {
+export async function updateProduct(orgId: string, id: string, input: Omit<ProductInput, 'kind'>, kind: ProductKind, variants: VariantInput[], removedIds: string[] = []) {
   const { error } = await supabase.from('shop_products').update(input).eq('id', id)
   if (error) throw error
+  if (removedIds.length) {
+    const del = await supabase.from('shop_product_variants').delete().in('id', removedIds).eq('product_id', id)
+    if (del.error) {
+      if (del.error.code === '23503') throw new Error('Esta variação já tem pedidos e não pode ser excluída. Desative-a com o botão de proibido.')
+      throw del.error
+    }
+  }
   await saveVariants(orgId, id, kind, variants)
 }
 
