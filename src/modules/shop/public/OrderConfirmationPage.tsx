@@ -100,6 +100,7 @@ export function OrderConfirmationPage() {
                 <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></dd></div>
             <div><dt className="text-muted-foreground">Informe no Pix como referência/mensagem</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
           </dl>
+          <p className="rounded-lg bg-muted p-3 text-sm">A chave Pix está no nome de <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>, que recebe pelo Cordão da Tia Juca. Pode pagar tranquilo.</p>
           <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> por WhatsApp ou e-mail. O pedido só é confirmado quando a loja conferir o pagamento.</p>
           <div className="flex flex-wrap gap-2">
             {pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar pelo WhatsApp</a>}
