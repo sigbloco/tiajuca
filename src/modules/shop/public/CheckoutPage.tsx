@@ -91,6 +91,7 @@ export function CheckoutPage() {
             ))}
           </div>
           <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
+          {f.method === 'infinitepay' && <p className="rounded-lg bg-muted p-3 text-sm">Na página de pagamento da InfinitePay, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>}
         </Card>
 
         <label className="flex items-start gap-3 text-sm">

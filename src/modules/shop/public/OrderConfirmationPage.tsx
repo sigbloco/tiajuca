@@ -83,6 +83,7 @@ export function OrderConfirmationPage() {
         <Card className="space-y-3 p-5">
           <h2 className="text-lg font-bold">Pague com cartão de crédito ou Pix</h2>
           <p className="text-sm">O pagamento é feito em uma página segura da InfinitePay. Quando for confirmado, esta tela e o seu pedido são atualizados automaticamente.</p>
+          <p className="rounded-lg bg-muted p-3 text-sm">Na página de pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>
           {snap.paymentUrl
             ? <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={snap.paymentUrl}>Ir para o pagamento · {money(order.total_cents)}</a>
             : <p className="text-sm text-muted-foreground">Se a página de pagamento não abriu, fale com a Direção abaixo.</p>}
