@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
@@ -40,6 +40,11 @@ export function ProductsTab() {
   const restore = useMutation({
     mutationFn: (id: string) => setProductActive(id, true),
     onSuccess: () => { toast.success('Produto restaurado na loja.'); qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const trash = useMutation({
+    mutationFn: (id: string) => setProductActive(id, false),
+    onSuccess: () => { toast.success('Produto movido para a lixeira.'); qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const save = useMutation({
@@ -87,7 +92,7 @@ export function ProductsTab() {
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
       {q.data?.length === 0 && <EmptyState>Nenhum produto ainda. Crie o primeiro.</EmptyState>}
       {items.map((p, i) => (
-        <Card key={p.id} data-pid={p.id} className={`flex items-center gap-2 p-3 ${p.is_active ? '' : 'opacity-60'} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
+        <Card key={p.id} data-pid={p.id} className={`flex items-center gap-2 p-3 ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
           <button type="button" aria-label={`Arrastar ${p.name}`} title="Arraste para reordenar" style={{ touchAction: 'none' }}
             className="shrink-0 cursor-grab rounded p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing"
             onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragId(p.id); setLocal(items.map((x) => x.id)) }}
@@ -98,7 +103,7 @@ export function ProductsTab() {
             ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
             : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
           <div className="min-w-0 flex-1">
-            <p className="break-words font-semibold">{p.name} {!p.is_active && <Badge>Oculto</Badge>}</p>
+            <p className="break-words font-semibold">{p.name} {p.is_hidden && <Badge>Desativado</Badge>}</p>
             <p className="text-sm">
               {formatCurrency(fromCents(p.price_cents))}
               {p.member_discount_pct > 0 && <span className="text-muted-foreground"> · integrante {formatCurrency(fromCents(memberPriceCents(p.price_cents, p.member_discount_pct)))}</span>}
@@ -110,6 +115,8 @@ export function ProductsTab() {
             <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Descer ${p.name}`} disabled={i === items.length - 1 || save.isPending} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
           </div>
           <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet(p.id)}><Pencil className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
+            onClick={() => window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
         </Card>
       ))}
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>

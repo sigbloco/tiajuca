@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Palette } from 'lucide-react'
+import { Palette, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button, Card, cn } from '@/components/ui/primitives'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -17,7 +17,7 @@ const TABS = [
   { key: 'products', label: 'Produtos' },
   { key: 'stock', label: 'Estoque' },
   { key: 'pickup', label: 'Pontos de retirada' },
-  { key: 'payments', label: 'Configurações' },
+  { key: 'payments', label: 'Configurações', icon: Settings },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -40,11 +40,12 @@ export function ShopAdminPage() {
       )}
       <div role="tablist" className="flex flex-wrap gap-2">
         {TABS.map((t) => (
-          <Button key={t.key} role="tab" aria-selected={tab === t.key} variant={tab === t.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => setTab(t.key)}>
-            {t.label}
+          <Button key={t.key} role="tab" aria-selected={tab === t.key} aria-label={'icon' in t ? t.label : undefined} title={'icon' in t ? t.label : undefined}
+            variant={tab === t.key ? 'default' : 'outline'} size={'icon' in t ? 'icon' : 'default'} className={cn('min-h-11', 'icon' in t && 'min-w-11')} onClick={() => setTab(t.key)}>
+            {'icon' in t ? <t.icon className="h-5 w-5" /> : t.label}
           </Button>
         ))}
-        {canTheme && <Button asChild variant="outline" className="min-h-11"><Link to={`/${membership?.slug}/interface?area=shop`}><Palette className="h-4 w-4" /> Interface</Link></Button>}
+        {canTheme && <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11"><Link to={`/${membership?.slug}/interface?area=shop`} aria-label="Interface" title="Interface"><Palette className="h-5 w-5" /></Link></Button>}
       </div>
       {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
     </div>
