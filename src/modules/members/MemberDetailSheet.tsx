@@ -1,3 +1,4 @@
+import { ExtraEmails } from './ExtraEmails'
 import { requireFields } from '@/core/required'
 import { formatDate, shortName } from '@/core/format'
 
@@ -264,7 +265,8 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
         <div className="grid gap-2 sm:grid-cols-2">
           {fld('rd-full', 'Nome completo', <Input id="rd-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} />)}
           {fld('rd-display', 'Como prefere ser chamado(a)', <Input id="rd-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} />)}
-          {fld('rd-email', 'E-mail', <Input id="rd-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />)}
+          {fld('rd-email', 'E-mail principal', <Input id="rd-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />)}
+          <ExtraEmails memberId={member.id} />
           {fld('rd-phone', 'Celular', <><PhoneInput id="rd-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />{!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</>)}
           {fld('rd-birth', 'Data de nascimento', <Input id="rd-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} />)}
           {fld('rd-joined', 'Data de inscrição', <Input id="rd-joined" type="date" value={f.joined_at} onChange={(e) => setF({ ...f, joined_at: e.target.value })} />)}
