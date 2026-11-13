@@ -1,11 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Globe, LogOut, Store } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { friendlyError } from '@/core/errors'
-import { supabase } from '@/core/supabase'
+import { DEFAULT_ORG_SLUG, supabase } from '@/core/supabase'
 import { AuthLayout } from './AuthLayout'
 
 /** Única forma de entrar: conta Google. Quem chega ao bloco vem pelos formulários de inscrição, não por cadastro aberto. */
@@ -54,11 +55,19 @@ export function ClaimInvitePage() {
   )
 }
 
+/**
+ * Quem entra com o Google e ainda não tem cadastro ligado (ou é só integrante) vê sempre a tela "em construção":
+ * a área dos integrantes ainda não está pronta. Dá para ir à loja ou ao site.
+ */
 export function NoOrganizationPage() {
   const { signOut } = useAuth()
   return (
-    <AuthLayout title="Aguardando vínculo" subtitle="Sua conta ainda não está ligada a um cadastro. Peça um convite à Direção ou abra o link de convite recebido.">
-      <Button variant="outline" className="w-full" onClick={() => signOut()}>Sair</Button>
+    <AuthLayout title="Área em construção" subtitle="A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.">
+      <div className="space-y-2">
+        <Button asChild className="w-full"><Link to={`/${DEFAULT_ORG_SLUG}/loja`}><Store className="h-4 w-4" /> Ir para a loja</Link></Button>
+        <Button asChild variant="outline" className="w-full"><Link to="/site"><Globe className="h-4 w-4" /> Ver o site</Link></Button>
+        <Button variant="ghost" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+      </div>
     </AuthLayout>
   )
 }
