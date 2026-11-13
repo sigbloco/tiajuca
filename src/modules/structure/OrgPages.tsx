@@ -65,7 +65,7 @@ export function FunctionsPage() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>Funções</h2>
+        <h2>Categorias</h2>
         {canEdit && (
           <TrashDrawer entries={list.filter((f) => !f.is_active && !f.is_fixed).map((f) => ({ id: f.id, name: f.name }))}
             onRestore={(id) => { const f = list.find((x) => x.id === id); if (f) patch.mutate({ f, fields: { is_active: true } }) }}

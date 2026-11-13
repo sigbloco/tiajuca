@@ -85,7 +85,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
     <div className="space-y-3">
       <h2>Valores{cycle ? ` · ${cycle.name}` : ''}</h2>
       <ReadMore>
-        As categorias refletem as funções (Organização → Funções) e não se editam aqui; só o valor mensal. {cycle && cycle.ends_on < today ? 'Ciclo encerrado: só consulta.' : 'O valor muda daqui para frente (num ciclo futuro, vale desde o início dele); cobranças já geradas não mudam.'}
+        As categorias refletem as funções (Organização → Categorias) e não se editam aqui; só o valor mensal. {cycle && cycle.ends_on < today ? 'Ciclo encerrado: só consulta.' : 'O valor muda daqui para frente (num ciclo futuro, vale desde o início dele); cobranças já geradas não mudam.'}
         Defina a categoria de cada pessoa na ficha do integrante.
       </ReadMore>
       {(cats.isLoading || funcs.isLoading) && <Skeleton className="h-24" />}
