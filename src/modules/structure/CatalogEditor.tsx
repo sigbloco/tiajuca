@@ -119,10 +119,10 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
       <div className="grid gap-2">
         {prog.visible.map((item, idx) => (
           <Card key={item.id} {...(canEdit && !alphabetical ? drag.row(item.id, onDragMove) : {})} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
-            {canEdit && !alphabetical && drag.handle(item.id, onDragMove)}
-            {!alphabetical && <div className="flex flex-col">
+            {!alphabetical && <div className="flex flex-col items-center">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx === 0}
                 onClick={() => move.mutate({ a: item, b: visible[idx - 1], list: visible })}><ArrowUp className="h-4 w-4" /></Button>
+              {canEdit && drag.handle(item.id, onDragMove)}
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || idx === visible.length - 1}
                 onClick={() => move.mutate({ a: item, b: visible[idx + 1], list: visible })}><ArrowDown className="h-4 w-4" /></Button>
             </div>}

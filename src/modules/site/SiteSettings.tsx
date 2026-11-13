@@ -18,16 +18,16 @@ import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteV
 
 const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'albums', label: 'Fotos' }, { key: 'videos', label: 'Vídeos' }] as const
 type TabKey = (typeof TABS)[number]['key']
-type MenuKey = 'enrollment' | 'shop' | 'login' | 'albums'
-const MENU_DEFAULT: MenuKey[] = ['enrollment', 'shop', 'albums', 'login']
+type MenuKey = 'enrollment' | 'shop' | 'login' | 'albums' | 'release'
+const MENU_DEFAULT: MenuKey[] = ['enrollment', 'shop', 'albums', 'release', 'login']
 /** Ordem salva (completa e sem repetição); o que faltar vai para o fim. */
 const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): k is MenuKey => MENU_DEFAULT.includes(k as MenuKey)).filter((k, i, a) => a.indexOf(k) === i), ...MENU_DEFAULT.filter((k) => !(o ?? []).includes(k))]
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shop_product_id: string | null; show_albums: boolean; albums_label: string; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shop_product_id: string | null; show_albums: boolean; albums_label: string; show_release: boolean; release_label: string; release_url: string | null; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_shop: true, show_enrollment: true, show_login: true, shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -51,14 +51,14 @@ export function SiteSettings() {
   const loaded = useRef(false)
   useEffect(() => { if (!isLoading && !loaded.current) { loaded.current = true; setF({ ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }) } }, [data, isLoading])
   const saved = { ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }
-  const invalid = f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))
+  const invalid = (!!f.release_url?.trim() && !/^https:\/\//i.test(f.release_url.trim())) || f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))
 
   const payload = (row: SiteRow) => ({
     headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url ?? null,
     links: row.links.filter((l) => l.value.trim()), videos: row.videos.filter((v) => v.url.trim()),
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
-    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums,
+    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
     shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
@@ -114,13 +114,11 @@ export function SiteSettings() {
 
   /** Alça de arrastar + setas (uma acima da outra), como nas variações do produto. */
   const reorderCol = (id: string, i: number, total: number, move: (i: number, d: number) => void, drag: (f: string, t: string) => void, scope: string, what: string) => (
-    <>
+    <div className="flex flex-col items-center">
+      <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label={`Subir ${what}`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
       {dnd.handle(id, drag, scope)}
-      <div className="flex flex-col">
-        <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label={`Subir ${what}`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
-        <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label={`Descer ${what}`} disabled={i === total - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
-      </div>
-    </>
+      <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label={`Descer ${what}`} disabled={i === total - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+    </div>
   )
 
   if (isLoading) return <Skeleton className="h-40" />
@@ -206,12 +204,13 @@ export function SiteSettings() {
               enrollment: { id: 'st-enr', label: 'Botão das inscrições', text: f.enrollment_label, on: f.show_enrollment, set: (v: string) => ({ enrollment_label: v }), toggle: () => ({ show_enrollment: !f.show_enrollment }) },
               shop: { id: 'st-shop', label: 'Nome da loja (menu, site e vitrine)', text: f.shop_label, on: f.show_shop, set: (v: string) => ({ shop_label: v }), toggle: () => ({ show_shop: !f.show_shop }) },
               albums: { id: 'st-alb', label: 'Botão das fotos', text: f.albums_label, on: f.show_albums, set: (v: string) => ({ albums_label: v }), toggle: () => ({ show_albums: !f.show_albums }) },
+              release: { id: 'st-rel', label: 'Botão do release', text: f.release_label, on: f.show_release, set: (v: string) => ({ release_label: v }), toggle: () => ({ show_release: !f.show_release }) },
               login: { id: 'st-login', label: 'Botão de acesso', text: f.login_label, on: f.show_login, set: (v: string) => ({ login_label: v }), toggle: () => ({ show_login: !f.show_login }) },
             } as const)[key]
             const id = String(i)
             return (
               <div key={key} {...dnd.row(id, dragMenu, 'menu')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
-                {reorderCol(id, i, 4, moveMenu, dragMenu, 'menu', 'botão')}
+                {reorderCol(id, i, 5, moveMenu, dragMenu, 'menu', 'botão')}
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Label htmlFor={b.id}>{b.label}</Label>
                   <div className="flex items-center gap-2">
@@ -222,6 +221,14 @@ export function SiteSettings() {
                     </button>
                     <Input id={b.id} className="min-w-0 flex-1" value={b.text} onChange={(e) => setF({ ...f, ...b.set(e.target.value) })} />
                   </div>
+                  {key === 'release' && (
+                    <div className="space-y-1">
+                      <Label htmlFor="st-rel-url">Endereço do release (https)</Label>
+                      <Input id="st-rel-url" inputMode="url" placeholder="https://drive.google.com/…" value={f.release_url ?? ''} onChange={(e) => setF({ ...f, release_url: e.target.value })} />
+                      {f.release_url?.trim() && !/^https:\/\//i.test(f.release_url.trim()) && <p className="text-xs text-destructive">O endereço precisa começar com https://</p>}
+                      <p className="text-xs text-muted-foreground">Normalmente um PDF no Drive (compartilhado com “qualquer pessoa com o link”). Sem endereço, o botão não aparece.</p>
+                    </div>
+                  )}
                   {key === 'shop' && (
                     <div className="space-y-1">
                       <Label htmlFor="st-shop-product">Produto no botão</Label>

@@ -59,10 +59,10 @@ export function ItemRow({ item, siblings, canEdit, mut, extra, zebra }: {
   const onMove = (from: string, to: string) => mut.reorder.mutate({ from, to, list: siblings })
   return (
     <div {...(canEdit ? drag.row(item.id, onMove, scope) : {})} className={cn('flex flex-wrap items-center gap-1.5 rounded-lg p-1.5', zebra ? 'bg-muted/60' : 'bg-card', !item.is_active && 'opacity-60', drag.cls(item.id))}>
-      {canEdit && drag.handle(item.id, onMove, scope)}
-      <div className="flex flex-col">
+      <div className="flex flex-col items-center">
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx <= 0}
           onClick={() => mut.move.mutate({ a: item, b: siblings[idx - 1], list: siblings })}><ArrowUp className="h-3.5 w-3.5" /></Button>
+        {canEdit && drag.handle(item.id, onMove, scope)}
         <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1}
           onClick={() => mut.move.mutate({ a: item, b: siblings[idx + 1], list: siblings })}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>

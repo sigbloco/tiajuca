@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ClipboardList, Images, LogIn, ShoppingBag } from 'lucide-react'
+import { ArrowLeft, ClipboardList, Images, LogIn, Newspaper, ShoppingBag } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LoginPopup } from '@/modules/auth/LoginPopup'
@@ -19,7 +19,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; show_albums?: boolean; albums_label?: string; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   shop_product?: { slug: string; name: string; image_path: string | null } | null
   open_forms: { slug: string; title: string }[]
@@ -99,7 +99,7 @@ export function LandingPage() {
         )}
 
         <nav className="space-y-3" aria-label="Menu">
-          {[...(site.menu_order ?? []), 'enrollment', 'shop', 'albums', 'login'].filter((k, i, all) => all.indexOf(k) === i).map((k) => (
+          {[...(site.menu_order ?? []), 'enrollment', 'shop', 'albums', 'release', 'login'].filter((k, i, all) => all.indexOf(k) === i).map((k) => (
             <Fragment key={k}>
               {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.map((f) => (
                 <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
@@ -120,6 +120,9 @@ export function LandingPage() {
               )}
               {k === 'albums' && site.show_albums !== false && (
                 <Link to={`/${slug}/fotos`} className={`${pill} bg-card text-foreground ${site.shake_button === 'albums' ? 'animate-attention trim-ring' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}</Link>
+              )}
+              {k === 'release' && site.show_release !== false && site.release_url && (
+                <a href={site.release_url} target="_blank" rel="noreferrer noopener" className={`${pill} bg-card text-foreground ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}</a>
               )}
               {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
             </Fragment>
