@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/primitives'
 import { takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
-import { ClaimInvitePage, ForgotPasswordPage, NoOrganizationPage, ResetPasswordPage, SignupPage, VerifyEmailPage } from '@/modules/auth/pages'
+import { ClaimInvitePage, NoOrganizationPage } from '@/modules/auth/pages'
 import { HomePage } from '@/modules/dashboard/HomePage'
 import { CapacityPage } from '@/modules/capacity/CapacityPage'
 import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
@@ -94,10 +94,11 @@ export const router = createBrowserRouter(
   isSupabaseConfigured
     ? [
         { path: '/entrar', element: <Navigate to="/?entrar=1" replace /> },
-        { path: '/cadastro', element: <SignupPage /> },
-        { path: '/verifique-seu-email', element: <VerifyEmailPage /> },
-        { path: '/recuperar-senha', element: <ForgotPasswordPage /> },
-        { path: '/redefinir-senha', element: <ResetPasswordPage /> },
+        // Sem cadastro aberto nem senha: só entrada com Google (links antigos caem no início).
+        { path: '/cadastro', element: <Navigate to="/?entrar=1" replace /> },
+        { path: '/verifique-seu-email', element: <Navigate to="/?entrar=1" replace /> },
+        { path: '/recuperar-senha', element: <Navigate to="/?entrar=1" replace /> },
+        { path: '/redefinir-senha', element: <Navigate to="/?entrar=1" replace /> },
         { path: '/convite/:token', element: <ClaimInvitePage /> },
         { path: '/f/:orgSlug/:formSlug', element: <PublicFormPage /> },
         { path: '/:orgSlug/fotos', element: <AlbumsPage /> }, // álbuns públicos, fora do guard de login
