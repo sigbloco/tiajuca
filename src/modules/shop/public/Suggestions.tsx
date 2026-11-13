@@ -1,3 +1,4 @@
+import { KitChip } from '@/modules/shop/KitChip'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/primitives'
 import { imageUrl } from '../admin/service'
@@ -42,7 +43,7 @@ export function SuggestedProducts({ from, exclude }: { from: StoreProduct[]; exc
                   ? <img src={imageUrl(p.images[0])} alt="" loading="lazy" className="aspect-square w-full object-contain bg-muted" />
                   : <div aria-hidden className="aspect-square w-full bg-muted" />}
                 <div className="space-y-0.5 p-2">
-                  <p className="text-xs font-semibold leading-tight">{p.name}</p>
+                  <p className="text-xs font-semibold leading-tight">{p.is_kit && <KitChip />}{p.name}</p>
                   <div className="text-xs [&_strong]:text-sm"><Price product={p} isMember={isMember} /></div>
                 </div>
               </Card>
