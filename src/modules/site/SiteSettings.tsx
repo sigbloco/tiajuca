@@ -17,7 +17,7 @@ import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
 
-const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'links', label: 'Redes sociais e contatos' }, { key: 'videos', label: 'Vídeos do YouTube' }, { key: 'albums', label: 'Álbuns de fotos' }] as const
+const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'albums', label: 'Fotos' }, { key: 'videos', label: 'Vídeos' }] as const
 type TabKey = (typeof TABS)[number]['key']
 type MenuKey = 'enrollment' | 'shop' | 'login' | 'albums'
 const MENU_DEFAULT: MenuKey[] = ['enrollment', 'shop', 'albums', 'login']
@@ -152,7 +152,7 @@ export function SiteSettings() {
       </Card>
       )}
 
-      {tab === 'links' && (
+      {tab === 'header' && (
       <Card className="space-y-3 p-4">
         <h3>Redes sociais e contatos</h3>
         <p className="text-xs text-muted-foreground">Aparecem como botões redondos, lado a lado. Digite só o número, o @ ou o endereço: o link é montado sozinho.</p>
