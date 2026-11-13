@@ -166,7 +166,7 @@ export function AppShell() {
               <BulletTrail items={(() => { const t = cameFrom ? cameFrom.label : backTrail; if (!t) return ['Voltar']; const p = t.split(' • '); return [`Voltar para ${p[0]}`, ...p.slice(1)] })()} />
             </button>
           )}
-          <Breadcrumbs crumbs={crumbs} home={base} />
+          <Breadcrumbs crumbs={crumbs} />
           <div id="edit-actions-slot" />
           <CycleBar base={base} />
           </div>

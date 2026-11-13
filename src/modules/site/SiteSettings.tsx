@@ -25,9 +25,9 @@ const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): 
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shop_product_id: string | null; show_albums: boolean; albums_label: string; show_release: boolean; release_label: string; release_url: string | null; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; menu_construction: string[]; shop_product_id: string | null; show_albums: boolean; albums_label: string; show_release: boolean; release_label: string; release_url: string | null; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, menu_construction: [], shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -58,7 +58,7 @@ export function SiteSettings() {
     links: row.links.filter((l) => l.value.trim()), videos: row.videos.filter((v) => v.url.trim()),
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
-    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
+    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
     shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
@@ -237,6 +237,7 @@ export function SiteSettings() {
                       <p className="text-xs text-muted-foreground">Mostra a miniatura e o título do produto acima do botão da loja; ao clicar, abre a página dele.</p>
                     </div>
                   )}
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={(f.menu_construction ?? []).includes(key)} onChange={(e) => setF({ ...f, menu_construction: e.target.checked ? [...(f.menu_construction ?? []), key] : (f.menu_construction ?? []).filter((k) => k !== key) })} /> Em construção</label>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? key : null })} /> Destacar</label>
                 </div>
               </div>
