@@ -37,7 +37,7 @@ export function AppShell() {
   })
   const { membership, realMembership } = useOrganization()
   const { signOut } = useAuth()
-  const { pathname, state } = useLocation()
+  const { pathname, search, state } = useLocation()
   const navigate = useNavigate()
   // Página de onde a pessoa veio dentro do app (só muda quando o caminho muda, não ao trocar de aba na mesma página).
   const lastPath = useRef(pathname)
@@ -45,9 +45,11 @@ export function AppShell() {
   const extras = useExtraCrumbs()
   const trailRender = useRef<string | null>(null)
   const trailCommitted = useRef<string | null>(null)
-  const [previous, setPrevious] = useState<{ path: string; trail: string | null } | null>(null)
+  const lastUrl = useRef(pathname + search)
+  const [previous, setPrevious] = useState<{ path: string; url: string; trail: string | null } | null>(null)
   useEffect(() => {
-    if (pathname !== lastPath.current) { setPrevious({ path: lastPath.current, trail: trailCommitted.current }); lastPath.current = pathname }
+    if (pathname !== lastPath.current) { setPrevious({ path: lastPath.current, url: lastUrl.current, trail: trailCommitted.current }); lastPath.current = pathname }
+    lastUrl.current = pathname + search
     trailCommitted.current = trailRender.current
   })
   const cameFrom = (state as { from?: CameFrom } | null)?.from
@@ -156,7 +158,7 @@ export function AppShell() {
                 const close = document.querySelector<HTMLElement>('#edit-slot [data-sheet-close]')
                 if (close) { close.click(); return }
                 if (cameFrom) navigate(cameFrom.path)
-                else if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
+                else if (previous && previous.path !== pathname && previous.path.startsWith(base)) navigate(previous.url) // exatamente a página que o botão nomeia
                 else navigate(base)
               }}>
               <ArrowLeft className="mt-0.5 h-4 w-4 shrink-0" />
