@@ -44,8 +44,7 @@ export function AlbumsPage() {
           {data.albums.length === 0 && <p className="py-10 text-center text-muted-foreground">Ainda não há álbuns.</p>}
           <ul className="grid gap-4 sm:grid-cols-2">
             {prog.visible.map((a) => {
-              const by = a.author_value ? hrefOf({ kind: a.author_kind, label: '', value: a.author_value }) : null
-              const handle = a.author_value?.trim().replace(/^@?/, '@')
+              const authors = (a.authors ?? []).map((u) => ({ u, href: hrefOf({ ...u, label: '' }) })).filter((x) => x.u.value?.trim())
               return (
                 <li key={a.id} className="overflow-hidden rounded-2xl border-2 border-border bg-card shadow-card">
                   <a href={a.url} target="_blank" rel="noreferrer noopener" aria-label={`Abrir o álbum ${a.title}`} className="block">
@@ -54,10 +53,15 @@ export function AlbumsPage() {
                   <div className="space-y-0.5 p-3">
                     {a.event_date && <p className="text-sm text-muted-foreground">{albumDate(a.event_date)}</p>}
                     <a href={a.url} target="_blank" rel="noreferrer noopener" className="block font-display text-lg font-bold leading-tight hover:underline">{a.title}</a>
-                    {a.author_value && (by && a.author_kind === 'instagram'
-                      ? <p className="text-sm">por <a href={by} target="_blank" rel="noreferrer noopener" className="font-semibold text-primary hover:underline">{handle}</a></p>
-                      : by ? <p className="text-sm">por <a href={by} target="_blank" rel="noreferrer noopener" className="font-semibold text-primary hover:underline">{a.author_value}</a></p>
-                      : <p className="text-sm">por {a.author_value}</p>)}
+                    {authors.length > 0 && (
+                      <p className="text-sm">por {authors.map(({ u, href }, i) => (
+                        <span key={i}>{i > 0 && (i === authors.length - 1 ? ' e ' : ', ')}
+                          {href
+                            ? <a href={href} target="_blank" rel="noreferrer noopener" className="font-semibold text-primary hover:underline">{u.kind === 'instagram' ? `@${u.value.trim().replace(/^@/, '')}` : u.value}</a>
+                            : u.value}
+                        </span>
+                      ))}</p>
+                    )}
                   </div>
                 </li>
               )

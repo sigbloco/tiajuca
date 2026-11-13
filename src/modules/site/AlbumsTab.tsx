@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ExternalLink, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowDown, ArrowUp, ExternalLink, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useProgressive } from '@/components/shared/LoadMore'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
@@ -12,8 +12,11 @@ import { useOrgId } from '@/core/organization'
 import { requireFields } from '@/core/required'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
-import { albumDate, listAlbums, parseAlbumTitle, previewAlbum, type Album } from './albums'
+import { listAlbums, parseAlbumTitle, previewAlbum, type Album, type Author } from './albums'
 import { LINK_KINDS, type LinkKind } from './links'
+
+/** Lista de autores a partir dos @ achados no nome do álbum (assumidos do Instagram). */
+const fromHandles = (handles: string[]): Author[] => handles.map((h) => ({ kind: 'instagram', value: `@${h}` }))
 
 const isPhotosUrl = (u: string) => /^https:\/\/(photos\.app\.goo\.gl|photos\.google\.com)\//.test(u)
 
@@ -43,7 +46,7 @@ export function AlbumsTab() {
           const info = await previewAlbum(orgId, a.url)
           const p = parseAlbumTitle(info.title)
           const fields: Partial<Album> = { cover_url: info.cover_url ?? a.cover_url }
-          if (info.title) Object.assign(fields, { title: p.title, event_date: p.event_date ?? a.event_date, author_value: p.handle ?? a.author_value })
+          if (info.title) Object.assign(fields, { title: p.title, event_date: p.event_date ?? a.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors })
           const { error } = await supabase.from('site_albums').update(fields).eq('id', a.id).eq('organization_id', orgId)
           if (error) throw error
         } catch { failed++ }
@@ -64,7 +67,7 @@ export function AlbumsTab() {
       const p = parseAlbumTitle(info.title)
       const top = active.reduce((m, a) => Math.min(m, a.sort_order), 0) - 1
       const { error } = await supabase.from('site_albums').insert({
-        organization_id: orgId, url: link, title: p.title, event_date: p.event_date, author_kind: 'instagram', author_value: p.handle, cover_url: info.cover_url, sort_order: top,
+        organization_id: orgId, url: link, title: p.title, event_date: p.event_date, authors: fromHandles(p.handles), cover_url: info.cover_url, sort_order: top,
       })
       if (error) throw error
       return info
@@ -114,7 +117,7 @@ export function AlbumsTab() {
     <Card className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-2">
         <h3>Álbuns de fotos</h3>
-        <TrashDrawer iconOnly entries={trashed.map((a) => ({ id: a.id, name: a.title || a.url, detail: albumDate(a.event_date) }))}
+        <TrashDrawer iconOnly entries={trashed.map((a) => ({ id: a.id, name: a.title || a.url }))}
           onRestore={(id) => patch.mutate({ id, fields: { is_active: true } })} onPurge={(id) => purge.mutate(id)} />
       </div>
       <p className="text-xs text-muted-foreground">Cole o link público de compartilhamento do álbum (photos.app.goo.gl ou photos.google.com/share…). O sistema lê o título e a capa. Nomes no padrão “250608 Aniversário do Museu Nacional (@brunosarlas)” viram data, título e autor.</p>
@@ -138,7 +141,7 @@ export function AlbumsTab() {
           onRefresh={async () => {
             const info = await previewAlbum(orgId, a.url)
             const p = parseAlbumTitle(info.title)
-            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title, event_date: p.event_date ?? a.event_date, author_value: p.handle ?? a.author_value } : {}) } })
+            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title, event_date: p.event_date ?? a.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors } : {}) } })
           }} />
       ))}
       {prog.button}
@@ -151,41 +154,42 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
   onMove: (i: number, d: number) => void; onDrag: (from: string, to: string) => void
   onSave: (fields: Partial<Album>) => Promise<unknown>; onTrash: () => void; onRefresh: () => Promise<unknown>
 }) {
-  const [d, setD] = useState({ title: a.title, event_date: a.event_date, author_kind: a.author_kind, author_value: a.author_value ?? '' })
+  const [d, setD] = useState({ title: a.title, event_date: a.event_date, authors: a.authors })
   const [busy, setBusy] = useState(false)
-  const dirty = d.title !== a.title || d.event_date !== a.event_date || d.author_kind !== a.author_kind || d.author_value !== (a.author_value ?? '')
+  const dirty = d.title !== a.title || d.event_date !== a.event_date || JSON.stringify(d.authors) !== JSON.stringify(a.authors)
+  // Chegou título/capa/autores novos do Google (reler): o rascunho acompanha.
+  useEffect(() => { setD({ title: a.title, event_date: a.event_date, authors: a.authors }) }, [a.title, a.event_date, a.authors])
+  const setAuthor = (i: number, p: Partial<Author>) => setD((x) => ({ ...x, authors: x.authors.map((u, k) => (k === i ? { ...u, ...p } : u)) }))
   return (
     <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${dnd.cls(a.id)}`}>
-      <div className="flex items-center gap-1 pt-1">
+      <div className="flex flex-col items-center">
+        <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label="Subir álbum" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
         {dnd.handle(a.id, onDrag, 'albums')}
-        <div className="flex flex-col">
-          <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir álbum" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
-          <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer álbum" disabled={index === total - 1} onClick={() => onMove(index, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
-        </div>
+        <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label="Descer álbum" disabled={index === total - 1} onClick={() => onMove(index, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="flex items-start gap-3">
-          {a.cover_url ? <img src={a.cover_url} alt="" className="h-16 w-24 shrink-0 rounded-md object-cover" /> : <div aria-hidden className="flex h-16 w-24 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">sem capa</div>}
-          <div className="min-w-0 flex-1 space-y-2">
-            <Input aria-label="Título" placeholder="Título" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
-            <DateInput aria-label="Data do evento" value={d.event_date ?? ''} onChange={(v) => setD({ ...d, event_date: v || null })} />
-          </div>
+        {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-[4/3] w-full max-w-xs rounded-lg object-cover" /> : <div aria-hidden className="flex aspect-[4/3] w-full max-w-xs items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">sem capa</div>}
+        <Input aria-label="Título" placeholder="Título" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
+        <DateInput aria-label="Data do evento" value={d.event_date ?? ''} onChange={(v) => setD({ ...d, event_date: v || null })} />
+        <div className="space-y-1.5">
+          <Label>Autores (“por …”)</Label>
+          {d.authors.map((u, i) => (
+            <div key={i} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-2">
+              <Select aria-label="Rede do autor" value={u.kind} onChange={(e) => setAuthor(i, { kind: e.target.value as LinkKind })}>
+                {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </Select>
+              <Input aria-label="Usuário ou endereço do autor" placeholder={LINK_KINDS[u.kind].placeholder} value={u.value} onChange={(e) => setAuthor(i, { value: e.target.value })} />
+              <Button type="button" size="icon" variant="ghost" className="h-9 w-9" aria-label="Remover autor" title="Remover autor" onClick={() => setD({ ...d, authors: d.authors.filter((_, k) => k !== i) })}><X className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          <Button type="button" size="sm" variant="outline" disabled={d.authors.length >= 10} onClick={() => setD({ ...d, authors: [...d.authors, { kind: 'instagram', value: '' }] })}><Plus className="h-4 w-4" /> Autor</Button>
         </div>
-        <div className="space-y-1">
-          <Label>Autor (link “por …”)</Label>
-          <div className="grid grid-cols-[8rem_1fr] gap-2">
-            <Select aria-label="Rede do autor" value={d.author_kind} onChange={(e) => setD({ ...d, author_kind: e.target.value as LinkKind })}>
-              {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </Select>
-            <Input aria-label="Usuário ou endereço do autor" placeholder={LINK_KINDS[d.author_kind].placeholder} value={d.author_value} onChange={(e) => setD({ ...d, author_value: e.target.value })} />
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {dirty && <Button type="button" size="sm" onClick={() => { if (requireFields([['Título', d.title.trim()]])) void onSave({ title: d.title.trim(), event_date: d.event_date, authors: d.authors.filter((u) => u.value.trim()).map((u) => ({ kind: u.kind, value: u.value.trim() })) }) }}><Save className="h-4 w-4" /> Salvar</Button>}
           <Button asChild size="icon" variant="ghost" className="h-9 w-9"><a href={a.url} target="_blank" rel="noreferrer noopener" aria-label="Abrir o álbum" title="Abrir o álbum"><ExternalLink className="h-4 w-4" /></a></Button>
           <Button type="button" size="icon" variant="ghost" className="h-9 w-9" disabled={busy} aria-label="Reler título e capa do Google" title="Reler título e capa do Google"
             onClick={async () => { setBusy(true); try { await onRefresh() } catch (e) { toast.error(e instanceof Error ? e.message : friendlyError(e)) } finally { setBusy(false) } }}><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /></Button>
-          {dirty && <Button type="button" size="sm" onClick={() => { if (requireFields([['Título', d.title.trim()]])) void onSave({ title: d.title.trim(), event_date: d.event_date, author_kind: d.author_kind, author_value: d.author_value.trim() || null }) }}><Save className="h-4 w-4" /> Salvar</Button>}
-          <Button type="button" size="icon" variant="ghost" className="ml-auto h-9 w-9 text-destructive" aria-label="Mover para a lixeira" title="Mover para a lixeira" onClick={onTrash}><Trash2 className="h-4 w-4" /></Button>
+          <Button type="button" size="icon" variant="ghost" className="h-9 w-9 text-destructive" aria-label="Mover para a lixeira" title="Mover para a lixeira" onClick={onTrash}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
     </div>
