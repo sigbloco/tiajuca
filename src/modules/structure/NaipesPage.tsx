@@ -1,3 +1,4 @@
+import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { StaffChipLabel } from './StaffChipLabel'
@@ -363,8 +364,8 @@ export function NaipesPage() {
       </div>
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
       <ReadMore>
-        Os nomes de naipe disponíveis ficam em Organização → Nomes de naipes. Cada naipe tem seus instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
-        mude a ordem. Lembre de conceder também o papel de acesso (Professor/Monitor) em <strong>Acesso e papéis</strong>.
+        Os nomes de naipe disponíveis ficam em <PageLink to="naipes/configuracoes">Organização → Nomes de naipes</PageLink>. Cada naipe tem seus instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
+        mude a ordem. Lembre de conceder também o papel de acesso (Professor/Monitor) em <PageLink to="acesso">Acesso e papéis</PageLink>.
       </ReadMore>
       {sections.isLoading && <Skeleton className="h-24" />}
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}

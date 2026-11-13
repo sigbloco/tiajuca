@@ -1,3 +1,4 @@
+import { PageLink } from '@/components/shared/PageLink'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -100,7 +101,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
         </div>
       )}
       {sub.status !== 'pending' && sub.status !== 'approved' && !purged && <Button variant="outline" onClick={() => review.mutate('pending')}>Reabrir análise</Button>}
-      {sub.status === 'approved' && <p className="text-muted-foreground">Integrante criado. Veja em Integrantes.</p>}
+      {sub.status === 'approved' && <p className="text-muted-foreground">Integrante criado. Veja em <PageLink to="membros">Integrantes</PageLink>.</p>}
     </SheetContent>
   )
 }
