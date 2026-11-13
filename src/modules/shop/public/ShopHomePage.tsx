@@ -15,12 +15,11 @@ const FILTERS: { key: ProductKind; label: string }[] = [
 /** Vitrine pública: lista de produtos com filtro por tipo (estoque / encomenda). */
 export function ShopHomePage() {
   const { store, isMember, basePath } = useStore()
-  // Pronta entrega e Sob encomenda se combinam; os dois marcados (ou nenhum) mostram tudo.
+  // Pronta entrega e Sob encomenda se combinam; os dois marcados mostram tudo e nenhum marcado não mostra nada. O filtro não afeta os destaques.
   const [kinds, setKinds] = useState<ProductKind[]>(['stock', 'made_to_order'])
   const toggleKind = (k: ProductKind) => setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
-  const products = store.products.filter((p) => kinds.length === 0 || kinds.includes(p.kind))
-  const featured = products.filter((p) => p.is_featured)
-  const others = products.filter((p) => !p.is_featured)
+  const featured = store.products.filter((p) => p.is_featured)
+  const others = store.products.filter((p) => !p.is_featured && kinds.includes(p.kind))
 
   return (
     <div className="space-y-4">
@@ -37,7 +36,9 @@ export function ShopHomePage() {
         ))}
       </ButtonRow>
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
-      {products.length === 0 && <EmptyState>{store.products.length === 0 ? 'A loja ainda não tem produtos.' : 'Nenhum produto neste filtro.'}</EmptyState>}
+      {store.products.length === 0 && <EmptyState>A loja ainda não tem produtos.</EmptyState>}
+      {store.products.length > 0 && kinds.length === 0 && <EmptyState>Selecione um filtro.</EmptyState>}
+      {kinds.length > 0 && others.length === 0 && store.products.some((p) => !p.is_featured) && <EmptyState>Nenhum produto neste filtro.</EmptyState>}
       {others.length > 0 && renderGrid(others)}
     </div>
   )
