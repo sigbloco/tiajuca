@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Palette, Plus, Save, Tra
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { AlbumsTab } from './AlbumsTab'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { useProgressive } from '@/components/shared/LoadMore'
@@ -16,18 +17,18 @@ import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
 
-const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'links', label: 'Redes sociais e contatos' }, { key: 'videos', label: 'Vídeos do YouTube' }] as const
+const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'links', label: 'Redes sociais e contatos' }, { key: 'videos', label: 'Vídeos do YouTube' }, { key: 'albums', label: 'Álbuns de fotos' }] as const
 type TabKey = (typeof TABS)[number]['key']
-type MenuKey = 'enrollment' | 'shop' | 'login'
-const MENU_DEFAULT: MenuKey[] = ['enrollment', 'shop', 'login']
+type MenuKey = 'enrollment' | 'shop' | 'login' | 'albums'
+const MENU_DEFAULT: MenuKey[] = ['enrollment', 'shop', 'albums', 'login']
 /** Ordem salva (completa e sem repetição); o que faltar vai para o fim. */
 const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): k is MenuKey => MENU_DEFAULT.includes(k as MenuKey)).filter((k, i, a) => a.indexOf(k) === i), ...MENU_DEFAULT.filter((k) => !(o ?? []).includes(k))]
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shake_button: 'enrollment' | 'shop' | 'login' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; show_albums: boolean; albums_label: string; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, show_enrollment: true, show_login: true, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_shop: true, show_enrollment: true, show_login: true, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -52,7 +53,7 @@ export function SiteSettings() {
     const { error } = await supabase.from('site_settings').upsert({
       organization_id: orgId, headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url,
       links: row.links, videos: row.videos, enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label,
-      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shake_button: row.shake_button, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
+      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, show_albums: row.show_albums, albums_label: row.albums_label.trim() || EMPTY.albums_label, shake_button: row.shake_button, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
     }, { onConflict: 'organization_id' })
     if (error) throw error
   }
@@ -186,12 +187,13 @@ export function SiteSettings() {
             const b = ({
               enrollment: { id: 'st-enr', label: 'Botão das inscrições', text: f.enrollment_label, on: f.show_enrollment, set: (v: string) => ({ enrollment_label: v }), toggle: () => ({ show_enrollment: !f.show_enrollment }) },
               shop: { id: 'st-shop', label: 'Nome da loja (menu, site e vitrine)', text: f.shop_label, on: f.show_shop, set: (v: string) => ({ shop_label: v }), toggle: () => ({ show_shop: !f.show_shop }) },
+              albums: { id: 'st-alb', label: 'Botão das fotos', text: f.albums_label, on: f.show_albums, set: (v: string) => ({ albums_label: v }), toggle: () => ({ show_albums: !f.show_albums }) },
               login: { id: 'st-login', label: 'Botão de acesso', text: f.login_label, on: f.show_login, set: (v: string) => ({ login_label: v }), toggle: () => ({ show_login: !f.show_login }) },
             } as const)[key]
             const id = String(i)
             return (
               <div key={key} {...dnd.row(id, dragMenu, 'menu')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
-                {reorderCol(id, i, 3, moveMenu, dragMenu, 'menu', 'botão')}
+                {reorderCol(id, i, 4, moveMenu, dragMenu, 'menu', 'botão')}
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Label htmlFor={b.id}>{b.label}</Label>
                   <div className="flex items-center gap-2">
@@ -210,6 +212,8 @@ export function SiteSettings() {
         </div>
       </Card>
       )}
+
+      {tab === 'albums' && <AlbumsTab />}
 
       {tab === 'videos' && (
       <Card className="space-y-3 p-4">
