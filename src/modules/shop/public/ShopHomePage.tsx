@@ -7,8 +7,7 @@ import { imageUrl } from '../admin/service'
 import { Price } from './Price'
 import { useStore } from './StoreContext'
 
-const FILTERS: { key: 'all' | ProductKind; label: string }[] = [
-  { key: 'all', label: 'Todos' },
+const FILTERS: { key: ProductKind; label: string }[] = [
   { key: 'stock', label: 'Pronta entrega' },
   { key: 'made_to_order', label: 'Sob encomenda' },
 ]
@@ -16,33 +15,30 @@ const FILTERS: { key: 'all' | ProductKind; label: string }[] = [
 /** Vitrine pública: lista de produtos com filtro por tipo (estoque / encomenda). */
 export function ShopHomePage() {
   const { store, isMember, basePath } = useStore()
-  const [filter, setFilter] = useState<'all' | ProductKind>('all')
-  const products = store.products.filter((p) => filter === 'all' || p.kind === filter)
+  // Pronta entrega e Sob encomenda se combinam; os dois marcados (ou nenhum) mostram tudo.
+  const [kinds, setKinds] = useState<ProductKind[]>(['stock', 'made_to_order'])
+  const toggleKind = (k: ProductKind) => setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
+  const products = store.products.filter((p) => kinds.length === 0 || kinds.includes(p.kind))
   const featured = products.filter((p) => p.is_featured)
   const others = products.filter((p) => !p.is_featured)
 
   return (
     <div className="space-y-4">
       {store.intro_text && <p className="whitespace-pre-line rounded-lg border border-secondary p-3">{store.intro_text}</p>}
-      <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
-      <ButtonRow role="group" aria-label="Filtrar produtos">
-        {FILTERS.map((f) => (
-          <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</Button>
-        ))}
-      </ButtonRow>
-      {products.length === 0 && <EmptyState>{store.products.length === 0 ? 'A loja ainda não tem produtos.' : 'Nenhum produto neste filtro.'}</EmptyState>}
       {featured.length > 0 && (
         <section aria-labelledby="shop-featured" className="space-y-2">
           <h2 id="shop-featured" className="text-xl font-bold">{store.featured_title || 'Destaques'}</h2>
           {renderGrid(featured)}
         </section>
       )}
-      {others.length > 0 && (
-        <section aria-label="Outros produtos" className="space-y-2">
-          {featured.length > 0 && <h2 className="text-xl font-bold">Outros produtos</h2>}
-          {renderGrid(others)}
-        </section>
-      )}
+      <ButtonRow role="group" aria-label="Filtrar produtos">
+        {FILTERS.map((f) => (
+          <Button key={f.key} size="sm" variant={kinds.includes(f.key) ? 'default' : 'outline'} aria-pressed={kinds.includes(f.key)} onClick={() => toggleKind(f.key)}>{f.label}</Button>
+        ))}
+      </ButtonRow>
+      <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
+      {products.length === 0 && <EmptyState>{store.products.length === 0 ? 'A loja ainda não tem produtos.' : 'Nenhum produto neste filtro.'}</EmptyState>}
+      {others.length > 0 && renderGrid(others)}
     </div>
   )
 
