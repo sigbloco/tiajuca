@@ -61,6 +61,12 @@ export function ProductPage() {
               : <Badge>Pronta entrega</Badge>}
           </div>
           <MinUnitsBar product={product} />
+          {product.is_kit && (product.components?.length ?? 0) > 0 && (
+            <div className="rounded-lg bg-muted p-3 text-sm">
+              <p className="font-semibold">Este kit inclui</p>
+              <ul className="list-disc pl-5">{product.components!.map((c) => <li key={c.name}>{c.quantity} × {c.name}</li>)}</ul>
+            </div>
+          )}
           {product.description && <p className="whitespace-pre-line">{product.description}</p>}
 
           {soldOut ? <Badge>Esgotado</Badge> : (

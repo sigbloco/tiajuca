@@ -10,7 +10,7 @@ export interface StoreVariant { id: string; label: string; available: number | n
 export interface StoreProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
   price_cents: number; member_discount_pct: number; lead_time_days: string | null; is_featured?: boolean
-  min_units?: number | null; confirmed_units?: number | null; suggested_ids?: string[]
+  is_kit?: boolean; components?: { name: string; quantity: number }[] | null; min_units?: number | null; confirmed_units?: number | null; suggested_ids?: string[]
   images: string[]; variants: StoreVariant[]
 }
 export interface CatalogEntry { product: StoreProduct; variant: StoreVariant }

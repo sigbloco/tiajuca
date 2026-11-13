@@ -3,11 +3,14 @@ import { slugify, type ProductKind } from '../catalog'
 import type { ScheduleSlot } from './schedule'
 import { resizeImage } from './imageResize'
 
-export interface ShopVariant { id: string; product_id: string; label: string; stock: number | null; reserved: number; sort_order: number; is_active: boolean }
+export interface ShopVariant { id: string; product_id: string; label: string; stock: number | null; reserved: number; sort_order: number; is_active: boolean; shop_variant_stock: VariantStockUse[] }
+export interface VariantStockUse { id: string; variant_id: string; stock_item_id: string; quantity: number; sort_order: number }
+export interface StockItem { id: string; name: string; stock: number | null; reserved: number; is_active: boolean; sort_order: number }
 export interface ShopImage { id: string; product_id: string; storage_path: string; alt: string; sort_order: number }
 export interface ShopProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
   price_cents: number; member_discount_pct: number; lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean; sort_order: number
+  is_kit: boolean; kit_component_photos: boolean
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
 export interface PickupPoint {
@@ -24,7 +27,7 @@ export const imageUrl = (path: string) => supabase.storage.from(IMAGE_BUCKET).ge
 
 export async function listProducts(orgId: string) {
   const { data, error } = await supabase.from('shop_products')
-    .select('*, shop_product_variants(*), shop_product_images(*)').eq('organization_id', orgId).order('sort_order').order('name')
+    .select('*, shop_product_variants(*, shop_variant_stock(*)), shop_product_images(*)').eq('organization_id', orgId).order('sort_order').order('name')
   if (error) throw error
   return (data as ShopProduct[]).map((p) => ({
     ...p,
@@ -36,8 +39,9 @@ export async function listProducts(orgId: string) {
 export interface ProductInput {
   name: string; description: string; kind: ProductKind; price_cents: number; member_discount_pct: number
   lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean
+  is_kit?: boolean; kit_component_photos?: boolean
 }
-export interface VariantInput { id?: string; label: string; stock: number | null; is_active: boolean }
+export interface VariantInput { id?: string; label: string; items: { stock_item_id: string; quantity: number }[]; is_active: boolean }
 
 const isUniqueViolation = (e: { code?: string } | null) => e?.code === '23505'
 
@@ -69,15 +73,53 @@ export async function updateProduct(orgId: string, id: string, input: Omit<Produ
   await saveVariants(orgId, id, kind, variants)
 }
 
+/** O estoque da variação é só um marcador alto: o estoque real está nos itens (ver migração do estoque independente). */
+export const VARIANT_STOCK_REF = 1_000_000
+
 async function saveVariants(orgId: string, productId: string, kind: ProductKind, variants: VariantInput[]) {
   for (const [i, v] of variants.entries()) {
-    const row = { label: v.label.trim(), stock: kind === 'stock' ? v.stock : null, is_active: v.is_active, sort_order: i }
-    const q = v.id
-      ? supabase.from('shop_product_variants').update(row).eq('id', v.id)
-      : supabase.from('shop_product_variants').insert({ ...row, organization_id: orgId, product_id: productId })
-    const { error } = await q
-    if (error) throw error
+    const base = { label: v.label.trim(), is_active: v.is_active, sort_order: i }
+    let id = v.id
+    if (id) {
+      const { error } = await supabase.from('shop_product_variants').update(base).eq('id', id)
+      if (error) throw error
+    } else {
+      const { data, error } = await supabase.from('shop_product_variants')
+        .insert({ ...base, stock: kind === 'stock' ? VARIANT_STOCK_REF : null, organization_id: orgId, product_id: productId }).select('id').single()
+      if (error) throw error
+      id = (data as { id: string }).id
+    }
+    if (kind === 'stock') await saveVariantStock(orgId, id, v.items)
   }
+}
+
+/** Troca os itens de estoque que a variação consome. O banco recusa se houver pedidos em andamento com ela. */
+async function saveVariantStock(orgId: string, variantId: string, items: { stock_item_id: string; quantity: number }[]) {
+  const { data, error } = await supabase.from('shop_variant_stock').select('stock_item_id, quantity').eq('variant_id', variantId)
+  if (error) throw error
+  const same = (data ?? []).length === items.length && items.every((it) => (data as typeof items).some((d) => d.stock_item_id === it.stock_item_id && d.quantity === it.quantity))
+  if (same) return
+  const del = await supabase.from('shop_variant_stock').delete().eq('variant_id', variantId)
+  if (del.error) throw del.error
+  if (items.length === 0) return
+  const ins = await supabase.from('shop_variant_stock').insert(items.map((it, i) => ({ organization_id: orgId, variant_id: variantId, stock_item_id: it.stock_item_id, quantity: it.quantity, sort_order: i })))
+  if (ins.error) throw ins.error
+}
+
+export async function listStockItems(orgId: string): Promise<StockItem[]> {
+  const { data, error } = await supabase.from('shop_stock_items').select('*').eq('organization_id', orgId).order('sort_order').order('name')
+  if (error) throw error
+  return data as StockItem[]
+}
+
+export async function createStockItem(orgId: string, name: string, stock: number | null) {
+  const { error } = await supabase.from('shop_stock_items').insert({ organization_id: orgId, name: name.trim(), stock })
+  if (error) throw error
+}
+
+export async function updateStockItem(id: string, patch: Partial<Pick<StockItem, 'name' | 'stock' | 'is_active'>>) {
+  const { error } = await supabase.from('shop_stock_items').update(patch).eq('id', id)
+  if (error) throw error
 }
 
 export async function setProductActive(id: string, is_active: boolean) {
@@ -139,3 +181,4 @@ export async function reorderProducts(orgId: string, ids: string[]) {
   const failed = results.find((r) => r.error)
   if (failed?.error) throw failed.error
 }
+
