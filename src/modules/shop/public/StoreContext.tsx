@@ -6,7 +6,7 @@ import type { OrgTheme } from '@/core/theme'
 import type { ContactInfo, PixInfo } from '../payments/pix'
 import { addToCart, indexCatalog, priceCart, reconcileCart, removeLine, setQuantity, type CartLine, type CatalogIndex, type PricedCart, type StoreProduct } from '../cart'
 
-export interface PickupPointPublic { id: string; name: string; address: string; opening_hours: string }
+export interface PickupPointPublic { id: string; name: string; address: string; opening_hours: string; kind?: 'place' | 'person'; contact_name?: string | null; contact_phone?: string | null }
 export interface StoreData {
   org: { id: string; name: string; short_name: string; slug: string; logo_path: string | null; theme: OrgTheme }
   intro_text: string | null

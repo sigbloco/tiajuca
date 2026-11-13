@@ -101,7 +101,7 @@ export function ProductPage() {
               </Button>
             </div>
           )}
-          <p className="text-sm text-muted-foreground">Retirada combinada em um dos pontos de retirada. Pagamento antecipado.</p>
+          <p className="text-sm text-muted-foreground">Retirada combinada{(() => { const names = (product.pickup_ids ?? []).map((id) => store.pickup_points.find((p) => p.id === id)?.name).filter(Boolean); return names.length ? ` com: ${names.join(', ')}` : ' em um dos pontos de retirada' })()}. Pagamento antecipado.</p>
         </div>
       </div>
       <SuggestedProducts from={[product]} exclude={[product.id]} />

@@ -11,7 +11,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, variantUnits } from '../catalog'
 import { ProductSheet } from './ProductSheet'
-import { imageUrl, listProducts, listStockItems, reorderProducts, setProductActive, type ShopProduct, type StockItem } from './service'
+import { imageUrl, listProducts, listPickupPoints, listStockItems, reorderProducts, setProductActive, type ShopProduct, type StockItem } from './service'
 import { getSettings } from './settings'
 
 function stockSummary(p: ShopProduct, items: Map<string, StockItem>): string {
@@ -26,6 +26,7 @@ export function ProductsTab() {
   const [sheet, setSheet] = useState<'new' | 'new-kit' | string | null>(null)
   const q = useQuery({ queryKey: ['shop', orgId, 'products'], queryFn: () => listProducts(orgId) })
   const stock = useQuery({ queryKey: ['shop', orgId, 'stock'], queryFn: () => listStockItems(orgId) })
+  const points = useQuery({ queryKey: ['shop', orgId, 'pickup'], queryFn: () => listPickupPoints(orgId) })
   const itemsMap = new Map((stock.data ?? []).map((it) => [it.id, it]))
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const defaultDiscount = settings.data?.default_member_discount_pct ?? 0
@@ -126,9 +127,9 @@ export function ProductsTab() {
       <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
       <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
-        {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
-        {current && <ProductSheet key={current.id} product={current} others={(q.data ?? []).filter((x) => x.id !== current.id)} stockItems={stock.data ?? []} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {current && <ProductSheet key={current.id} product={current} others={(q.data ?? []).filter((x) => x.id !== current.id)} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} onSaved={setSheet} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )
