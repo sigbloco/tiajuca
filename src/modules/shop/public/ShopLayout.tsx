@@ -22,7 +22,7 @@ function MemberNotice() {
   return (
     <div className="mb-4 space-y-2">
       <Button className="w-full" onClick={() => setLoginOpen(true)}><LogIn className="h-4 w-4" aria-hidden /> Entrar</Button>
-      <Card className="border-secondary p-3 text-sm">É integrante do bloco? Entre com a sua conta para ver os preços de integrante.</Card>
+      <Card className="border-secondary p-3 text-sm">Entre com a sua conta para ver os preços de integrante.</Card>
     </div>
   )
 }
