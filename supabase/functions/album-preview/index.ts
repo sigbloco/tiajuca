@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
     const title = meta(html, 'og:title').replace(/\s+-\s+Google (Fotos|Photos)$/i, '').split(' · ')[0].trim()
     const image = meta(html, 'og:image')
     let cover_url: string | null = null
-    if (image) {
+    // `cover: false` só relê título (não copia a capa de novo para o armazenamento).
+    if (image && body.cover !== false) {
       try {
         if (okImage(new URL(image))) {
           const big = image.replace(/=[wh]\d[^/]*$/, '=w1200-h900-c')

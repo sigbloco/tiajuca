@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useProgressive } from '@/components/shared/LoadMore'
-import { Skeleton } from '@/components/ui/primitives'
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { Button, Skeleton } from '@/components/ui/primitives'
 import { supabase } from '@/core/supabase'
 import { useAreaTheme } from '@/core/useAreaTheme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
@@ -28,7 +29,16 @@ export function AlbumsPage() {
   })
   useAreaTheme(data?.org.theme, 'site')
   useEffect(() => { if (data) applyBrandToDocument({ name: `${data.label} · ${data.org.name}`, logo_path: data.org.logo_path }) }, [data])
-  const prog = useProgressive(data?.albums ?? [], 6)
+  // Filtro por ano: começa no ano atual (se não houver álbum nele, no ano mais recente); "Sem data" só aparece se houver álbum sem data.
+  const all = data?.albums ?? []
+  const years = [...new Set(all.map((a) => a.event_date?.slice(0, 4)).filter((y): y is string => !!y))].sort((a, b) => b.localeCompare(a))
+  const hasUndated = all.some((a) => !a.event_date)
+  const options = [...years, ...(hasUndated ? ['semdata'] : [])]
+  const [picked, setPicked] = useState<string | null>(null)
+  const thisYear = String(new Date().getFullYear())
+  const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
+  const shown = all.filter((a) => (year === 'semdata' ? !a.event_date : a.event_date?.startsWith(year)))
+  const prog = useProgressive(shown, 6, year)
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-4 pb-16 pt-6">
@@ -41,6 +51,13 @@ export function AlbumsPage() {
             <OrgLogo name={data.org.name} logoPath={data.org.logo_path} className="h-12 w-12 shrink-0" />
             <h1 className="font-display text-2xl font-extrabold">{data.label}</h1>
           </header>
+          {options.length > 1 && (
+            <ButtonRow role="group" aria-label="Filtrar por ano" className="mb-4">
+              {options.map((y) => (
+                <Button key={y} size="sm" variant={year === y ? 'default' : 'outline'} aria-pressed={year === y} onClick={() => setPicked(y)}>{y === 'semdata' ? 'Sem data' : y}</Button>
+              ))}
+            </ButtonRow>
+          )}
           {data.albums.length === 0 && <p className="py-10 text-center text-muted-foreground">Ainda não há álbuns.</p>}
           <ul className="grid gap-4 sm:grid-cols-2">
             {prog.visible.map((a) => {
