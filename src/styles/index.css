@@ -58,3 +58,16 @@ html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }
 body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
 button, [role="button"], a, label, summary { user-select: none; -webkit-user-select: none; }
 input, textarea, select { font-size: max(16px, 1em); }
+
+/* Botão que chama atenção: fica parado e dá uma tremida de tempos em tempos (em loop). */
+@keyframes attention-shake {
+  0%, 70%, 100% { transform: translateX(0) rotate(0); }
+  74% { transform: translateX(-5px) rotate(-1.5deg); }
+  78% { transform: translateX(5px) rotate(1.5deg); }
+  82% { transform: translateX(-4px) rotate(-1deg); }
+  86% { transform: translateX(4px) rotate(1deg); }
+  90% { transform: translateX(-2px); }
+  94% { transform: translateX(2px); }
+}
+.animate-attention { animation: attention-shake 3.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .animate-attention { animation: none; } }
