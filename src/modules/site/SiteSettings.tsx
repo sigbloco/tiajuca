@@ -147,7 +147,6 @@ export function SiteSettings() {
 
       {tab === 'header' && (
       <Card className="space-y-3 p-4">
-        <h3>Cabeçalho</h3>
         <div className="flex flex-wrap items-center gap-3">
           <img src={f.photo_url || membership?.logo_path || '/brand/tiajuca.png'} alt="Foto da página" className="h-24 w-24 rounded-full object-cover ring-2 ring-border" />
           <div className="space-y-2">
@@ -177,7 +176,7 @@ export function SiteSettings() {
           const id = String(i)
           return (
             <div key={i} className="space-y-1">
-              <div {...dnd.row(id, dragLink, 'links')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
+              <div {...dnd.row(id, dragLink, 'links')} className={`flex items-center gap-2 rounded-lg p-2 ${i % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(id)}`}>
                 {reorderCol(id, i, f.links.length, moveLink, dragLink, 'links', 'item')}
                 <div className="min-w-0 flex-1 space-y-2">
                   <Select aria-label="Tipo" value={l.kind} onChange={(e) => setLink(i, { kind: e.target.value as LinkKind })}>
@@ -197,7 +196,6 @@ export function SiteSettings() {
 
       {tab === 'menu' && (
       <Card className="space-y-3 p-4">
-        <h3>Menu</h3>
         <div className="space-y-3">
           {menuOrder(f.menu_order).map((key, i) => {
             const b = ({
@@ -209,7 +207,7 @@ export function SiteSettings() {
             } as const)[key]
             const id = String(i)
             return (
-              <div key={key} {...dnd.row(id, dragMenu, 'menu')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
+              <div key={key} {...dnd.row(id, dragMenu, 'menu')} className={`flex items-center gap-2 rounded-lg p-2 ${i % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(id)}`}>
                 {reorderCol(id, i, 5, moveMenu, dragMenu, 'menu', 'botão')}
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Label htmlFor={b.id}>{b.label}</Label>
@@ -252,13 +250,12 @@ export function SiteSettings() {
 
       {tab === 'videos' && (
       <Card className="space-y-3 p-4">
-        <h3>Vídeos do YouTube</h3>
         {vids.visible.map((v, i) => {
           const ok = !v.url.trim() || !!youtubeId(v.url)
           const id = String(i)
           return (
             <div key={i} className="space-y-1">
-              <div {...dnd.row(id, dragVideo, 'videos')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
+              <div {...dnd.row(id, dragVideo, 'videos')} className={`flex items-center gap-2 rounded-lg p-2 ${i % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(id)}`}>
                 {reorderCol(id, i, f.videos.length, moveVideo, dragVideo, 'videos', 'vídeo')}
                 <div className="min-w-0 flex-1 space-y-2">
                   <Input aria-label="Endereço do vídeo" placeholder="https://www.youtube.com/watch?v=" value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} />
