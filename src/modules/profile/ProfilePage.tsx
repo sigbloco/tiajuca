@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -85,14 +86,14 @@ export function ProfilePage() {
         <section className="space-y-2">
           <h3>Meus pagamentos</h3>
           {payments.isLoading && <Skeleton className="h-16" />}
-          {payments.data?.map((p) => (
+          <ProgressiveList items={(payments.data) ?? []} render={(p) => (
             <Card key={p.id} className="flex items-center justify-between gap-3 p-3">
               <div><p className="font-semibold">{p.distribution_destinations?.name ?? 'Equipe'}</p>
                 <p className="text-muted-foreground">{p.status === 'paid' ? `Pago em ${formatDate(p.paid_on)}` : p.due_on ? `Previsto ${formatDate(p.due_on)}` : 'Sem data prevista'}</p></div>
               <div className="flex flex-col items-end gap-1"><span className="font-semibold">{formatCurrency(Number(p.amount))}</span>
                 <Badge className={PAY_STATUS_CLASS[p.status]}>{PAY_STATUS_LABEL[p.status]}</Badge></div>
             </Card>
-          ))}
+          )} />
         </section>
       )}
       {payments.data?.length === 0 && <EmptyState>Você não tem pagamentos registrados.</EmptyState>}

@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Pencil, Plus, Share2 } from 'lucide-react'
 import { useState } from 'react'
@@ -75,7 +76,7 @@ export function RepertoireDetailPage() {
       {songs.isLoading && <Skeleton className="h-24" />}
       {songs.data && visible.length === 0 && <EmptyState>{songs.data.length === 0 ? 'Nenhuma música neste repertório.' : 'Nenhuma música encontrada.'}</EmptyState>}
       <div className="grid gap-2">
-        {visible.map((s, i) => (
+        <ProgressiveList items={visible} render={(s, i) => (
           <Card key={s.id} className={cn('flex items-center gap-2 p-2.5', !s.is_active && 'opacity-60')}>
             <span className="w-7 text-center font-display text-lg font-bold text-muted-foreground">{i + 1}</span>
             <button className="min-w-0 flex-1 text-left" onClick={() => setSong({ song: s })}>
@@ -90,7 +91,7 @@ export function RepertoireDetailPage() {
               </div>
             )}
           </Card>
-        ))}
+        )} />
       </div>
 
       <Sheet open={song !== null} onOpenChange={(o) => { if (!o) { setSong(null); if (searchParams.has('nova')) { searchParams.delete('nova'); setSearchParams(searchParams, { replace: true }) } } }}>

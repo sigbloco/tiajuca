@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle } from 'lucide-react'
@@ -111,12 +112,12 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
           <p className="font-semibold">Histórico</p>
           {events.isLoading && <Skeleton className="h-10" />}
           <ul className="space-y-1">
-            {events.data?.map((e) => (
+            <ProgressiveList items={(events.data) ?? []} render={(e) => (
               <li key={e.id} className="text-muted-foreground">
                 {formatDateTime(e.created_at)} — {e.scope === 'fulfillment' ? `${e.note === 'made_to_order' ? 'Encomenda' : 'Pronta entrega'}: ` : ''}
                 {STATUS_ANY[e.to_status] ?? e.to_status} <span className="text-foreground">({e.actor_label})</span>{e.scope === 'order' && e.note ? ` · ${e.note}` : ''}
               </li>
-            ))}
+            )} />
           </ul>
         </section>
       </div>

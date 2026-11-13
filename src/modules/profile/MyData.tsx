@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useUnsaved } from '@/core/unsaved'
 import { ReadMore } from '@/components/shared/ReadMore'
@@ -185,10 +186,10 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
           {(consents.data?.length ?? 0) > 0 && (
             <section className="space-y-1 border-t border-border pt-3">
               <h3 className="text-sm">Consentimentos registrados</h3>
-              {consents.data!.map((c) => (
+              <ProgressiveList items={consents.data!} render={(c) => (
                 <p key={c.id} className="flex items-center justify-between text-muted-foreground"><span>{c.purpose === 'inscricao' ? 'Inscrição' : c.purpose} · {formatDateTime(c.granted_at, membership?.timezone)}</span>
                   <Badge>{c.revoked_at ? 'Revogado' : 'Ativo'}</Badge></p>
-              ))}
+              )} />
             </section>
           )}
           {!admin && <p className="text-xs text-muted-foreground">Para corrigir dados cadastrais travados, excluir seu cadastro ou revogar consentimentos, fale com a Direção.</p>}

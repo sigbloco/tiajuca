@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { Plus } from 'lucide-react'
@@ -44,7 +45,7 @@ export function SectionNamesPage() {
         </Card>
       )}
       <div className="grid gap-1.5">
-        {list.map((n, k) => (
+        <ProgressiveList items={list} render={(n, k) => (
           <ItemRow key={n.id} zebra={k % 2 === 1} item={n} siblings={list} canEdit={canEdit} mut={mut}
             extra={(
               <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row">
@@ -56,7 +57,7 @@ export function SectionNamesPage() {
                   onSave={(v) => mut.save.mutateAsync({ id: n.id, name: n.name, item_label: v })} />
               </div>
             )} />
-        ))}
+        )} />
       </div>
     </div>
   )

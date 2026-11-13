@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { shortName } from '@/core/format'
@@ -103,7 +104,7 @@ export function WaitlistPage() {
       {isLoading && <Skeleton className="h-24" />}
       {data?.length === 0 && <EmptyState>Ninguém na lista de espera deste ciclo.</EmptyState>}
       <div className="grid gap-2">
-        {data?.map((r, i) => (
+        <ProgressiveList items={(data) ?? []} render={(r, i) => (
           <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
               <p className="break-words font-semibold">{i + 1}. <MemberLink id={r.member_id}>{shortName(r.members?.full_name, r.members?.display_name)}</MemberLink></p>
@@ -117,7 +118,7 @@ export function WaitlistPage() {
               </Button>
             )}
           </Card>
-        ))}
+        )} />
       </div>
     </div>
   )

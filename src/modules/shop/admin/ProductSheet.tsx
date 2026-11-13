@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useProgressive } from '@/components/shared/LoadMore'
 import { useHoldReorder } from '@/core/holdReorder'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
@@ -189,6 +190,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   })
 
   const dnd = useHoldReorder()
+  const varProg = useProgressive(variants, 5)
   const vKey = (v: VariantRow, i: number) => v.id ?? `n${i}`
   const dragVariant = (from: string, to: string) => setVariants((vs) => {
     const keys = vs.map(vKey), a = keys.indexOf(from), b = keys.indexOf(to)
@@ -299,7 +301,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         {!isKit && <fieldset className="space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 font-semibold">{isStock ? 'Variações e estoque' : 'Variações'}</legend>
           {isStock && <p className="text-xs text-muted-foreground">Cada variação consome itens do estoque (cadastrados na aba Estoque). Ex.: o tamanho M usa 1 × Camiseta M.</p>}
-          {variants.map((v, i) => (
+          {varProg.visible.map((v, i) => (
             <div key={vKey(v, i)} className="space-y-1">
             <div {...dnd.row(vKey(v, i), dragVariant, 'variants')} className={`flex items-center gap-2 rounded-lg ${v.is_active ? '' : 'bg-muted/60 opacity-60'} ${dnd.cls(vKey(v, i))}`}>
               {dnd.handle(vKey(v, i), dragVariant, 'variants')}
@@ -317,9 +319,10 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
             {isStock && v.reserved > 0 && <p className="pl-1 text-xs text-muted-foreground">{v.reserved} reservada(s) em pedidos em andamento: os itens só mudam depois que forem retirados ou cancelados.</p>}
             </div>
           ))}
+          {varProg.button}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => setVariants((vs) => [...vs, { label: '', uses: isStock ? [{ stock_item_id: '', quantity: '1' }] : [], reserved: 0, is_active: true }])}><Plus className="h-4 w-4" /> Variação</Button>
-            <Button type="button" size="sm" variant="outline" onClick={addSizes}>Adicionar P, M, G, GG</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => { varProg.showAll(); setVariants((vs) => [...vs, { label: '', uses: isStock ? [{ stock_item_id: '', quantity: '1' }] : [], reserved: 0, is_active: true }]) }}><Plus className="h-4 w-4" /> Variação</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => { varProg.showAll(); addSizes() }}>Adicionar P, M, G, GG</Button>
           </div>
         </fieldset>}
 

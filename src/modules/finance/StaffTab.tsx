@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
@@ -136,7 +137,7 @@ export function StaffTab({ competence }: { competence: string }) {
       {isLoading && <Skeleton className="h-20" />}
       {data?.length === 0 && <EmptyState>Nenhum pagamento da equipe neste mês.</EmptyState>}
       <div className="grid gap-2">
-        {data?.map((p) => (
+        <ProgressiveList items={(data) ?? []} render={(p) => (
           <Card key={p.id} className="flex items-center justify-between gap-3 p-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(p)}>
               <p className="break-words font-semibold">{shortName(p.members?.full_name, p.members?.display_name)}</p>
@@ -147,7 +148,7 @@ export function StaffTab({ competence }: { competence: string }) {
               <Badge className={PAY_STATUS_CLASS[p.status]}>{PAY_STATUS_LABEL[p.status]}</Badge>
             </div>
           </Card>
-        ))}
+        )} />
       </div>
       <Sheet open={newSheet} onOpenChange={setNewSheet}>{newSheet && <NewPaymentSheet competence={competence} onClose={() => setNewSheet(false)} />}</Sheet>
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>{selected && <PaySheet key={selected.id} payment={selected} onClose={() => setSelected(null)} />}</Sheet>
