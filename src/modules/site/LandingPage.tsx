@@ -12,6 +12,7 @@ import { areaOverrides } from '@/core/themeModel'
 import { useAreaTheme } from '@/core/useAreaTheme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { useAuth } from '@/core/auth'
+import { imageUrl } from '@/modules/shop/admin/service'
 import { LINK_KINDS, hrefOf, textOn, youtubeId, type SiteLink, type SiteVideo } from './links'
 
 export interface PublicSite {
@@ -20,6 +21,7 @@ export interface PublicSite {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
     enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; show_albums?: boolean; albums_label?: string; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
+  shop_product?: { slug: string; name: string; image_path: string | null } | null
   open_forms: { slug: string; title: string }[]
 }
 
@@ -104,7 +106,16 @@ export function LandingPage() {
                   <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}
                 </Link>
               ))}
-              {k === 'shop' && site.show_shop !== false && (
+              {k === 'shop' && site.show_shop !== false && data.shop_product && (
+                <Link to={`/${slug}/loja/produto/${data.shop_product.slug}`}
+                  className={`flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-card p-2 pr-5 text-left font-display text-lg font-bold text-foreground shadow-card transition hover:-translate-y-0.5 hover:shadow-lg ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}>
+                  {data.shop_product.image_path
+                    ? <img src={imageUrl(data.shop_product.image_path)} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+                    : <ShoppingBag className="mx-4 h-8 w-8 shrink-0" aria-hidden />}
+                  <span className="min-w-0 flex-1 leading-tight">{data.shop_product.name}</span>
+                </Link>
+              )}
+              {k === 'shop' && site.show_shop !== false && !data.shop_product && (
                 <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
               )}
               {k === 'albums' && site.show_albums !== false && (

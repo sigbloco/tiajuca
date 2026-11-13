@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Palette, Plus, Trash2, U
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { listProducts } from '@/modules/shop/admin/service'
 import { AlbumsTab } from './AlbumsTab'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useProgressive } from '@/components/shared/LoadMore'
@@ -24,9 +25,9 @@ const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): 
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; show_albums: boolean; albums_label: string; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shop_product_id: string | null; show_albums: boolean; albums_label: string; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_shop: true, show_enrollment: true, show_login: true, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_shop: true, show_enrollment: true, show_login: true, shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -42,6 +43,9 @@ export function SiteSettings() {
       return (data ?? null) as (SiteRow & { organization_id: string }) | null
     },
   })
+  // Produtos que podem ser ligados ao botão da loja (ativos e não ocultos).
+  const products = useQuery({ queryKey: ['site-shop-products', orgId], queryFn: () => listProducts(orgId) })
+  const pickable = (products.data ?? []).filter((p) => p.is_active && !p.is_hidden)
   const [f, setF] = useState<SiteRow>(EMPTY)
   // Carrega uma vez; depois o que está na tela é a verdade (salvamento automático não pode apagar o que a pessoa está digitando).
   const loaded = useRef(false)
@@ -54,7 +58,7 @@ export function SiteSettings() {
     links: row.links.filter((l) => l.value.trim()), videos: row.videos.filter((v) => v.url.trim()),
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
-    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, show_albums: row.show_albums,
+    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums,
     shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
@@ -218,6 +222,16 @@ export function SiteSettings() {
                     </button>
                     <Input id={b.id} className="min-w-0 flex-1" value={b.text} onChange={(e) => setF({ ...f, ...b.set(e.target.value) })} />
                   </div>
+                  {key === 'shop' && (
+                    <div className="space-y-1">
+                      <Label htmlFor="st-shop-product">Produto no botão</Label>
+                      <Select id="st-shop-product" value={f.shop_product_id ?? ''} onChange={(e) => setF({ ...f, shop_product_id: e.target.value || null })}>
+                        <option value="">Nenhum (botão com o nome da loja)</option>
+                        {pickable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Mostra a miniatura e o título do produto; ao clicar, abre a página dele.</p>
+                    </div>
+                  )}
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? key : null })} /> Destacar</label>
                 </div>
               </div>
