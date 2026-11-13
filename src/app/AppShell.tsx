@@ -1,4 +1,4 @@
-import { ArrowLeft, Construction, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Construction, Globe, LogOut, Menu, Store, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useExtraCrumbs } from '@/core/breadcrumb'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -74,8 +74,9 @@ export function AppShell() {
         <Construction className="h-10 w-10 text-primary" />
         <h1 className="font-display text-2xl font-extrabold">Área em construção</h1>
         <p className="max-w-sm text-muted-foreground">A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.</p>
-        <div className="flex gap-2">
-          <Link to="/site"><Button variant="outline"><Globe className="h-4 w-4" /> Ver o site</Button></Link>
+        <div className="flex w-full max-w-sm flex-col gap-2">
+          <Link to={`/${membership.slug}/loja`}><Button className="w-full"><Store className="h-4 w-4" /> Ir para a loja</Button></Link>
+          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Ver o site</Button></Link>
           <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
       </div>
