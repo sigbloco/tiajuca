@@ -37,8 +37,8 @@ export function parseAlbumTitle(raw: string): { event_date: string | null; title
 /** "2025-06-08" → "08/06/2025". */
 export const albumDate = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '')
 
-export async function previewAlbum(orgId: string, url: string): Promise<{ title: string; cover_url: string | null }> {
-  const { data, error } = await supabase.functions.invoke('album-preview', { body: { organization_id: orgId, url } })
+export async function previewAlbum(orgId: string, url: string, opts?: { cover?: boolean }): Promise<{ title: string; cover_url: string | null }> {
+  const { data, error } = await supabase.functions.invoke('album-preview', { body: { organization_id: orgId, url, cover: opts?.cover } })
   if (error) {
     const ctx = (error as { context?: Response }).context
     const msg = ctx ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error : null
