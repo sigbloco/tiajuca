@@ -46,21 +46,20 @@ export function ShopHomePage() {
 
   function renderGrid(products: typeof store.products) {
     return (
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-12">
         {products.map((p, idx) => {
-          // Distribuição harmônica: celular em 2 colunas; telas maiores no número de colunas que fecha melhor as linhas (4 → 2+2, 5 → 3+2).
-          // A última linha incompleta estica para ocupar a largura, mas uma caixa sozinha na linha tem tamanho máximo (a foto não fica gigante).
+          // Distribuição harmônica: celular em 2 colunas; telas maiores usam o número de colunas que fecha melhor as linhas
+          // (tablet até 3, PC até 4, para as fotos não ficarem enormes). A última linha incompleta estica, mas uma caixa sozinha
+          // na linha tem tamanho máximo.
           const n = products.length
-          const cols = balancedCols(n, 3)
-          const rem = n % cols
-          const inLast = rem > 0 && idx >= n - rem
-          const perRow = inLast ? rem : cols
-          const span = ({ 1: 'sm:col-span-6 sm:max-w-md sm:w-full sm:justify-self-center', 2: 'sm:col-span-3', 3: 'sm:col-span-2' } as const)[perRow as 1 | 2 | 3]
+          const per = (max: number) => { const c = balancedCols(n, max); const rem = n % c; return rem > 0 && idx >= n - rem ? rem : c }
+          const sm = ({ 1: 'sm:col-span-12 sm:w-full sm:max-w-[18rem] sm:justify-self-center', 2: 'sm:col-span-6', 3: 'sm:col-span-4' } as const)[per(3) as 1 | 2 | 3]
+          const lg = ({ 1: 'lg:col-span-12 lg:w-full lg:max-w-[18rem] lg:justify-self-center', 2: 'lg:col-span-6 lg:max-w-none lg:justify-self-stretch', 3: 'lg:col-span-4 lg:max-w-none lg:justify-self-stretch', 4: 'lg:col-span-3 lg:max-w-none lg:justify-self-stretch' } as const)[per(4) as 1 | 2 | 3 | 4]
           const phone = idx === n - 1 && n % 2 === 1 ? 'col-span-2' : 'col-span-1'
           const a = productAvailability(p.kind, p.variants.map((v) => ({ stock: v.available, reserved: 0, is_active: true })))
           const soldOut = a.status === 'sold_out'
           return (
-            <li key={p.id} className={`${phone} ${span}`}>
+            <li key={p.id} className={`${phone} ${sm} ${lg}`}>
               <Link to={`${basePath}/produto/${p.slug}`} className="block h-full">
                 <Card className={cn('h-full overflow-hidden transition hover:shadow-md', soldOut && 'opacity-70 grayscale')}>
                   {p.images[0]
