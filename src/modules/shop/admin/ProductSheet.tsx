@@ -162,8 +162,9 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     onSuccess: (id) => {
       if (!id) return
       refresh()
-      toast.success(product ? (isKit ? 'Kit atualizado.' : 'Produto atualizado.') : (isKit ? 'Kit criado.' : 'Produto criado.'))
-      if (product) onClose(); else onSaved(id)
+      // Salvou (novo ou existente): volta para a lista de produtos. As fotos entram editando o item (lápis), pois só existem depois que ele é criado.
+      toast.success(product ? (isKit ? 'Kit atualizado.' : 'Produto atualizado.') : (isKit ? 'Kit criado. Para adicionar fotos, abra-o pelo lápis.' : 'Produto criado. Para adicionar fotos, abra-o pelo lápis.'))
+      onClose()
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
