@@ -71,6 +71,29 @@ export interface ActivityInput {
 export type AudienceKind = 'section' | 'instrument'
 export interface AudienceInput { kind: AudienceKind; ref_id: string }
 
+/** Público de vários eventos de uma vez (id do evento → itens). Evento sem público não aparece no mapa. */
+export async function getAudiencesFor(activityIds: string[]): Promise<Map<string, AudienceInput[]>> {
+  const out = new Map<string, AudienceInput[]>()
+  if (activityIds.length === 0) return out
+  const { data, error } = await supabase.from('activity_audiences').select('activity_id, kind, ref_id').in('activity_id', activityIds).limit(5000)
+  if (error) throw error
+  for (const a of (data ?? []) as { activity_id: string; kind: string; ref_id: string }[]) {
+    if (a.kind !== 'section' && a.kind !== 'instrument') continue
+    out.set(a.activity_id, [...(out.get(a.activity_id) ?? []), { kind: a.kind, ref_id: a.ref_id }])
+  }
+  return out
+}
+
+/** Naipes (ids) a que o público de um evento pertence: o naipe escolhido ou o naipe do instrumento escolhido. */
+export function audienceSectionIds(audience: AudienceInput[], instrumentSection: Map<string, string>): Set<string> {
+  const ids = new Set<string>()
+  for (const a of audience) {
+    const sid = a.kind === 'section' ? a.ref_id : instrumentSection.get(a.ref_id)
+    if (sid) ids.add(sid)
+  }
+  return ids
+}
+
 /** Público da chamada de um evento: vários itens (naipe ou instrumento). */
 export async function getAudiences(activityId: string): Promise<AudienceInput[]> {
   const { data, error } = await supabase.from('activity_audiences').select('kind, ref_id').eq('activity_id', activityId)

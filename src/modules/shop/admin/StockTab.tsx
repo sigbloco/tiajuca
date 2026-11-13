@@ -42,7 +42,7 @@ function ItemSheet({ item, minStock, onClose }: { item: StockItem | null; minSto
             {minStock > 0 && <p className="text-xs text-muted-foreground">Não pode ficar abaixo de {minStock}, que já estão reservadas em pedidos em andamento.</p>}</div>
         )}
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!valid || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <Button type="submit" className="flex-1" disabled={!valid || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           <Button type="button" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
       </form>

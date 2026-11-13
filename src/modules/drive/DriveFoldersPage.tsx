@@ -129,7 +129,7 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
         <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">
           O app controla quem vê o <strong>atalho</strong>. Quem abrir a pasta ainda precisa ter acesso no próprio Google Drive: compartilhe a pasta lá com quem deve entrar.
         </p>
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
         {folder && (
           <Button type="button" variant="ghost" className={folder.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
             if (!folder.is_active || await confirmBox('Mover esta pasta para a lixeira? Ela some do app, o cadastro é mantido e você pode restaurar depois.')) toggleActive.mutate()

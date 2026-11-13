@@ -1,3 +1,4 @@
+import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -167,7 +168,7 @@ export function InterfacePage() {
       <h1>Interface</h1>
       <ButtonRow role="tablist">
         {AREAS.map((a) => (
-          <Button key={a.key} role="tab" aria-selected={tab === a.key} variant={tab === a.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => go(a.key)}>{a.label}</Button>
+          <Button key={a.key} role="tab" aria-selected={tab === a.key} variant={tab === a.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => go(a.key)}><FitWord>{a.label}</FitWord></Button>
         ))}
       </ButtonRow>
       {tab === 'factory' ? <FactoryEditor /> : <ColorsEditor key={tab} area={tab} intro={current.intro} />}

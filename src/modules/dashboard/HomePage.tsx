@@ -11,7 +11,7 @@ import { supabase } from '@/core/supabase'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { EventCard } from '@/modules/events/EventCard'
 import { EventSheet } from '@/modules/events/EventSheet'
-import { listActivities, type Activity } from '@/modules/events/service'
+import { audienceSectionIds, getAudiencesFor, listActivities, type Activity } from '@/modules/events/service'
 
 const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
 
@@ -47,7 +47,7 @@ function useMySections(orgId: string, memberId: string, cycleId: string | undefi
       }
       for (const r of parts.data ?? []) { const sid = insMap.get(r.instrument_id as string); if (sid) ids.add(sid) }
       const all = (secs.data ?? []).map((x) => ({ id: x.id as string, plain: plain(x.name as string) }))
-      return { mine: new Set(all.filter((x) => ids.has(x.id)).map((x) => x.plain)), all: all.map((x) => x.plain) }
+      return { mine: new Set(all.filter((x) => ids.has(x.id)).map((x) => x.plain)), all: all.map((x) => x.plain), sectionPlain: new Map(all.map((x) => [x.id, x.plain] as const)), instSection: insMap }
     },
   })
 }
@@ -84,9 +84,16 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
     queryKey: ['activities', orgId, 'upcoming', today],
     queryFn: async () => (await listActivities({ orgId, from: today, to: addDaysIso(today, 90) })).filter((a) => a.status !== 'cancelled'),
   })
-  // Oficina de outro naipe não aparece (vale para professor, monitor e aluno). Sem naipe no título, aparece para todos.
+  // Evento com PÚBLICO definido segue o público (naipe ou instrumento); só quando não há público vale o naipe citado no título.
+  const audiences = useQuery({ queryKey: ['audiences-upcoming', (data ?? []).map((a) => a.id).join(',')], enabled: (data?.length ?? 0) > 0, queryFn: () => getAudiencesFor((data ?? []).map((a) => a.id)) })
+  // Oficina de outro naipe não aparece (vale para professor, monitor e aluno). Sem público e sem naipe no título, aparece para todos.
   const visible = (data ?? []).filter((a) => {
     if (!filterByMine || !my.data || my.data.mine.size === 0) return true
+    const aud = audiences.data?.get(a.id)
+    if (aud && aud.length > 0) {
+      const sids = audienceSectionIds(aud, my.data.instSection)
+      return [...sids].some((sid) => my.data!.mine.has(my.data!.sectionPlain.get(sid) ?? ''))
+    }
     const t = plain(a.title)
     const hits = my.data.all.filter((n) => t.includes(n))
     return hits.length === 0 || hits.some((n) => my.data!.mine.has(n))

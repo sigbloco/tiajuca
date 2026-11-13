@@ -1,3 +1,4 @@
+import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -18,7 +19,7 @@ export function AuditBackupsPage() {
         <ButtonRow role="tablist">
           {([['audit', 'Auditoria'], ['backups', 'Backups']] as const).map(([k, l]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-              className={cn('rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{l}</button>
+              className={cn('rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}><FitWord>{l}</FitWord></button>
           ))}
         </ButtonRow>
       )}

@@ -12,7 +12,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
-import { getAudiences, listActivities, type Activity } from '@/modules/events/service'
+import { getAudiences, getAudiencesFor, listActivities, type Activity, type AudienceInput } from '@/modules/events/service'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
@@ -94,11 +94,14 @@ function useStudentInstruments(cycleId: string | null | undefined) {
 }
 
 /** Um horário do dia: título e os instrumentos com alunos; cada um abre a chamada só daquele instrumento. */
-function ActivityCard({ a, instruments, studentIds, slug }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string }) {
-  // Naipe pelo título ("Oficina de percussão" → Percussão); sem coincidência única, todos.
+function ActivityCard({ a, instruments, studentIds, slug, audience }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string; audience?: AudienceInput[] }) {
+  // Evento com PÚBLICO definido: os botões são os instrumentos desse público (naipe escolhido ou o próprio instrumento).
+  // Sem público: naipe pelo título ("Oficina de percussão" → Percussão); sem coincidência única, todos os instrumentos com alunos.
   const title = plain(a.title)
   const hit = [...new Set(instruments.map((i) => i.section))].filter((n) => title.includes(plain(n)))
-  const shown = instruments.filter((i) => studentIds.has(i.id) && (hit.length === 1 ? i.section === hit[0] : true))
+  const shown = (audience && audience.length > 0
+    ? instruments.filter((i) => audience.some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
+    : instruments.filter((i) => studentIds.has(i.id) && (hit.length === 1 ? i.section === hit[0] : true)))
     .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
   return (
     <Card className="flex gap-3 p-3">
@@ -140,6 +143,7 @@ export function AttendanceListPage() {
   const idx = current ? days.indexOf(current) : -1
   const dayItems = items.filter((a) => a.activity_date === current)
     .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '') || a.title.localeCompare(b.title, 'pt-BR'))
+  const audiences = useQuery({ queryKey: ['audiences-day', dayItems.map((a) => a.id).join(',')], enabled: dayItems.length > 0, queryFn: () => getAudiencesFor(dayItems.map((a) => a.id)) })
   return (
     <div className="space-y-4">
       <h1>Presença</h1>
@@ -153,7 +157,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data?.instruments ?? new Set()} slug={membership?.slug} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data?.instruments ?? new Set()} slug={membership?.slug} audience={audiences.data?.get(a.id)} />)}
       </div>
     </div>
   )
@@ -301,10 +305,14 @@ export function AttendanceRosterPage() {
     return { section: secs.size === 1 ? [...secs][0] : '', inst: only?.name ?? '' }
   })()
   const naipe = hasAudience ? '' : lockedNaipe || (naipeSel ?? myScope.section)
-  const inst = hasAudience ? '' : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
+  const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
     && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
+  // Evento com público: dá para filtrar a chamada pelos instrumentos do público (ex.: Pernalta).
+  const audInstOptions = hasAudience
+    ? [...new Set((catalog.data?.list ?? []).filter((i) => (audience.data ?? []).some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id))).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    : []
   const instOptions = [...new Set(studentInsts.filter((i) => i.section === naipe).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const cancelled = activity.data?.status === 'cancelled'
 
@@ -339,7 +347,16 @@ export function AttendanceRosterPage() {
         <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {naipe && instOptions.length > 0 ? (
+      {hasAudience && audInstOptions.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
+          {['', ...audInstOptions].map((n) => (
+            <button key={n || 'todos'} onClick={() => setInst(n)}
+              className={cn('h-9 rounded-full border px-3 text-sm font-medium', inst === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
+              {n || 'Todos'}
+            </button>
+          ))}
+        </div>
+      ) : naipe && instOptions.length > 0 ? (
         // Dentro de um naipe (ex.: Oficina de percussão): filtra por instrumento (agogô, caixa de guerra…).
         <div className="flex flex-wrap gap-2">
           {!lockedNaipe && <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>}

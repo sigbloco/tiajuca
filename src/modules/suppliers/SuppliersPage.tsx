@@ -87,7 +87,7 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
           <Input id="sp-site" placeholder="https://" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="sp-notes">Observações</Label>
           <Input id="sp-notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || !f.category_id || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" className="w-full" disabled={!f.name.trim() || !f.category_id || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
         {sup && (
           <Button type="button" variant="ghost" className={sup.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
             if (!sup.is_active || await confirmBox('Mover este fornecedor para a lixeira? Você pode restaurar depois.')) toggle.mutate()
