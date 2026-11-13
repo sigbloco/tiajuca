@@ -48,7 +48,7 @@ export function AlbumsTab() {
           const info = await previewAlbum(orgId, a.url, { cover: mode === 'missing' })
           const p = parseAlbumTitle(info.title)
           const fields: Partial<Album> = { cover_url: info.cover_url ?? a.cover_url }
-          if (info.title) Object.assign(fields, { title: p.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors })
+          if (info.title) Object.assign(fields, { title: p.title || a.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors })
           const { error } = await supabase.from('site_albums').update(fields).eq('id', a.id).eq('organization_id', orgId)
           if (error) throw error
         } catch { failed++ }
@@ -148,7 +148,7 @@ export function AlbumsTab() {
           onRefresh={async () => {
             const info = await previewAlbum(orgId, a.url)
             const p = parseAlbumTitle(info.title)
-            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors } : {}) } })
+            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title || a.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors } : {}) } })
           }} />
       ))}
       {prog.button}
@@ -176,8 +176,11 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-[4/3] w-full max-w-xs rounded-lg object-cover" /> : <div aria-hidden className="flex aspect-[4/3] w-full max-w-xs items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">sem capa</div>}
-        <Input aria-label="Título" placeholder="Título" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
-        <DateInput aria-label="Data do evento" value={d.event_date ?? ''} onChange={(v) => setD({ ...d, event_date: v || null })} />
+        {/* PC: data (largura fixa) e título lado a lado; celular: uma linha cada. */}
+        <div className="grid gap-2 sm:grid-cols-[9.5rem_1fr]">
+          <DateInput aria-label="Data do evento" value={d.event_date ?? ''} onChange={(v) => setD({ ...d, event_date: v || null })} />
+          <Input aria-label="Título" placeholder="Título" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
+        </div>
         <div className="space-y-1.5">
           <Label>Autores (“por …”)</Label>
           {d.authors.map((u, i) => (
