@@ -1,3 +1,4 @@
+import { KitChip } from '@/modules/shop/KitChip'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
@@ -130,7 +131,7 @@ export function CheckoutPage() {
           <h2 className="text-lg font-bold">Resumo</h2>
           <ul className="space-y-1 text-sm">
             {cart.lines.map((l) => (
-              <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {l.name} ({l.variantLabel})</span><span>{money(l.lineTotalCents)}</span></li>
+              <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span>{money(l.lineTotalCents)}</span></li>
             ))}
           </ul>
           <hr className="border-border" />

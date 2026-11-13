@@ -1,3 +1,4 @@
+import { KitChip } from '@/modules/shop/KitChip'
 import { Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button, Card, EmptyState } from '@/components/ui/primitives'
@@ -33,7 +34,7 @@ export function CartPage() {
               <Card className="flex gap-3 p-3">
                 {l.image ? <img src={imageUrl(l.image)} alt="" className="h-20 w-20 shrink-0 rounded-lg object-contain bg-muted" /> : <div aria-hidden className="h-20 w-20 shrink-0 rounded-lg bg-muted" />}
                 <div className="min-w-0 flex-1 space-y-1">
-                  <Link to={`${basePath}/produto/${l.slug}`} className="font-semibold hover:underline">{l.name}</Link>
+                  <Link to={`${basePath}/produto/${l.slug}`} className="font-semibold hover:underline">{entry?.product.is_kit && <KitChip />}{l.name}</Link>
                   <p className="text-sm text-muted-foreground">{l.variantLabel}{l.kind === 'made_to_order' ? ' · sob encomenda' : ''}</p>
                   <p className="text-sm">
                     {isMember && l.unitFinalCents !== l.unitPriceCents && <s className="mr-2 text-muted-foreground">{money(l.unitPriceCents)}</s>}
