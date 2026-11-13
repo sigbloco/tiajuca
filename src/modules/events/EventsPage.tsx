@@ -123,7 +123,7 @@ export function EventsPage() {
   const header = (
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Calendário</h1>
-        {canManage && <Button onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
+        {canManage && <Button variant="outline" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
       </div>
   )
   const sheetEl = (

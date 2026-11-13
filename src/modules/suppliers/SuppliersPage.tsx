@@ -209,7 +209,7 @@ export function SuppliersPage() {
             ]} />
           )}
           {canManage && <Button variant="outline" onClick={() => setCatSheet(true)}><Tags className="h-4 w-4" /> Categorias</Button>}
-          {canManage && <Button onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo</Button>}
+          {canManage && <Button variant="outline" onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo</Button>}
         </div>
       </div>
       {loading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14" />)}</div>}

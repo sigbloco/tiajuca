@@ -91,8 +91,7 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-bold">{kits ? 'Kits' : 'Produtos'}</h2>
-      <Button className="w-full" onClick={() => setSheet(kits ? 'new-kit' : 'new')}><Plus className="h-4 w-4" /> {kits ? 'Novo kit' : 'Novo produto'}</Button>
+      <Button variant="outline" className="w-full" onClick={() => setSheet(kits ? 'new-kit' : 'new')}><Plus className="h-4 w-4" /> {kits ? 'Novo kit' : 'Novo produto'}</Button>
       {q.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
       {q.data && items.length === 0 && <EmptyState>{kits ? 'Nenhum kit ainda. Crie o primeiro.' : 'Nenhum produto ainda. Crie o primeiro.'}</EmptyState>}
