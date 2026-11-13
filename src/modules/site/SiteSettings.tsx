@@ -226,10 +226,10 @@ export function SiteSettings() {
                     <div className="space-y-1">
                       <Label htmlFor="st-shop-product">Produto no botão</Label>
                       <Select id="st-shop-product" value={f.shop_product_id ?? ''} onChange={(e) => setF({ ...f, shop_product_id: e.target.value || null })}>
-                        <option value="">Nenhum (botão com o nome da loja)</option>
+                        <option value="">Nenhum</option>
                         {pickable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </Select>
-                      <p className="text-xs text-muted-foreground">Mostra a miniatura e o título do produto; ao clicar, abre a página dele.</p>
+                      <p className="text-xs text-muted-foreground">Mostra a miniatura e o título do produto acima do botão da loja; ao clicar, abre a página dele.</p>
                     </div>
                   )}
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? key : null })} /> Destacar</label>
