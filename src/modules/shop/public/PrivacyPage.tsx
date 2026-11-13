@@ -8,7 +8,7 @@ export function PrivacyPage() {
   const { store, basePath } = useStore()
   const sections = buildPrivacyNotice(store.org.name, store.contact, store.privacy_retention_years)
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="max-w-2xl space-y-4">
       <h1>Aviso de privacidade</h1>
       {sections.map((s) => (
         <Card key={s.title} className="space-y-2 p-5">
@@ -16,7 +16,7 @@ export function PrivacyPage() {
           {s.paragraphs.map((p) => <p key={p} className="text-sm">{p}</p>)}
         </Card>
       ))}
-      <Link className="block text-center font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
+      <Link className="block font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
     </div>
   )
 }
