@@ -143,7 +143,7 @@ export function CyclesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2>Ciclos</h2>
-        {canManage && <Button variant="outline" onClick={() => setSheet({ cycle: null })}><Plus className="h-4 w-4" /> Novo ciclo</Button>}
+        {canManage && <Button variant="add" onClick={() => setSheet({ cycle: null })}><Plus className="h-4 w-4" /> Novo ciclo</Button>}
       </div>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && (sheet.blockers && sheet.cycle

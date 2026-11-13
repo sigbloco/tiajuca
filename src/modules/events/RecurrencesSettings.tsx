@@ -186,7 +186,7 @@ export function RecurrencesSettings() {
         <h2>Recorrências</h2>
         <div className="flex gap-2">
           <Button variant="outline" disabled={generate.isPending} onClick={() => generate.mutate()}>Atualizar próximas datas</Button>
-          <Button variant="outline" onClick={() => setSheet({ rule: null })}><Plus className="h-4 w-4" /> Nova</Button>
+          <Button variant="add" onClick={() => setSheet({ rule: null })}><Plus className="h-4 w-4" /> Nova</Button>
         </div>
       </div>
       <p className="text-muted-foreground">As próximas 12 semanas são geradas automaticamente quando a Direção abre a agenda.</p>

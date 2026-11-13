@@ -68,7 +68,7 @@ export function ScholarshipsPage() {
       <div className="flex items-center justify-between">
         <h1>Bolsas</h1>
         <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={() => { setNewMember(''); setSheet('new') }}><Plus className="h-4 w-4" /> Nova bolsa</Button></div>
+        <Button variant="add" onClick={() => { setNewMember(''); setSheet('new') }}><Plus className="h-4 w-4" /> Nova bolsa</Button></div>
       </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Pessoas bolsistas" value={String(i?.bolsistas ?? 0)} />

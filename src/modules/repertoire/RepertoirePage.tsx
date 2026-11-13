@@ -94,7 +94,7 @@ export function RepertoirePage() {
             <TrashDrawer entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
               onRestore={(id) => restoreRep.mutate(id)} />
           )}
-          {canManage && <Button variant="outline" onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
+          {canManage && <Button variant="add" onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
         </ButtonRow>
       </div>
       {isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>}

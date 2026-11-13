@@ -241,7 +241,7 @@ export function DriveFoldersPage() {
         <h1>Google Drive</h1>
         <div className="flex gap-2">
           {canManage && <TrashDrawer entries={(folders.data ?? []).filter((f) => !f.is_active).map((f) => ({ id: f.id, name: f.name, detail: f.description ?? undefined }))} onRestore={(id) => restoreFolder.mutate(id)} />}
-          {canManage && <Button variant="outline" onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
+          {canManage && <Button variant="add" onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
         </div>
       </div>
       <ReadMore>{canManage

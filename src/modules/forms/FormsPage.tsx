@@ -65,7 +65,7 @@ export function FormsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1>Inscrições</h1>
-        <Button variant="outline" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Novo formulário</Button>
+        <Button variant="add" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Novo formulário</Button>
       </div>
       {isLoading && <Skeleton className="h-24" />}
       {data?.length === 0 && <EmptyState>Nenhum formulário ainda.</EmptyState>}
