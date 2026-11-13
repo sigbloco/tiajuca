@@ -22,15 +22,15 @@ export function parseAlbumTitle(raw: string): { event_date: string | null; title
   let t = raw.trim()
   const handles = [...new Set([...t.matchAll(/@([A-Za-z0-9._]*[A-Za-z0-9_])/g)].map((m) => m[1]))]
   let event_date: string | null = null
-  const m = t.match(/^(d{2})(d{2})(d{2})s+/)
+  const m = t.match(/^(\d{2})(\d{2})(\d{2})\s+/)
   if (m) {
     const month = Number(m[2]), day = Number(m[3])
     if (month >= 1 && month <= 12 && day >= 1 && day <= 31) { event_date = `20${m[1]}-${m[2]}-${m[3]}`; t = t.slice(m[0].length) }
   }
   // Tira os parênteses que citam @ ("(mídias por @a e @b)") e qualquer @ solto que sobrar.
-  t = t.replace(/^d{5}s+/, '')
-  t = t.replace(/s*([^)]*@[^)]*)/g, '').replace(/s*@[A-Za-z0-9._]+/g, '').replace(/s+/g, ' ').trim()
-  t = t.replace(/[s-–:,(]*(?:m[ií]dias?|fotos?|fotografias?|v[ií]deos?)s+(?:por|de)[s-–:,(]*$/i, '').trim() // sobra de "mídias por @fulano"
+  t = t.replace(/^\d{5}\s+/, '')
+  t = t.replace(/\s*\([^)]*@[^)]*\)/g, '').replace(/\s*@[A-Za-z0-9._]+/g, '').replace(/\s+/g, ' ').trim()
+  t = t.replace(/[\s\-–:,(]*(?:m[ií]dias?|fotos?|fotografias?|v[ií]deos?)\s+(?:por|de)[\s\-–:,(]*$/i, '').trim() // sobra de "mídias por @fulano"
   return { event_date, title: t, handles }
 }
 
