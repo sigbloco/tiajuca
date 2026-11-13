@@ -4,14 +4,36 @@ import { useRef, useState } from 'react'
 import { useHoldReorder } from '@/core/holdReorder'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Input, Label, Select, SheetContent } from '@/components/ui/primitives'
+import { Button, Input, Label, Select, SheetContent } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
-import { fromCents, memberPriceCents, stockFromDb, stockToDb, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, updateProduct, uploadProductImage, type ShopProduct } from './service'
+import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
+import { createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, updateProduct, uploadProductImage, type ShopProduct, type StockItem } from './service'
 
-interface VariantRow { id?: string; label: string; stock: string; reserved: number; is_active: boolean }
+interface Use { stock_item_id: string; quantity: string }
+interface VariantRow { id?: string; label: string; uses: Use[]; reserved: number; is_active: boolean }
+
+/** Itens de estoque que a variação consome por unidade vendida (kit = vários itens). */
+function UsesEditor({ uses, items, locked, onChange }: { uses: Use[]; items: StockItem[]; locked: boolean; onChange: (u: Use[]) => void }) {
+  const set = (i: number, patch: Partial<Use>) => onChange(uses.map((u, j) => (j === i ? { ...u, ...patch } : u)))
+  return (
+    <div className="space-y-1.5 pl-1">
+      {uses.map((u, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <Input aria-label="Quantidade do item por unidade vendida" className="w-16" type="number" min={1} max={50} disabled={locked} value={u.quantity} onChange={(e) => set(i, { quantity: e.target.value })} />
+          <span aria-hidden>×</span>
+          <Select aria-label="Item de estoque" className="min-w-0 flex-1" disabled={locked} value={u.stock_item_id} onChange={(e) => set(i, { stock_item_id: e.target.value })}>
+            <option value="">Escolha o item de estoque</option>
+            {items.filter((it) => it.is_active || it.id === u.stock_item_id).map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+          </Select>
+          <Button type="button" size="icon" variant="ghost" aria-label="Tirar item" title="Tirar item" disabled={locked} onClick={() => onChange(uses.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button type="button" size="sm" variant="outline" disabled={locked} onClick={() => onChange([...uses, { stock_item_id: '', quantity: '1' }])}><Plus className="h-4 w-4" /> Item de estoque</Button>
+    </div>
+  )
+}
 
 const swapped = (imgs: { id: string }[], i: number, d: -1 | 1) => {
   const ids = imgs.map((x) => x.id);
@@ -21,7 +43,7 @@ const swapped = (imgs: { id: string }[], i: number, d: -1 | 1) => {
 
 const SIZES = ['P', 'M', 'G', 'GG']
 
-export function ProductSheet({ product, others = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; others?: ShopProduct[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
+export function ProductSheet({ product, kit = false, others = [], stockItems = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; kit?: boolean; others?: ShopProduct[]; stockItems?: StockItem[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
@@ -30,9 +52,13 @@ export function ProductSheet({ product, others = [], defaultDiscount = 0, onSave
     discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '', minUnits: product?.min_units ? String(product.min_units) : '', suggested: product?.suggested_ids ?? ([] as string[]),
     is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
+  const isKit = product ? product.is_kit : kit
+  const [photos, setPhotos] = useState(product?.kit_component_photos ?? true)
   const [variants, setVariants] = useState<VariantRow[]>(
-    product?.shop_product_variants.map((v) => ({ id: v.id, label: v.label, stock: String(stockFromDb(v.stock)), reserved: v.reserved, is_active: v.is_active }))
-      ?? [{ label: 'Único', stock: '0', reserved: 0, is_active: true }],
+    product?.shop_product_variants.map((v) => ({
+      id: v.id, label: v.label, reserved: v.reserved, is_active: v.is_active,
+      uses: [...(v.shop_variant_stock ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((u) => ({ stock_item_id: u.stock_item_id, quantity: String(u.quantity) })),
+    })) ?? [{ label: 'Único', uses: [{ stock_item_id: '', quantity: '1' }], reserved: 0, is_active: true }],
   )
   const [removed, setRemoved] = useState<string[]>([])
   const [errors, setErrors] = useState<string[]>([])
@@ -46,14 +72,14 @@ export function ProductSheet({ product, others = [], defaultDiscount = 0, onSave
       const draft = {
         name: f.name, kind: f.kind, priceCents: f.price === null ? null : toCents(f.price), discountPct: discount,
         leadTimeDays: f.leadTime.trim() || null,
-        variants: variants.map((v) => ({ label: v.label, stock: v.stock === '' ? null : Number(v.stock) })),
+        variants: variants.map((v) => ({ label: v.label, items: v.uses.filter((u) => u.stock_item_id).length })),
       }
       const errs = validateProductDraft(draft)
-      // O estoque físico não pode ficar abaixo do que já está reservado por pedidos em andamento.
       if (isStock) {
-        for (const [i, v] of variants.entries()) {
-          const s = draft.variants[i].stock
-          if (s !== null && s >= 0 && s < v.reserved) errs.push(`"${v.label}": há ${v.reserved} reservada(s) em pedidos; o estoque não pode ser menor.`)
+        for (const v of variants) {
+          const ids = v.uses.map((u) => u.stock_item_id).filter(Boolean)
+          if (new Set(ids).size !== ids.length) errs.push(`"${v.label || 'Variação'}": há um item de estoque repetido. Some as quantidades numa linha só.`)
+          if (v.uses.some((u) => u.stock_item_id && !(Number.isInteger(Number(u.quantity)) && Number(u.quantity) >= 1 && Number(u.quantity) <= 50))) errs.push('A quantidade de cada item deve ficar entre 1 e 50.')
         }
       }
       setErrors(errs)
@@ -61,15 +87,16 @@ export function ProductSheet({ product, others = [], defaultDiscount = 0, onSave
       const input = {
         name: f.name.trim(), description: f.description.trim(), price_cents: draft.priceCents!, member_discount_pct: discount,
         lead_time_days: isStock ? null : draft.leadTimeDays, min_units: isStock || !f.minUnits ? null : Number(f.minUnits), suggested_ids: f.suggested.filter((id) => id !== product?.id), is_active: f.is_active, is_featured: f.is_featured,
+        ...(isKit ? { is_kit: true, kit_component_photos: photos } : {}),
       }
-      const rows = variants.map((v, i) => ({ id: v.id, label: v.label, stock: isStock ? stockToDb(draft.variants[i].stock as number) : null, is_active: v.is_active }))
+      const rows = variants.map((v) => ({ id: v.id, label: v.label, is_active: v.is_active, items: v.uses.filter((u) => u.stock_item_id).map((u) => ({ stock_item_id: u.stock_item_id, quantity: Number(u.quantity) })) }))
       if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); return product.id }
       return createProduct(orgId, { ...input, kind: f.kind }, rows)
     },
     onSuccess: (id) => {
       if (!id) return
       refresh()
-      toast.success(product ? 'Produto atualizado.' : 'Produto criado. Agora você pode adicionar as fotos.')
+      toast.success(product ? (isKit ? 'Kit atualizado.' : 'Produto atualizado.') : (isKit ? 'Kit criado. Agora você pode adicionar fotos próprias dele.' : 'Produto criado. Agora você pode adicionar as fotos.'))
       if (product) onClose(); else onSaved(id)
     },
     onError: (e) => toast.error(friendlyError(e)),
@@ -127,25 +154,24 @@ export function ProductSheet({ product, others = [], defaultDiscount = 0, onSave
   const setVariant = (i: number, patch: Partial<VariantRow>) => setVariants((vs) => vs.map((v, j) => (j === i ? { ...v, ...patch } : v)))
   const addSizes = () => setVariants((vs) => {
     const have = new Set(vs.map((v) => v.label.trim().toLowerCase()))
-    return [...vs.filter((v) => v.label.trim() || v.id), ...SIZES.filter((s) => !have.has(s.toLowerCase())).map((label) => ({ label, stock: '0', reserved: 0, is_active: true }))]
+    return [...vs.filter((v) => v.label.trim() || v.id), ...SIZES.filter((s) => !have.has(s.toLowerCase())).map((label) => ({ label, uses: [{ stock_item_id: '', quantity: '1' }], reserved: 0, is_active: true }))]
   })
 
   const publicCents = f.price === null ? null : toCents(f.price)
   return (
-    <SheetContent title={product ? 'Editar produto' : 'Novo produto'} description="Preço público, desconto de integrante, variações e fotos.">
+    <SheetContent title={isKit ? (product ? 'Editar kit' : 'Novo kit') : (product ? 'Editar produto' : 'Novo produto')} description={isKit ? 'Preço do kit, itens de estoque que entram nele e fotos.' : 'Preço público, desconto de integrante, variações, estoque e fotos.'}>
       <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="pr-name">Nome</Label>
           <Input id="pr-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="pr-kind">Tipo</Label>
+        {!isKit && <div className="space-y-1.5"><Label htmlFor="pr-kind">Tipo</Label>
           <Select id="pr-kind" value={f.kind} disabled={!!product} onChange={(e) => {
             const kind = e.target.value as ProductKind
             setF({ ...f, kind })
-            setVariants((vs) => vs.map((v) => ({ ...v, stock: kind === 'stock' ? (v.stock || '0') : '' })))
           }}>
             <option value="stock">Em estoque (controla quantidade)</option>
             <option value="made_to_order">Sob encomenda (prazo de produção)</option>
           </Select>
-          {product && <p className="text-sm text-muted-foreground">O tipo não muda depois de criado.</p>}</div>
+          {product && <p className="text-sm text-muted-foreground">O tipo não muda depois de criado.</p>}</div>}
         <div className="space-y-1.5"><Label htmlFor="pr-desc">Descrição</Label>
           <textarea id="pr-desc" rows={3} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
@@ -184,34 +210,47 @@ export function ProductSheet({ product, others = [], defaultDiscount = 0, onSave
           </fieldset>
         )}
 
-        <fieldset className="space-y-2 rounded-lg border border-border p-3">
+        {isKit && (
+          <fieldset className="space-y-2 rounded-lg border border-border p-3">
+            <legend className="px-1 font-semibold">O que vem no kit</legend>
+            <p className="text-xs text-muted-foreground">Escolha os itens do estoque e quantos de cada vão em um kit. Vender um kit baixa esses itens, os mesmos dos produtos avulsos.</p>
+            {(variants[0]?.reserved ?? 0) > 0 && <p role="alert" className="text-sm text-destructive">Há pedidos em andamento com este kit. Os itens só podem mudar depois que forem retirados ou cancelados.</p>}
+            <UsesEditor uses={variants[0]?.uses ?? []} items={stockItems} locked={(variants[0]?.reserved ?? 0) > 0} onChange={(u) => setVariant(0, { uses: u })} />
+            <label className="flex items-center gap-2 pt-1 text-sm font-medium">
+              <input type="checkbox" className="h-4 w-4" checked={photos} onChange={(e) => setPhotos(e.target.checked)} />
+              Incluir também as fotos dos produtos avulsos que usam esses itens
+            </label>
+          </fieldset>
+        )}
+        {!isKit && <fieldset className="space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 font-semibold">{isStock ? 'Variações e estoque' : 'Variações'}</legend>
-          {isStock && <p className="text-xs text-muted-foreground">Estoque de -1 a 99: -1 = ilimitado · 0 = esgotado.</p>}
+          {isStock && <p className="text-xs text-muted-foreground">Cada variação consome itens do estoque (cadastrados na aba Estoque). Ex.: o tamanho M usa 1 × Camiseta M.</p>}
           {variants.map((v, i) => (
-            <div key={vKey(v, i)} {...dnd.row(vKey(v, i), dragVariant, 'variants')} className={`flex items-center gap-2 rounded-lg ${v.is_active ? '' : 'bg-muted/60 opacity-60'} ${dnd.cls(vKey(v, i))}`}>
+            <div key={vKey(v, i)} className="space-y-1">
+            <div {...dnd.row(vKey(v, i), dragVariant, 'variants')} className={`flex items-center gap-2 rounded-lg ${v.is_active ? '' : 'bg-muted/60 opacity-60'} ${dnd.cls(vKey(v, i))}`}>
               {dnd.handle(vKey(v, i), dragVariant, 'variants')}
               <div className="flex flex-col">
                 <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir variação" disabled={i === 0} onClick={() => moveVariant(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
                 <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer variação" disabled={i === variants.length - 1} onClick={() => moveVariant(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
               </div>
               <Input aria-label="Nome da variação" placeholder="Ex.: M" className={v.is_active ? '' : 'line-through'} value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} />
-              {isStock && <Input aria-label={`Estoque de ${v.label || 'variação'}`} className="w-24" type="number" min={-1} max={99} step={1} title="-1 = ilimitado · 0 = esgotado" value={v.stock}
-                onChange={(e) => setVariant(i, { stock: e.target.value === '' ? '' : String(Math.min(99, Math.max(-1, Math.trunc(Number(e.target.value))))) })} />}
-              {product && isStock && v.reserved > 0 && <Badge title="Reservado em pedidos em andamento">{v.reserved} res.</Badge>}
               <Button type="button" size="icon" variant={v.is_active ? 'ghost' : 'outline'} aria-pressed={!v.is_active} title={v.is_active ? 'Desativar variação' : 'Variação desativada: clique para reativar'}
                 aria-label={v.is_active ? 'Desativar variação' : 'Reativar variação'} className={v.is_active ? '' : 'border-destructive text-destructive'} onClick={() => setVariant(i, { is_active: !v.is_active })}><Ban className="h-4 w-4" /></Button>
               <Button type="button" size="icon" variant="ghost" aria-label="Excluir variação" title="Excluir variação"
                 onClick={() => { if (v.id) setRemoved((r) => [...r, v.id!]); setVariants((vs) => vs.filter((_, j) => j !== i)) }}><Trash2 className="h-4 w-4" /></Button>
             </div>
+            {isStock && <UsesEditor uses={v.uses} items={stockItems} locked={v.reserved > 0} onChange={(u) => setVariant(i, { uses: u })} />}
+            {isStock && v.reserved > 0 && <p className="pl-1 text-xs text-muted-foreground">{v.reserved} reservada(s) em pedidos em andamento: os itens só mudam depois que forem retirados ou cancelados.</p>}
+            </div>
           ))}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => setVariants((vs) => [...vs, { label: '', stock: isStock ? '0' : '', reserved: 0, is_active: true }])}><Plus className="h-4 w-4" /> Variação</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setVariants((vs) => [...vs, { label: '', uses: isStock ? [{ stock_item_id: '', quantity: '1' }] : [], reserved: 0, is_active: true }])}><Plus className="h-4 w-4" /> Variação</Button>
             <Button type="button" size="sm" variant="outline" onClick={addSizes}>Adicionar P, M, G, GG</Button>
           </div>
-        </fieldset>
+        </fieldset>}
 
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-        <Button type="submit" className="w-full" disabled={save.isPending}>{product ? 'Salvar' : 'Criar produto'}</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending}>{product ? 'Salvar' : isKit ? 'Criar kit' : 'Criar produto'}</Button>
       </form>
 
       {product ? (

@@ -37,7 +37,7 @@ export function slugify(name: string): string {
 
 export interface ProductDraft {
   name: string; kind: ProductKind; priceCents: number | null; discountPct: number; leadTimeDays: string | null
-  variants: { label: string; stock: number | null }[]
+  variants: { label: string; items: number }[]
 }
 
 /** Erros de preenchimento do produto (lista vazia = pode salvar). */
@@ -54,6 +54,19 @@ export function validateProductDraft(d: ProductDraft): string[] {
     if (labels.some((l) => !l)) errors.push('Toda variação precisa de um nome.')
     if (new Set(labels).size !== labels.length) errors.push('Há variações com o mesmo nome.')
   }
-  if (d.kind === 'stock' && d.variants.some((v) => v.stock === null || !Number.isInteger(v.stock) || v.stock < -1 || v.stock > 99)) errors.push('Informe o estoque de cada variação (de -1 a 99; -1 = ilimitado, 0 = esgotado).')
+  if (d.kind === 'stock' && d.variants.some((v) => v.items < 1)) errors.push('Escolha ao menos um item de estoque para cada variação.')
   return errors
+}
+
+/** Quantas unidades de uma variação os itens de estoque permitem (Infinity = só itens ilimitados; 0 = falta item, item inativo ou sem item). */
+export interface StockItemUnits { stock: number | null; reserved: number; is_active: boolean }
+export function variantUnits(uses: { stock_item_id: string; quantity: number }[], items: Map<string, StockItemUnits>): number {
+  if (uses.length === 0) return 0
+  let min = Infinity
+  for (const u of uses) {
+    const it = items.get(u.stock_item_id)
+    if (!it || !it.is_active) return 0
+    min = Math.min(min, Math.floor(availableUnits(it) / u.quantity))
+  }
+  return min
 }

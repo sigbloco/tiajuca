@@ -9,11 +9,13 @@ import { OrdersTab } from './OrdersTab'
 import { PaymentsTab } from './PaymentsTab'
 import { PickupPointsTab } from './PickupPointsTab'
 import { ProductsTab } from './ProductsTab'
+import { StockTab } from './StockTab'
 import { getSettings, missingSetup } from './settings'
 
 const TABS = [
   { key: 'orders', label: 'Pedidos' },
   { key: 'products', label: 'Produtos' },
+  { key: 'stock', label: 'Estoque' },
   { key: 'pickup', label: 'Pontos de retirada' },
   { key: 'payments', label: 'Configurações' },
 ] as const
@@ -44,7 +46,7 @@ export function ShopAdminPage() {
         ))}
         {canTheme && <Button asChild variant="outline" className="min-h-11"><Link to={`/${membership?.slug}/interface?area=shop`}><Palette className="h-4 w-4" /> Interface</Link></Button>}
       </div>
-      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
+      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
     </div>
   )
 }

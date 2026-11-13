@@ -7,22 +7,24 @@ import { Badge, Button, Card, EmptyState, Sheet, Skeleton } from '@/components/u
 import { formatCurrency } from '@/core/format'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
-import { fromCents, memberPriceCents, productAvailability } from '../catalog'
+import { fromCents, memberPriceCents, variantUnits } from '../catalog'
 import { ProductSheet } from './ProductSheet'
-import { imageUrl, listProducts, reorderProducts, setProductActive, type ShopProduct } from './service'
+import { imageUrl, listProducts, listStockItems, reorderProducts, setProductActive, type ShopProduct, type StockItem } from './service'
 import { getSettings } from './settings'
 
-function stockSummary(p: ShopProduct): string {
+function stockSummary(p: ShopProduct, items: Map<string, StockItem>): string {
   if (p.kind === 'made_to_order') return `Sob encomenda · ${p.lead_time_days ?? '?'}`
-  const a = productAvailability(p.kind, p.shop_product_variants)
-  if (a.status === 'sold_out') return 'Esgotado'
-  return a.units === Infinity ? 'Estoque ilimitado' : `${a.units} em estoque`
+  const units = p.shop_product_variants.filter((v) => v.is_active).reduce((n, v) => n + variantUnits(v.shop_variant_stock ?? [], items), 0)
+  if (units === 0) return 'Esgotado'
+  return units === Infinity ? 'Estoque ilimitado' : `${units} ${p.is_kit ? 'kit(s) possível(is)' : 'em estoque'}`
 }
 
 export function ProductsTab() {
   const orgId = useOrgId()
-  const [sheet, setSheet] = useState<'new' | string | null>(null)
+  const [sheet, setSheet] = useState<'new' | 'new-kit' | string | null>(null)
   const q = useQuery({ queryKey: ['shop', orgId, 'products'], queryFn: () => listProducts(orgId) })
+  const stock = useQuery({ queryKey: ['shop', orgId, 'stock'], queryFn: () => listStockItems(orgId) })
+  const itemsMap = new Map((stock.data ?? []).map((it) => [it.id, it]))
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const defaultDiscount = settings.data?.default_member_discount_pct ?? 0
   const qc = useQueryClient()
@@ -69,7 +71,7 @@ export function ProductsTab() {
     setDragId(null)
     if (local) save.mutate(local)
   }
-  const current = sheet && sheet !== 'new' ? q.data?.find((p) => p.id === sheet) ?? null : null
+  const current = sheet && sheet !== 'new' && sheet !== 'new-kit' ? q.data?.find((p) => p.id === sheet) ?? null : null
 
   return (
     <div className="space-y-3">
@@ -77,6 +79,7 @@ export function ProductsTab() {
         <h2 className="text-lg font-bold">Produtos</h2>
         <div className="flex gap-2">
           <TrashDrawer entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
+          <Button variant="outline" onClick={() => setSheet('new-kit')}><Plus className="h-4 w-4" /> Novo kit</Button>
           <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
         </div>
       </div>
@@ -100,7 +103,7 @@ export function ProductsTab() {
               {formatCurrency(fromCents(p.price_cents))}
               {p.member_discount_pct > 0 && <span className="text-muted-foreground"> · integrante {formatCurrency(fromCents(memberPriceCents(p.price_cents, p.member_discount_pct)))}</span>}
             </p>
-            <p className="text-sm text-muted-foreground">{stockSummary(p)}</p>
+            <p className="text-sm text-muted-foreground">{stockSummary(p, itemsMap)}</p>
           </div>
           <div className="flex shrink-0 flex-col">
             <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Subir ${p.name}`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
@@ -110,8 +113,9 @@ export function ProductsTab() {
         </Card>
       ))}
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
-        {current && <ProductSheet key={current.id} product={current} others={(q.data ?? []).filter((x) => x.id !== current.id)} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {current && <ProductSheet key={current.id} product={current} others={(q.data ?? []).filter((x) => x.id !== current.id)} stockItems={stock.data ?? []} onSaved={setSheet} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )
