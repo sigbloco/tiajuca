@@ -1,5 +1,6 @@
 import { ArrowLeft, Construction, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useExtraCrumbs } from '@/core/breadcrumb'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
@@ -39,10 +40,15 @@ export function AppShell() {
   const navigate = useNavigate()
   // Página de onde a pessoa veio dentro do app (só muda quando o caminho muda, não ao trocar de aba na mesma página).
   const lastPath = useRef(pathname)
-  const [previousPath, setPreviousPath] = useState<string | null>(null)
+  // O caminho completo da página (inclui a aba aberta) é guardado a cada tela; ao mudar de página, o da anterior vira o destino do Voltar.
+  const extras = useExtraCrumbs()
+  const trailRender = useRef<string | null>(null)
+  const trailCommitted = useRef<string | null>(null)
+  const [previous, setPrevious] = useState<{ path: string; trail: string | null } | null>(null)
   useEffect(() => {
-    if (pathname !== lastPath.current) { setPreviousPath(lastPath.current); lastPath.current = pathname }
-  }, [pathname])
+    if (pathname !== lastPath.current) { setPrevious({ path: lastPath.current, trail: trailCommitted.current }); lastPath.current = pathname }
+    trailCommitted.current = trailRender.current
+  })
   const cameFrom = (state as { from?: CameFrom } | null)?.from
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
@@ -92,9 +98,11 @@ export function AppShell() {
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
   const crumbs = crumbsFor(segs, base)
   // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
+  trailRender.current = ['Início', ...crumbs.map((c) => c.label), ...extras.filter((e) => e.level === 0).map((e) => e.title)].join(' • ')
   const backTrail = (() => {
-    if (!previousPath || previousPath === pathname || !previousPath.startsWith(base)) return null
-    const labels = crumbsFor(previousPath.slice(base.length).split('/').filter(Boolean), base).map((c) => c.label)
+    if (!previous || previous.path === pathname || !previous.path.startsWith(base)) return null
+    if (previous.trail) return previous.trail
+    const labels = crumbsFor(previous.path.slice(base.length).split('/').filter(Boolean), base).map((c) => c.label)
     return ['Início', ...labels].join(' • ')
   })()
   const isActive = (e: MenuEntry) => {

@@ -1,7 +1,7 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Badge, Button, Skeleton, cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
@@ -16,7 +16,7 @@ export function FormEditorPage() {
   const { formId = '' } = useParams()
   const { membership } = useOrganization()
   const { data: form, isLoading } = useForm(formId)
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('fields')
+  const [tab, setTab] = useRememberedState<(typeof TABS)[number]['key']>('formulario-aba', 'fields', TABS.map((t) => t.key))
   useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('fields'), true, 0)
   if (isLoading || !form) return <Skeleton className="h-40" />
   return (

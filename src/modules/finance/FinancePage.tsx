@@ -1,4 +1,5 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useState } from 'react'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
@@ -19,7 +20,7 @@ export function FinancePage() {
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)
   const [ym, setYm] = useState<YearMonth>({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('income')
+  const [tab, setTab] = useRememberedState<(typeof TABS)[number]['key']>('financeiro-aba', 'income', TABS.map((t) => t.key))
   useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('income'), true, 0)
   const competence = toCompetence(ym)
   return (

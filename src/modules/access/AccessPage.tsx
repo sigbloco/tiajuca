@@ -1,4 +1,5 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -148,7 +149,7 @@ function PermissionsTab() {
 }
 
 export function AccessPage() {
-  const [tab, setTab] = useState<'people' | 'perms'>('people')
+  const [tab, setTab] = useRememberedState<'people' | 'perms'>('acesso-aba', 'people', ['people', 'perms'])
   useRegisterCrumb(tab === 'people' ? 'Pessoas' : 'Permissões dos papéis', () => setTab('people'), true, 0)
   return (
     <div className="space-y-4">
