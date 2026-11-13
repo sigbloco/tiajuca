@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, RotateCcw, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
@@ -112,11 +113,11 @@ export function BackupsTab() {
               <div className="flex flex-wrap gap-1">
                 <Button size="sm" variant="outline" disabled={download.isPending} onClick={() => download.mutate(b)}><Download className="h-4 w-4" /> Baixar</Button>
                 <Button size="sm" variant="outline" disabled={restore.isPending}
-                  onClick={() => { if (window.confirm(`Restaurar “${b.label}”?\n\nOs dados voltam ao que eram neste backup (linhas apagadas ou alteradas depois são recuperadas). Um backup automático do estado atual é guardado antes.`)) restore.mutate(b) }}>
+                  onClick={async () => { if (await confirmBox(`Restaurar “${b.label}”?\n\nOs dados voltam ao que eram neste backup (linhas apagadas ou alteradas depois são recuperadas). Um backup automático do estado atual é guardado antes.`)) restore.mutate(b) }}>
                   <RotateCcw className="h-4 w-4" /> {restore.isPending ? 'Restaurando' : 'Restaurar'}
                 </Button>
                 <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${b.label}`} title="Excluir o backup"
-                  onClick={() => { if (window.confirm(`Excluir o backup “${b.label}”? Isso não pode ser desfeito.`)) remove.mutate(b) }}><Trash2 className="h-4 w-4" /></Button>
+                  onClick={async () => { if (await confirmBox(`Excluir o backup “${b.label}”? Isso não pode ser desfeito.`)) remove.mutate(b) }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           </Card>

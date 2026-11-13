@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { Lock } from 'lucide-react'
@@ -50,7 +51,7 @@ function TransferSheet({ onClose }: { onClose: () => void }) {
     <SheetContent title="Transferir titularidade" description="A nova pessoa passa a controlar tudo, inclusive a Direção. Você perde esse papel e todas as permissões ligadas a ele.">
       <MemberPicker value={to} onChange={setTo} />
       <p className="text-xs text-muted-foreground">A pessoa precisa ter conta de acesso vinculada ao cadastro.</p>
-      <Button disabled={!to || transfer.isPending} onClick={() => { if (window.confirm('Transferir a titularidade do bloco? Esta ação só pode ser desfeita pelo novo titular.')) transfer.mutate() }}>Transferir titularidade</Button>
+      <Button disabled={!to || transfer.isPending} onClick={async () => { if (await confirmBox('Transferir a titularidade do bloco? Esta ação só pode ser desfeita pelo novo titular.')) transfer.mutate() }}>Transferir titularidade</Button>
     </SheetContent>
   )
 }

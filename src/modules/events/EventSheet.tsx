@@ -1,3 +1,4 @@
+import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClipboardCheck, Pencil, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -143,7 +144,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
             {canManage && <Button variant="outline" size="icon" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
             {canManage && activity.status !== 'cancelled' && (
               <Button variant="outline" className="flex-1 text-destructive" disabled={changeStatus.isPending}
-                onClick={() => { const reason = window.prompt(`Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, ''); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
+                onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
                 Cancelar {cancelWord(activity.activity_types?.name)}
               </Button>
             )}

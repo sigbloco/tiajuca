@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -165,7 +166,7 @@ export function PickupPointsTab() {
             </div>
             <div className="flex shrink-0">
               <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet({ point: p })}><Pencil className="h-4 w-4" /></Button>
-              <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" onClick={() => { if (window.confirm(`Mover o ponto “${p.name}” para a lixeira? Você pode restaurar depois.`)) setActive.mutate({ id: p.id, active: false }) }}><Trash2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" onClick={async () => { if (await confirmBox(`Mover o ponto “${p.name}” para a lixeira? Você pode restaurar depois.`)) setActive.mutate({ id: p.id, active: false }) }}><Trash2 className="h-4 w-4" /></Button>
             </div>
           </Card>
         )

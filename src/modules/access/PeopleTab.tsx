@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -125,8 +126,8 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
             return (
               <Button key={r.key} size="sm" variant={on ? 'default' : 'outline'} disabled={toggle.isPending || blocked} aria-pressed={on}
                 title={blocked ? 'Somente o titular do bloco concede ou remove a Direção' : undefined}
-                onClick={() => {
-                  if (on && r.key === 'direcao' && !window.confirm('Remover o papel de Direção desta pessoa?')) return
+                onClick={async () => {
+                  if (on && r.key === 'direcao' && !(await confirmBox('Remover o papel de Direção desta pessoa?'))) return
                   toggle.mutate({ member: p.id, role: r.key, on: !on })
                 }}>
                 {blocked && <Lock className="h-3 w-3" />}{r.label}

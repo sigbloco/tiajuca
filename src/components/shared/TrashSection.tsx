@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { ChevronDown, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button, Card } from '@/components/ui/primitives'
@@ -42,7 +43,7 @@ export function TrashSection({ entries, onRestore, onPurge }: {
             <Button size="icon" variant="outline" aria-label={`Restaurar ${e.name}`} title="Restaurar" onClick={() => onRestore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
             {onPurge && (
               <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${e.name} de vez`} title="Excluir de vez"
-                onClick={() => { if (window.confirm(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) onPurge(e.id) }}><Trash2 className="h-4 w-4" /></Button>
+                onClick={async () => { if (await confirmBox(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) onPurge(e.id) }}><Trash2 className="h-4 w-4" /></Button>
             )}
           </div>
         </Card>

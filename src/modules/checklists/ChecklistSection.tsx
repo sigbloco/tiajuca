@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { ArrowDown, ArrowUp, CheckCircle2, Circle, CircleDot, MessageSquare, Trash2, UserRound, X } from 'lucide-react'
@@ -95,7 +96,7 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
                 <div className="flex">
                   <Button size="icon" variant="ghost" aria-label="Subir" disabled={idx === 0} onClick={() => reorder.mutate({ from: idx, to: idx - 1 })}><ArrowUp className="h-4 w-4" /></Button>
                   <Button size="icon" variant="ghost" aria-label="Descer" disabled={idx === list.length - 1} onClick={() => reorder.mutate({ from: idx, to: idx + 1 })}><ArrowDown className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => { if (window.confirm('Remover esta tarefa do evento?')) remove.mutate(i.id) }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" aria-label="Remover" onClick={async () => { if (await confirmBox('Remover esta tarefa do evento?')) remove.mutate(i.id) }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               )}
             </div>

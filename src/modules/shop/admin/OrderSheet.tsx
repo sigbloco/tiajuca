@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -62,7 +63,7 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
           <section className="space-y-2 rounded-lg border border-border p-3">
             <p className="font-semibold">{order.status === 'payment_review' ? 'O cliente avisou que pagou' : 'Aguardando o pagamento'}</p>
             <p className="text-muted-foreground">Confira o pagamento de <strong>{money(order.total_cents)}</strong> (referência <strong>{order.code}</strong>) antes de confirmar.</p>
-            <Button className="w-full" disabled={act.isPending} onClick={() => window.confirm(`Confirmar que o pagamento de ${money(order.total_cents)} foi recebido?`) && act.mutate(() => markPaid(order.id))}>Marcar como pago</Button>
+            <Button className="w-full" disabled={act.isPending} onClick={async () => await confirmBox(`Confirmar que o pagamento de ${money(order.total_cents)} foi recebido?`) && act.mutate(() => markPaid(order.id))}>Marcar como pago</Button>
           </section>
         )}
         {order.status === 'paid' && (
@@ -83,7 +84,7 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
                   <p className="flex items-center justify-between gap-2"><span className="font-semibold">{KIND_LABEL[f.kind]}</span><Badge>{fulfillmentLabel(f.kind, f.status)}</Badge></p>
                   <div className="flex flex-wrap gap-2">
                     {steps.next && <Button size="sm" disabled={act.isPending} onClick={() => act.mutate(() => setFulfillment(order.id, f.kind, steps.next as FulfillmentStatus))}>Marcar: {fulfillmentLabel(f.kind, steps.next)}</Button>}
-                    {steps.back && <Button size="sm" variant="outline" disabled={act.isPending} onClick={() => window.confirm('Voltar um passo?') && act.mutate(() => setFulfillment(order.id, f.kind, steps.back as FulfillmentStatus))}>Voltar para: {fulfillmentLabel(f.kind, steps.back)}</Button>}
+                    {steps.back && <Button size="sm" variant="outline" disabled={act.isPending} onClick={async () => await confirmBox('Voltar um passo?') && act.mutate(() => setFulfillment(order.id, f.kind, steps.back as FulfillmentStatus))}>Voltar para: {fulfillmentLabel(f.kind, steps.back)}</Button>}
                   </div>
                 </div>
               )
@@ -92,13 +93,13 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
         )}
 
         {a.canReactivate && (
-          <Button variant="outline" className="w-full" disabled={act.isPending} onClick={() => window.confirm('Reativar este pedido? O estoque será reservado de novo.') && act.mutate(() => reactivateOrder(order.id))}>Reativar pedido</Button>
+          <Button variant="outline" className="w-full" disabled={act.isPending} onClick={async () => await confirmBox('Reativar este pedido? O estoque será reservado de novo.') && act.mutate(() => reactivateOrder(order.id))}>Reativar pedido</Button>
         )}
         {a.canCancel && (
           <section className="space-y-2">
             <Input aria-label="Motivo do cancelamento" placeholder="Motivo do cancelamento (opcional)" value={reason} onChange={(e) => setReason(e.target.value)} />
             <Button variant="ghost" className="w-full text-destructive" disabled={act.isPending}
-              onClick={() => window.confirm('Cancelar este pedido? Os itens em estoque voltam para a venda. Reembolsos são feitos por fora do sistema.') && act.mutate(() => cancelOrder(order.id, reason))}>Cancelar pedido</Button>
+              onClick={async () => await confirmBox('Cancelar este pedido? Os itens em estoque voltam para a venda. Reembolsos são feitos por fora do sistema.') && act.mutate(() => cancelOrder(order.id, reason))}>Cancelar pedido</Button>
           </section>
         )}
 

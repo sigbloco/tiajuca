@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
 import { ArrowDown, ArrowUp, Music2, Pencil, Plus, Save } from 'lucide-react'
@@ -43,8 +44,8 @@ export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onCl
         <div className="space-y-1.5"><Label htmlFor="rp-desc">Descrição</Label><Input id="rp-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
         <Button type="submit" className="w-full" disabled={!f.name.trim() || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
         {rep && (
-          <Button type="button" variant="ghost" className={rep.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
-            if (!rep.is_active || window.confirm('Mover este repertório para a lixeira? As músicas e o histórico são mantidos e você pode restaurar depois.')) toggle.mutate()
+          <Button type="button" variant="ghost" className={rep.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
+            if (!rep.is_active || await confirmBox('Mover este repertório para a lixeira? As músicas e o histórico são mantidos e você pode restaurar depois.')) toggle.mutate()
           }}>{rep.is_active ? 'Mover para a lixeira' : 'Restaurar repertório'}</Button>
         )}
       </form>

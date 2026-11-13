@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, MessageCircle, Pencil, Phone, Plus, Save, Tags } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -88,8 +89,8 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
           <Input id="sp-notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
         <Button type="submit" className="w-full" disabled={!f.name.trim() || !f.category_id || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
         {sup && (
-          <Button type="button" variant="ghost" className={sup.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
-            if (!sup.is_active || window.confirm('Mover este fornecedor para a lixeira? Você pode restaurar depois.')) toggle.mutate()
+          <Button type="button" variant="ghost" className={sup.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
+            if (!sup.is_active || await confirmBox('Mover este fornecedor para a lixeira? Você pode restaurar depois.')) toggle.mutate()
           }}>{sup.is_active ? 'Mover para a lixeira' : 'Restaurar fornecedor'}</Button>
         )}
       </form>

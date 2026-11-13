@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useUnsaved } from '@/core/unsaved'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { socialUrl } from '@/core/social'
@@ -175,7 +176,7 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
                 <Button type="button" variant="ghost" className="text-destructive" disabled={save.isPending}
-                  onClick={() => { if (window.confirm(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
+                  onClick={async () => { if (await confirmBox(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
                   {admin ? 'Apagar dados sensíveis' : 'Apagar meus dados sensíveis'}
                 </Button>
               </div>

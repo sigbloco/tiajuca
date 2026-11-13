@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { DialogHost } from '@/components/shared/DialogHost'
 import { router } from '@/app/routes'
 import { AuthProvider } from '@/core/auth'
 import { startGlueConnectives } from '@/core/glueConnectives'
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <RouterProvider router={router} />
         <Toaster position="top-center" richColors />
+        <DialogHost />
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

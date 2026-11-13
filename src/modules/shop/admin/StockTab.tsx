@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
@@ -98,9 +99,9 @@ export function StockTab() {
               <p className="text-sm text-muted-foreground">{uses.length === 0 ? 'Nenhum produto usa este item ainda.' : `Usado em: ${uses.join('; ')}`}</p>
             </div>
             <Button size="icon" variant="ghost" aria-label={`Editar ${it.name}`} onClick={() => setSheet(it.id)}><Pencil className="h-4 w-4" /></Button>
-            <Button size="icon" variant="ghost" aria-label={`Mover ${it.name} para a lixeira`} title="Mover para a lixeira" onClick={() => {
+            <Button size="icon" variant="ghost" aria-label={`Mover ${it.name} para a lixeira`} title="Mover para a lixeira" onClick={async () => {
               if (uses.length > 0) return toast.error(`Ainda há produtos usando este item: ${uses.join('; ')}. Tire o item deles primeiro.`)
-              if (window.confirm('Mover este item para a lixeira? Você pode restaurar depois.')) setActive.mutate({ id: it.id, active: false })
+              if (await confirmBox('Mover este item para a lixeira? Você pode restaurar depois.')) setActive.mutate({ id: it.id, active: false })
             }}><Trash2 className="h-4 w-4" /></Button>
           </Card>
         )

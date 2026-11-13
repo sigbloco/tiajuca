@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -116,7 +117,7 @@ export function ProductsTab() {
           </div>
           <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet(p.id)}><Pencil className="h-4 w-4" /></Button>
           <Button size="icon" variant="ghost" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
-            onClick={() => window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
+            onClick={async () => await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
         </Card>
       ))}
       <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />

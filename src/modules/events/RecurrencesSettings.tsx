@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
@@ -214,7 +215,7 @@ export function RecurrencesSettings() {
             <div className="flex shrink-0 gap-1">
               <Button size="icon" variant="ghost" aria-label={'Restaurar ' + r.title} title="Restaurar" disabled={reactivate.isPending} onClick={() => reactivate.mutate(r.id)}><Undo2 className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="text-destructive" aria-label={'Apagar ' + r.title + ' de vez'} title="Apagar de vez" disabled={remove.isPending}
-                onClick={() => { if (window.confirm('Apagar de vez esta recorrência e os eventos gerados por ela? Isso não pode ser desfeito. Eventos com presença registrada são mantidos no histórico.')) remove.mutate(r.id) }}><Trash2 className="h-4 w-4" /></Button>
+                onClick={async () => { if (await confirmBox('Apagar de vez esta recorrência e os eventos gerados por ela? Isso não pode ser desfeito. Eventos com presença registrada são mantidos no histórico.')) remove.mutate(r.id) }}><Trash2 className="h-4 w-4" /></Button>
             </div>
           </Card>
         ))}

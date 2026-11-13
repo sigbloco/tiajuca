@@ -1,3 +1,4 @@
+import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ban, ClipboardCheck, Pencil, Undo2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -60,7 +61,7 @@ export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index
             {canRecord && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>}
             {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>}
             {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
-              onClick={() => { const reason = window.prompt(`Cancelar ${cancelWord(t?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, ''); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /> Cancelar</Button>}
+              onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(t?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /> Cancelar</Button>}
           </div>
         )}
         {canManage && a.status === 'cancelled' && (

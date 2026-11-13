@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Download, Eye, EyeOff, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -167,7 +168,7 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
         <h2>Respostas</h2>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4" /> CSV</Button>
-          <Button variant="ghost" size="sm" disabled={purge.isPending} onClick={() => { if (window.confirm('Remover respostas antigas? Rejeitadas/arquivadas há mais de 12 meses e pendentes há mais de 6 meses. Aprovadas não são afetadas.')) purge.mutate() }}>Aplicar retenção</Button>
+          <Button variant="ghost" size="sm" disabled={purge.isPending} onClick={async () => { if (await confirmBox('Remover respostas antigas? Rejeitadas/arquivadas há mais de 12 meses e pendentes há mais de 6 meses. Aprovadas não são afetadas.')) purge.mutate() }}>Aplicar retenção</Button>
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
