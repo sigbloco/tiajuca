@@ -37,6 +37,12 @@ export function AppShell() {
   const { signOut } = useAuth()
   const { pathname, state } = useLocation()
   const navigate = useNavigate()
+  // Página de onde a pessoa veio dentro do app (só muda quando o caminho muda, não ao trocar de aba na mesma página).
+  const lastPath = useRef(pathname)
+  const [previousPath, setPreviousPath] = useState<string | null>(null)
+  useEffect(() => {
+    if (pathname !== lastPath.current) { setPreviousPath(lastPath.current); lastPath.current = pathname }
+  }, [pathname])
   const cameFrom = (state as { from?: CameFrom } | null)?.from
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
@@ -85,6 +91,12 @@ export function AppShell() {
   ]
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
   const crumbs = crumbsFor(segs, base)
+  // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
+  const backTrail = (() => {
+    if (!previousPath || previousPath === pathname || !previousPath.startsWith(base)) return null
+    const labels = crumbsFor(previousPath.slice(base.length).split('/').filter(Boolean), base).map((c) => c.label)
+    return ['Início', ...labels].join(' • ')
+  })()
   const isActive = (e: MenuEntry) => {
     const rest = pathname.slice(base.length).replace(/^\//, '')
     const first = rest.split('/')[0]
@@ -138,7 +150,7 @@ export function AppShell() {
                 else if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
                 else navigate(base)
               }}>
-              <ArrowLeft className="h-4 w-4" /> Voltar{cameFrom ? ` para ${cameFrom.label}` : ''}
+              <ArrowLeft className="h-4 w-4" /> Voltar{cameFrom ? ` para ${cameFrom.label}` : backTrail ? ` para ${backTrail}` : ''}
             </button>
           )}
           <Breadcrumbs crumbs={crumbs} home={base} />
