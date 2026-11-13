@@ -111,10 +111,6 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
           {preview.expired > 0 && <span className="text-muted-foreground"> ({preview.expired} data(s) já passada(s) não aparece(m))</span>}</p>}
         {!person && slots.length > 0 && !hasFutureSlot(slots, today) && <p role="alert" className="text-sm text-destructive">Todas as datas já passaram: este ponto não vai aparecer no checkout.</p>}
 
-        <label className="flex min-h-11 items-center gap-3">
-          <input type="checkbox" className="h-5 w-5" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} />
-          Disponível no checkout
-        </label>
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
         <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
       </form>
