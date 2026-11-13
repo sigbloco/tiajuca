@@ -53,7 +53,7 @@ begin
                         select 1 from public.member_artistic_links l join public.instruments i on i.id = l.instrument_id
                         where l.member_id = m.id and l.ended_at is null
                           and ((au.kind = 'instrument' and i.id = au.ref_id)
-                            or (au.kind = 'section' and i.section_id = au.ref_id))))))))
+                            or (au.kind = 'section' and i.section_id = au.ref_id)))))))))
   ), picked as (
     select e.mid, false as off from eligible e
     union
