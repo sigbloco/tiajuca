@@ -71,7 +71,9 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   })
   const functions = (funcs.data ?? []).filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order)
   const isExempt = (f: CatalogItem) => !!f.is_exempt || !!f.exempt_locked
-  const exemptNames = functions.filter(isExempt).map((f) => f.name)
+  // Mesmo nome em duas seções (ex.: Monitor remunerado e Monitor colaborativo): mostra a seção entre parênteses.
+  const dupNames = new Set(functions.map((f) => f.name.toLowerCase()).filter((n, i, all) => all.indexOf(n) !== i))
+  const exemptNames = functions.filter(isExempt).map((f) => (dupNames.has(f.name.toLowerCase()) ? `${f.name} (${f.kind === 'paid' ? 'remunerado' : f.kind === 'artistic' ? 'artístico' : 'colaborativo'})` : f.name))
   const payers = functions.filter((f) => !isExempt(f)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const byName = new Map((cats.data ?? []).map((c) => [c.name.toLowerCase(), c]))
 
