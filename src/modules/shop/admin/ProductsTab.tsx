@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency } from '@/core/format'
 import { friendlyError } from '@/core/errors'
@@ -37,6 +37,7 @@ export function ProductsTab() {
     const ordered = local.map((id) => byId.get(id)).filter((p): p is ShopProduct => Boolean(p))
     return [...ordered, ...list.filter((p) => !local.includes(p.id))]
   })()
+  const paged = usePaged(items)
   const restore = useMutation({
     mutationFn: (id: string) => setProductActive(id, true),
     onSuccess: () => { toast.success('Produto restaurado na loja.'); qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }) },
@@ -83,7 +84,6 @@ export function ProductsTab() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Produtos</h2>
         <div className="flex gap-2">
-          <TrashDrawer entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
           <Button variant="outline" onClick={() => setSheet('new-kit')}><Plus className="h-4 w-4" /> Novo kit</Button>
           <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
         </div>
@@ -91,7 +91,7 @@ export function ProductsTab() {
       {q.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
       {q.data?.length === 0 && <EmptyState>Nenhum produto ainda. Crie o primeiro.</EmptyState>}
-      {items.map((p, i) => (
+      {paged.visible.map((p, i) => (
         <Card key={p.id} data-pid={p.id} className={`flex items-center gap-2 p-3 ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
           <button type="button" aria-label={`Arrastar ${p.name}`} title="Arraste para reordenar" style={{ touchAction: 'none' }}
             className="shrink-0 cursor-grab rounded p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing"
@@ -119,6 +119,8 @@ export function ProductsTab() {
             onClick={() => window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
         </Card>
       ))}
+      <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
+      <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
         {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
