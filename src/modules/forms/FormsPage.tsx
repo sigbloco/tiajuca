@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -28,12 +29,12 @@ function NewFormSheet() {
   })
   return (
     <SheetContent title="Novo formulário" description="Começa como rascunho; só vai ao ar quando você publicar.">
-      <form onSubmit={(e) => { e.preventDefault(); if (title.trim()) create.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="nf-title">Título</Label><Input id="nf-title" required value={title} onChange={(e) => { setTitle(e.target.value); setSlug(slugify(e.target.value)) }} /></div>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', title.trim()]])) create.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="nf-title" required>Título</Label><Input id="nf-title" required value={title} onChange={(e) => { setTitle(e.target.value); setSlug(slugify(e.target.value)) }} /></div>
         <div className="space-y-1.5"><Label htmlFor="nf-slug">Endereço (final do link)</Label>
           <Input id="nf-slug" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} />
           <p className="text-xs text-muted-foreground">{membership ? publicUrl(membership.slug, slug || '—') : ''}</p></div>
-        <Button type="submit" className="w-full" disabled={!title.trim() || create.isPending}>Criar</Button>
+        <Button type="submit" className="w-full" disabled={create.isPending}>Criar</Button>
       </form>
     </SheetContent>
   )

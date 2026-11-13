@@ -57,7 +57,7 @@ export function InactiveNotice() {
       {mine?.status !== 'pending' && !open && <Button onClick={() => setOpen(true)}>Pedir para voltar</Button>}
       {open && (
         <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); send.mutate() }}>
-          <textarea rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" placeholder="Quer deixar um recado? (opcional)"
+          <textarea rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" placeholder="Quer deixar um recado?"
             value={message} onChange={(e) => setMessage(e.target.value)} />
           <div className="flex gap-2">
             <Button type="submit" disabled={send.isPending}>Enviar pedido</Button>

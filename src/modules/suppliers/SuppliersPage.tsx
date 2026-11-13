@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, MessageCircle, Pencil, Phone, Plus, Save, Tags } from 'lucide-react'
@@ -72,10 +73,10 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
   })
   return (
     <SheetContent title={sup ? 'Editar fornecedor' : 'Novo fornecedor'} description="Contato de quem presta serviço ao bloco.">
-      <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim() && f.category_id) save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="sp-name">Nome (pessoa ou empresa)</Label>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome', f.name.trim()], ['Categoria', f.category_id]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="sp-name" required>Nome (pessoa ou empresa)</Label>
           <Input id="sp-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="sp-cat">Categoria</Label>
+        <div className="space-y-1.5"><Label htmlFor="sp-cat" required>Categoria</Label>
           <Select id="sp-cat" required value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })}>
             <option value="" disabled>Escolha</option>
             {categories.filter((c) => c.is_active || c.id === f.category_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -87,7 +88,7 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
           <Input id="sp-site" placeholder="https://" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="sp-notes">Observações</Label>
           <Input id="sp-notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || !f.category_id || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
         {sup && (
           <Button type="button" variant="ghost" className={sup.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
             if (!sup.is_active || await confirmBox('Mover este fornecedor para a lixeira? Você pode restaurar depois.')) toggle.mutate()
@@ -122,9 +123,9 @@ function CategoriesSheet({ categories, onClose }: { categories: SupplierCategory
   return (
     <SheetContent title="Categorias de fornecedores" description="Ex.: Sonorização, Tenda, Fotógrafo.">
       <div className="space-y-3">
-        <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) add.mutate() }} className="flex gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome', name.trim()]])) add.mutate() }} className="flex gap-2">
           <Input aria-label="Nova categoria" placeholder="Nova categoria" value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit" disabled={!name.trim() || add.isPending}>Adicionar</Button>
+          <Button type="submit" disabled={add.isPending}>Adicionar</Button>
         </form>
         <ul className="space-y-2">
           {categories.filter((c) => c.is_active).map((c) => (

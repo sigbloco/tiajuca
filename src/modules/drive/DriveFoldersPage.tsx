@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
@@ -109,9 +110,9 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
 
   return (
     <SheetContent title={folder ? 'Editar pasta' : 'Adicionar pasta do Google Drive'} description="Defina o link e quem enxerga esta pasta no app.">
-      <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim() && urlOk) save.mutate() }} className="space-y-4">
-        <div className="space-y-1.5"><Label htmlFor="df-name">Nome</Label><Input id="df-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="df-url">Link da pasta no Google Drive</Label>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome', f.name.trim()], ['Link do Google Drive válido (drive.google.com ou docs.google.com)', urlOk]])) save.mutate() }} className="space-y-4">
+        <div className="space-y-1.5"><Label htmlFor="df-name" required>Nome</Label><Input id="df-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="df-url" required>Link da pasta no Google Drive</Label>
           <Input id="df-url" required placeholder="https://drive.google.com/drive/folders/" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} />
           {f.url && !urlOk && <p className="text-xs text-destructive">Use o link da pasta (drive.google.com ou docs.google.com).</p>}</div>
         <div className="space-y-1.5"><Label htmlFor="df-desc">Descrição</Label><Input id="df-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
@@ -129,7 +130,7 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
         <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">
           O app controla quem vê o <strong>atalho</strong>. Quem abrir a pasta ainda precisa ter acesso no próprio Google Drive: compartilhe a pasta lá com quem deve entrar.
         </p>
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
         {folder && (
           <Button type="button" variant="ghost" className={folder.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
             if (!folder.is_active || await confirmBox('Mover esta pasta para a lixeira? Ela some do app, o cadastro é mantido e você pode restaurar depois.')) toggleActive.mutate()

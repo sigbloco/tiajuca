@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -27,7 +28,6 @@ function CycleSheet({ cycle, onClose }: { cycle: Cycle | null; onClose: () => vo
   const qc = useQueryClient()
   const { data: types } = useCycleTypes()
   const [form, setForm] = useState({ cycle_type_id: cycle?.cycle_type_id ?? '', name: cycle?.name ?? '', start: cycle ? toMonthValue(cycle.starts_on) : '', end: cycle ? toMonthValue(cycle.ends_on) : '' })
-  const valid = form.cycle_type_id && form.name.trim() && form.start && form.end && form.end >= form.start
   const save = useMutation({
     mutationFn: async () => {
       const row = { cycle_type_id: form.cycle_type_id, name: form.name.trim(), starts_on: firstDay(form.start), ends_on: lastDay(form.end) }
@@ -42,20 +42,20 @@ function CycleSheet({ cycle, onClose }: { cycle: Cycle | null; onClose: () => vo
   })
   return (
     <SheetContent title={cycle ? 'Editar ciclo' : 'Novo ciclo'} description="Ex.: Carnaval 2026/27 ou Junino 2027. Só o mês e o ano importam.">
-      <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Tipo', form.cycle_type_id], ['Nome', form.name.trim()], ['Início', form.start], ['Fim', form.end], ['Fim igual ou depois do início', !(form.start && form.end && form.end < form.start)]])) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="cy-type">Tipo</Label>
+          <Label htmlFor="cy-type" required>Tipo</Label>
           <Select id="cy-type" required value={form.cycle_type_id} onChange={(e) => setForm({ ...form, cycle_type_id: e.target.value })}>
             <option value="">Selecione</option>
             {types?.filter((t) => t.is_active || t.id === form.cycle_type_id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </div>
-        <div className="space-y-1.5"><Label htmlFor="cy-name">Nome</Label><Input id="cy-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="cy-name" required>Nome</Label><Input id="cy-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5"><Label htmlFor="cy-start">Início (mês e ano)</Label><MonthInput id="cy-start" required value={form.start} onChange={(v) => setForm({ ...form, start: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="cy-end">Término (mês e ano)</Label><MonthInput id="cy-end" required value={form.end} onChange={(v) => setForm({ ...form, end: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="cy-start" required>Início (mês e ano)</Label><MonthInput id="cy-start" required value={form.start} onChange={(v) => setForm({ ...form, start: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="cy-end" required>Término (mês e ano)</Label><MonthInput id="cy-end" required value={form.end} onChange={(v) => setForm({ ...form, end: v })} /></div>
         </div>
-        <Button type="submit" className="w-full" disabled={!valid || save.isPending}>{cycle ? 'Salvar' : 'Criar ciclo'}</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending}>{cycle ? 'Salvar' : 'Criar ciclo'}</Button>
         {form.start && form.end && form.end < form.start && <p className="text-sm text-destructive">O término deve ser depois do início.</p>}
       </form>
     </SheetContent>

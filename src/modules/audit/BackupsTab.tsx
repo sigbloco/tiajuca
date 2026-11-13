@@ -92,7 +92,7 @@ export function BackupsTab() {
       </Card>
 
       <Card className="flex flex-wrap items-center gap-2 p-3">
-        <Input className="min-w-48 flex-1" aria-label="Nome do backup" placeholder="Nome do backup (opcional)" value={label} onChange={(e) => setLabel(e.target.value)} />
+        <Input className="min-w-48 flex-1" aria-label="Nome do backup" placeholder="Nome do backup" value={label} onChange={(e) => setLabel(e.target.value)} />
         <Button disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? 'Criando' : 'Criar backup agora'}</Button>
         <input ref={fileRef} type="file" accept="application/json,.json" className="sr-only" aria-label="Carregar arquivo de backup"
           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) upload.mutate(f) }} />

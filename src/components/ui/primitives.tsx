@@ -49,8 +49,13 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 ))
 Input.displayName = 'Input'
 
-export const Label = ({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) => (
-  <label className={cn('text-sm font-semibold', className)} {...props} />
+/** `required` mostra o asterisco vermelho; campo sem `required` é opcional (não se escreve "(opcional)"). */
+export const Label = ({ className, required, children, ...props }: LabelHTMLAttributes<HTMLLabelElement> & { required?: boolean }) => (
+  <label className={cn('text-sm font-semibold', className)} {...props}>
+    {children}
+    {required && <span aria-hidden className="ml-0.5 font-bold text-destructive">*</span>}
+    {required && <span className="sr-only"> (obrigatório)</span>}
+  </label>
 )
 
 export const Card = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (

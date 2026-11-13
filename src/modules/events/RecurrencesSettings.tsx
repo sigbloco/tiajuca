@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2, Undo2 } from 'lucide-react'
@@ -81,8 +82,8 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   })
   return (
     <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Ao salvar, as próximas datas já geradas são atualizadas; as passadas não mudam.">
-      <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="r-title">Título</Label><Input id="r-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['A partir de', f.starts_on], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="r-title" required>Título</Label><Input id="r-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5">
           <Label>Cor no calendário</Label>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor no calendário">
@@ -103,7 +104,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
         <ItineraryEditor steps={steps} onChange={setSteps} />
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5"><Label htmlFor="r-from">A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
+            <div className="space-y-1.5"><Label htmlFor="r-from" required>A partir de</Label><DateInput id="r-from" required value={f.starts_on} onChange={(v) => setF({ ...f, starts_on: v })} /></div>
             <div className="space-y-1.5"><Label htmlFor="r-until">Até</Label><DateInput id="r-until" min={f.starts_on || undefined} value={f.until} onChange={(v) => setF({ ...f, until: v })} /></div>
           </div>
           <AudiencePicker value={auds} onChange={setAuds} />
@@ -114,7 +115,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             </Select>
           </div>
         </div>
-        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
       </form>
     </SheetContent>
   )

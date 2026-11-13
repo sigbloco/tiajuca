@@ -14,7 +14,7 @@ export function balancedCols(n: number, max = 3): number {
   return best
 }
 
-// Larguras fixas (o Tailwind precisa enxergar as classes inteiras). A última linha, se incompleta, fica centralizada.
+// Larguras fixas (o Tailwind precisa enxergar as classes inteiras). A última linha, se incompleta, estica para ocupar a largura toda.
 const W2 = 'sm:w-[calc((100%-0.75rem)/2)]'
 const L2 = 'lg:w-[calc((100%-0.75rem)/2)]'
 const L3 = 'lg:w-[calc((100%-1.5rem)/3)]'
@@ -26,9 +26,10 @@ const L3 = 'lg:w-[calc((100%-1.5rem)/3)]'
 export function BalancedGrid({ children, max = 3, className = '' }: { children: ReactNode; max?: 2 | 3; className?: string }) {
   const items = Children.toArray(children)
   const cols = balancedCols(items.length, max)
-  const itemCls = cols >= 3 ? `w-full ${W2} ${L3}` : cols === 2 ? `w-full ${W2} ${L2}` : 'w-full'
+  // `grow`: a última linha, se incompleta, estica as caixas para ocupar 100% da largura.
+  const itemCls = cols >= 3 ? `w-full grow ${W2} ${L3}` : cols === 2 ? `w-full grow ${W2} ${L2}` : 'w-full'
   return (
-    <div className={`flex flex-wrap justify-center gap-3 ${className}`}>
+    <div className={`flex flex-wrap gap-3 ${className}`}>
       {items.map((c, i) => <div key={i} className={`flex min-w-0 [&>*]:w-full ${itemCls}`}>{c}</div>)}
     </div>
   )

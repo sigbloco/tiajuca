@@ -152,7 +152,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
           <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked, skill_level_id: e.target.checked ? f.skill_level_id : '' })} /> Aluno</label>
           {f.is_student && (
             <Select value={f.skill_level_id} aria-label="Nível" onChange={(e) => setF({ ...f, skill_level_id: e.target.value })}>
-              <option value="">Nível (opcional)</option>
+              <option value="">Nível</option>
               {active(levels.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </Select>
           )}

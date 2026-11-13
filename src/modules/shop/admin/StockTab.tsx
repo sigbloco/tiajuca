@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2, X } from 'lucide-react'
@@ -21,7 +22,6 @@ function ItemSheet({ item, minStock, onClose }: { item: StockItem | null; minSto
   const [unlimited, setUnlimited] = useState(item ? item.stock === null : false)
   const [qty, setQty] = useState(item?.stock === null || !item ? '0' : String(item.stock))
   const stock = unlimited ? null : Number(qty)
-  const valid = name.trim().length > 0 && (unlimited || (Number.isInteger(stock) && stock! >= minStock))
   const save = useMutation({
     mutationFn: () => (item ? updateStockItem(item.id, { name: name.trim(), stock }) : createStockItem(orgId, name, stock)),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'stock'] }); toast.success(item ? 'Item atualizado.' : 'Item criado.'); onClose() },
@@ -29,20 +29,20 @@ function ItemSheet({ item, minStock, onClose }: { item: StockItem | null; minSto
   })
   return (
     <SheetContent title={item ? 'Editar item de estoque' : 'Novo item de estoque'} description="Um item é algo que você guarda e vende, avulso ou dentro de um kit.">
-      <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="st-name">Nome</Label>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome', name.trim()], ['Quantidade em estoque' + (minStock > 0 ? ' (mínimo ' + minStock + ')' : ''), unlimited || (Number.isInteger(stock) && stock! >= minStock)]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="st-name" required>Nome</Label>
           <Input id="st-name" placeholder="Ex.: Adesivo Carnaval 2027" value={name} onChange={(e) => setName(e.target.value)} /></div>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" className="h-4 w-4" checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
           Estoque ilimitado (não controlar quantidade)
         </label>
         {!unlimited && (
-          <div className="space-y-1.5"><Label htmlFor="st-qty">Quantidade em estoque</Label>
+          <div className="space-y-1.5"><Label htmlFor="st-qty" required>Quantidade em estoque</Label>
             <Input id="st-qty" type="number" min={minStock} step={1} value={qty} onChange={(e) => setQty(e.target.value)} />
             {minStock > 0 && <p className="text-xs text-muted-foreground">Não pode ficar abaixo de {minStock}, que já estão reservadas em pedidos em andamento.</p>}</div>
         )}
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!valid || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+          <Button type="submit" className="flex-1" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           <Button type="button" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
       </form>

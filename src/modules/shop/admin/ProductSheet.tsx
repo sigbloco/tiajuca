@@ -249,7 +249,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     <SheetContent titleAction={product ? <Button type="button" size="icon" variant="outline" className="h-8 w-8" aria-label="Duplicar" title="Duplicar: cria uma cópia para você ajustar" disabled={dup.isPending} onClick={() => dup.mutate()}><Copy className="h-4 w-4" /></Button> : undefined} title={isKit ? (product ? 'Editar kit' : 'Novo kit') : (product ? 'Editar produto' : 'Novo produto')} description={isKit ? 'Preço do kit, itens de estoque que entram nele e fotos.' : 'Preço público, desconto de integrante, variações, estoque e fotos.'}>
       {topSlot ? createPortal(actionBar, topSlot) : actionBar}
       <form id="product-form" onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="pr-name">Nome</Label>
+        <div className="space-y-1.5"><Label htmlFor="pr-name" required>Nome</Label>
           <Input id="pr-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         {!isKit && <div className="space-y-1.5"><Label htmlFor="pr-kind">Tipo</Label>
           <Select id="pr-kind" value={f.kind} disabled={kindLocked} onChange={(e) => {
@@ -266,7 +266,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           <textarea id="pr-desc" rows={3} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
         <div className="grid grid-cols-2 items-end gap-3">
-          <div className="space-y-1.5"><Label htmlFor="pr-price">Preço público</Label><MoneyInput id="pr-price" value={f.price} onChange={(v) => setF({ ...f, price: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="pr-price" required>Preço público</Label><MoneyInput id="pr-price" value={f.price} onChange={(v) => setF({ ...f, price: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="pr-disc">Desconto de integrante</Label>
             <div className="flex items-center gap-2"><Input id="pr-disc" inputMode="decimal" className="w-16 text-center" maxLength={5} value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value.replace(/[^\d.,]/g, '') })} /><span className="font-semibold">%</span></div></div>
         </div>
@@ -278,11 +278,11 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           Produto em destaque (aparece na seção do alto da loja)
         </label>
         {!isStock && (
-          <div className="space-y-1.5"><Label htmlFor="pr-lead">Prazo de produção</Label>
+          <div className="space-y-1.5"><Label htmlFor="pr-lead" required>Prazo de produção</Label>
             <Input id="pr-lead" placeholder="Ex.: 10-15 dias úteis" value={f.leadTime} onChange={(e) => setF({ ...f, leadTime: e.target.value })} /></div>
         )}
         {!isStock && (
-          <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir (opcional)</Label>
+          <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir</Label>
             <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
             <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p></div>
         )}

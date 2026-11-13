@@ -52,7 +52,7 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
       <Card className="space-y-3 p-4">
         <h3 className="font-bold">Vitrine</h3>
         <ShopNameField value={shopName} onChange={setShopName} />
-        <div className="space-y-1.5"><Label htmlFor="st-intro">Texto de abertura da vitrine (opcional)</Label>
+        <div className="space-y-1.5"><Label htmlFor="st-intro">Texto de abertura da vitrine</Label>
           <textarea id="st-intro" rows={3} maxLength={400} value={f.introText} onChange={(e) => set({ introText: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <p className="text-sm text-muted-foreground">Mostrado no alto da loja. Ex.: &quot;Camisas do Carnaval 2027! Retire nos ensaios, às segundas.&quot; ({f.introText.length}/400)</p></div>

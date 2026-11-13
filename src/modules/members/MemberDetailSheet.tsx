@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { formatDate, shortName } from '@/core/format'
 
 function ageOf(iso: string | null | undefined): number | null {
@@ -259,7 +260,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
   const fld = (id: string, label: string, el: ReactNode) => <div className="space-y-1.5"><Label htmlFor={id}>{label}</Label>{el}</div>
   return (
     <div className="rounded-md bg-muted/40 p-2">
-      <form onSubmit={(e) => { e.preventDefault(); if (phoneOk) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-2">
           {fld('rd-full', 'Nome completo', <Input id="rd-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} />)}
           {fld('rd-display', 'Como prefere ser chamado(a)', <Input id="rd-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} />)}
@@ -280,7 +281,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
         {fld('rd-aff', 'Relação com a Grande Tijuca', <textarea id="rd-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} />)}
         {fld('rd-other', 'Outros blocos', <Input id="rd-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} />)}
         <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={!phoneOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <Button type="submit" size="sm" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       </form>
