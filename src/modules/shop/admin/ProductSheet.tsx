@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Copy, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
@@ -265,8 +266,8 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
         <div className="grid grid-cols-2 items-end gap-3">
           <div className="space-y-1.5"><Label htmlFor="pr-price">Preço público</Label><MoneyInput id="pr-price" value={f.price} onChange={(v) => setF({ ...f, price: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="pr-disc">Desconto de integrante (%)</Label>
-            <Input id="pr-disc" inputMode="decimal" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value.replace(/[^\d.,]/g, '') })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="pr-disc">Desconto de integrante</Label>
+            <div className="flex items-center gap-2"><Input id="pr-disc" inputMode="decimal" className="w-16 text-center" maxLength={5} value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value.replace(/[^\d.,]/g, '') })} /><span className="font-semibold">%</span></div></div>
         </div>
         {publicCents !== null && discount > 0 && discount <= 100 && (
           <p className="text-sm text-muted-foreground">Integrante ativo paga {formatCurrency(fromCents(memberPriceCents(publicCents, discount)))}.</p>
@@ -345,10 +346,10 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
             </div>
           ))}
           {varProg.button}
-          <div className="flex flex-wrap gap-2">
+          <ButtonRow>
             <Button type="button" size="sm" variant="outline" onClick={() => { varProg.showAll(); setVariants((vs) => [...vs, { label: '', uses: isStock ? [{ stock_item_id: '', quantity: '1' }] : [], reserved: 0, is_active: true }]) }}><Plus className="h-4 w-4" /> Variação</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => { varProg.showAll(); addSizes() }}>Adicionar P, M, G, GG</Button>
-          </div>
+          </ButtonRow>
         </fieldset>}
 
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}

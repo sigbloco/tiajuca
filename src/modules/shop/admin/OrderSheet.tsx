@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -83,10 +84,10 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
               return (
                 <div key={f.id} className="space-y-2 rounded-lg border border-border p-3">
                   <p className="flex items-center justify-between gap-2"><span className="font-semibold">{KIND_LABEL[f.kind]}</span><Badge>{fulfillmentLabel(f.kind, f.status)}</Badge></p>
-                  <div className="flex flex-wrap gap-2">
+                  <ButtonRow>
                     {steps.next && <Button size="sm" disabled={act.isPending} onClick={() => act.mutate(() => setFulfillment(order.id, f.kind, steps.next as FulfillmentStatus))}>Marcar: {fulfillmentLabel(f.kind, steps.next)}</Button>}
                     {steps.back && <Button size="sm" variant="outline" disabled={act.isPending} onClick={async () => await confirmBox('Voltar um passo?') && act.mutate(() => setFulfillment(order.id, f.kind, steps.back as FulfillmentStatus))}>Voltar para: {fulfillmentLabel(f.kind, steps.back)}</Button>}
-                  </div>
+                  </ButtonRow>
                 </div>
               )
             })}

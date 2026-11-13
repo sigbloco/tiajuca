@@ -98,10 +98,10 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
               </div>
             </div>
           ))}
-          <div className="flex flex-wrap gap-2">
+          <ButtonRow>
             <Button type="button" size="sm" variant="outline" onClick={() => setSlots((c) => [...c, { type: 'weekly', weekday: 1 }])}><Plus className="h-4 w-4" /> Dia da semana</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setSlots((c) => [...c, { type: 'date', date: '' }])}><Plus className="h-4 w-4" /> Data única</Button>
-          </div>
+          </ButtonRow>
         </fieldset>}
 
         {!person && <div className="space-y-1.5"><Label htmlFor="pp-hours">Observação (opcional)</Label>

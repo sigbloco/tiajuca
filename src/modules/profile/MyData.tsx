@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useUnsaved } from '@/core/unsaved'
@@ -174,13 +175,13 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
                   <Select id="s-pcd" value={f.is_pcd} onChange={(e) => setF({ ...f, is_pcd: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
               </div>
               {f.is_pcd === 'yes' && <div className="space-y-1.5"><Label htmlFor="s-pcd-d">Qual?</Label><Input id="s-pcd-d" value={f.pcd_description} onChange={(e) => setF({ ...f, pcd_description: e.target.value })} /></div>}
-              <div className="flex flex-wrap gap-2">
+              <ButtonRow>
                 <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
                 <Button type="button" variant="ghost" className="text-destructive" disabled={save.isPending}
                   onClick={async () => { if (await confirmBox(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
                   {admin ? 'Apagar dados sensíveis' : 'Apagar meus dados sensíveis'}
                 </Button>
-              </div>
+              </ButtonRow>
             </form>
           )}
           {(consents.data?.length ?? 0) > 0 && (

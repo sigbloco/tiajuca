@@ -1,3 +1,5 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useState } from 'react'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
 import { cn } from '@/components/ui/primitives'
@@ -18,6 +20,7 @@ export function FinancePage() {
   const today = todayIso(membership?.timezone)
   const [ym, setYm] = useState<YearMonth>({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('income')
+  useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('income'), true, 0)
   const competence = toCompetence(ym)
   return (
     <div className="space-y-4">
@@ -25,14 +28,14 @@ export function FinancePage() {
         <h1>Financeiro</h1>
         <MonthNav value={ym} onChange={setYm} />
       </div>
-      <div className="flex gap-1 overflow-x-auto pb-1" role="tablist">
+      <ButtonRow role="tablist">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
             className={cn('whitespace-nowrap rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'bg-primary text-primary-foreground hover:bg-primary')}>
             {t.label}
           </button>
         ))}
-      </div>
+      </ButtonRow>
       {(tab === 'income' || tab === 'expense') && <LedgerTab key={tab} kind={tab} competence={competence} />}
       {tab === 'distribution' && <DistributionTab competence={competence} />}
     </div>

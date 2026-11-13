@@ -1,3 +1,5 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
@@ -147,15 +149,16 @@ function PermissionsTab() {
 
 export function AccessPage() {
   const [tab, setTab] = useState<'people' | 'perms'>('people')
+  useRegisterCrumb(tab === 'people' ? 'Pessoas' : 'Permissões dos papéis', () => setTab('people'), true, 0)
   return (
     <div className="space-y-4">
       <h1>Acesso e papéis</h1>
-      <div className="flex gap-1" role="tablist">
+      <ButtonRow role="tablist">
         {[['people', 'Pessoas'], ['perms', 'Permissões dos papéis']].map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k as typeof tab)}
             className={cn('rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === k && 'bg-primary text-primary-foreground hover:bg-primary')}>{l}</button>
         ))}
-      </div>
+      </ButtonRow>
       {tab === 'people' ? <PeopleTabContainer /> : <PermissionsTab />}
     </div>
   )

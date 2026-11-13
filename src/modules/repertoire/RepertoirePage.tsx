@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
@@ -87,13 +88,13 @@ export function RepertoirePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1>Repertório</h1>
-        <div className="flex flex-wrap gap-2">
+        <ButtonRow>
           {canManage && (
             <TrashDrawer entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
               onRestore={(id) => restoreRep.mutate(id)} />
           )}
           {canManage && <Button onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
-        </div>
+        </ButtonRow>
       </div>
       {isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {data?.length === 0 && <EmptyState>Nenhum repertório ainda.{canManage ? ' Crie o primeiro para começar a cadastrar músicas.' : ''}</EmptyState>}

@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Pencil, Plus, Share2 } from 'lucide-react'
@@ -65,12 +66,12 @@ export function RepertoireDetailPage() {
         {canManage && rep && <Button size="icon" variant="outline" aria-label="Editar" title="Editar" onClick={() => setEditRep(true)}><Pencil className="h-4 w-4" /></Button>}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <ButtonRow>
         <Button variant="outline" disabled={!text} onClick={copy}><Share2 className="h-4 w-4" /> Copiar lista</Button>
         <Button variant="outline" disabled={!text} onClick={whatsapp}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
         {canManage && <TrashDrawer entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} />}
         {canManage && <Button onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
-      </div>
+      </ButtonRow>
 
       <FilterBar value={filter} onChange={setFilter} />
       {songs.isLoading && <Skeleton className="h-24" />}

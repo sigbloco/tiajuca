@@ -1,3 +1,5 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useState } from 'react'
 import { cn } from '@/components/ui/primitives'
 import { usePermission } from '@/core/permissions'
@@ -8,16 +10,17 @@ import { BackupsTab } from './BackupsTab'
 export function AuditBackupsPage() {
   const canBackup = usePermission('backups.manage')
   const [tab, setTab] = useState<'audit' | 'backups'>('audit')
+  useRegisterCrumb(tab === 'backups' ? 'Backups' : 'Auditoria', () => setTab('audit'), canBackup, 0)
   return (
     <div className="space-y-4">
       <h1>Auditoria e backups</h1>
       {canBackup && (
-        <div className="flex gap-2" role="tablist">
+        <ButtonRow role="tablist">
           {([['audit', 'Auditoria'], ['backups', 'Backups']] as const).map(([k, l]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
               className={cn('rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{l}</button>
           ))}
-        </div>
+        </ButtonRow>
       )}
       {tab === 'backups' && canBackup ? <BackupsTab /> : <AuditLogTab />}
     </div>
