@@ -60,7 +60,40 @@ export async function createProduct(orgId: string, input: ProductInput, variants
   throw new Error('Não foi possível gerar um endereço único para o produto. Mude o nome.')
 }
 
-export async function updateProduct(orgId: string, id: string, input: Omit<ProductInput, 'kind'>, kind: ProductKind, variants: VariantInput[], removedIds: string[] = []) {
+/** O tipo só pode mudar enquanto o produto nunca teve pedido (pedidos guardam o tipo, as reservas e a retirada dependem dele). */
+export async function productHasOrders(productId: string): Promise<boolean> {
+  const { count, error } = await supabase.from('shop_order_items').select('id', { count: 'exact', head: true }).eq('product_id', productId)
+  if (error) throw error
+  return (count ?? 0) > 0
+}
+
+/** Troca o tipo de um produto sem pedidos: tira os itens de estoque (ou os liga de novo) e acerta o marcador de estoque das variações. */
+async function changeKind(productId: string, from: ProductKind, to: ProductKind) {
+  if (await productHasOrders(productId)) throw new Error('Este produto já teve pedidos: o tipo não pode mais mudar.')
+  const vars = await supabase.from('shop_product_variants').select('id').eq('product_id', productId)
+  if (vars.error) throw vars.error
+  const ids = (vars.data ?? []).map((v) => (v as { id: string }).id)
+  if (from === 'stock' && to === 'made_to_order') {
+    if (ids.length) {
+      const del = await supabase.from('shop_variant_stock').delete().in('variant_id', ids)
+      if (del.error) throw del.error
+      const st = await supabase.from('shop_product_variants').update({ stock: null }).in('id', ids)
+      if (st.error) throw st.error
+    }
+    const p = await supabase.from('shop_products').update({ kind: 'made_to_order', is_kit: false }).eq('id', productId)
+    if (p.error) throw p.error
+  } else if (from === 'made_to_order' && to === 'stock') {
+    const p = await supabase.from('shop_products').update({ kind: 'stock', lead_time_days: null, min_units: null }).eq('id', productId)
+    if (p.error) throw p.error
+    if (ids.length) {
+      const st = await supabase.from('shop_product_variants').update({ stock: VARIANT_STOCK_REF }).in('id', ids)
+      if (st.error) throw st.error
+    }
+  }
+}
+
+export async function updateProduct(orgId: string, id: string, input: Omit<ProductInput, 'kind'>, kind: ProductKind, variants: VariantInput[], removedIds: string[] = [], fromKind: ProductKind = kind) {
+  if (fromKind !== kind) await changeKind(id, fromKind, kind)
   const { error } = await supabase.from('shop_products').update(input).eq('id', id)
   if (error) throw error
   if (removedIds.length) {
