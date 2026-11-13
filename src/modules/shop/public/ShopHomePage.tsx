@@ -9,19 +9,23 @@ import { imageUrl } from '../admin/service'
 import { Price } from './Price'
 import { useStore } from './StoreContext'
 
-const FILTERS: { key: ProductKind; label: string }[] = [
+type FilterKey = ProductKind | 'kit'
+const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'stock', label: 'Pronta entrega' },
   { key: 'made_to_order', label: 'Sob encomenda' },
+  { key: 'kit', label: 'Kits' },
 ]
 
 /** Vitrine pública: lista de produtos com filtro por tipo (estoque / encomenda). */
 export function ShopHomePage() {
   const { store, isMember, basePath } = useStore()
   // Pronta entrega e Sob encomenda se combinam; os dois marcados mostram tudo e nenhum marcado não mostra nada. O filtro não afeta os destaques.
-  const [kinds, setKinds] = useState<ProductKind[]>(['stock', 'made_to_order'])
-  const toggleKind = (k: ProductKind) => setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
+  const [kinds, setKinds] = useState<FilterKey[]>(['stock', 'made_to_order', 'kit'])
+  // Kit é uma categoria própria: aparece no filtro Kits e não no de pronta entrega.
+  const category = (p: { kind: ProductKind; is_kit?: boolean }): FilterKey => (p.is_kit ? 'kit' : p.kind)
+  const toggleKind = (k: FilterKey) => setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
   const featured = store.products.filter((p) => p.is_featured)
-  const others = store.products.filter((p) => !p.is_featured && kinds.includes(p.kind))
+  const others = store.products.filter((p) => !p.is_featured && kinds.includes(category(p)))
 
   return (
     <div className="space-y-4">
@@ -40,7 +44,7 @@ export function ShopHomePage() {
       {store.products.length > 0 && kinds.length === 0 && <p className="-mt-2 text-sm text-muted-foreground">Selecione um filtro.</p>}
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
       {store.products.length === 0 && <EmptyState>A loja ainda não tem produtos.</EmptyState>}
-      {kinds.length > 0 && others.length === 0 && store.products.some((p) => !p.is_featured) && <EmptyState>Nenhum produto neste filtro.</EmptyState>}
+      {kinds.length > 0 && others.length === 0 && store.products.some((p) => !p.is_featured) && <EmptyState>{featured.length > 0 ? 'Nenhum outro produto neste filtro.' : 'Nenhum produto neste filtro.'}</EmptyState>}
       {others.length > 0 && renderGrid(others)}
     </div>
   )

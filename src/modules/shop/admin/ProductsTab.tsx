@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency } from '@/core/format'
@@ -22,7 +21,8 @@ function stockSummary(p: ShopProduct, items: Map<string, StockItem>): string {
   return units === Infinity ? 'Estoque ilimitado' : `${units} ${p.is_kit ? 'kit(s) possível(is)' : 'em estoque'}`
 }
 
-export function ProductsTab() {
+/** Lista de produtos ou, com `kits`, só os kits (cada um numa aba própria do painel). */
+export function ProductsTab({ kits = false }: { kits?: boolean }) {
   const orgId = useOrgId()
   const [sheet, setSheet] = useState<'new' | 'new-kit' | string | null>(null)
   const q = useQuery({ queryKey: ['shop', orgId, 'products'], queryFn: () => listProducts(orgId) })
@@ -35,7 +35,7 @@ export function ProductsTab() {
   const [local, setLocal] = useState<string[] | null>(null) // ordem provisória enquanto arrasta
   const [dragId, setDragId] = useState<string | null>(null)
   const items = (() => {
-    const list = (q.data ?? []).filter((p) => p.is_active)
+    const list = (q.data ?? []).filter((p) => p.is_active && !!p.is_kit === kits)
     if (!local) return list
     const byId = new Map(list.map((p) => [p.id, p]))
     const ordered = local.map((id) => byId.get(id)).filter((p): p is ShopProduct => Boolean(p))
@@ -57,7 +57,13 @@ export function ProductsTab() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }).then(() => setLocal(null)),
     onError: (e) => { toast.error(friendlyError(e)); setLocal(null) },
   })
-  const commit = (ids: string[]) => { setLocal(ids); save.mutate(ids) }
+  // A ordem gravada é a da loja inteira: os itens desta aba trocam de lugar entre si, os da outra aba ficam onde estão.
+  const merge = (sub: string[]) => {
+    const inSub = new Set(sub)
+    let k = 0
+    return (q.data ?? []).filter((p) => p.is_active).map((p) => (inSub.has(p.id) ? sub[k++] : p.id))
+  }
+  const commit = (ids: string[]) => { setLocal(ids); save.mutate(merge(ids)) }
   const move = (i: number, d: -1 | 1) => {
     const ids = items.map((p) => p.id)
     const j = i + d
@@ -79,20 +85,17 @@ export function ProductsTab() {
   const onDragEnd = () => {
     if (!dragId) return
     setDragId(null)
-    if (local) save.mutate(local)
+    if (local) save.mutate(merge(local))
   }
   const current = sheet && sheet !== 'new' && sheet !== 'new-kit' ? q.data?.find((p) => p.id === sheet) ?? null : null
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-bold">Produtos</h2>
-      <ButtonRow>
-        <Button variant="outline" onClick={() => setSheet('new-kit')}><Plus className="h-4 w-4" /> Novo kit</Button>
-        <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
-      </ButtonRow>
+      <h2 className="text-lg font-bold">{kits ? 'Kits' : 'Produtos'}</h2>
+      <Button className="w-full" onClick={() => setSheet(kits ? 'new-kit' : 'new')}><Plus className="h-4 w-4" /> {kits ? 'Novo kit' : 'Novo produto'}</Button>
       {q.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
-      {q.data?.length === 0 && <EmptyState>Nenhum produto ainda. Crie o primeiro.</EmptyState>}
+      {q.data && items.length === 0 && <EmptyState>{kits ? 'Nenhum kit ainda. Crie o primeiro.' : 'Nenhum produto ainda. Crie o primeiro.'}</EmptyState>}
       {paged.visible.map((p, i) => (
         <Card key={p.id} data-pid={p.id} className={`flex items-center gap-2 p-3 ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
           <div className="flex shrink-0 flex-col items-center">
@@ -124,7 +127,7 @@ export function ProductsTab() {
         </Card>
       ))}
       <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
-      <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
+      <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active && !!p.is_kit === kits).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
         {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}

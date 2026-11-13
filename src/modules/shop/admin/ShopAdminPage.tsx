@@ -18,18 +18,19 @@ import { getSettings, missingSetup } from './settings'
 const TABS = [
   { key: 'orders', label: 'Pedidos' },
   { key: 'products', label: 'Produtos' },
+  { key: 'kits', label: 'Kits' },
   { key: 'stock', label: 'Estoque' },
   { key: 'pickup', label: 'Pontos de retirada' },
 ] as const
 type TabKey = (typeof TABS)[number]['key'] | 'payments'
-const TAB_LABEL: Record<TabKey, string> = { orders: 'Pedidos', products: 'Produtos', stock: 'Estoque', pickup: 'Pontos de retirada', payments: 'Configurações' }
+const TAB_LABEL: Record<TabKey, string> = { orders: 'Pedidos', products: 'Produtos', kits: 'Kits', stock: 'Estoque', pickup: 'Pontos de retirada', payments: 'Configurações' }
 
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const canTheme = usePermission('org.manage')
-  const [tab, setTab] = useRememberedState<TabKey>('loja-aba', 'orders', ['orders', 'products', 'stock', 'pickup', 'payments'])
+  const [tab, setTab] = useRememberedState<TabKey>('loja-aba', 'orders', ['orders', 'products', 'kits', 'stock', 'pickup', 'payments'])
   useRegisterCrumb(TAB_LABEL[tab], () => setTab('orders'), true, 0)
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const pending = settings.data ? missingSetup(settings.data) : []
@@ -63,7 +64,7 @@ export function ShopAdminPage() {
           </Button>
         ))}
       </ButtonRow>
-      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
+      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'kits' ? <ProductsTab kits /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
     </div>
   )
 }
