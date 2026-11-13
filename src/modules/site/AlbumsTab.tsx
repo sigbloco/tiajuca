@@ -34,12 +34,15 @@ export function AlbumsTab() {
   const trashed = all.filter((a) => !a.is_active)
   // Filtro por ano (padrão: o ano atual, ou o mais recente se o atual não tiver álbum) e navegação por página, porque as capas são pesadas.
   const years = [...new Set(active.map((a) => a.event_date?.slice(0, 4)).filter((y): y is string => !!y))].sort((a, b) => b.localeCompare(a))
-  const options = [...years, ...(active.some((a) => !a.event_date) ? ['semdata'] : [])]
+  // "Com problema": álbum sem capa, sem data ou sem título (ex.: o Google não mostrou o álbum ou o link deixou de ser público).
+  const hasProblem = (a: Album) => !a.cover_url || !a.event_date || !a.title.trim()
+  const problems = active.filter(hasProblem)
+  const options = [...years, ...(problems.length > 0 ? ['problema'] : [])]
   const [picked, setPicked] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const thisYear = String(new Date().getFullYear())
   const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
-  const inYear = active.filter((a) => (year === 'semdata' ? !a.event_date : a.event_date?.startsWith(year)))
+  const inYear = active.filter((a) => (year === 'problema' ? hasProblem(a) : a.event_date?.startsWith(year)))
   const PER_PAGE = 5
   const pages = Math.max(1, Math.ceil(inYear.length / PER_PAGE))
   const cur = Math.min(page, pages)
@@ -71,7 +74,7 @@ export function AlbumsTab() {
     await Promise.all([worker(), worker(), worker()])
     setBulk(null)
     refresh()
-    notifySaved(failed ? `Capas lidas. ${failed} álbum(ns) não deram certo: abra o link e confira se está compartilhado.` : 'Capas e títulos atualizados.')
+    notifySaved(failed ? `Capas lidas. ${failed} álbum(ns) não deram certo: veja-os no filtro “Com problema” e confira se estão compartilhados.` : 'Capas e títulos atualizados.')
   }
 
   const add = useMutation({
@@ -138,28 +141,30 @@ export function AlbumsTab() {
           onRestore={(id) => patch.mutate({ id, fields: { is_active: true } })} onPurge={(id) => purge.mutate(id)} />
       </div>
       <p className="text-xs text-muted-foreground">Cole o link público de compartilhamento do álbum (photos.app.goo.gl ou photos.google.com/share…). O sistema lê o título e a capa. Nomes no padrão “250608 Aniversário do Museu Nacional (@brunosarlas)” viram data, título e autor.</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Input className="min-w-56 flex-1" aria-label="Link do álbum" placeholder="https://photos.app.goo.gl/…" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <Button type="button" disabled={add.isPending}
+      <div className="flex items-center gap-2">
+        <Input className="min-w-0 flex-1" aria-label="Link do álbum" placeholder="https://photos.app.goo.gl/…" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <Button type="button" disabled={add.isPending} className="shrink-0" aria-label="Adicionar álbum" title="Adicionar álbum"
           onClick={() => { if (requireFields([['Link do álbum', url.trim()], ['Link do Google Fotos (photos.app.goo.gl ou photos.google.com)', !url.trim() || isPhotosUrl(url.trim())]])) add.mutate() }}>
-          <Plus className="h-4 w-4" /> {add.isPending ? 'Lendo o álbum' : 'Adicionar'}
+          <Plus className="h-4 w-4" /><span className="ml-2 hidden sm:inline">{add.isPending ? 'Lendo o álbum' : 'Adicionar'}</span>
         </Button>
       </div>
-      {missing.length > 0 && (
-        <Button type="button" variant="outline" className="w-full" disabled={!!bulk} onClick={() => void readBulk('missing')}>
-          <RefreshCw className={`h-4 w-4 ${bulk?.mode === 'missing' ? 'animate-spin' : ''}`} /> {bulk?.mode === 'missing' ? `Lendo ${bulk.done}/${bulk.total}` : `Ler capas e títulos que faltam (${missing.length})`}
-        </Button>
-      )}
       {active.length > 0 && (
-        <Button type="button" variant="outline" className="w-full" disabled={!!bulk} onClick={() => void readBulk('titles')}>
-          <RefreshCw className={`h-4 w-4 ${bulk?.mode === 'titles' ? 'animate-spin' : ''}`} /> {bulk?.mode === 'titles' ? `Lendo ${bulk.done}/${bulk.total}` : `Atualizar títulos, datas e autores de todos (${active.length})`}
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          {missing.length > 0 && (
+            <Button type="button" variant="outline" className="h-auto min-h-10 whitespace-normal py-2 leading-tight" disabled={!!bulk} onClick={() => void readBulk('missing')}>
+              <RefreshCw className={`h-4 w-4 shrink-0 ${bulk?.mode === 'missing' ? 'animate-spin' : ''}`} /><span className="ml-2">{bulk?.mode === 'missing' ? `Lendo ${bulk.done}/${bulk.total}` : `Ler capas que faltam (${missing.length})`}</span>
+            </Button>
+          )}
+          <Button type="button" variant="outline" className={`h-auto min-h-10 whitespace-normal py-2 leading-tight ${missing.length > 0 ? '' : 'col-span-2'}`} disabled={!!bulk} onClick={() => void readBulk('titles')}>
+            <RefreshCw className={`h-4 w-4 shrink-0 ${bulk?.mode === 'titles' ? 'animate-spin' : ''}`} /><span className="ml-2">{bulk?.mode === 'titles' ? `Lendo ${bulk.done}/${bulk.total}` : 'Atualização geral'}</span>
+          </Button>
+        </div>
       )}
       {active.length === 0 && <p className="text-muted-foreground">Nenhum álbum ainda.</p>}
       {options.length > 1 && (
         <ButtonRow role="group" aria-label="Filtrar por ano">
           {options.map((y) => (
-            <Button key={y} size="sm" variant={year === y ? 'default' : 'outline'} aria-pressed={year === y} onClick={() => pickYear(y)}>{y === 'semdata' ? 'Sem data' : y}</Button>
+            <Button key={y} size="sm" variant={year === y ? 'default' : 'outline'} aria-pressed={year === y} onClick={() => pickYear(y)}>{y === 'problema' ? `Com problema (${problems.length})` : y}</Button>
           ))}
         </ButtonRow>
       )}
