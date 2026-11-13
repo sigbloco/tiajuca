@@ -5,13 +5,14 @@ import { Link, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useProgressive } from '@/components/shared/LoadMore'
 import { ButtonRow } from '@/components/shared/ButtonRow'
-import { Button, Skeleton } from '@/components/ui/primitives'
+import { Skeleton } from '@/components/ui/primitives'
 import { supabase } from '@/core/supabase'
 import { useAreaTheme } from '@/core/useAreaTheme'
+import { areaOverrides } from '@/core/themeModel'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import type { OrgTheme } from '@/core/theme'
 import { albumDate, type PublicAlbum } from './albums'
-import { hrefOf } from './links'
+import { hrefOf, textOn } from './links'
 
 interface PublicAlbums { org: { slug: string; name: string; logo_path: string | null; theme: OrgTheme }; label: string; albums: PublicAlbum[] }
 
@@ -39,25 +40,36 @@ export function AlbumsPage() {
   const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
   const shown = all.filter((a) => (year === 'semdata' ? !a.event_date : a.event_date?.startsWith(year)))
   const prog = useProgressive(shown, 6, year)
+  const heroColor = data ? areaOverrides(data.org.theme, 'site').header ?? null : null
+  const heroText = heroColor ? areaOverrides(data!.org.theme, 'site').headerText ?? textOn(heroColor) : undefined
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 pb-16 pt-6">
-      <Link to="/site" className="mb-4 inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar para a página inicial</Link>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Cabeçalho fixo, vermelho como o da página inicial: voltar, título e filtro por ano ficam sempre à vista. */}
+      <header className={`sticky top-0 z-20 shadow-card ${heroColor ? '' : 'bg-primary text-primary-foreground'}`} style={heroColor ? { backgroundColor: heroColor, color: heroText } : undefined}>
+        <div className="mx-auto max-w-3xl space-y-3 px-4 pb-3 pt-3">
+          <Link to="/site" className="inline-flex min-h-9 items-center gap-2 font-semibold hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar para a página inicial</Link>
+          {data && (
+            <div className="flex items-center gap-3">
+              <OrgLogo name={data.org.name} logoPath={data.org.logo_path} className="h-10 w-10 shrink-0 ring-2 ring-secondary" />
+              <h1 className="font-display text-2xl font-extrabold">{data.label}</h1>
+            </div>
+          )}
+          {options.length > 1 && (
+            <ButtonRow role="group" aria-label="Filtrar por ano">
+              {options.map((y) => (
+                <button key={y} type="button" aria-pressed={year === y} onClick={() => setPicked(y)}
+                  className={`min-h-9 rounded-lg border-2 border-transparent px-3 py-1.5 text-sm font-bold shadow-card ${year === y ? 'bg-secondary text-secondary-foreground' : 'bg-card text-foreground hover:bg-muted'}`}>{y === 'semdata' ? 'Sem data' : y}</button>
+              ))}
+            </ButtonRow>
+          )}
+        </div>
+      </header>
+    <main className="mx-auto max-w-3xl px-4 pb-16 pt-4">
       {isLoading && <div className="grid gap-4 sm:grid-cols-2"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>}
       {(isError || (!isLoading && !data)) && <p className="py-10 text-center text-muted-foreground">Não foi possível carregar as fotos agora.</p>}
       {data && (
         <>
-          <header className="mb-4 flex items-center gap-3">
-            <OrgLogo name={data.org.name} logoPath={data.org.logo_path} className="h-12 w-12 shrink-0" />
-            <h1 className="font-display text-2xl font-extrabold">{data.label}</h1>
-          </header>
-          {options.length > 1 && (
-            <ButtonRow role="group" aria-label="Filtrar por ano" className="mb-4">
-              {options.map((y) => (
-                <Button key={y} size="sm" variant={year === y ? 'default' : 'outline'} aria-pressed={year === y} onClick={() => setPicked(y)}>{y === 'semdata' ? 'Sem data' : y}</Button>
-              ))}
-            </ButtonRow>
-          )}
           {data.albums.length === 0 && <p className="py-10 text-center text-muted-foreground">Ainda não há álbuns.</p>}
           <ul className="grid gap-4 sm:grid-cols-2">
             {prog.visible.map((a) => {
@@ -88,5 +100,6 @@ export function AlbumsPage() {
         </>
       )}
     </main>
+    </div>
   )
 }
