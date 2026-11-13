@@ -253,7 +253,8 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           <Select id="pr-kind" value={f.kind} disabled={kindLocked} onChange={(e) => {
             const kind = e.target.value as ProductKind
             setF({ ...f, kind })
-            setVariants((vs) => vs.map((v) => ({ ...v, uses: kind === 'stock' ? (v.uses.length ? v.uses : [{ stock_item_id: '', quantity: '1' }]) : [] })))
+            // Nada é apagado ao trocar: prazo, meta mínima e itens de estoque ficam guardados na tela até salvar (só vale o que o tipo escolhido usa).
+            setVariants((vs) => vs.map((v) => (kind === 'stock' && v.uses.length === 0 ? { ...v, uses: [{ stock_item_id: '', quantity: '1' }] } : v)))
           }}>
             <option value="stock">Em estoque (controla quantidade)</option>
             <option value="made_to_order">Sob encomenda (prazo de produção)</option>
