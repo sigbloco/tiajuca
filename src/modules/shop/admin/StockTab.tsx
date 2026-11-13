@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -75,12 +76,10 @@ export function StockTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">Estoque</h2>
-        <div className="flex gap-2">
-          <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo item</Button>
-        </div>
-      </div>
+      <h2 className="text-lg font-bold">Estoque</h2>
+      <ButtonRow>
+        <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo item</Button>
+      </ButtonRow>
       <p className="text-sm text-muted-foreground">Cadastre aqui o que você guarda. Ao criar um produto ou um kit, você escolhe quais itens ele consome: assim o avulso e o kit baixam o mesmo estoque.</p>
       {items.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {items.isError && <EmptyState>Não foi possível carregar o estoque.</EmptyState>}

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Palette, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Button, Card, cn } from '@/components/ui/primitives'
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { Button, Card } from '@/components/ui/primitives'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { OrdersTab } from './OrdersTab'
@@ -17,9 +18,8 @@ const TABS = [
   { key: 'products', label: 'Produtos' },
   { key: 'stock', label: 'Estoque' },
   { key: 'pickup', label: 'Pontos de retirada' },
-  { key: 'payments', label: 'Configurações', icon: Settings },
 ] as const
-type TabKey = (typeof TABS)[number]['key']
+type TabKey = (typeof TABS)[number]['key'] | 'payments'
 
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
@@ -31,22 +31,31 @@ export function ShopAdminPage() {
   const pending = settings.data ? missingSetup(settings.data) : []
   return (
     <div className="space-y-4">
-      <h1>Loja</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1>Loja</h1>
+        <div className="flex gap-2">
+          <Button role="tab" aria-selected={tab === 'payments'} aria-label="Configurações" title="Configurações" variant={tab === 'payments' ? 'default' : 'outline'}
+            size="icon" className="min-h-11 min-w-11" onClick={() => setTab('payments')}><Settings className="h-5 w-5" /></Button>
+          {canTheme && (
+            <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11">
+              <Link to={`/${membership?.slug}/interface?area=shop`} aria-label="Interface" title="Interface"><Palette className="h-5 w-5" /></Link>
+            </Button>
+          )}
+        </div>
+      </div>
       {pending.length > 0 && (
         <Card className="border-secondary p-4">
-          <p className="font-semibold">Falta configurar antes de vender (aba Configurações):</p>
+          <p className="font-semibold">Falta configurar antes de vender (botão de configurações, ao lado do título):</p>
           <ul className="mt-2 list-disc pl-5 text-sm">{pending.map((p) => <li key={p}>{p}</li>)}</ul>
         </Card>
       )}
-      <div role="tablist" className="flex flex-wrap gap-2">
+      <ButtonRow role="tablist" aria-label="Seções da loja">
         {TABS.map((t) => (
-          <Button key={t.key} role="tab" aria-selected={tab === t.key} aria-label={'icon' in t ? t.label : undefined} title={'icon' in t ? t.label : undefined}
-            variant={tab === t.key ? 'default' : 'outline'} size={'icon' in t ? 'icon' : 'default'} className={cn('min-h-11', 'icon' in t && 'min-w-11')} onClick={() => setTab(t.key)}>
-            {'icon' in t ? <t.icon className="h-5 w-5" /> : t.label}
+          <Button key={t.key} role="tab" aria-selected={tab === t.key} variant={tab === t.key ? 'default' : 'outline'} className="min-h-11" onClick={() => setTab(t.key)}>
+            {t.label}
           </Button>
         ))}
-        {canTheme && <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11"><Link to={`/${membership?.slug}/interface?area=shop`} aria-label="Interface" title="Interface"><Palette className="h-5 w-5" /></Link></Button>}
-      </div>
+      </ButtonRow>
       {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
     </div>
   )

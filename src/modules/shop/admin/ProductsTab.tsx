@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton } from '@/components/ui/primitives'
 import { formatCurrency } from '@/core/format'
@@ -82,24 +83,26 @@ export function ProductsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">Produtos</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setSheet('new-kit')}><Plus className="h-4 w-4" /> Novo kit</Button>
-          <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
-        </div>
-      </div>
+      <h2 className="text-lg font-bold">Produtos</h2>
+      <ButtonRow>
+        <Button variant="outline" onClick={() => setSheet('new-kit')}><Plus className="h-4 w-4" /> Novo kit</Button>
+        <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo produto</Button>
+      </ButtonRow>
       {q.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
       {q.data?.length === 0 && <EmptyState>Nenhum produto ainda. Crie o primeiro.</EmptyState>}
       {paged.visible.map((p, i) => (
         <Card key={p.id} data-pid={p.id} className={`flex items-center gap-2 p-3 ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
+          <div className="flex shrink-0 flex-col items-center">
+          <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Subir ${p.name}`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
           <button type="button" aria-label={`Arrastar ${p.name}`} title="Arraste para reordenar" style={{ touchAction: 'none' }}
             className="shrink-0 cursor-grab rounded p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing"
             onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragId(p.id); setLocal(items.map((x) => x.id)) }}
             onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
             <GripVertical className="h-5 w-5" />
           </button>
+          <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Descer ${p.name}`} disabled={i === items.length - 1 || save.isPending} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
+          </div>
           {p.shop_product_images[0]
             ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
             : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
@@ -110,10 +113,6 @@ export function ProductsTab() {
               {p.member_discount_pct > 0 && <span className="text-muted-foreground"> · integrante {formatCurrency(fromCents(memberPriceCents(p.price_cents, p.member_discount_pct)))}</span>}
             </p>
             <p className="text-sm text-muted-foreground">{stockSummary(p, itemsMap)}</p>
-          </div>
-          <div className="flex shrink-0 flex-col">
-            <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Subir ${p.name}`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
-            <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Descer ${p.name}`} disabled={i === items.length - 1 || save.isPending} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
           </div>
           <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet(p.id)}><Pencil className="h-4 w-4" /></Button>
           <Button size="icon" variant="ghost" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}

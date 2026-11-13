@@ -4,6 +4,7 @@ import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, PhoneInput, TimeInput } from '@/components/ui/masked-inputs'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -145,12 +146,10 @@ export function PickupPointsTab() {
   })
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">Pontos de retirada</h2>
-        <div className="flex gap-2">
-          <Button onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
-        </div>
-      </div>
+      <h2 className="text-lg font-bold">Pontos de retirada</h2>
+      <ButtonRow>
+        <Button onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
+      </ButtonRow>
       {q.isLoading && <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-16" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os pontos de retirada.</EmptyState>}
       {q.data?.length === 0 && <EmptyState>Nenhum ponto de retirada ainda.</EmptyState>}
