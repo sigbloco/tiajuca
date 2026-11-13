@@ -46,7 +46,7 @@ export function AlbumsTab() {
           const info = await previewAlbum(orgId, a.url)
           const p = parseAlbumTitle(info.title)
           const fields: Partial<Album> = { cover_url: info.cover_url ?? a.cover_url }
-          if (info.title) Object.assign(fields, { title: p.title, event_date: p.event_date ?? a.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors })
+          if (info.title) Object.assign(fields, { title: p.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors })
           const { error } = await supabase.from('site_albums').update(fields).eq('id', a.id).eq('organization_id', orgId)
           if (error) throw error
         } catch { failed++ }
@@ -141,7 +141,7 @@ export function AlbumsTab() {
           onRefresh={async () => {
             const info = await previewAlbum(orgId, a.url)
             const p = parseAlbumTitle(info.title)
-            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title, event_date: p.event_date ?? a.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors } : {}) } })
+            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors } : {}) } })
           }} />
       ))}
       {prog.button}
