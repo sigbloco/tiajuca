@@ -84,9 +84,9 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
     queryKey: ['activities', orgId, 'upcoming', today],
     queryFn: async () => (await listActivities({ orgId, from: today, to: addDaysIso(today, 90) })).filter((a) => a.status !== 'cancelled'),
   })
-  // Evento com PÚBLICO definido segue o público (naipe ou instrumento); só quando não há público vale o naipe citado no título.
+  // Evento com PÚBLICO definido segue o público (naipe ou instrumento); sem público, aparece para todos.
   const audiences = useQuery({ queryKey: ['audiences-upcoming', (data ?? []).map((a) => a.id).join(',')], enabled: (data?.length ?? 0) > 0, queryFn: () => getAudiencesFor((data ?? []).map((a) => a.id)) })
-  // Oficina de outro naipe não aparece (vale para professor, monitor e aluno). Sem público e sem naipe no título, aparece para todos.
+  // Oficina de outro naipe não aparece (vale para professor, monitor e aluno). 
   const visible = (data ?? []).filter((a) => {
     if (!filterByMine || !my.data || my.data.mine.size === 0) return true
     const aud = audiences.data?.get(a.id)
@@ -94,9 +94,7 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
       const sids = audienceSectionIds(aud, my.data.instSection)
       return [...sids].some((sid) => my.data!.mine.has(my.data!.sectionPlain.get(sid) ?? ''))
     }
-    const t = plain(a.title)
-    const hits = my.data.all.filter((n) => t.includes(n))
-    return hits.length === 0 || hits.some((n) => my.data!.mine.has(n))
+    return true
   })
   const todayCount = visible.filter((a) => a.activity_date === today).length
   const list = visible.slice(0, todayCount + shown)

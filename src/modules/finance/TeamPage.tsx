@@ -40,7 +40,6 @@ interface Lesson { id: string; title: string; activity_date: string; start_time:
 const SCOPE_LABEL: Record<Scope, string> = { all: 'Receita total das oficinas', section: 'Um naipe', instrument: 'Um instrumento' }
 const EMPTY_RULE: Rule = { kind: 'percent', fixed_amount: null, percent: null, hourly_rate: null, scope: 'all', section_id: null, instrument_id: null }
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
-const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
 const hoursOf = (l: Lesson) => {
   if (!l.start_time || !l.end_time) return 1
   const [h1, m1] = l.start_time.split(':').map(Number), [h2, m2] = l.end_time.split(':').map(Number)
@@ -269,17 +268,16 @@ export function TeamPage() {
       return hit ? sum + Number(c.final_amount) : sum
     }, 0)
   }, [paid.data, parts.data, instruments.data])
-  /** Aulas do mês que entram na regra por hora (todas as oficinas ou as de um naipe, pelo nome no título). */
-  // Aula com público definido conta para o naipe do público; sem público, vale o nome do naipe no título.
+  /** Aulas do mês que entram na regra por hora (todas as oficinas ou as do público de um naipe). */
+  // Aula com público definido conta para o naipe do público; sem público, não conta para o naipe.
   const lessonAudiences = useQuery({ queryKey: ['audiences-lessons', orgId, competence, (lessons.data ?? []).length], enabled: (lessons.data?.length ?? 0) > 0, queryFn: () => getAudiencesFor((lessons.data ?? []).map((l) => l.id)) })
   const lessonsOf = (rule: Rule) => {
-    const sec = rule.scope === 'section' ? sections.data?.find((s) => s.id === rule.section_id) : undefined
     const instSection = new Map((instruments.data ?? []).map((i) => [i.id, i.section_id as string]))
     return (lessons.data ?? []).filter((l) => {
       if (rule.scope !== 'section') return true
       const aud = lessonAudiences.data?.get(l.id)
       if (aud && aud.length > 0) return audienceSectionIds(aud, instSection).has(rule.section_id as string)
-      return !!sec && plain(l.title).includes(plain(sec.name))
+      return false
     })
   }
   const hoursFor = (rule: Rule) => lessonsOf(rule).reduce((n, l) => n + hoursOf(l), 0)
