@@ -1,5 +1,5 @@
 import { confirmBox } from '@/components/shared/DialogHost'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Copy, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,7 +12,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, duplicateProduct, deleteProductImage, imageUrl, reorderProductImages, saveProductPickups, setProductActive, setProductHidden, updateProduct, uploadProductImage, type PickupPoint, type ShopProduct, type StockItem } from './service'
+import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, duplicateProduct, deleteProductImage, imageUrl, reorderProductImages, productHasOrders, saveProductPickups, setProductActive, setProductHidden, updateProduct, uploadProductImage, type PickupPoint, type ShopProduct, type StockItem } from './service'
 
 interface Use { stock_item_id: string; quantity: string }
 interface VariantRow { id?: string; label: string; uses: Use[]; reserved: number; is_active: boolean }
@@ -151,7 +151,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         ...(isKit ? { is_kit: true, kit_component_photos: photos } : {}),
       }
       const rows = variants.map((v) => ({ id: v.id, label: v.label, is_active: v.is_active, items: v.uses.filter((u) => u.stock_item_id).map((u) => ({ stock_item_id: u.stock_item_id, quantity: Number(u.quantity) })) }))
-      if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); await saveProductPickups(orgId, product.id, pickups); return product.id }
+      if (product) { await updateProduct(orgId, product.id, input, f.kind, rows, removed, product.kind); await saveProductPickups(orgId, product.id, pickups); return product.id }
       const created = await createProduct(orgId, { ...input, kind: f.kind }, rows)
       await saveProductPickups(orgId, created, pickups)
       await sendPending(created)
@@ -171,6 +171,9 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     onSuccess: (id) => { refresh(); toast.success('Produto duplicado. A cópia está oculta na loja: ajuste o nome e o que mudar e use Exibir.'); onSaved(id) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  // O tipo só muda enquanto o produto nunca teve pedido.
+  const orders = useQuery({ queryKey: ['shop', orgId, 'product-orders', product?.id], queryFn: () => productHasOrders(product!.id), enabled: !!product })
+  const kindLocked = !!product && orders.data !== false
   const hide = useMutation({
     mutationFn: () => setProductHidden(product!.id, !product!.is_hidden),
     onSuccess: () => { refresh(); toast.success(product!.is_hidden ? 'Produto exibido na loja.' : 'Produto oculto: não aparece na loja, mas continua na lista.'); onClose() },
@@ -247,14 +250,15 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         <div className="space-y-1.5"><Label htmlFor="pr-name">Nome</Label>
           <Input id="pr-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         {!isKit && <div className="space-y-1.5"><Label htmlFor="pr-kind">Tipo</Label>
-          <Select id="pr-kind" value={f.kind} disabled={!!product} onChange={(e) => {
+          <Select id="pr-kind" value={f.kind} disabled={kindLocked} onChange={(e) => {
             const kind = e.target.value as ProductKind
             setF({ ...f, kind })
+            setVariants((vs) => vs.map((v) => ({ ...v, uses: kind === 'stock' ? (v.uses.length ? v.uses : [{ stock_item_id: '', quantity: '1' }]) : [] })))
           }}>
             <option value="stock">Em estoque (controla quantidade)</option>
             <option value="made_to_order">Sob encomenda (prazo de produção)</option>
           </Select>
-          {product && <p className="text-sm text-muted-foreground">O tipo não muda depois de criado.</p>}</div>}
+          {product && <p className="text-sm text-muted-foreground">{orders.isLoading ? 'Conferindo se o produto já teve pedidos.' : orders.data === false ? 'Este produto nunca teve pedido, então o tipo ainda pode mudar.' : 'O tipo não muda porque o produto já teve pedidos.'}</p>}</div>}
         <div className="space-y-1.5"><Label htmlFor="pr-desc">Descrição</Label>
           <textarea id="pr-desc" rows={3} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
