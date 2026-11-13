@@ -43,7 +43,7 @@ export function AlbumsTab() {
   const thisYear = String(new Date().getFullYear())
   const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
   const inYear = active.filter((a) => (year === 'problema' ? hasProblem(a) : a.event_date?.startsWith(year)))
-  const PER_PAGE = 5
+  const PER_PAGE = 3
   const pages = Math.max(1, Math.ceil(inYear.length / PER_PAGE))
   const cur = Math.min(page, pages)
   const visible = inYear.slice((cur - 1) * PER_PAGE, cur * PER_PAGE)
@@ -177,6 +177,7 @@ export function AlbumsTab() {
           ))}
         </ButtonRow>
       )}
+      <Pager page={cur} pages={pages} onChange={setPage} />
       {visible.map((a, i) => (
         <AlbumRow key={a.id} album={a} index={(cur - 1) * PER_PAGE + i} total={inYear.length} dnd={dnd} onMove={move} onDrag={drag}
           onSave={(fields) => autosave.mutateAsync({ id: a.id, fields })}
