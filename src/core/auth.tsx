@@ -5,13 +5,9 @@ import { supabase } from './supabase'
 interface AuthContextValue {
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName: string) => Promise<{ needsVerification: boolean }>
   /** `next`: caminho interno para voltar depois do login com Google (ex.: a loja). */
   signInWithGoogle: (next?: string) => Promise<void>
   signOut: () => Promise<void>
-  requestPasswordReset: (email: string) => Promise<void>
-  updatePassword: (password: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -45,19 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       session,
       loading,
-      async signIn(email, password) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-      },
-      async signUp(email, password, fullName) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName }, emailRedirectTo: `${origin()}/` },
-        })
-        if (error) throw error
-        return { needsVerification: !data.session }
-      },
       async signInWithGoogle(next) {
         if (next) try { sessionStorage.setItem(POST_LOGIN_KEY, next) } catch { /* sem armazenamento: volta para o início */ }
         const { error } = await supabase.auth.signInWithOAuth({
@@ -68,16 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async signOut() {
         const { error } = await supabase.auth.signOut()
-        if (error) throw error
-      },
-      async requestPasswordReset(email) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${origin()}/redefinir-senha`,
-        })
-        if (error) throw error
-      },
-      async updatePassword(password) {
-        const { error } = await supabase.auth.updateUser({ password })
         if (error) throw error
       },
     }),

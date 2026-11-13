@@ -1,10 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useMutation } from '@tanstack/react-query'
 import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { toast } from 'sonner'
-import { Button, Input, Label } from '@/components/ui/primitives'
+import { Button } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { friendlyError } from '@/core/errors'
 
@@ -12,19 +10,11 @@ import { friendlyError } from '@/core/errors'
 export function LoginPopup({ open, onOpenChange, title = 'Entrar', description = 'Acesso de integrantes, professores, monitores e Direção.', returnTo = '/', successMessage, onSignedIn }: {
   open: boolean; onOpenChange: (o: boolean) => void; title?: string; description?: string; returnTo?: string; successMessage?: string; onSignedIn?: () => void
 }) {
-  const { signIn, signInWithGoogle, session } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const { signInWithGoogle, session } = useAuth()
 
   useEffect(() => {
-    if (session && open) { onOpenChange(false); setPassword(''); onSignedIn?.() }
+    if (session && open) { onOpenChange(false); onSignedIn?.() }
   }, [session, open]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const login = useMutation({
-    mutationFn: () => signIn(email.trim(), password),
-    onSuccess: () => { if (successMessage) toast.success(successMessage) },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -38,19 +28,7 @@ export function LoginPopup({ open, onOpenChange, title = 'Entrar', description =
             </div>
             <Dialog.Close className="rounded-md p-1 hover:bg-muted" aria-label="Fechar"><X className="h-5 w-5" /></Dialog.Close>
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); login.mutate() }} className="mt-4 space-y-3">
-            <div className="space-y-1.5"><Label htmlFor="lp-email" required>E-mail</Label>
-              <Input id="lp-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label htmlFor="lp-pass" required>Senha</Label>
-              <Input id="lp-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-            <Button type="submit" className="w-full" disabled={login.isPending}>{login.isPending ? 'Entrando' : 'Entrar'}</Button>
-          </form>
-          <p className="my-3 text-center text-xs text-muted-foreground">ou</p>
-          <Button type="button" variant="outline" className="w-full" onClick={() => signInWithGoogle(returnTo).catch((e) => toast.error(friendlyError(e)))}>Continuar com Google</Button>
-          <div className="mt-4 flex justify-between text-sm">
-            <Link className="text-primary hover:underline" to="/recuperar-senha">Esqueci a senha</Link>
-            <Link className="text-primary hover:underline" to="/cadastro">Criar conta</Link>
-          </div>
+          <Button type="button" className="mt-5 w-full" onClick={() => signInWithGoogle(returnTo).then(() => { if (successMessage) toast.success(successMessage) }).catch((e) => toast.error(friendlyError(e)))}>Continuar com Google</Button>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
