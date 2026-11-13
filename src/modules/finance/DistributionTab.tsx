@@ -144,7 +144,7 @@ export function DistributionTab({ competence }: { competence: string }) {
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h3>Regras</h3>
-          {canManage && <Button size="sm" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Nova regra</Button>}
+          {canManage && <Button variant="outline" size="sm" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Nova regra</Button>}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {(Object.keys(BASE_LABEL) as Base[]).map((b) => (

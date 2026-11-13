@@ -142,9 +142,8 @@ export function PickupPointsTab() {
   })
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-bold">Pontos de retirada</h2>
       <ButtonRow>
-        <Button onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
+        <Button variant="outline" onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
       </ButtonRow>
       {q.isLoading && <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-16" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os pontos de retirada.</EmptyState>}

@@ -142,7 +142,7 @@ export function FieldsTab({ formId }: { formId: string }) {
   })
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between"><h2>Campos</h2><Button onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Novo campo</Button></div>
+      <div className="flex items-center justify-between"><h2>Campos</h2><Button variant="outline" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Novo campo</Button></div>
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
         {fields.map((x, i) => (
