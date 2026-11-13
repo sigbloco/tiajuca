@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ClipboardList, LogIn, ShoppingBag } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LoginPopup } from '@/modules/auth/LoginPopup'
 import { useMemberships } from '@/core/organization'
@@ -18,7 +18,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; shake_button?: 'enrollment' | 'shop' | 'login' | null; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; shake_button?: 'enrollment' | 'shop' | 'login' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   open_forms: { slug: string; title: string }[]
 }
@@ -97,15 +97,19 @@ export function LandingPage() {
         )}
 
         <nav className="space-y-3" aria-label="Menu">
-          {site.show_enrollment !== false && data.open_forms.map((f) => (
-            <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention' : ''}`}>
-              <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}
-            </Link>
+          {[...(site.menu_order ?? []), 'enrollment', 'shop', 'login'].filter((k, i, all) => all.indexOf(k) === i).map((k) => (
+            <Fragment key={k}>
+              {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.map((f) => (
+                <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention' : ''}`}>
+                  <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}
+                </Link>
+              ))}
+              {k === 'shop' && site.show_shop !== false && (
+                <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
+              )}
+              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
+            </Fragment>
           ))}
-          {site.show_shop !== false && (
-            <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
-          )}
-          {site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
         </nav>
 
         {videos.length > 0 && (
