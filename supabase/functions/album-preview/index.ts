@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const res = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': UA, 'Accept-Language': 'pt-BR,pt;q=0.9' } })
     if (!res.ok) return json({ error: 'Não foi possível abrir o link. Confira se o álbum está compartilhado.' }, 502)
     if (!okPage(new URL(res.url))) return json({ error: 'O link levou a um endereço não permitido.' }, 400)
-    const html = (await res.text()).slice(0, 400_000)
+    const html = (await res.text())
 
     // O Google acrescenta " · datas 📸" ao título: fica só o nome do álbum.
     const title = meta(html, 'og:title').replace(/\s+-\s+Google (Fotos|Photos)$/i, '').split(' · ')[0].trim()
