@@ -17,7 +17,7 @@ function MemberNotice() {
   const { store, isMember, setLoginOpen } = useStore()
   const { session } = useAuth()
   const hasDiscount = store.products.some((p) => p.member_discount_pct > 0)
-  if (isMember) return null
+  if (isMember) return <p role="status" className="mb-4 inline-block rounded-full bg-secondary px-3 py-1 text-sm font-bold text-secondary-foreground">Preço de integrante ativo</p>
   if (session || !hasDiscount) return null
   return (
     <div className="mb-4 space-y-2">
@@ -64,7 +64,8 @@ function Shell() {
       <LoginDialog />
       <main className="mx-auto max-w-5xl px-4 pb-6 pt-3">
         {pathname.replace(/\/$/, '') === basePath ? <BackButton to="/site" name="a página inicial" /> : <BackButton to={basePath} name={shopLabel} />}
-        <MemberNotice />
+        {/* Na página de privacidade o aviso de preço não faz sentido. */}
+        {!pathname.replace(/\/$/, '').endsWith('/privacidade') && <MemberNotice />}
         {notices.length > 0 && (
           <Card role="status" className="mb-4 border-secondary p-3 text-sm">
             <ul className="list-disc space-y-1 pl-5">{notices.map((n) => <li key={n}>{n}</li>)}</ul>
