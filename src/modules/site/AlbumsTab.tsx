@@ -47,13 +47,13 @@ export function AlbumsTab() {
   const pickYear = (y: string) => { setPicked(y); setPage(1) }
   const dnd = useHoldReorder()
   // Relê, de 3 em 3, título e capa dos álbuns que ainda não têm capa.
-  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null)
+  const [bulk, setBulk] = useState<{ mode: 'missing' | 'titles'; done: number; total: number } | null>(null)
   const missing = active.filter((a) => !a.cover_url)
   // mode 'missing': lê capa e título dos que ainda não têm capa. mode 'titles': relê só título, data e autores de todos (depois de renomear álbuns no Google Fotos).
   const readBulk = async (mode: 'missing' | 'titles') => {
     const list = mode === 'missing' ? missing : active
     const queue = [...list]
-    setBulk({ done: 0, total: list.length })
+    setBulk({ mode, done: 0, total: list.length })
     let done = 0, failed = 0
     const worker = async () => {
       for (let a = queue.shift(); a; a = queue.shift()) {
@@ -65,7 +65,7 @@ export function AlbumsTab() {
           const { error } = await supabase.from('site_albums').update(fields).eq('id', a.id).eq('organization_id', orgId)
           if (error) throw error
         } catch { failed++ }
-        setBulk({ done: ++done, total: list.length })
+        setBulk({ mode, done: ++done, total: list.length })
       }
     }
     await Promise.all([worker(), worker(), worker()])
@@ -147,12 +147,12 @@ export function AlbumsTab() {
       </div>
       {missing.length > 0 && (
         <Button type="button" variant="outline" className="w-full" disabled={!!bulk} onClick={() => void readBulk('missing')}>
-          <RefreshCw className={`h-4 w-4 ${bulk ? 'animate-spin' : ''}`} /> {bulk ? `Lendo ${bulk.done}/${bulk.total}` : `Ler capas e títulos que faltam (${missing.length})`}
+          <RefreshCw className={`h-4 w-4 ${bulk?.mode === 'missing' ? 'animate-spin' : ''}`} /> {bulk?.mode === 'missing' ? `Lendo ${bulk.done}/${bulk.total}` : `Ler capas e títulos que faltam (${missing.length})`}
         </Button>
       )}
       {active.length > 0 && (
         <Button type="button" variant="outline" className="w-full" disabled={!!bulk} onClick={() => void readBulk('titles')}>
-          <RefreshCw className={`h-4 w-4 ${bulk ? 'animate-spin' : ''}`} /> {bulk ? `Lendo ${bulk.done}/${bulk.total}` : `Atualizar títulos, datas e autores de todos (${active.length})`}
+          <RefreshCw className={`h-4 w-4 ${bulk?.mode === 'titles' ? 'animate-spin' : ''}`} /> {bulk?.mode === 'titles' ? `Lendo ${bulk.done}/${bulk.total}` : `Atualizar títulos, datas e autores de todos (${active.length})`}
         </Button>
       )}
       {active.length === 0 && <p className="text-muted-foreground">Nenhum álbum ainda.</p>}
