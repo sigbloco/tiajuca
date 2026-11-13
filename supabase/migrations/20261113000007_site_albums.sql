@@ -25,6 +25,15 @@ create policy albums_insert on public.site_albums for insert to authenticated wi
 create policy albums_update on public.site_albums for update to authenticated using (public.has_permission(organization_id, 'settings.manage')) with check (public.has_permission(organization_id, 'settings.manage'));
 create policy albums_delete on public.site_albums for delete to authenticated using (public.has_permission(organization_id, 'settings.manage'));
 
+-- Botão "Fotos" no menu da página inicial (entra na ordem do menu).
+alter table public.site_settings
+  add column if not exists show_albums boolean not null default true,
+  add column if not exists albums_label text not null default 'Fotos';
+alter table public.site_settings drop constraint if exists site_settings_menu_order_check;
+alter table public.site_settings add constraint site_settings_menu_order_check check (jsonb_typeof(menu_order) = 'array' and jsonb_array_length(menu_order) <= 4);
+alter table public.site_settings drop constraint if exists site_settings_shake_button_check;
+alter table public.site_settings add constraint site_settings_shake_button_check check (shake_button in ('enrollment', 'shop', 'login', 'albums'));
+
 -- Leitura pública (página de fotos): só os álbuns ativos, na ordem escolhida.
 create or replace function public.get_public_albums(p_slug text) returns jsonb
 language sql stable security definer set search_path = '' as $$
@@ -43,12 +52,3 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke all on function public.get_public_albums(text) from public;
 grant execute on function public.get_public_albums(text) to anon, authenticated;
-
--- Botão "Fotos" no menu da página inicial (entra na ordem do menu).
-alter table public.site_settings
-  add column if not exists show_albums boolean not null default true,
-  add column if not exists albums_label text not null default 'Fotos';
-alter table public.site_settings drop constraint if exists site_settings_menu_order_check;
-alter table public.site_settings add constraint site_settings_menu_order_check check (jsonb_typeof(menu_order) = 'array' and jsonb_array_length(menu_order) <= 4);
-alter table public.site_settings drop constraint if exists site_settings_shake_button_check;
-alter table public.site_settings add constraint site_settings_shake_button_check check (shake_button in ('enrollment', 'shop', 'login', 'albums'));
