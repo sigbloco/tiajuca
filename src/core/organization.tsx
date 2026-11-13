@@ -49,6 +49,8 @@ export function useMemberships() {
     queryKey: ['memberships', session?.user.id],
     enabled: Boolean(session),
     queryFn: async () => {
+      // Entrada só com Google: quem tem cadastro com o mesmo e-mail é vinculado sozinho (o servidor confere e-mail verificado).
+      await supabase.rpc('link_my_member_by_email')
       const { data, error } = await supabase.rpc('get_my_memberships')
       if (error) throw error
       return (data ?? []) as Membership[]
