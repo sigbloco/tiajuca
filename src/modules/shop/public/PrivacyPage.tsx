@@ -1,11 +1,10 @@
-import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/primitives'
 import { buildPrivacyNotice } from '../privacy'
 import { useStore } from './StoreContext'
 
 /** Aviso de privacidade da loja (LGPD). */
 export function PrivacyPage() {
-  const { store, basePath } = useStore()
+  const { store } = useStore()
   const sections = buildPrivacyNotice(store.org.name, store.contact, store.privacy_retention_years)
   return (
     <div className="max-w-2xl space-y-4">
@@ -16,7 +15,6 @@ export function PrivacyPage() {
           {s.paragraphs.map((p) => <p key={p} className="text-sm">{p}</p>)}
         </Card>
       ))}
-      <Link className="block font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
     </div>
   )
 }

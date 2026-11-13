@@ -2,6 +2,7 @@ import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, EmptyState, cn } from '@/components/ui/primitives'
+import { balancedCols } from '@/components/shared/BalancedGrid'
 import { productAvailability, type ProductKind } from '../catalog'
 import { imageUrl } from '../admin/service'
 import { Price } from './Price'
@@ -47,14 +48,19 @@ export function ShopHomePage() {
     return (
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         {products.map((p, idx) => {
-          // Última linha incompleta estica para ocupar 100% da largura (celular: 2 colunas; telas maiores: 3).
-          const n = products.length, last = idx === n - 1, prev = idx === n - 2
-          const phone = last && n % 2 === 1 ? 'col-span-2' : ''
-          const wide = n % 3 === 1 && last ? 'sm:col-span-6' : n % 3 === 2 && (last || prev) ? 'sm:col-span-3' : 'sm:col-span-2'
+          // Distribuição harmônica: celular em 2 colunas; telas maiores no número de colunas que fecha melhor as linhas (4 → 2+2, 5 → 3+2).
+          // A última linha incompleta estica para ocupar a largura, mas uma caixa sozinha na linha tem tamanho máximo (a foto não fica gigante).
+          const n = products.length
+          const cols = balancedCols(n, 3)
+          const rem = n % cols
+          const inLast = rem > 0 && idx >= n - rem
+          const perRow = inLast ? rem : cols
+          const span = ({ 1: 'sm:col-span-6 sm:max-w-md sm:w-full sm:justify-self-center', 2: 'sm:col-span-3', 3: 'sm:col-span-2' } as const)[perRow as 1 | 2 | 3]
+          const phone = idx === n - 1 && n % 2 === 1 ? 'col-span-2' : 'col-span-1'
           const a = productAvailability(p.kind, p.variants.map((v) => ({ stock: v.available, reserved: 0, is_active: true })))
           const soldOut = a.status === 'sold_out'
           return (
-            <li key={p.id} className={`${phone || 'col-span-1'} ${wide}`}>
+            <li key={p.id} className={`${phone} ${span}`}>
               <Link to={`${basePath}/produto/${p.slug}`} className="block h-full">
                 <Card className={cn('h-full overflow-hidden transition hover:shadow-md', soldOut && 'opacity-70 grayscale')}>
                   {p.images[0]
