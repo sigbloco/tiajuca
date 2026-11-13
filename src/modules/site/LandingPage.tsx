@@ -100,17 +100,17 @@ export function LandingPage() {
           {[...(site.menu_order ?? []), 'enrollment', 'shop', 'albums', 'login'].filter((k, i, all) => all.indexOf(k) === i).map((k) => (
             <Fragment key={k}>
               {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.map((f) => (
-                <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention' : ''}`}>
+                <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
                   <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}
                 </Link>
               ))}
               {k === 'shop' && site.show_shop !== false && (
-                <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
+                <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
               )}
               {k === 'albums' && site.show_albums !== false && (
-                <Link to={`/${slug}/fotos`} className={`${pill} bg-card text-foreground ${site.shake_button === 'albums' ? 'animate-attention' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}</Link>
+                <Link to={`/${slug}/fotos`} className={`${pill} bg-card text-foreground ${site.shake_button === 'albums' ? 'animate-attention trim-ring' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}</Link>
               )}
-              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
+              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
             </Fragment>
           ))}
         </nav>
