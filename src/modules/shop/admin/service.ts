@@ -39,7 +39,7 @@ export async function listProducts(orgId: string) {
 export interface ProductInput {
   name: string; description: string; kind: ProductKind; price_cents: number; member_discount_pct: number
   lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean
-  is_kit?: boolean; kit_component_photos?: boolean
+  is_kit?: boolean; kit_component_photos?: boolean; is_hidden?: boolean
 }
 export interface VariantInput { id?: string; label: string; items: { stock_item_id: string; quantity: number }[]; is_active: boolean }
 
@@ -120,6 +120,31 @@ export async function createStockItem(orgId: string, name: string, stock: number
 export async function updateStockItem(id: string, patch: Partial<Pick<StockItem, 'name' | 'stock' | 'is_active'>>) {
   const { error } = await supabase.from('shop_stock_items').update(patch).eq('id', id)
   if (error) throw error
+}
+
+/**
+ * Duplica o produto para criar outro parecido: copia dados, variações com os mesmos itens de estoque, pontos de retirada e fotos
+ * (os arquivos são copiados, então apagar uma foto de um não afeta o outro). A cópia nasce OCULTA na loja, com " (cópia)" no nome.
+ */
+export async function duplicateProduct(orgId: string, p: ShopProduct): Promise<string> {
+  const variants: VariantInput[] = p.shop_product_variants.map((v) => ({
+    label: v.label, is_active: v.is_active,
+    items: [...(v.shop_variant_stock ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((u) => ({ stock_item_id: u.stock_item_id, quantity: u.quantity })),
+  }))
+  const id = await createProduct(orgId, {
+    name: `${p.name} (cópia)`.slice(0, 120), description: p.description, kind: p.kind, price_cents: p.price_cents, member_discount_pct: p.member_discount_pct,
+    lead_time_days: p.lead_time_days, min_units: p.min_units, suggested_ids: p.suggested_ids, is_active: true, is_featured: false,
+    is_kit: p.is_kit, kit_component_photos: p.kit_component_photos, is_hidden: true,
+  }, variants)
+  await saveProductPickups(orgId, id, p.shop_product_pickups.map((x) => x.pickup_point_id))
+  for (const img of p.shop_product_images) {
+    const path = `${orgId}/${id}/${crypto.randomUUID()}.webp`
+    const cp = await supabase.storage.from(IMAGE_BUCKET).copy(img.storage_path, path)
+    if (cp.error) continue
+    const { error } = await supabase.from('shop_product_images').insert({ organization_id: orgId, product_id: id, storage_path: path, alt: img.alt, sort_order: img.sort_order })
+    if (error) await supabase.storage.from(IMAGE_BUCKET).remove([path])
+  }
+  return id
 }
 
 /** Pontos de retirada do produto (nenhum marcado = vale para todos). */

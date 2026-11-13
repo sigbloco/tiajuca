@@ -1,6 +1,6 @@
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
+import { Ban, Copy, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useProgressive } from '@/components/shared/LoadMore'
@@ -12,7 +12,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, deleteProductImage, imageUrl, reorderProductImages, saveProductPickups, setProductActive, setProductHidden, updateProduct, uploadProductImage, type PickupPoint, type ShopProduct, type StockItem } from './service'
+import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, duplicateProduct, deleteProductImage, imageUrl, reorderProductImages, saveProductPickups, setProductActive, setProductHidden, updateProduct, uploadProductImage, type PickupPoint, type ShopProduct, type StockItem } from './service'
 
 interface Use { stock_item_id: string; quantity: string }
 interface VariantRow { id?: string; label: string; uses: Use[]; reserved: number; is_active: boolean }
@@ -166,6 +166,11 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const dup = useMutation({
+    mutationFn: () => duplicateProduct(orgId, product!),
+    onSuccess: (id) => { refresh(); toast.success('Produto duplicado. A cópia está oculta na loja: ajuste o nome e o que mudar e use Exibir.'); onSaved(id) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const hide = useMutation({
     mutationFn: () => setProductHidden(product!.id, !product!.is_hidden),
     onSuccess: () => { refresh(); toast.success(product!.is_hidden ? 'Produto exibido na loja.' : 'Produto oculto: não aparece na loja, mas continua na lista.'); onClose() },
@@ -236,7 +241,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   )
   const topSlot = typeof document === 'undefined' ? null : document.getElementById('edit-actions-slot')
   return (
-    <SheetContent title={isKit ? (product ? 'Editar kit' : 'Novo kit') : (product ? 'Editar produto' : 'Novo produto')} description={isKit ? 'Preço do kit, itens de estoque que entram nele e fotos.' : 'Preço público, desconto de integrante, variações, estoque e fotos.'}>
+    <SheetContent titleAction={product ? <Button type="button" size="icon" variant="outline" className="h-8 w-8" aria-label="Duplicar" title="Duplicar: cria uma cópia para você ajustar" disabled={dup.isPending} onClick={() => dup.mutate()}><Copy className="h-4 w-4" /></Button> : undefined} title={isKit ? (product ? 'Editar kit' : 'Novo kit') : (product ? 'Editar produto' : 'Novo produto')} description={isKit ? 'Preço do kit, itens de estoque que entram nele e fotos.' : 'Preço público, desconto de integrante, variações, estoque e fotos.'}>
       {topSlot ? createPortal(actionBar, topSlot) : actionBar}
       <form id="product-form" onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="pr-name">Nome</Label>
@@ -253,7 +258,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         <div className="space-y-1.5"><Label htmlFor="pr-desc">Descrição</Label>
           <textarea id="pr-desc" rows={3} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 items-end gap-3">
           <div className="space-y-1.5"><Label htmlFor="pr-price">Preço público</Label><MoneyInput id="pr-price" value={f.price} onChange={(v) => setF({ ...f, price: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="pr-disc">Desconto de integrante (%)</Label>
             <Input id="pr-disc" inputMode="decimal" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value.replace(/[^\d.,]/g, '') })} /></div>
