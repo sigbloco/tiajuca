@@ -144,8 +144,7 @@ export function AlbumsTab() {
   if (isLoading) return <Skeleton className="h-40" />
   return (
     <Card className="space-y-3 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3>Álbuns de fotos</h3>
+      <div className="flex items-center justify-end gap-2">
         <TrashDrawer iconOnly entries={trashed.map((a) => ({ id: a.id, name: a.title || a.url }))}
           onRestore={(id) => patch.mutate({ id, fields: { is_active: true } })} onPurge={(id) => purge.mutate(id)} />
       </div>
@@ -218,7 +217,7 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
   }, [JSON.stringify(clean(d)), dirty]) // eslint-disable-line react-hooks/exhaustive-deps
   const setAuthor = (i: number, p: Partial<Author>) => setD((x) => ({ ...x, authors: x.authors.map((u, k) => (k === i ? { ...u, ...p } : u)) }))
   return (
-    <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${dnd.cls(a.id)}`}>
+    <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${index % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(a.id)}`}>
       <div className="flex flex-col items-center">
         <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label="Subir álbum" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
         {dnd.handle(a.id, onDrag, 'albums')}
