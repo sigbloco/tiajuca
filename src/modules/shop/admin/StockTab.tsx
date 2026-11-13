@@ -11,6 +11,9 @@ import { useOrgId } from '@/core/organization'
 import { availableUnits } from '../catalog'
 import { createStockItem, listProducts, listStockItems, updateStockItem, type StockItem } from './service'
 
+/** Singular para 0 e 1, plural a partir de 2 (português). */
+const plural = (n: number, one: string, many: string) => (n >= 2 ? many : one)
+
 function ItemSheet({ item, minStock, onClose }: { item: StockItem | null; minStock: number; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -91,10 +94,15 @@ export function StockTab() {
           <Card key={it.id} className="flex items-start gap-2 p-3">
             <div className="min-w-0 flex-1 space-y-1">
               <p className="break-words font-semibold">{it.name}</p>
-              <p className="text-sm">
-                {it.stock === null ? 'Estoque ilimitado' : <>Em estoque <strong>{it.stock}</strong> · reservado {it.reserved} · disponível <strong>{avail}</strong></>}
-                {it.stock !== null && avail === 0 && <> <Badge>Esgotado</Badge></>}
-              </p>
+              {it.stock === null
+                ? <p className="text-sm">Estoque ilimitado</p>
+                : (
+                  <div className="text-sm">
+                    <p><strong>{it.stock}</strong> em estoque</p>
+                    <p>{it.reserved} {plural(it.reserved, 'reservado', 'reservados')}</p>
+                    <p><strong>{avail}</strong> {plural(avail, 'disponível', 'disponíveis')} {avail === 0 && <Badge>Esgotado</Badge>}</p>
+                  </div>
+                )}
               <p className="text-sm text-muted-foreground">{uses.length === 0 ? 'Nenhum produto usa este item ainda.' : `Usado em: ${uses.join('; ')}`}</p>
             </div>
             <Button size="icon" variant="ghost" aria-label={`Editar ${it.name}`} onClick={() => setSheet(it.id)}><Pencil className="h-4 w-4" /></Button>
