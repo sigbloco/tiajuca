@@ -1,6 +1,7 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FitLabel } from '@/components/shared/FitLabel'
 import { Ban, Copy, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -348,7 +349,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           {varProg.button}
           <ButtonRow>
             <Button type="button" size="sm" variant="outline" onClick={() => { varProg.showAll(); setVariants((vs) => [...vs, { label: '', uses: isStock ? [{ stock_item_id: '', quantity: '1' }] : [], reserved: 0, is_active: true }]) }}><Plus className="h-4 w-4" /> Variação</Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => { varProg.showAll(); addSizes() }}>Adicionar P, M, G, GG</Button>
+            <Button type="button" size="sm" variant="outline" className="relative" onClick={() => { varProg.showAll(); addSizes() }}><FitLabel full="Adicionar P, M, G, GG" short="+ P, M, G e GG" /></Button>
           </ButtonRow>
         </fieldset>}
 
