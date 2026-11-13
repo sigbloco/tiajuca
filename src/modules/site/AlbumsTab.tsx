@@ -225,7 +225,7 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
             <Button type="button" onClick={() => { if (requireFields([['Título', d.title.trim()]])) void onSave({ title: d.title.trim(), event_date: d.event_date, authors: d.authors.filter((u) => u.value.trim()).map((u) => ({ kind: u.kind, value: u.value.trim() })) }) }}
               aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>
           )}
-          <Button asChild variant="outline"><a href={a.url} target="_blank" rel="noreferrer noopener" aria-label="Abrir o álbum" title="Abrir o álbum"><ExternalLink className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Abrir</span></a></Button>
+          <Button asChild variant="outline"><a href={a.url} target="_blank" rel="noreferrer noopener" aria-label="Abrir no Google Photos" title="Abrir no Google Photos"><ExternalLink className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Google Photos</span></a></Button>
           <Button type="button" variant="outline" disabled={busy} aria-label="Reler título e capa do Google" title="Reler título e capa do Google"
             onClick={async () => { setBusy(true); try { await onRefresh() } catch (e) { toast.error(e instanceof Error ? e.message : friendlyError(e)) } finally { setBusy(false) } }}><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /><span className="ml-2 hidden sm:inline">Reler</span></Button>
           <Button type="button" variant="outline" className="text-destructive" aria-label="Mover para a lixeira" title="Mover para a lixeira" onClick={onTrash}><Trash2 className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Lixeira</span></Button>
