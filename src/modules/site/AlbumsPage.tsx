@@ -33,12 +33,12 @@ export function AlbumsPage() {
   // Filtro por ano: começa no ano atual (se não houver álbum nele, no ano mais recente); "Sem data" só aparece se houver álbum sem data.
   const all = data?.albums ?? []
   const years = [...new Set(all.map((a) => a.event_date?.slice(0, 4)).filter((y): y is string => !!y))].sort((a, b) => b.localeCompare(a))
-  const hasUndated = all.some((a) => !a.event_date)
-  const options = [...years, ...(hasUndated ? ['semdata'] : [])]
+  // Álbum sem data não aparece na página pública.
+  const options = years
   const [picked, setPicked] = useState<string | null>(null)
   const thisYear = String(new Date().getFullYear())
   const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
-  const shown = all.filter((a) => (year === 'semdata' ? !a.event_date : a.event_date?.startsWith(year)))
+  const shown = all.filter((a) => a.event_date?.startsWith(year))
   const prog = useProgressive(shown, 6, year)
   const heroColor = data ? areaOverrides(data.org.theme, 'site').header ?? null : null
   const heroText = heroColor ? areaOverrides(data!.org.theme, 'site').headerText ?? textOn(heroColor) : undefined
@@ -59,7 +59,7 @@ export function AlbumsPage() {
             <ButtonRow role="group" aria-label="Filtrar por ano">
               {options.map((y) => (
                 <button key={y} type="button" aria-pressed={year === y} onClick={() => setPicked(y)}
-                  className={`min-h-9 rounded-lg border-2 border-transparent px-3 py-1.5 text-sm font-bold shadow-card ${year === y ? 'bg-secondary text-secondary-foreground' : 'bg-card text-foreground hover:bg-muted'}`}>{y === 'semdata' ? 'Sem data' : y}</button>
+                  className={`min-h-9 rounded-lg border-2 border-transparent px-3 py-1.5 text-sm font-bold ${year === y ? 'bg-secondary text-secondary-foreground' : 'bg-card text-foreground hover:bg-muted'}`}>{y}</button>
               ))}
             </ButtonRow>
           )}
@@ -70,7 +70,7 @@ export function AlbumsPage() {
       {(isError || (!isLoading && !data)) && <p className="py-10 text-center text-muted-foreground">Não foi possível carregar as fotos agora.</p>}
       {data && (
         <>
-          {data.albums.length === 0 && <p className="py-10 text-center text-muted-foreground">Ainda não há álbuns.</p>}
+          {shown.length === 0 && <p className="py-10 text-center text-muted-foreground">Ainda não há álbuns.</p>}
           <ul className="grid gap-4 sm:grid-cols-2">
             {prog.visible.map((a) => {
               const authors = (a.authors ?? []).map((u) => ({ u, href: hrefOf({ ...u, label: '' }) })).filter((x) => x.u.value?.trim())
