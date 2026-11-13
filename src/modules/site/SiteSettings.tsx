@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
+import { useProgressive } from '@/components/shared/LoadMore'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useRememberedState } from '@/core/rememberedState'
@@ -17,12 +18,16 @@ import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteV
 
 const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'links', label: 'Redes sociais e contatos' }, { key: 'videos', label: 'Vídeos do YouTube' }] as const
 type TabKey = (typeof TABS)[number]['key']
+type MenuKey = 'enrollment' | 'shop' | 'login'
+const MENU_DEFAULT: MenuKey[] = ['enrollment', 'shop', 'login']
+/** Ordem salva (completa e sem repetição); o que faltar vai para o fim. */
+const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): k is MenuKey => MENU_DEFAULT.includes(k as MenuKey)).filter((k, i, a) => a.indexOf(k) === i), ...MENU_DEFAULT.filter((k) => !(o ?? []).includes(k))]
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shake_button: 'enrollment' | 'shop' | 'login' | null; hide_headline: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shake_button: 'enrollment' | 'shop' | 'login' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, show_enrollment: true, show_login: true, shake_button: null, hide_headline: false, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, show_enrollment: true, show_login: true, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -47,7 +52,7 @@ export function SiteSettings() {
     const { error } = await supabase.from('site_settings').upsert({
       organization_id: orgId, headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url,
       links: row.links, videos: row.videos, enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label,
-      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shake_button: row.shake_button, hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
+      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shake_button: row.shake_button, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
     }, { onConflict: 'organization_id' })
     if (error) throw error
   }
@@ -82,6 +87,9 @@ export function SiteSettings() {
   // Arrastar pela alça: o id da linha é o índice (escopo "links" ou "videos").
   const dnd = useHoldReorder()
   const dragLink = (from: string, to: string) => moveLink(Number(from), Number(to) - Number(from))
+  const moveMenu = (i: number, d: number) => setF((x) => { const a = menuOrder(x.menu_order); const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, menu_order: a } })
+  const dragMenu = (from: string, to: string) => moveMenu(Number(from), Number(to) - Number(from))
+  const vids = useProgressive(f.videos, 3)
   const dragVideo = (from: string, to: string) => moveVideo(Number(from), Number(to) - Number(from))
   const [tab, setTab] = useRememberedState<TabKey>('site-aba', 'header', TABS.map((t) => t.key))
   useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('header'), true, 0)
@@ -173,25 +181,32 @@ export function SiteSettings() {
       {tab === 'menu' && (
       <Card className="space-y-3 p-4">
         <h3>Menu</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {([
-            { key: 'enrollment', id: 'st-enr', label: 'Botão das inscrições', text: f.enrollment_label, on: f.show_enrollment, set: (v: string) => ({ enrollment_label: v }), toggle: () => ({ show_enrollment: !f.show_enrollment }) },
-            { key: 'shop', id: 'st-shop', label: 'Nome da loja (menu, site e vitrine)', text: f.shop_label, on: f.show_shop, set: (v: string) => ({ shop_label: v }), toggle: () => ({ show_shop: !f.show_shop }) },
-            { key: 'login', id: 'st-login', label: 'Botão de acesso', text: f.login_label, on: f.show_login, set: (v: string) => ({ login_label: v }), toggle: () => ({ show_login: !f.show_login }) },
-          ] as const).map((b) => (
-            <div key={b.key} className="space-y-1.5">
-              <Label htmlFor={b.id}>{b.label}</Label>
-              <div className="flex items-center gap-2">
-                <button type="button" aria-pressed={b.on} aria-label={b.on ? 'Botão visível no site (clique para ocultar)' : 'Botão oculto no site (clique para mostrar)'} title={b.on ? 'Visível no site' : 'Oculto no site'}
-                  onClick={() => setF({ ...f, ...b.toggle() })}
-                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border ${b.on ? 'bg-card text-foreground' : 'bg-muted text-muted-foreground'} hover:bg-muted`}>
-                  {b.on ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-                </button>
-                <Input id={b.id} className="min-w-0 flex-1" value={b.text} onChange={(e) => setF({ ...f, ...b.set(e.target.value) })} />
+        <div className="space-y-3">
+          {menuOrder(f.menu_order).map((key, i) => {
+            const b = ({
+              enrollment: { id: 'st-enr', label: 'Botão das inscrições', text: f.enrollment_label, on: f.show_enrollment, set: (v: string) => ({ enrollment_label: v }), toggle: () => ({ show_enrollment: !f.show_enrollment }) },
+              shop: { id: 'st-shop', label: 'Nome da loja (menu, site e vitrine)', text: f.shop_label, on: f.show_shop, set: (v: string) => ({ shop_label: v }), toggle: () => ({ show_shop: !f.show_shop }) },
+              login: { id: 'st-login', label: 'Botão de acesso', text: f.login_label, on: f.show_login, set: (v: string) => ({ login_label: v }), toggle: () => ({ show_login: !f.show_login }) },
+            } as const)[key]
+            const id = String(i)
+            return (
+              <div key={key} {...dnd.row(id, dragMenu, 'menu')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
+                {reorderCol(id, i, 3, moveMenu, dragMenu, 'menu', 'botão')}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Label htmlFor={b.id}>{b.label}</Label>
+                  <div className="flex items-center gap-2">
+                    <button type="button" aria-pressed={b.on} aria-label={b.on ? 'Botão visível no site (clique para ocultar)' : 'Botão oculto no site (clique para mostrar)'} title={b.on ? 'Visível no site' : 'Oculto no site'}
+                      onClick={() => setF({ ...f, ...b.toggle() })}
+                      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border ${b.on ? 'bg-card text-foreground' : 'bg-muted text-muted-foreground'} hover:bg-muted`}>
+                      {b.on ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                    </button>
+                    <Input id={b.id} className="min-w-0 flex-1" value={b.text} onChange={(e) => setF({ ...f, ...b.set(e.target.value) })} />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? key : null })} /> Tremer para chamar atenção</label>
+                </div>
               </div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === b.key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? b.key : null })} /> Tremer para chamar atenção</label>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </Card>
       )}
@@ -199,7 +214,7 @@ export function SiteSettings() {
       {tab === 'videos' && (
       <Card className="space-y-3 p-4">
         <h3>Vídeos do YouTube</h3>
-        {f.videos.map((v, i) => {
+        {vids.visible.map((v, i) => {
           const ok = !v.url.trim() || !!youtubeId(v.url)
           const id = String(i)
           return (
@@ -216,7 +231,8 @@ export function SiteSettings() {
             </div>
           )
         })}
-        <Button type="button" variant="outline" disabled={f.videos.length >= 12} onClick={() => setF({ ...f, videos: [...f.videos, { url: '', title: '' }] })}><Plus className="h-4 w-4" /> Adicionar vídeo</Button>
+        {vids.button}
+        <Button type="button" variant="outline" disabled={f.videos.length >= 12} onClick={() => { vids.showAll(); setF({ ...f, videos: [...f.videos, { url: '', title: '' }] }) }}><Plus className="h-4 w-4" /> Adicionar vídeo</Button>
       </Card>
       )}
 
