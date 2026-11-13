@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { ShoppingCart } from 'lucide-react'
+import { LogIn, ShoppingCart } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
-import { Card, Skeleton } from '@/components/ui/primitives'
+import { Button, Card, Skeleton } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { useAreaTheme } from '@/core/useAreaTheme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
@@ -20,10 +20,10 @@ function MemberNotice() {
   if (isMember) return <p role="status" className="mb-4 inline-block rounded-full bg-secondary px-3 py-1 text-sm font-bold text-secondary-foreground">Preço de integrante ativo</p>
   if (session || !hasDiscount) return null
   return (
-    <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 border-secondary p-3 text-sm">
-      <span>É integrante do bloco? Entre com a sua conta para ver os preços de integrante.</span>
-      <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Entrar</button>
-    </Card>
+    <div className="mb-4 space-y-2">
+      <Button className="w-full" onClick={() => setLoginOpen(true)}><LogIn className="h-4 w-4" aria-hidden /> Entrar</Button>
+      <Card className="border-secondary p-3 text-sm">É integrante do bloco? Entre com a sua conta para ver os preços de integrante.</Card>
+    </div>
   )
 }
 
@@ -62,7 +62,7 @@ function Shell() {
     <div className="min-h-screen bg-background">
       <Header />
       <LoginDialog />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto max-w-5xl px-4 pb-6 pt-3">
         {pathname.replace(/\/$/, '') === basePath ? <BackButton to="/site" name="a página inicial" /> : <BackButton to={basePath} name={shopLabel} />}
         <MemberNotice />
         {notices.length > 0 && (
