@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 import { Palette, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { Button, Card } from '@/components/ui/primitives'
@@ -28,7 +28,7 @@ export function ShopAdminPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const canTheme = usePermission('org.manage')
-  const [tab, setTab] = useState<TabKey>('orders')
+  const [tab, setTab] = useRememberedState<TabKey>('loja-aba', 'orders', ['orders', 'products', 'stock', 'pickup', 'payments'])
   useRegisterCrumb(TAB_LABEL[tab], () => setTab('orders'), true, 0)
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const pending = settings.data ? missingSetup(settings.data) : []

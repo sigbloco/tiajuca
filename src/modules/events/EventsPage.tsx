@@ -1,4 +1,5 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
@@ -31,7 +32,7 @@ export function EventsPage() {
   const { cycleId, cycle: selCycle } = useSelectedCycle()
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null; edit?: boolean } | null>(null)
-  const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados'>('agenda')
+  const [tab, setTab] = useRememberedState<'agenda' | 'recorrencias' | 'feriados'>('calendario-aba', 'agenda', ['agenda', 'recorrencias', 'feriados'])
   useRegisterCrumb(tab === 'recorrencias' ? 'Recorrências' : tab === 'feriados' ? 'Feriados' : 'Agenda', () => setTab('agenda'), canManage, 0)
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
