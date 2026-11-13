@@ -68,7 +68,7 @@ export interface ActivityInput {
   itinerary: ItineraryStep[] | null
 }
 
-export type AudienceKind = 'section' | 'instrument'
+export type AudienceKind = 'section' | 'instrument' | 'category'
 export interface AudienceInput { kind: AudienceKind; ref_id: string }
 
 /** Público de vários eventos de uma vez (id do evento → itens). Evento sem público não aparece no mapa. */
@@ -78,7 +78,7 @@ export async function getAudiencesFor(activityIds: string[]): Promise<Map<string
   const { data, error } = await supabase.from('activity_audiences').select('activity_id, kind, ref_id').in('activity_id', activityIds).limit(5000)
   if (error) throw error
   for (const a of (data ?? []) as { activity_id: string; kind: string; ref_id: string }[]) {
-    if (a.kind !== 'section' && a.kind !== 'instrument') continue
+    if (a.kind !== 'section' && a.kind !== 'instrument' && a.kind !== 'category') continue
     out.set(a.activity_id, [...(out.get(a.activity_id) ?? []), { kind: a.kind, ref_id: a.ref_id }])
   }
   return out
@@ -88,6 +88,7 @@ export async function getAudiencesFor(activityIds: string[]): Promise<Map<string
 export function audienceSectionIds(audience: AudienceInput[], instrumentSection: Map<string, string>): Set<string> {
   const ids = new Set<string>()
   for (const a of audience) {
+    if (a.kind === 'category') continue
     const sid = a.kind === 'section' ? a.ref_id : instrumentSection.get(a.ref_id)
     if (sid) ids.add(sid)
   }
@@ -98,7 +99,7 @@ export function audienceSectionIds(audience: AudienceInput[], instrumentSection:
 export async function getAudiences(activityId: string): Promise<AudienceInput[]> {
   const { data, error } = await supabase.from('activity_audiences').select('kind, ref_id').eq('activity_id', activityId)
   if (error) throw error
-  return ((data ?? []) as AudienceInput[]).filter((a) => a.kind === 'section' || a.kind === 'instrument')
+  return ((data ?? []) as AudienceInput[]).filter((a) => a.kind === 'section' || a.kind === 'instrument' || a.kind === 'category')
 }
 
 async function replaceAudience(orgId: string, activityId: string, audiences: AudienceInput[]) {
