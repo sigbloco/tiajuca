@@ -331,9 +331,9 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           {varProg.visible.map((v, i) => (
             <div key={vKey(v, i)} className="space-y-1">
             <div {...dnd.row(vKey(v, i), dragVariant, 'variants')} className={`flex items-center gap-2 rounded-lg ${v.is_active ? '' : 'bg-muted/60 opacity-60'} ${dnd.cls(vKey(v, i))}`}>
-              {dnd.handle(vKey(v, i), dragVariant, 'variants')}
-              <div className="flex flex-col">
+              <div className="flex flex-col items-center">
                 <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir variação" disabled={i === 0} onClick={() => moveVariant(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+              {dnd.handle(vKey(v, i), dragVariant, 'variants')}
                 <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer variação" disabled={i === variants.length - 1} onClick={() => moveVariant(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
               </div>
               <Input aria-label="Nome da variação" placeholder="Ex.: M" className={v.is_active ? '' : 'line-through'} value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} />
