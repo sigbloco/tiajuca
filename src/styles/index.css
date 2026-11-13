@@ -71,3 +71,16 @@ input, textarea, select { font-size: max(16px, 1em); }
 }
 .animate-attention { animation: attention-shake 3.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .animate-attention { animation: none; } }
+
+/* Botão destacado: traço vermelho incompleto que percorre a borda (estilo "trim path"), junto da tremidinha. */
+@property --ring-a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes ring-spin { to { --ring-a: 360deg; } }
+.trim-ring { position: relative; }
+.trim-ring::after {
+  content: ''; position: absolute; inset: -3px; border-radius: inherit; padding: 2.5px; pointer-events: none;
+  background: conic-gradient(from var(--ring-a), transparent 0 62%, rgb(220 38 38 / 0.25) 62%, rgb(220 38 38) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: ring-spin 2.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .trim-ring::after { display: none; } }
