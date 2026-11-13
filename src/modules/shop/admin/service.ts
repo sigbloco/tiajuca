@@ -10,7 +10,7 @@ export interface ShopImage { id: string; product_id: string; storage_path: strin
 export interface ShopProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
   price_cents: number; member_discount_pct: number; lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean; sort_order: number
-  is_kit: boolean; kit_component_photos: boolean
+  is_kit: boolean; kit_component_photos: boolean; is_hidden: boolean
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
 export interface PickupPoint {
@@ -119,6 +119,11 @@ export async function createStockItem(orgId: string, name: string, stock: number
 
 export async function updateStockItem(id: string, patch: Partial<Pick<StockItem, 'name' | 'stock' | 'is_active'>>) {
   const { error } = await supabase.from('shop_stock_items').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+export async function setProductHidden(id: string, is_hidden: boolean) {
+  const { error } = await supabase.from('shop_products').update({ is_hidden }).eq('id', id)
   if (error) throw error
 }
 

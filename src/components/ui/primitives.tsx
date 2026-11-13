@@ -131,7 +131,7 @@ export function SheetContent({ title, titleExtra, titleAction, description, chil
             <DialogPrimitive.Title className="font-display text-xl font-bold">{title}{titleExtra && <span className="font-normal text-muted-foreground"> • {titleExtra}</span>}{titleAction && <span className="ml-1.5 inline-flex align-middle">{titleAction}</span>}</DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-muted-foreground">{description ?? ''}</DialogPrimitive.Description>
           </div>
-          <DialogPrimitive.Close ref={closeRef} onClick={guard} className="rounded-md p-1 hover:bg-muted" aria-label="Fechar">
+          <DialogPrimitive.Close ref={closeRef} data-sheet-close onClick={guard} className="rounded-md p-1 hover:bg-muted" aria-label="Fechar">
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         </div>

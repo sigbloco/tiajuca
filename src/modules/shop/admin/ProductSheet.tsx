@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Plus, Trash2 } from 'lucide-react'
+import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useHoldReorder } from '@/core/holdReorder'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
@@ -9,7 +10,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, updateProduct, uploadProductImage, type ShopProduct, type StockItem } from './service'
+import { createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, setProductHidden, updateProduct, uploadProductImage, type ShopProduct, type StockItem } from './service'
 
 interface Use { stock_item_id: string; quantity: string }
 interface VariantRow { id?: string; label: string; uses: Use[]; reserved: number; is_active: boolean }
@@ -102,6 +103,11 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const hide = useMutation({
+    mutationFn: () => setProductHidden(product!.id, !product!.is_hidden),
+    onSuccess: () => { refresh(); toast.success(product!.is_hidden ? 'Produto reativado na loja.' : 'Produto desativado: não aparece na loja, mas continua na lista.'); onClose() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const toggle = useMutation({
     mutationFn: () => setProductActive(product!.id, !product!.is_active),
     onSuccess: () => { refresh(); toast.success(product!.is_active ? 'Produto movido para a lixeira.' : 'Produto restaurado na loja.'); onClose() },
@@ -158,9 +164,32 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   })
 
   const publicCents = f.price === null ? null : toCents(f.price)
+  const goBack = () => { const b = document.querySelector<HTMLElement>('[data-sheet-close]'); if (b) b.click(); else onClose() }
+  // Botões com ícone: voltar, salvar, desativar e lixeira (os dois últimos só em produto já criado).
+  const actionBar = (
+    <div role="toolbar" aria-label="Ações do produto" className="flex items-center gap-2 py-1.5">
+      <Button type="button" size="icon" variant="outline" aria-label="Voltar" title="Voltar" onClick={goBack}><ArrowLeft className="h-4 w-4" /></Button>
+      <Button type="submit" form="product-form" size="icon" aria-label="Salvar" title="Salvar" disabled={save.isPending}><Save className="h-4 w-4" /></Button>
+      {product && (
+        <>
+          <Button type="button" size="icon" variant="outline" aria-label={product.is_hidden ? 'Reativar na loja' : 'Desativar'} title={product.is_hidden ? 'Reativar na loja' : 'Desativar: some da loja, mas continua na lista'}
+            aria-pressed={product.is_hidden} className={product.is_hidden ? 'border-destructive text-destructive' : ''} disabled={hide.isPending} onClick={() => hide.mutate()}>
+            {product.is_hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </Button>
+          <Button type="button" size="icon" variant="outline" aria-label={product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'} title={product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'}
+            className={product.is_active ? 'text-destructive' : ''} disabled={toggle.isPending}
+            onClick={() => (!product.is_active || window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+    </div>
+  )
+  const topSlot = typeof document === 'undefined' ? null : document.getElementById('edit-actions-slot')
   return (
     <SheetContent title={isKit ? (product ? 'Editar kit' : 'Novo kit') : (product ? 'Editar produto' : 'Novo produto')} description={isKit ? 'Preço do kit, itens de estoque que entram nele e fotos.' : 'Preço público, desconto de integrante, variações, estoque e fotos.'}>
-      <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
+      {topSlot ? createPortal(actionBar, topSlot) : actionBar}
+      <form id="product-form" onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="pr-name">Nome</Label>
           <Input id="pr-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         {!isKit && <div className="space-y-1.5"><Label htmlFor="pr-kind">Tipo</Label>
@@ -250,7 +279,6 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         </fieldset>}
 
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-        <Button type="submit" className="w-full" disabled={save.isPending}>{product ? 'Salvar' : isKit ? 'Criar kit' : 'Criar produto'}</Button>
       </form>
 
       {product ? (
@@ -274,13 +302,13 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           <Button type="button" variant="outline" className="w-full" disabled={upload.isPending} onClick={() => fileRef.current?.click()}>
             <ImagePlus className="h-4 w-4" /> {upload.isPending ? 'Enviando' : 'Adicionar fotos'}
           </Button>
-          <Button type="button" variant="ghost" className={product.is_active ? 'w-full text-destructive' : 'w-full'} disabled={toggle.isPending}
-            onClick={() => (!product.is_active || window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>
-            {product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'}
-          </Button>
+          {actionBar}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">As fotos podem ser adicionadas logo depois de criar o produto.</p>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">As fotos podem ser adicionadas logo depois de criar o produto.</p>
+          {actionBar}
+        </div>
       )}
     </SheetContent>
   )
