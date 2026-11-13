@@ -18,7 +18,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; shake_button?: 'enrollment' | 'shop' | 'login' | null; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   open_forms: { slug: string; title: string }[]
 }
@@ -97,15 +97,15 @@ export function LandingPage() {
         )}
 
         <nav className="space-y-3" aria-label="Menu">
-          {data.open_forms.map((f) => (
-            <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground`}>
+          {site.show_enrollment !== false && data.open_forms.map((f) => (
+            <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention' : ''}`}>
               <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}
             </Link>
           ))}
           {site.show_shop !== false && (
-            <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
+            <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
           )}
-          <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>
+          {site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
         </nav>
 
         {videos.length > 0 && (

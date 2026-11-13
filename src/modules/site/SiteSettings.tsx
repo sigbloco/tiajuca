@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ExternalLink, Plus, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Plus, Save, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -13,9 +13,9 @@ import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteV
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; hide_headline: boolean; header_color: string | null; page_color: string | null
+  enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; shake_button: 'enrollment' | 'shop' | 'login' | null; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
-const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, hide_headline: false, header_color: null, page_color: null }
+const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', show_shop: true, show_enrollment: true, show_login: true, shake_button: null, hide_headline: false, header_color: null, page_color: null }
 
 /** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
 export function SiteSettings() {
@@ -40,7 +40,7 @@ export function SiteSettings() {
     const { error } = await supabase.from('site_settings').upsert({
       organization_id: orgId, headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url,
       links: row.links, videos: row.videos, enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label,
-      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
+      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, shake_button: row.shake_button, hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
     }, { onConflict: 'organization_id' })
     if (error) throw error
   }
@@ -130,13 +130,26 @@ export function SiteSettings() {
 
       <Card className="space-y-3 p-4">
         <h3>Menu</h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5"><Label htmlFor="st-enr">Botão das inscrições</Label><Input id="st-enr" value={f.enrollment_label} onChange={(e) => setF({ ...f, enrollment_label: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="st-shop">Nome da loja (menu, site e vitrine)</Label><Input id="st-shop" value={f.shop_label} onChange={(e) => setF({ ...f, shop_label: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="st-login">Botão de acesso</Label><Input id="st-login" value={f.login_label} onChange={(e) => setF({ ...f, login_label: e.target.value })} /></div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {([
+            { key: 'enrollment', id: 'st-enr', label: 'Botão das inscrições', text: f.enrollment_label, on: f.show_enrollment, set: (v: string) => ({ enrollment_label: v }), toggle: () => ({ show_enrollment: !f.show_enrollment }) },
+            { key: 'shop', id: 'st-shop', label: 'Nome da loja (menu, site e vitrine)', text: f.shop_label, on: f.show_shop, set: (v: string) => ({ shop_label: v }), toggle: () => ({ show_shop: !f.show_shop }) },
+            { key: 'login', id: 'st-login', label: 'Botão de acesso', text: f.login_label, on: f.show_login, set: (v: string) => ({ login_label: v }), toggle: () => ({ show_login: !f.show_login }) },
+          ] as const).map((b) => (
+            <div key={b.key} className="space-y-1.5">
+              <Label htmlFor={b.id}>{b.label}</Label>
+              <div className="flex items-center gap-2">
+                <button type="button" aria-pressed={b.on} aria-label={b.on ? 'Botão visível no site (clique para ocultar)' : 'Botão oculto no site (clique para mostrar)'} title={b.on ? 'Visível no site' : 'Oculto no site'}
+                  onClick={() => setF({ ...f, ...b.toggle() })}
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border ${b.on ? 'bg-card text-foreground' : 'bg-muted text-muted-foreground'} hover:bg-muted`}>
+                  {b.on ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                </button>
+                <Input id={b.id} className="min-w-0 flex-1" value={b.text} onChange={(e) => setF({ ...f, ...b.set(e.target.value) })} />
+              </div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === b.key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? b.key : null })} /> Tremer para chamar atenção</label>
+            </div>
+          ))}
         </div>
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.show_shop} onChange={(e) => setF({ ...f, show_shop: e.target.checked })} /> Mostrar o botão da loja</label>
-        <p className="text-xs text-muted-foreground">O botão das <strong>inscrições</strong> aparece sozinho quando há um formulário publicado e dentro do prazo (em <strong>Inscrições</strong>). Fora do prazo, some. O botão de acesso leva à entrada de integrantes, professores, monitores e Direção.</p>
       </Card>
 
       <Card className="space-y-3 p-4">
