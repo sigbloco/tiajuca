@@ -17,6 +17,8 @@ export interface CatalogItem {
   /** Funções: fixa (não exclui nem desativa), isenta e isenção fixa. */
   is_fixed?: boolean
   is_exempt?: boolean
+  /** Categorias: seção a que pertence. */
+  kind?: 'paid' | 'collab' | 'artistic'
   exempt_locked?: boolean
   /** Altura do naipe: definida (tem afinação), indefinida ou não se aplica. */
   pitch_mode?: 'defined' | 'undefined' | 'na'
