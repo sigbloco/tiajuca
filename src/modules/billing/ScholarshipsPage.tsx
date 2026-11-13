@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useQuery } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Plus } from 'lucide-react'
@@ -79,7 +80,7 @@ export function ScholarshipsPage() {
       {list.isLoading && <Skeleton className="h-24" />}
       {rows.length === 0 && !list.isLoading && <EmptyState>Nenhuma bolsa ativa.</EmptyState>}
       <div className="grid gap-2">
-        {rows.map((r) => {
+        <ProgressiveList items={rows} render={(r) => {
           const name = shortName(r.members?.full_name, r.members?.display_name) ?? ''
           return (
             <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
@@ -92,7 +93,7 @@ export function ScholarshipsPage() {
               <Badge className="bg-primary/15 text-primary">{Number(r.percent).toLocaleString('pt-BR')}%</Badge>
             </Card>
           )
-        })}
+        }} />
       </div>
 
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>

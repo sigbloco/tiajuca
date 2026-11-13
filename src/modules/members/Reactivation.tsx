@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
@@ -101,7 +102,7 @@ export function ReactivationRequests() {
   return (
     <Card className="space-y-2 border-primary/40 bg-primary/5 p-4">
       <h3>Pedidos para voltar ({pending.length})</h3>
-      {pending.map((r) => (
+      <ProgressiveList items={pending} render={(r) => (
         <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card p-3">
           <div className="min-w-0">
             <p className="font-semibold"><MemberLink id={r.member_id}>{shortName(r.members?.full_name, r.members?.display_name)}</MemberLink></p>
@@ -112,7 +113,7 @@ export function ReactivationRequests() {
             <Button size="sm" variant="outline" disabled={decide.isPending} onClick={() => decide.mutate({ req: r, approve: false })}>Recusar</Button>
           </div>
         </div>
-      ))}
+      )} />
     </Card>
   )
 }

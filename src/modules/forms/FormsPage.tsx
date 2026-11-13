@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -67,7 +68,7 @@ export function FormsPage() {
       {isLoading && <Skeleton className="h-24" />}
       {data?.length === 0 && <EmptyState>Nenhum formulário ainda.</EmptyState>}
       <div className="grid gap-2">
-        {data?.map((f) => (
+        <ProgressiveList items={(data) ?? []} render={(f) => (
           <Card key={f.id} className="space-y-2 p-3">
             <div className="flex items-start justify-between gap-2">
               <Link to={`/${membership?.slug}/inscricoes/${f.id}`} className="min-w-0 flex-1">
@@ -85,7 +86,7 @@ export function FormsPage() {
               <Button size="sm" variant="ghost" disabled={duplicate.isPending} onClick={() => duplicate.mutate(f.id)}>Duplicar</Button>
             </div>
           </Card>
-        ))}
+        )} />
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <NewFormSheet />}</Sheet>
     </div>

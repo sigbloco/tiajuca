@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Download, Eye, EyeOff, Save } from 'lucide-react'
@@ -178,7 +179,7 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
       {list.isLoading && <Skeleton className="h-24" />}
       {list.data?.rows.length === 0 && <EmptyState>Nenhuma resposta.</EmptyState>}
       <div className="grid gap-2">
-        {list.data?.rows.map((s) => (
+        <ProgressiveList items={(list.data?.rows) ?? []} render={(s) => (
           <Card key={s.id} className="flex items-center justify-between gap-3 p-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(s)}>
               <p className="break-words font-semibold">{s.purged_at ? 'Resposta removida (retenção)' : nameOf(s)}</p>
@@ -186,7 +187,7 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
             </button>
             <Badge className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Badge>
           </Card>
-        ))}
+        )} />
       </div>
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground">{total} resposta(s)</p>

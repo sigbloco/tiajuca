@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FileUp, Link2, Save } from 'lucide-react'
@@ -117,7 +118,7 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
         <optgroup label="Instrumento">{instruments.data?.filter((i) => i.is_active).map((i) => <option key={i.id} value={`i:${i.id}`}>{i.name}</option>)}</optgroup>
       </Select>
       {shown.length === 0 && <p className="text-muted-foreground">Nenhum anexo.</p>}
-      {shown.map((a) => (
+      <ProgressiveList items={shown} render={(a) => (
         <Card key={a.id} className="flex items-center justify-between gap-2 p-2.5">
           <button className="min-w-0 flex-1 text-left" onClick={() => open.mutate(a)}>
             <p className="flex items-center gap-1.5 break-words font-semibold"><ExternalLink className="h-4 w-4 shrink-0" />{a.description || a.file_name || a.url}</p>
@@ -125,7 +126,7 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
           </button>
           {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Remover este anexo?')) remove.mutate(a.id) }}>Remover</Button>}
         </Card>
-      ))}
+      )} />
 
       {canManage && (
         <Card className="space-y-2 p-3">

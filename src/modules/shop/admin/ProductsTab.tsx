@@ -103,9 +103,16 @@ export function ProductsTab() {
           </button>
           <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Descer ${p.name}`} disabled={i === items.length - 1 || save.isPending} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
           </div>
-          {p.shop_product_images[0]
-            ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
-            : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
+          <div className="flex shrink-0 flex-col items-center gap-1 self-start">
+            {p.shop_product_images[0]
+              ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
+              : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
+            <div className="flex">
+              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar ${p.name}`} title="Editar" onClick={() => setSheet(p.id)}><Pencil className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
+                onClick={async () => await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          </div>
           <div className="min-w-0 flex-1">
             <p className="break-words font-semibold">{p.name} {p.is_hidden && <Badge>Oculto</Badge>}</p>
             <p className="text-sm">
@@ -114,9 +121,6 @@ export function ProductsTab() {
             </p>
             <p className="text-sm text-muted-foreground">{stockSummary(p, itemsMap)}</p>
           </div>
-          <Button size="icon" variant="ghost" aria-label={`Editar ${p.name}`} onClick={() => setSheet(p.id)}><Pencil className="h-4 w-4" /></Button>
-          <Button size="icon" variant="ghost" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
-            onClick={async () => await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
         </Card>
       ))}
       <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />

@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive } from 'lucide-react'
@@ -71,7 +72,7 @@ export function OrdersTab() {
       {orders.data && shown.length === 0 && <EmptyState>{orders.data.length === 0 ? 'Nenhum pedido encontrado.' : 'Nenhum pedido com essa busca.'}</EmptyState>}
       {orders.data && orders.data.length >= ORDERS_LIMIT && <p className="text-sm text-muted-foreground">Mostrando os {ORDERS_LIMIT} pedidos mais recentes. Use os filtros para refinar.</p>}
 
-      {shown.map((o) => (
+      <ProgressiveList items={shown} render={(o) => (
         <button key={o.id} type="button" className="block w-full text-left" onClick={() => setOpenId(o.id)}>
           <Card className="space-y-1 p-3 transition hover:shadow-md">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -85,7 +86,7 @@ export function OrdersTab() {
             </div>
           </Card>
         </button>
-      ))}
+      )} />
 
       <Sheet open={current !== null} onOpenChange={(o) => !o && setOpenId(null)}>
         {current && <OrderSheet key={current.id} order={current} pickup={pointName.get(current.pickup_point_id)} />}

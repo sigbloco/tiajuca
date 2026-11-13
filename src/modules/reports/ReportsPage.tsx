@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useQuery } from '@tanstack/react-query'
 import { Download } from 'lucide-react'
@@ -89,7 +90,7 @@ export function ReportsPage() {
       {report.isError && <Card className="p-3 text-destructive">{friendlyError(report.error)}</Card>}
       {report.data && rows.length === 0 && <EmptyState>Sem registros de presença neste período.</EmptyState>}
       <div className="grid gap-2">
-        {rows.map((r) => (
+        <ProgressiveList items={rows} render={(r) => (
           <Card key={`${r.group_id}-${r.label}`} className="space-y-1.5 p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="break-words font-semibold">{r.label}</p>
@@ -98,7 +99,7 @@ export function ReportsPage() {
             <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className={cn('h-full', Number(r.pct) < 60 ? 'bg-destructive' : Number(r.pct) < 80 ? 'bg-warning' : 'bg-success')} style={{ width: `${Math.min(100, Number(r.pct))}%` }} /></div>
             <p className="text-xs text-muted-foreground">{r.present} presenças em {r.records} registros</p>
           </Card>
-        ))}
+        )} />
       </div>
 
       <section className="space-y-2">
@@ -109,9 +110,9 @@ export function ReportsPage() {
           </Select>
         </div>
         {streaks.data?.length === 0 && <EmptyState>Ninguém com {minStreak}+ faltas seguidas.</EmptyState>}
-        {streaks.data?.map((s) => (
+        <ProgressiveList items={(streaks.data) ?? []} render={(s) => (
           <Card key={s.member_id} className="flex items-center justify-between p-3"><span className="font-semibold"><MemberLink id={s.member_id}>{s.display_name}</MemberLink></span><span className="font-display text-lg font-bold text-destructive">{s.streak} faltas</span></Card>
-        ))}
+        )} />
         <p className="text-xs text-muted-foreground">Conta eventos já realizados, do mais recente para o mais antigo, até a última presença. Ausente e justificado contam como falta de presença.</p>
       </section>
     </div>

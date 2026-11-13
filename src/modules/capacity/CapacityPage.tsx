@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Badge, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
@@ -98,7 +99,7 @@ export function CapacityPage() {
         <section key={section} className="space-y-2">
           <h3>{section}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
-            {rows.map((r) => (
+            <ProgressiveList items={rows} render={(r) => (
               <Card key={r.instrument_id} className={cn('flex items-center justify-between gap-3 p-3', r.is_full && 'border-destructive/50')}>
                 <div>
                   <p className="font-semibold">{r.instrument_name} {r.is_full && <Badge className="bg-destructive/15 text-destructive">Lotado</Badge>}</p>
@@ -108,7 +109,7 @@ export function CapacityPage() {
                 </div>
                 {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
               </Card>
-            ))}
+            )} />
           </div>
         </section>
       ))}

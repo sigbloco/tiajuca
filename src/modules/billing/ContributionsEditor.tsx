@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { Lock, Save } from 'lucide-react'
@@ -93,12 +94,12 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
           <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-muted-foreground" aria-hidden /> Isento <span className="font-normal text-muted-foreground">· R$ 0,00 /mês</span></p>
           <p className="text-sm text-muted-foreground">Quem tem uma função isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. Não é editável.</p>
         </Card>
-        {payers.map((f) => {
+        <ProgressiveList items={payers} render={(f) => {
           const c = byName.get(f.name.toLowerCase())
           return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={editable} from={from} /> : (
             <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</Card>
           )
-        })}
+        }} />
       </div>
     </div>
   )

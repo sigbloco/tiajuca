@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, X } from 'lucide-react'
@@ -119,7 +120,7 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
       {ledger.isLoading && <Skeleton className="h-24" />}
       {ledger.data && rows.length === 0 && <EmptyState>Nada registrado neste mês.</EmptyState>}
       <div className="grid gap-2">
-        {rows.map((r) => (
+        <ProgressiveList items={rows} render={(r) => (
           <Card key={r.ref} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
               <p className="break-words font-semibold">{r.description}</p>
@@ -135,7 +136,7 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
               )}
             </div>
           </Card>
-        ))}
+        )} />
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <EntrySheet kind={kind} onClose={() => setSheet(false)} />}</Sheet>
     </div>

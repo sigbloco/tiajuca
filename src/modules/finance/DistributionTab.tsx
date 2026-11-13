@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Save } from 'lucide-react'
@@ -126,13 +127,13 @@ export function DistributionTab({ competence }: { competence: string }) {
           <span className="text-muted-foreground">Receita do mês: <strong>{formatCurrency(gross)}</strong></span>
         </div>
         {dist.isLoading && <Skeleton className="h-20" />}
-        {dist.data?.rows.map((r) => (
+        <ProgressiveList items={(dist.data?.rows) ?? []} render={(r) => (
           <div key={r.destination_id} className="flex items-center justify-between gap-3 border-t border-border pt-2">
             <div><p className="font-semibold">{r.destination_name}</p>
               <p className="text-xs text-muted-foreground">fixo {formatCurrency(Number(r.fixed_total))} · percentual {formatCurrency(Number(r.percent_total))}</p></div>
             <span className="font-semibold">{formatCurrency(Number(r.total))}</span>
           </div>
-        ))}
+        )} />
         <div className={cn('flex items-center justify-between border-t border-border pt-2 font-semibold', remainder < 0 && 'text-destructive')}>
           <span>{remainder < 0 ? 'Distribuição acima da receita' : 'Não distribuído (fica no caixa)'}</span>
           <span>{formatCurrency(remainder)}</span>
@@ -151,7 +152,7 @@ export function DistributionTab({ competence }: { competence: string }) {
           ))}
         </div>
         {rules.data?.length === 0 && <EmptyState>Nenhuma regra. Crie regras para simular a distribuição.</EmptyState>}
-        {rules.data?.map((r) => (
+        <ProgressiveList items={(rules.data) ?? []} render={(r) => (
           <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
               <p className="font-semibold">{destName(r.destination_id)}</p>
@@ -161,7 +162,7 @@ export function DistributionTab({ competence }: { competence: string }) {
             </div>
             {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Encerrar esta regra? O histórico é mantido.')) endRule.mutate(r.id) }}>Encerrar</Button>}
           </Card>
-        ))}
+        )} />
       </section>
 
       <section className="space-y-2">
@@ -172,12 +173,12 @@ export function DistributionTab({ competence }: { competence: string }) {
             <Button disabled={!newDest.trim() || addDest.isPending} onClick={() => addDest.mutate()}>Adicionar</Button>
           </div>
         )}
-        {dests.data?.map((d) => (
+        <ProgressiveList items={(dests.data) ?? []} render={(d) => (
           <Card key={d.id} className={cn('flex items-center justify-between p-2 pl-3', !d.is_active && 'opacity-60')}>
             <span className="font-semibold">{d.name}</span>
             {canManage && <Button size="sm" variant="outline" onClick={() => toggleDest.mutate({ id: d.id, active: !d.is_active })}>{d.is_active ? 'Desativar' : 'Ativar'}</Button>}
           </Card>
-        ))}
+        )} />
       </section>
       <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <RuleSheet onClose={() => setSheet(false)} />}</Sheet>
     </div>

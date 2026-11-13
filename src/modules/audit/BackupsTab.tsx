@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, RotateCcw, Trash2, Upload } from 'lucide-react'
@@ -102,7 +103,7 @@ export function BackupsTab() {
       {list.isError && <Card className="p-4 text-destructive">{friendlyError(list.error)}</Card>}
       {list.data?.length === 0 && <EmptyState>Nenhum backup ainda.</EmptyState>}
       <div className="grid gap-2">
-        {list.data?.map((b) => (
+        <ProgressiveList items={(list.data) ?? []} render={(b) => (
           <Card key={b.id} className="space-y-2 p-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
@@ -121,7 +122,7 @@ export function BackupsTab() {
               </div>
             </div>
           </Card>
-        ))}
+        )} />
       </div>
     </div>
   )

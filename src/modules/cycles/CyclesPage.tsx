@@ -1,3 +1,4 @@
+import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
@@ -160,7 +161,7 @@ export function CyclesPage() {
       {groups.filter(([, list]) => list.length > 0).map(([title, list]) => (
         <Collapsible key={title} open={open[title] ?? title.startsWith('Atua')} onToggle={() => setOpen((o) => ({ ...o, [title]: !(o[title] ?? title.startsWith('Atua')) }))} title={title} count={list.length}>
           <div className="grid gap-2">
-            {list.map((c) => (
+            <ProgressiveList items={list} render={(c) => (
               <Card key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
                 <div>
                   <p className="font-display text-lg font-bold">{c.name} {c.is_current && <Badge className="bg-primary text-primary-foreground">Principal</Badge>}</p>
@@ -174,7 +175,7 @@ export function CyclesPage() {
                   </div>
                 )}
               </Card>
-            ))}
+            )} />
           </div>
         </Collapsible>
       ))}
