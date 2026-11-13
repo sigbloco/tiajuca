@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Palette, Plus, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Palette, Plus, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AlbumsTab } from './AlbumsTab'
 import { ButtonRow } from '@/components/shared/ButtonRow'
-import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { useProgressive } from '@/components/shared/LoadMore'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -14,7 +13,6 @@ import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/pr
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { notifySaved } from '@/core/undo'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
 
 const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'albums', label: 'Fotos' }, { key: 'videos', label: 'Vídeos' }] as const
@@ -45,28 +43,43 @@ export function SiteSettings() {
     },
   })
   const [f, setF] = useState<SiteRow>(EMPTY)
-  useEffect(() => { if (!isLoading) setF({ ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }) }, [data, isLoading])
+  // Carrega uma vez; depois o que está na tela é a verdade (salvamento automático não pode apagar o que a pessoa está digitando).
+  const loaded = useRef(false)
+  useEffect(() => { if (!isLoading && !loaded.current) { loaded.current = true; setF({ ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }) } }, [data, isLoading])
   const saved = { ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }
-  const dirty = JSON.stringify(f) !== JSON.stringify(saved)
+  const invalid = f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))
 
+  const payload = (row: SiteRow) => ({
+    headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url ?? null,
+    links: row.links.filter((l) => l.value.trim()), videos: row.videos.filter((v) => v.url.trim()),
+    enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
+    login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
+    show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, show_albums: row.show_albums,
+    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline,
+    header_color: row.header_color ?? null, page_color: row.page_color ?? null,
+  })
   const write = async (row: SiteRow) => {
-    const { error } = await supabase.from('site_settings').upsert({
-      organization_id: orgId, headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url,
-      links: row.links, videos: row.videos, enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label,
-      shop_label: row.shop_label.trim() || EMPTY.shop_label, login_label: row.login_label.trim() || EMPTY.login_label, show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, show_albums: row.show_albums, albums_label: row.albums_label.trim() || EMPTY.albums_label, shake_button: row.shake_button, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, header_color: row.header_color, page_color: row.page_color,
-    }, { onConflict: 'organization_id' })
+    const { error } = await supabase.from('site_settings').upsert({ organization_id: orgId, ...payload(row) }, { onConflict: 'organization_id' })
     if (error) throw error
   }
+  // Linhas vazias (recém-adicionadas) não contam nem vão para o banco.
+  const dirty = JSON.stringify(payload(f)) !== JSON.stringify(payload(saved))
   const refresh = () => { qc.invalidateQueries({ queryKey: ['site-settings', orgId] }); qc.invalidateQueries({ queryKey: ['public-site'] }) }
   const save = useMutation({
     mutationFn: () => write(f),
-    onSuccess: () => {
-      const before = saved
-      refresh()
-      notifySaved('Página inicial salva.', async () => { await write(before); refresh() })
-    },
+    onSuccess: refresh,
     onError: (e) => toast.error(friendlyError(e)),
   })
+  // Salva sozinho, 0,8 s depois da última alteração (links e vídeos inválidos esperam ser corrigidos).
+  useEffect(() => {
+    if (!loaded.current || !dirty || invalid || save.isPending) return
+    const t = setTimeout(() => save.mutate(), 800)
+    return () => clearTimeout(t)
+  }, [JSON.stringify(f), dirty, invalid, save.isPending]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Saindo da página com algo pendente: salva na hora.
+  const latest = useRef({ f, dirty, invalid })
+  latest.current = { f, dirty, invalid }
+  useEffect(() => () => { const c = latest.current; if (c.dirty && !c.invalid) void write(c.f).then(refresh) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const upload = useMutation({
     mutationFn: async (file: File) => {
       if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(file.type)) throw new Error('Use uma imagem SVG, PNG, JPG ou WebP.')
@@ -120,8 +133,9 @@ export function SiteSettings() {
           </Button>
         </div>
       </div>
-      <UnsavedGuard dirty={dirty} onSave={() => save.mutateAsync()} />
       <p className="text-muted-foreground">É a página que as pessoas veem ao abrir o endereço do site (antes de entrar): foto, descrição, redes e contatos, menu e vídeos.</p>
+
+      <p role="status" className="text-xs text-muted-foreground">{save.isPending ? 'Salvando…' : invalid ? 'Corrija o link destacado para salvar.' : dirty ? 'Salvando em instantes…' : 'Tudo salvo automaticamente.'}</p>
 
       <ButtonRow role="tablist" aria-label="Seções da página inicial">
         {TABS.map((t) => (
@@ -240,12 +254,6 @@ export function SiteSettings() {
       </Card>
       )}
 
-      <div className="sticky bottom-20 z-10 flex justify-end md:bottom-4">
-        <Button disabled={!dirty || save.isPending || f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))} onClick={() => {
-          setF((x) => ({ ...x, links: x.links.filter((l) => l.value.trim()), videos: x.videos.filter((v) => v.url.trim()) }))
-          save.mutate()
-        }} aria-label="Salvar página" title="Salvar página"><Save className="h-4 w-4" /></Button>
-      </div>
     </div>
   )
 }
