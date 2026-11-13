@@ -35,9 +35,9 @@ export function ShopHomePage() {
           <Button key={f.key} size="sm" variant={kinds.includes(f.key) ? 'default' : 'outline'} aria-pressed={kinds.includes(f.key)} onClick={() => toggleKind(f.key)}>{f.label}</Button>
         ))}
       </ButtonRow>
+      {store.products.length > 0 && kinds.length === 0 && <p className="-mt-2 text-sm text-muted-foreground">Selecione um filtro.</p>}
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
       {store.products.length === 0 && <EmptyState>A loja ainda não tem produtos.</EmptyState>}
-      {store.products.length > 0 && kinds.length === 0 && <EmptyState>Selecione um filtro.</EmptyState>}
       {kinds.length > 0 && others.length === 0 && store.products.some((p) => !p.is_featured) && <EmptyState>Nenhum produto neste filtro.</EmptyState>}
       {others.length > 0 && renderGrid(others)}
     </div>
