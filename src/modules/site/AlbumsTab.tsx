@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, ExternalLink, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useProgressive } from '@/components/shared/LoadMore'
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { Pager } from '@/components/shared/Pager'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
@@ -31,7 +32,19 @@ export function AlbumsTab() {
   const all = data ?? []
   const active = all.filter((a) => a.is_active)
   const trashed = all.filter((a) => !a.is_active)
-  const prog = useProgressive(active, 5)
+  // Filtro por ano (padrão: o ano atual, ou o mais recente se o atual não tiver álbum) e navegação por página, porque as capas são pesadas.
+  const years = [...new Set(active.map((a) => a.event_date?.slice(0, 4)).filter((y): y is string => !!y))].sort((a, b) => b.localeCompare(a))
+  const options = [...years, ...(active.some((a) => !a.event_date) ? ['semdata'] : [])]
+  const [picked, setPicked] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const thisYear = String(new Date().getFullYear())
+  const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
+  const inYear = active.filter((a) => (year === 'semdata' ? !a.event_date : a.event_date?.startsWith(year)))
+  const PER_PAGE = 5
+  const pages = Math.max(1, Math.ceil(inYear.length / PER_PAGE))
+  const cur = Math.min(page, pages)
+  const visible = inYear.slice((cur - 1) * PER_PAGE, cur * PER_PAGE)
+  const pickYear = (y: string) => { setPicked(y); setPage(1) }
   const dnd = useHoldReorder()
   // Relê, de 3 em 3, título e capa dos álbuns que ainda não têm capa.
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null)
@@ -74,7 +87,7 @@ export function AlbumsTab() {
       if (error) throw error
       return info
     },
-    onSuccess: (info) => { setUrl(''); prog.showAll(); refresh(); notifySaved(info.title ? 'Álbum adicionado.' : 'Álbum adicionado, mas o Google não mostrou título nem capa: preencha à mão.') },
+    onSuccess: (info) => { setUrl(''); setPicked(parseAlbumTitle(info.title).event_date?.slice(0, 4) ?? 'semdata'); setPage(1); refresh(); notifySaved(info.title ? 'Álbum adicionado.' : 'Álbum adicionado, mas o Google não mostrou título nem capa: preencha à mão.') },
     onError,
   })
   const patch = useMutation({
@@ -104,13 +117,15 @@ export function AlbumsTab() {
     onError,
   })
   const move = (i: number, d: number) => {
-    const ids = active.map((a) => a.id)
-    const [it] = ids.splice(i, 1)
-    ids.splice(i + d, 0, it)
-    reorder.mutate(ids)
+    const sub = inYear.map((a) => a.id)
+    const [it] = sub.splice(i, 1)
+    sub.splice(i + d, 0, it)
+    const inSub = new Set(inYear.map((a) => a.id))
+    let k = 0
+    reorder.mutate(active.map((a) => (inSub.has(a.id) ? sub[k++] : a.id)))
   }
   const drag = (from: string, to: string) => {
-    const a = active.findIndex((x) => x.id === from), b = active.findIndex((x) => x.id === to)
+    const a = inYear.findIndex((x) => x.id === from), b = inYear.findIndex((x) => x.id === to)
     if (a >= 0 && b >= 0) move(a, b - a)
   }
 
@@ -141,8 +156,15 @@ export function AlbumsTab() {
         </Button>
       )}
       {active.length === 0 && <p className="text-muted-foreground">Nenhum álbum ainda.</p>}
-      {prog.visible.map((a, i) => (
-        <AlbumRow key={a.id} album={a} index={i} total={active.length} dnd={dnd} onMove={move} onDrag={drag}
+      {options.length > 1 && (
+        <ButtonRow role="group" aria-label="Filtrar por ano">
+          {options.map((y) => (
+            <Button key={y} size="sm" variant={year === y ? 'default' : 'outline'} aria-pressed={year === y} onClick={() => pickYear(y)}>{y === 'semdata' ? 'Sem data' : y}</Button>
+          ))}
+        </ButtonRow>
+      )}
+      {visible.map((a, i) => (
+        <AlbumRow key={a.id} album={a} index={(cur - 1) * PER_PAGE + i} total={inYear.length} dnd={dnd} onMove={move} onDrag={drag}
           onSave={(fields) => patch.mutateAsync({ id: a.id, fields })}
           onTrash={() => patch.mutate({ id: a.id, fields: { is_active: false } })}
           onRefresh={async () => {
@@ -151,7 +173,7 @@ export function AlbumsTab() {
             await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title || a.title, event_date: p.event_date, authors: p.handles.length ? fromHandles(p.handles) : a.authors } : {}) } })
           }} />
       ))}
-      {prog.button}
+      <Pager page={cur} pages={pages} onChange={setPage} />
     </Card>
   )
 }
