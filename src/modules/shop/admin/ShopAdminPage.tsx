@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Palette, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { Button, Card } from '@/components/ui/primitives'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -20,6 +21,7 @@ const TABS = [
   { key: 'pickup', label: 'Pontos de retirada' },
 ] as const
 type TabKey = (typeof TABS)[number]['key'] | 'payments'
+const TAB_LABEL: Record<TabKey, string> = { orders: 'Pedidos', products: 'Produtos', stock: 'Estoque', pickup: 'Pontos de retirada', payments: 'Configurações' }
 
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
@@ -27,6 +29,7 @@ export function ShopAdminPage() {
   const { membership } = useOrganization()
   const canTheme = usePermission('org.manage')
   const [tab, setTab] = useState<TabKey>('orders')
+  useRegisterCrumb(TAB_LABEL[tab], () => setTab('orders'), true, 0)
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const pending = settings.data ? missingSetup(settings.data) : []
   return (

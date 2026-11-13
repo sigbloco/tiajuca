@@ -26,11 +26,11 @@ export function Breadcrumbs({ crumbs, home }: { crumbs: Crumb[]; home: string })
   })
   if (crumbs.length === 0 && extra.length === 0) return null
   const all: (Crumb & { close?: () => void })[] = [...crumbs]
-  if (extra.length > 0 && all.length > 0) {
-    const last = all[all.length - 1]
-    all[all.length - 1] = { ...last, close: extra[0].close }
+  // Cada item que tem outro dentro dele fica clicável: clicar fecha o nível seguinte (aba ou painel de edição).
+  for (const e of extra) {
+    if (all.length > 0) all[all.length - 1] = { ...all[all.length - 1], close: e.close }
+    all.push({ label: e.title })
   }
-  for (const e of extra) all.push({ label: e.title })
   return (
     <nav ref={navRef} aria-label="Você está em" className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <Link to={home} className="font-semibold text-primary hover:underline">Início</Link>

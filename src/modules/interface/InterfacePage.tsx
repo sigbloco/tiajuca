@@ -1,3 +1,5 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Save, ShoppingCart, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
@@ -154,6 +156,7 @@ export function InterfacePage() {
   const can = usePermission('org.manage')
   const [params] = useSearchParams()
   const [tab, setTab] = useState<Tab>(() => (['factory', 'general', 'site', 'shop'].includes(params.get('area') ?? '') ? (params.get('area') as Tab) : 'factory'))
+  useRegisterCrumb(AREAS.find((a) => a.key === tab)?.label ?? 'Interface', () => setTab('factory'), can, 0)
   if (!can) return <Card className="p-6">Você não tem permissão para mudar a interface.</Card>
   const current = AREAS.find((a) => a.key === tab)!
   const pending = useUnsavedCount()
@@ -162,11 +165,11 @@ export function InterfacePage() {
   return (
     <div className="space-y-4">
       <h1>Interface</h1>
-      <div role="tablist" className="flex flex-wrap gap-2">
+      <ButtonRow role="tablist">
         {AREAS.map((a) => (
           <Button key={a.key} role="tab" aria-selected={tab === a.key} variant={tab === a.key ? 'default' : 'outline'} className={cn('min-h-11')} onClick={() => go(a.key)}>{a.label}</Button>
         ))}
-      </div>
+      </ButtonRow>
       {tab === 'factory' ? <FactoryEditor /> : <ColorsEditor key={tab} area={tab} intro={current.intro} />}
       <UnsavedDialog open={next !== null} onSave={async () => { await saveAllUnsaved(); setTab(next!); setNext(null) }}
         onDiscard={() => { setTab(next!); setNext(null) }} onStay={() => setNext(null)} />

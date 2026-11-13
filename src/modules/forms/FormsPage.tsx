@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, Plus } from 'lucide-react'
@@ -80,11 +81,11 @@ export function FormsPage() {
                 <span className="text-xs text-muted-foreground">{f.form_submissions?.[0]?.count ?? 0} resposta(s)</span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <ButtonRow>
               <Button size="sm" variant="outline" asChild><Link to={`/${membership?.slug}/inscricoes/${f.id}`}>Abrir</Link></Button>
               {f.status === 'published' && <Button size="sm" variant="outline" onClick={() => copy(f)}><Copy className="h-4 w-4" /> Copiar link</Button>}
               <Button size="sm" variant="ghost" disabled={duplicate.isPending} onClick={() => duplicate.mutate(f.id)}>Duplicar</Button>
-            </div>
+            </ButtonRow>
           </Card>
         )} />
       </div>

@@ -141,7 +141,7 @@ export function AppShell() {
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
-            <button type="button" className="mb-1 inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+            <button type="button" className="mb-1 inline-flex items-center gap-1 text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
               onClick={() => {
                 // Com um formulário aberto na página, "voltar" fecha o formulário (e pergunta se há algo sem salvar).
                 const close = document.querySelector<HTMLElement>('#edit-slot [data-sheet-close]')

@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { ShopNameField } from '@/modules/site/ShopNameField'
-import { Link } from 'react-router-dom'
+import { ShopNameField, getShopLabel, saveShopLabel } from '@/modules/site/ShopNameField'
 import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
@@ -12,13 +11,15 @@ import { useOrganization, useOrgId } from '@/core/organization'
 import { invokeShop } from '../public/api'
 import { cleanHandle, fromSettings, getSettings, saveSettings, toSettings, validateSettings, type SettingsForm, type ShopSettings } from './settings'
 
-function SettingsFormView({ initial }: { initial: ShopSettings }) {
+function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings; initialShopName: string }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const [f, setF] = useState<SettingsForm>(() => fromSettings(initial, window.location.origin))
   const [baseline, setBaseline] = useState(() => JSON.stringify(f))
-  const dirty = JSON.stringify(f) !== baseline
+  const [shopName, setShopName] = useState(initialShopName)
+  const [nameBaseline, setNameBaseline] = useState(initialShopName)
+  const dirty = JSON.stringify(f) !== baseline || shopName.trim() !== nameBaseline.trim()
   const [errors, setErrors] = useState<string[]>([])
   const [test, setTest] = useState<{ ok: boolean; message: string } | null>(null)
   const set = (patch: Partial<SettingsForm>) => setF((cur) => ({ ...cur, ...patch }))
@@ -29,9 +30,10 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
       setErrors(errs)
       if (errs.length) return false
       await saveSettings(orgId, toSettings(f))
+      if (shopName.trim() !== nameBaseline.trim()) await saveShopLabel(orgId, shopName)
       return true
     },
-    onSuccess: (saved) => { if (saved) { setBaseline(JSON.stringify(f)); qc.invalidateQueries({ queryKey: ['shop', orgId, 'settings'] }); toast.success('Configurações salvas.') } },
+    onSuccess: (saved) => { if (saved) { setBaseline(JSON.stringify(f)); setNameBaseline(shopName); for (const k of ['site-shop-label', 'site-settings', 'public-site']) qc.invalidateQueries({ queryKey: [k] }); qc.invalidateQueries({ queryKey: ['shop', orgId, 'settings'] }); toast.success('Configurações salvas.') } },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -49,8 +51,7 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
       <UnsavedGuard dirty={dirty} onSave={async () => { if (!(await save.mutateAsync())) throw new Error('invalid') }} />
       <Card className="space-y-3 p-4">
         <h3 className="font-bold">Vitrine</h3>
-        <ShopNameField />
-        <p className="rounded-lg bg-muted p-3 text-sm">As <strong>cores</strong> (cabeçalho, fundo, botões) em <Link className="font-semibold text-primary hover:underline" to={`/${membership?.slug}/interface`}>Interface → Loja</Link>.</p>
+        <ShopNameField value={shopName} onChange={setShopName} />
         <div className="space-y-1.5"><Label htmlFor="st-intro">Texto de abertura da vitrine (opcional)</Label>
           <textarea id="st-intro" rows={3} maxLength={400} value={f.introText} onChange={(e) => set({ introText: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
@@ -97,7 +98,7 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
           <Input id="ip-handle" placeholder="sua-tag (sem o $)" autoComplete="off" value={f.handle} onChange={(e) => { set({ handle: e.target.value }); setTest(null) }} />
           <p className="text-sm text-muted-foreground">É o nome de usuário da conta InfinitePay do bloco, o mesmo que aparece no app deles com um $ na frente.</p></div>
         <div className="space-y-2">
-          <Button type="button" variant="outline" disabled={check.isPending || !cleanHandle(f.handle)} onClick={() => { setTest(null); check.mutate() }}>
+          <Button type="button" variant="outline" className="h-auto min-h-10 w-full whitespace-normal py-2 text-center" disabled={check.isPending || !cleanHandle(f.handle)} onClick={() => { setTest(null); check.mutate() }}>
             {check.isPending ? 'Testando' : 'Testar conexão (cria um link de R$ 1, sem cobrar)'}
           </Button>
           {test && <p role="status" className={test.ok ? 'text-sm font-semibold text-primary' : 'text-sm font-semibold text-destructive'}>{test.message}</p>}
@@ -107,8 +108,8 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
 
       <Card className="space-y-3 p-4">
         <h3 className="font-bold">Desconto de integrante</h3>
-        <div className="space-y-1.5"><Label htmlFor="dd">Desconto padrão para integrantes ativos (%)</Label>
-          <Input id="dd" inputMode="decimal" className="max-w-32" value={f.defaultDiscount} onChange={(e) => set({ defaultDiscount: e.target.value.replace(/[^0-9.,]/g, '') })} />
+        <div className="space-y-1.5"><Label htmlFor="dd">Desconto padrão para integrantes ativos</Label>
+          <div className="flex items-center gap-2"><Input id="dd" inputMode="decimal" className="w-16 text-center" maxLength={5} value={f.defaultDiscount} onChange={(e) => set({ defaultDiscount: e.target.value.replace(/[^0-9.,]/g, '') })} /><span className="font-semibold">%</span></div>
           <p className="text-sm text-muted-foreground">Já vem preenchido em todo produto novo, e dá para mudar produto a produto. Não altera os produtos que já existem.</p></div>
       </Card>
 
@@ -151,7 +152,7 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
       </Card>
 
       {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-      <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+      <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
     </form>
   )
 }
@@ -159,12 +160,13 @@ function SettingsFormView({ initial }: { initial: ShopSettings }) {
 export function PaymentsTab() {
   const orgId = useOrgId()
   const q = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
+  const label = useQuery({ queryKey: ['site-shop-label', orgId], queryFn: () => getShopLabel(orgId) })
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-bold">Pagamentos e contatos</h2>
       {q.isLoading && <Skeleton className="h-40" />}
       {q.isError && <p className="text-destructive">Não foi possível carregar as configurações.</p>}
-      {q.data && <SettingsFormView key={JSON.stringify(q.data)} initial={q.data} />}
+      {q.data && label.data !== undefined && <SettingsFormView key={JSON.stringify(q.data) + label.data} initial={q.data} initialShopName={label.data} />}
     </div>
   )
 }

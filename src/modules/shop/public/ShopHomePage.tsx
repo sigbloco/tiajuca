@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, EmptyState, cn } from '@/components/ui/primitives'
@@ -24,11 +25,11 @@ export function ShopHomePage() {
     <div className="space-y-4">
       {store.intro_text && <p className="whitespace-pre-line rounded-lg border border-secondary p-3">{store.intro_text}</p>}
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
-      <div role="group" aria-label="Filtrar produtos" className="flex flex-wrap gap-2">
+      <ButtonRow role="group" aria-label="Filtrar produtos">
         {FILTERS.map((f) => (
           <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</Button>
         ))}
-      </div>
+      </ButtonRow>
       {products.length === 0 && <EmptyState>{store.products.length === 0 ? 'A loja ainda não tem produtos.' : 'Nenhum produto neste filtro.'}</EmptyState>}
       {featured.length > 0 && (
         <section aria-labelledby="shop-featured" className="space-y-2">

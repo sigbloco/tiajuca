@@ -1,3 +1,5 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -15,6 +17,7 @@ export function FormEditorPage() {
   const { membership } = useOrganization()
   const { data: form, isLoading } = useForm(formId)
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('fields')
+  useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('fields'), true, 0)
   if (isLoading || !form) return <Skeleton className="h-40" />
   return (
     <div className="space-y-4">
@@ -23,12 +26,12 @@ export function FormEditorPage() {
         <h1 className="min-w-0 flex-1 break-words">{form.title}</h1>
         <Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge>
       </div>
-      <div className="flex gap-1 overflow-x-auto pb-1" role="tablist">
+      <ButtonRow role="tablist">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
             className={cn('whitespace-nowrap rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'bg-primary text-primary-foreground hover:bg-primary')}>{t.label}</button>
         ))}
-      </div>
+      </ButtonRow>
       {tab === 'fields' && <FieldsTab formId={form.id} />}
       {tab === 'settings' && <SettingsTab key={form.updated_at ?? form.id} form={form} />}
       {tab === 'submissions' && <SubmissionsTab form={form} />}

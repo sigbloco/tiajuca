@@ -1,3 +1,5 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
@@ -30,6 +32,7 @@ export function EventsPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null; edit?: boolean } | null>(null)
   const [tab, setTab] = useState<'agenda' | 'recorrencias' | 'feriados'>('agenda')
+  useRegisterCrumb(tab === 'recorrencias' ? 'Recorrências' : tab === 'feriados' ? 'Feriados' : 'Agenda', () => setTab('agenda'), canManage, 0)
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
   const from = days[0].iso
@@ -108,12 +111,12 @@ export function EventsPage() {
 
   // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
   const tabs = canManage && (
-    <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
+    <ButtonRow role="tablist">
       {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
         <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
           className={cn('shrink-0 rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
       ))}
-    </div>
+    </ButtonRow>
   )
   const header = (
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
@@ -216,12 +217,12 @@ function AdminBilling() {
         <Stat label="Inadimplentes" value={String(s?.inadimplentes ?? 0)} tone={s?.inadimplentes ? 'text-destructive' : undefined} hint="pendentes após o vencimento" />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <ButtonRow>
         <Button disabled={gen.isPending} onClick={async () => { if (await confirmBox(`Gerar cobranças de ${formatCompetence(competence)}? Quem já tem cobrança no mês não será duplicado.`)) gen.mutate() }}>
           {gen.isPending ? 'Gerando' : 'Gerar cobranças'}
         </Button>
         <Button variant="outline" disabled={copy.isPending} onClick={() => copy.mutate()}><ClipboardCopy className="h-4 w-4" /> Copiar inadimplentes</Button>
-      </div>
+      </ButtonRow>
 
       <div className="flex gap-2">
         <div className="relative flex-1">
