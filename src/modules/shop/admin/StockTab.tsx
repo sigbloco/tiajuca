@@ -80,7 +80,7 @@ export function StockTab() {
   return (
     <div className="space-y-3">
       <ButtonRow>
-        <Button variant="outline" onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo item</Button>
+        <Button variant="add" onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo item</Button>
       </ButtonRow>
       <p className="text-sm text-muted-foreground">Cadastre aqui o que você guarda. Ao criar um produto ou um kit, você escolhe quais itens ele consome: assim o avulso e o kit baixam o mesmo estoque.</p>
       {items.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}

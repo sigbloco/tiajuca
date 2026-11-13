@@ -114,7 +114,7 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
 
       <div className="flex items-center justify-between">
         <h2>{kind === 'income' ? 'Outras receitas' : 'Despesas'} <span className="text-base font-normal text-muted-foreground">· {formatCurrency(total)}</span></h2>
-        {canManage && <Button variant="outline" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> {kind === 'income' ? 'Nova receita' : 'Nova despesa'}</Button>}
+        {canManage && <Button variant="add" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> {kind === 'income' ? 'Nova receita' : 'Nova despesa'}</Button>}
       </div>
 
       {ledger.isLoading && <Skeleton className="h-24" />}

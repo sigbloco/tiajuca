@@ -18,6 +18,8 @@ const buttonVariants = cva(
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         outline: 'border border-border bg-card hover:bg-muted',
+        // Botão de adicionar item: borda tracejada, sem fundo, texto em negrito.
+        add: 'border-2 border-dashed border-foreground/35 bg-transparent font-bold text-foreground hover:border-foreground/60 hover:bg-muted/60',
         ghost: 'hover:bg-muted',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         link: 'text-primary underline-offset-4 hover:underline',

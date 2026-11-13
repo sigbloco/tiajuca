@@ -70,7 +70,7 @@ export function RepertoireDetailPage() {
         <Button variant="outline" disabled={!text} onClick={copy}><Share2 className="h-4 w-4" /> Copiar lista</Button>
         <Button variant="outline" disabled={!text} onClick={whatsapp}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
         {canManage && <TrashDrawer entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} />}
-        {canManage && <Button variant="outline" onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
+        {canManage && <Button variant="add" onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
       </ButtonRow>
 
       <FilterBar value={filter} onChange={setFilter} />
