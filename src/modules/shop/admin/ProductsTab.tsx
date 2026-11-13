@@ -1,3 +1,4 @@
+import { KitChip } from '@/modules/shop/KitChip'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -115,7 +116,7 @@ export function ProductsTab() {
             </div>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="break-words font-semibold">{p.name} {p.is_hidden && <Badge>Oculto</Badge>}</p>
+            <p className="break-words font-semibold">{p.is_kit && <KitChip />}{p.name} {p.is_hidden && <Badge>Oculto</Badge>}</p>
             <p className="text-sm">{formatCurrency(fromCents(p.price_cents))}</p>
             {p.member_discount_pct > 0 && <p className="text-sm text-muted-foreground">{formatCurrency(fromCents(memberPriceCents(p.price_cents, p.member_discount_pct)))} · integrante</p>}
             <p className="text-sm text-muted-foreground">{stockSummary(p, itemsMap)}</p>

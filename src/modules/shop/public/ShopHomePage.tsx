@@ -1,3 +1,4 @@
+import { KitChip } from '@/modules/shop/KitChip'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -66,7 +67,7 @@ export function ShopHomePage() {
                     ? <img src={imageUrl(p.images[0])} alt={p.name} loading="lazy" className="aspect-square w-full object-contain bg-muted" />
                     : <div aria-hidden className="aspect-square w-full bg-muted" />}
                   <div className="space-y-1 p-3">
-                    <p className="font-semibold leading-tight">{p.name}</p>
+                    <p className="font-semibold leading-tight">{p.is_kit && <KitChip />}{p.name}</p>
                     <Price product={p} isMember={isMember} />
                     <div>
                       {soldOut ? <Badge>Esgotado</Badge> : p.kind === 'made_to_order' ? <Badge>Sob encomenda · {p.lead_time_days}</Badge> : <Badge>Pronta entrega</Badge>}
