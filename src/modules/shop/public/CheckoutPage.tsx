@@ -61,12 +61,12 @@ export function CheckoutPage() {
         <h1>Finalizar compra</h1>
         <Card className="space-y-3 p-4">
           <h2 className="text-lg font-bold">Seus dados</h2>
-          <div className="space-y-1.5"><Label htmlFor="ck-name">Nome completo</Label>
+          <div className="space-y-1.5"><Label htmlFor="ck-name" required>Nome completo</Label>
             <Input id="ck-name" autoComplete="name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="ck-phone">Telefone (WhatsApp)</Label>
+          <div className="space-y-1.5"><Label htmlFor="ck-phone" required>Telefone (WhatsApp)</Label>
             <PhoneInput id="ck-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             <p className="text-sm text-muted-foreground">Você vai precisar do telefone e do código do pedido para consultá-lo depois.</p></div>
-          <div className="space-y-1.5"><Label htmlFor="ck-email">E-mail</Label>
+          <div className="space-y-1.5"><Label htmlFor="ck-email" required>E-mail</Label>
             <Input id="ck-email" type="email" autoComplete="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
         </Card>
 
@@ -77,7 +77,7 @@ export function CheckoutPage() {
             : noCommon
             ? <p role="alert" className="text-destructive">Os itens do carrinho não têm um ponto de retirada em comum. Faça um pedido para cada grupo de itens.</p>
             : (
-              <div className="space-y-1.5"><Label htmlFor="ck-pickup">Ponto de retirada</Label>
+              <div className="space-y-1.5"><Label htmlFor="ck-pickup" required>Ponto de retirada</Label>
                 <Select id="ck-pickup" required value={pickup} onChange={(e) => setF({ ...f, pickup: e.target.value })}>
                   <option value="" disabled>Escolha</option>
                   {points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

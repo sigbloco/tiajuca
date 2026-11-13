@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -179,7 +180,7 @@ function DriveFolderField({ value, onChange }: { value: string; onChange: (v: st
   const roots = (registered.data ?? []).filter((r) => r.drive_folder_id)
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="s-drive-root">Pasta da música no Drive (opcional)</Label>
+      <Label htmlFor="s-drive-root">Pasta da música no Drive</Label>
       {value && (
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
           <span className="min-w-0 flex-1 break-words text-sm">{picked || value}</span>
@@ -207,7 +208,6 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
   const canManage = usePermission('repertoire.manage')
   const [f, setF] = useState({ title: song?.title ?? '', artist: song?.artist ?? '', genre: song?.genre ?? '', musical_key: song?.musical_key ?? '', notes: song?.notes ?? '', guide_url: song?.guide_url ?? '', drive_folder_url: song?.drive_folder_url ?? '' })
   const urlOk = (v: string) => !v.trim() || /^https?:///i.test(v.trim())
-  const valid = !!f.title.trim() && !!f.artist.trim() && urlOk(f.guide_url) && urlOk(f.drive_folder_url)
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value })
   const save = useMutation({
     mutationFn: async () => {
@@ -232,15 +232,15 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
   return (
     <SheetContent title={song?.title ?? 'Nova música'} description={song?.artist ?? 'Preencha os dados e salve; depois anexe as partituras.'}>
       {canManage ? (
-        <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
-          <div className="space-y-1.5"><Label htmlFor="s-title">Título</Label><Input id="s-title" required value={f.title} onChange={set('title')} /></div>
-          <div className="space-y-1.5"><Label htmlFor="s-artist">Artista</Label><Input id="s-artist" required value={f.artist} onChange={set('artist')} /></div>
+        <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Artista', f.artist.trim()], ['Link da guia válido (https://…)', urlOk(f.guide_url)], ['Link da pasta válido (https://…)', urlOk(f.drive_folder_url)]])) save.mutate() }} className="space-y-3">
+          <div className="space-y-1.5"><Label htmlFor="s-title" required>Título</Label><Input id="s-title" required value={f.title} onChange={set('title')} /></div>
+          <div className="space-y-1.5"><Label htmlFor="s-artist" required>Artista</Label><Input id="s-artist" required value={f.artist} onChange={set('artist')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-genre">Gênero</Label><Input id="s-genre" value={f.genre} onChange={set('genre')} /></div>
           <DriveFolderField value={f.drive_folder_url} onChange={(v) => setF({ ...f, drive_folder_url: v })} />
-          <div className="space-y-1.5"><Label htmlFor="s-guide">Link da guia (opcional)</Label><Input id="s-guide" type="url" placeholder="https://" value={f.guide_url} onChange={set('guide_url')} /></div>
+          <div className="space-y-1.5"><Label htmlFor="s-guide">Link da guia</Label><Input id="s-guide" type="url" placeholder="https://" value={f.guide_url} onChange={set('guide_url')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-notes">Observações</Label>
             <textarea id="s-notes" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.notes} onChange={set('notes')} /></div>
-          <Button type="submit" className="w-full" disabled={!valid || save.isPending} aria-label="Salvar música" title="Salvar música"><Save className="h-4 w-4" /></Button>
+          <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar música" title="Salvar música"><Save className="h-4 w-4" /></Button>
         </form>
       ) : (
         <dl className="space-y-1">

@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -32,22 +33,21 @@ function EntrySheet({ kind, onClose }: { kind: 'income' | 'expense'; onClose: ()
     onSuccess: () => { toast.success('Lançamento registrado.'); qc.invalidateQueries({ queryKey: ['finance', orgId] }); onClose() },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const valid = f.category && f.description.trim() && f.amount && f.amount > 0 && f.date
   return (
     <SheetContent title={kind === 'income' ? 'Nova receita' : 'Nova despesa'} description="Mensalidades entram sozinhas como receita quando são baixadas.">
-      <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="fe-cat">Categoria</Label>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Categoria', f.category], ['Descrição', f.description.trim()], ['Valor maior que zero', f.amount && f.amount > 0], ['Data', f.date]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="fe-cat" required>Categoria</Label>
           <Select id="fe-cat" required value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
             <option value="">Selecione</option>
             {cats.data?.filter((c) => c.kind === kind && c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select></div>
-        <div className="space-y-1.5"><Label htmlFor="fe-desc">Descrição</Label><Input id="fe-desc" required value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="fe-desc" required>Descrição</Label><Input id="fe-desc" required value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5"><Label htmlFor="fe-amt">Valor</Label><MoneyInput id="fe-amt" required value={f.amount} onChange={(v) => setF({ ...f, amount: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="fe-date">Data</Label><DateInput id="fe-date" required value={f.date} onChange={(v) => setF({ ...f, date: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="fe-amt" required>Valor</Label><MoneyInput id="fe-amt" required value={f.amount} onChange={(v) => setF({ ...f, amount: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="fe-date" required>Data</Label><DateInput id="fe-date" required value={f.date} onChange={(v) => setF({ ...f, date: v })} /></div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="fe-notes">Observação</Label><Input id="fe-notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
-        <Button type="submit" className="w-full" disabled={!valid || save.isPending}>Registrar</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending}>Registrar</Button>
       </form>
     </SheetContent>
   )

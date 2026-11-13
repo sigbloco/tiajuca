@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClipboardCheck, Pencil, Save } from 'lucide-react'
@@ -107,7 +108,6 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const valid = f.title.trim() && f.activity_date && f.cycle_id
   const time = activity ? [formatTime(activity.start_time), formatTime(activity.end_time)].filter(Boolean).join(' – ') : ''
 
   if (!editing && activity) {
@@ -159,8 +159,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
 
   return (
     <SheetContent title={isNew ? 'Novo evento' : 'Editar evento'} description="Data e horário no horário de Brasília.">
-      <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="ev-title">Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Data', f.activity_date], ['Ciclo', f.cycle_id], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5">
           <Label>Cor no calendário</Label>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor no calendário">
@@ -172,7 +172,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
             ))}
           </div>
         </div>
-        <div className="space-y-1.5"><Label htmlFor="ev-date">Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="ev-date" required>Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
         {!fromRule && (
           <>
         <div className="grid grid-cols-2 gap-2">
@@ -190,7 +190,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         <ItineraryEditor steps={steps} onChange={setSteps} />
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="ev-cycle">Ciclo</Label>
+            <Label htmlFor="ev-cycle" required>Ciclo</Label>
             <Select id="ev-cycle" required value={f.cycle_id} onChange={(e) => setF({ ...f, cycle_id: e.target.value })}>
               {cycles.data?.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
@@ -204,7 +204,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         </div>
         <AudiencePicker value={auds} onChange={setAuds} />
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!valid || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+          <Button type="submit" className="flex-1" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
       </form>

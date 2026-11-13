@@ -41,7 +41,7 @@ function NewMemberSheet({ onClose }: { onClose: () => void }) {
   return (
     <SheetContent title="Novo integrante" description="Dados sensíveis são preenchidos depois, na ficha do integrante.">
       <form onSubmit={(e) => { e.preventDefault(); create.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="full_name">Nome completo</Label><Input id="full_name" required value={form.full_name} onChange={set('full_name')} /></div>
+        <div className="space-y-1.5"><Label htmlFor="full_name" required>Nome completo</Label><Input id="full_name" required value={form.full_name} onChange={set('full_name')} /></div>
         <div className="space-y-1.5"><Label htmlFor="display_name">Como prefere ser chamado</Label><Input id="display_name" value={form.display_name} onChange={set('display_name')} /></div>
         <div className="space-y-1.5"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" value={form.email} onChange={set('email')} /></div>
         <div className="space-y-1.5"><Label htmlFor="phone">Celular</Label><PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} /></div>

@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
@@ -68,9 +69,9 @@ export function MyData({ memberId }: { memberId: string }) {
     <Card className="space-y-3 p-4">
       <h3>Meus dados</h3>
       <p className="text-sm text-muted-foreground">Inscrição em <strong>{formatDate(d.joined_at)}</strong> (não pode ser alterada).</p>
-      <form onSubmit={(e) => { e.preventDefault(); if (phoneOk) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="my-full">Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="my-email">E-mail</Label><Input id="my-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
         </div>
@@ -91,7 +92,7 @@ export function MyData({ memberId }: { memberId: string }) {
           <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.played_other_blocks} onChange={(e) => setF({ ...f, played_other_blocks: e.target.checked })} /> Toco ou já toquei com outros blocos</label>
         {f.played_other_blocks && <div className="space-y-1.5"><Label htmlFor="my-other">Quais blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>}
-        <Button type="submit" disabled={!phoneOk || save.isPending} aria-label="Salvar meus dados" title="Salvar meus dados"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" disabled={save.isPending} aria-label="Salvar meus dados" title="Salvar meus dados"><Save className="h-4 w-4" /></Button>
       </form>
     </Card>
   )

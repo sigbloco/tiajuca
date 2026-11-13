@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
@@ -21,7 +22,6 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
   const [kind, setKind] = useState<PickupPoint['kind']>(point?.kind ?? 'place')
   const [contact, setContact] = useState({ name: point?.contact_name ?? '', phone: point?.contact_phone ?? '' })
   const person = kind === 'person'
-  const valid = !!f.name.trim() && (person ? !!contact.name.trim() && contact.phone.replace(/\D/g, '').length >= 10 : !!f.address.trim())
   const [slots, setSlots] = useState<ScheduleSlot[]>(point?.schedule ?? [])
   const [errors, setErrors] = useState<string[]>([])
   const today = todayIso()
@@ -48,25 +48,25 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
 
   return (
     <SheetContent title={point ? 'Editar ponto de retirada' : 'Novo ponto de retirada'} description="O cliente escolhe um ponto ativo no checkout.">
-      <form onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome', f.name.trim()], ...((person ? [['Nome da pessoa', contact.name.trim()], ['WhatsApp / telefone com DDD', contact.phone.replace(/\D/g, '').length >= 10]] : [['Endereço', f.address.trim()]]) as [string, unknown][])])) save.mutate() }} className="space-y-3">
         <div role="radiogroup" aria-label="Tipo de retirada" className="grid grid-cols-2 gap-2">
           {([['place', 'Lugar e horário'], ['person', 'Combinar com uma pessoa']] as const).map(([k, label]) => (
             <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
               className={`min-h-11 rounded-lg border px-3 text-sm font-semibold ${kind === k ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted'}`}>{label}</button>
           ))}
         </div>
-        <div className="space-y-1.5"><Label htmlFor="pp-name">Nome</Label>
+        <div className="space-y-1.5"><Label htmlFor="pp-name" required>Nome</Label>
           <Input id="pp-name" required placeholder={person ? 'Ex.: Entrega combinada' : 'Ex.: Ensaio de segunda'} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         {!person && (
-          <div className="space-y-1.5"><Label htmlFor="pp-addr">Endereço</Label>
+          <div className="space-y-1.5"><Label htmlFor="pp-addr" required>Endereço</Label>
             <Input id="pp-addr" required value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></div>
         )}
         <fieldset className="space-y-2 rounded-lg border border-border p-3">
-          <legend className="px-1 font-semibold">{person ? 'Quem combina a entrega' : 'Quem o cliente deve procurar (opcional)'}</legend>
+          <legend className="px-1 font-semibold">{person ? 'Quem combina a entrega' : 'Quem o cliente deve procurar'}</legend>
           <div className="grid gap-2 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label htmlFor="pp-cname">Nome da pessoa</Label>
+            <div className="space-y-1.5"><Label htmlFor="pp-cname" required>Nome da pessoa</Label>
               <Input id="pp-cname" maxLength={80} required={person} value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} /></div>
-            <div className="space-y-1.5"><Label htmlFor="pp-cphone">WhatsApp / telefone</Label>
+            <div className="space-y-1.5"><Label htmlFor="pp-cphone" required>WhatsApp / telefone</Label>
               <PhoneInput id="pp-cphone" value={contact.phone} onChange={(v) => setContact({ ...contact, phone: v })} /></div>
           </div>
           <p className="text-sm text-muted-foreground">{person
@@ -94,7 +94,7 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span>das</span><div className="w-24"><TimeInput value={s.start ?? ''} onChange={(v) => setSlot(i, { start: v })} /></div>
                 <span>às</span><div className="w-24"><TimeInput value={s.end ?? ''} onChange={(v) => setSlot(i, { end: v })} /></div>
-                <Input aria-label="Nome (opcional)" className="min-w-40 flex-1" placeholder="Nome (ex.: Ensaio, Feijoada)" maxLength={60} value={s.label ?? ''} onChange={(e) => setSlot(i, { label: e.target.value })} />
+                <Input aria-label="Nome" className="min-w-40 flex-1" placeholder="Nome (ex.: Ensaio, Feijoada)" maxLength={60} value={s.label ?? ''} onChange={(e) => setSlot(i, { label: e.target.value })} />
               </div>
             </div>
           ))}
@@ -104,7 +104,7 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
           </ButtonRow>
         </fieldset>}
 
-        {!person && <div className="space-y-1.5"><Label htmlFor="pp-hours">Observação (opcional)</Label>
+        {!person && <div className="space-y-1.5"><Label htmlFor="pp-hours">Observação</Label>
           <Input id="pp-hours" placeholder="Ex.: Entrada pela portaria lateral" value={f.opening_hours} onChange={(e) => setF({ ...f, opening_hours: e.target.value })} /></div>}
 
         {!person && <p className="rounded-lg bg-muted p-3 text-sm"><strong>O cliente verá:</strong> {preview.text || 'nenhum horário informado'}
@@ -116,7 +116,7 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
           Disponível no checkout
         </label>
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-        <Button type="submit" className="w-full" disabled={!valid || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
       </form>
     </SheetContent>
   )

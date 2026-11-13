@@ -35,7 +35,7 @@ function NewPaymentSheet({ competence, onClose }: { competence: string; onClose:
       <div className="space-y-3">
         <MemberPicker value={f.member} onChange={(v) => setF({ ...f, member: v })} />
         <Select aria-label="Função / destino" value={f.destination} onChange={(e) => setF({ ...f, destination: e.target.value })}>
-          <option value="">Função / destino (opcional)</option>
+          <option value="">Função / destino</option>
           {dests.data?.filter((d) => d.is_active).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </Select>
         <div className="grid grid-cols-2 gap-2">
@@ -93,7 +93,7 @@ function PaySheet({ payment, onClose }: { payment: StaffPayment; onClose: () => 
             ) : <p className="text-warning">Esta pessoa ainda não cadastrou chave PIX.</p>}
           </Card>
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5"><Label htmlFor="pp-date">Data do pagamento</Label><DateInput id="pp-date" required value={paidOn} onChange={setPaidOn} /></div>
+            <div className="space-y-1.5"><Label htmlFor="pp-date" required>Data do pagamento</Label><DateInput id="pp-date" required value={paidOn} onChange={setPaidOn} /></div>
             <div className="space-y-1.5"><Label htmlFor="pp-m">Forma</Label>
               <Select id="pp-m" value={method} onChange={(e) => setMethod(e.target.value)}>{['PIX', 'Dinheiro', 'Transferência', 'Outro'].map((m) => <option key={m}>{m}</option>)}</Select></div>
           </div>

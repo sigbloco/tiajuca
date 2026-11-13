@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
@@ -118,8 +119,8 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
   const available = (names.data ?? []).filter((n) => n.is_active && !taken.has(n.name.toLowerCase()))
   return (
     <SheetContent title="Novo naipe" description="Escolha o naipe e, se quiser, já cadastre equipe e instrumentos.">
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate() }}>
-        <div className="space-y-1.5"><Label htmlFor="ns-name">Nome do naipe</Label>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome do naipe', name.trim()]])) create.mutate() }}>
+        <div className="space-y-1.5"><Label htmlFor="ns-name" required>Nome do naipe</Label>
           <Select id="ns-name" required value={name} onChange={(e) => setName(e.target.value)}>
             <option value="">Selecione</option>
             {available.map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
@@ -127,9 +128,9 @@ export function NewSectionSheet({ onClose }: { onClose: () => void }) {
           {available.length === 0 && <p className="text-sm text-muted-foreground">Todos os nomes já têm naipe. Cadastre mais nomes em Organização → Nomes de naipes.</p>}</div>
         <div className="space-y-1.5"><p className="font-semibold">Equipe do naipe</p><StaffPick value={staff} onChange={setStaff} /></div>
         <div className="space-y-1.5"><p className="font-semibold">{itemPlural(label)} do naipe</p><InstrumentsPick value={insts} onChange={setInsts} label={label} tuned={tuned} /></div>
-        <p className="text-sm text-muted-foreground">A afinação é de cada item (opcional) e só aparece nos naipes de altura definida. Dá para acrescentar mais instrumentos depois, na página Naipes.</p>
+        <p className="text-sm text-muted-foreground">A afinação é de cada item e só aparece nos naipes de altura definida. Dá para acrescentar mais instrumentos depois, na página Naipes.</p>
         <div className="flex gap-2">
-          <Button type="submit" disabled={!name.trim() || create.isPending}>{create.isPending ? 'Criando' : 'Criar naipe'}</Button>
+          <Button type="submit" disabled={create.isPending}>{create.isPending ? 'Criando' : 'Criar naipe'}</Button>
           <Button type="button" variant="outline" onClick={reset} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       </form>

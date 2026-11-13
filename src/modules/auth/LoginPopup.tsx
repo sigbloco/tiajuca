@@ -39,9 +39,9 @@ export function LoginPopup({ open, onOpenChange, title = 'Entrar', description =
             <Dialog.Close className="rounded-md p-1 hover:bg-muted" aria-label="Fechar"><X className="h-5 w-5" /></Dialog.Close>
           </div>
           <form onSubmit={(e) => { e.preventDefault(); login.mutate() }} className="mt-4 space-y-3">
-            <div className="space-y-1.5"><Label htmlFor="lp-email">E-mail</Label>
+            <div className="space-y-1.5"><Label htmlFor="lp-email" required>E-mail</Label>
               <Input id="lp-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label htmlFor="lp-pass">Senha</Label>
+            <div className="space-y-1.5"><Label htmlFor="lp-pass" required>Senha</Label>
               <Input id="lp-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <Button type="submit" className="w-full" disabled={login.isPending}>{login.isPending ? 'Entrando' : 'Entrar'}</Button>
           </form>

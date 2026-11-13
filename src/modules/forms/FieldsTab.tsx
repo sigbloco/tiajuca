@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GitBranch, Plus, Save } from 'lucide-react'
 import { useState } from 'react'
@@ -62,9 +63,9 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
   const needsOptions = OPTION_TYPES.includes(f.type) && !CATALOG_MAPPINGS.includes(f.mapping)
   return (
     <SheetContent title={field ? 'Editar campo' : 'Novo campo'} description={field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
-      <form onSubmit={(e) => { e.preventDefault(); if (f.label.trim()) save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="fl-label">{f.type === 'info' ? 'Texto' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição (opcional)</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome do campo', f.label.trim()], ['Opções', !needsOptions || f.options.trim()]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="fl-label" required>{f.type === 'info' ? 'Texto' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="fl-type">Tipo</Label>
             <Select id="fl-type" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as FieldType })}>
@@ -113,7 +114,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
             </Select>
             <p className="text-xs text-muted-foreground">Ao aprovar, o valor vai direto para o cadastro, sem digitar de novo.</p></div>
         )}
-        <Button type="submit" className="w-full" disabled={!f.label.trim() || save.isPending || (needsOptions && !f.options.trim())} aria-label="Salvar campo" title="Salvar campo"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar campo" title="Salvar campo"><Save className="h-4 w-4" /></Button>
       </form>
     </SheetContent>
   )

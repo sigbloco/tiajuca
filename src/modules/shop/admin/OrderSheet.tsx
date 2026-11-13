@@ -99,7 +99,7 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
         )}
         {a.canCancel && (
           <section className="space-y-2">
-            <Input aria-label="Motivo do cancelamento" placeholder="Motivo do cancelamento (opcional)" value={reason} onChange={(e) => setReason(e.target.value)} />
+            <Input aria-label="Motivo do cancelamento" placeholder="Motivo do cancelamento" value={reason} onChange={(e) => setReason(e.target.value)} />
             <Button variant="ghost" className="w-full text-destructive" disabled={act.isPending}
               onClick={async () => await confirmBox('Cancelar este pedido? Os itens em estoque voltam para a venda. Reembolsos são feitos por fora do sistema.') && act.mutate(() => cancelOrder(order.id, reason))}>Cancelar pedido</Button>
           </section>

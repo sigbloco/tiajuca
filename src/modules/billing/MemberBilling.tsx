@@ -124,7 +124,7 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
         <Input id={`pct-${memberId}`} className={cn('w-16 px-2 text-center', auto && 'h-8 text-sm')} inputMode="numeric" maxLength={3} value={percent} onBlur={autoSave}
           onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPercent(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
       <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={`reason-${memberId}`} className={auto ? 'text-xs' : undefined}>Motivo</Label>
-        <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Opcional" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
+        <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
       </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
       {!auto && <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()} aria-label="Salvar bolsa" title="Salvar bolsa"><Save className="h-4 w-4" /></Button>}
@@ -226,7 +226,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
               <Input id={'cc-pct-' + cycle.id} className="h-8 w-16 px-2 text-center text-sm" inputMode="numeric" maxLength={3} value={pct} onBlur={autoSave}
                 onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPct(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
             <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={'cc-reason-' + cycle.id} className="text-xs">Motivo</Label>
-              <Input id={'cc-reason-' + cycle.id} className="h-8 text-sm" placeholder="Opcional" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
+              <Input id={'cc-reason-' + cycle.id} className="h-8 text-sm" placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
           </div>
         </div>
       )}

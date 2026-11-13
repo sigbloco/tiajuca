@@ -75,7 +75,7 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
         <section className="space-y-2">
           <h3>Registrar pagamento</h3>
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5"><Label htmlFor="paid-on">Data</Label><DateInput id="paid-on" required value={paidOn} onChange={setPaidOn} /></div>
+            <div className="space-y-1.5"><Label htmlFor="paid-on" required>Data</Label><DateInput id="paid-on" required value={paidOn} onChange={setPaidOn} /></div>
             <div className="space-y-1.5"><Label htmlFor="method">Forma</Label>
               <Select id="method" value={method} onChange={(e) => setMethod(e.target.value)}>
                 {['PIX', 'Dinheiro', 'Transferência', 'Cartão', 'Outro'].map((m) => <option key={m}>{m}</option>)}

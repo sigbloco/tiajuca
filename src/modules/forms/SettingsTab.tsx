@@ -1,3 +1,4 @@
+import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -69,8 +70,8 @@ export function SettingsTab({ form }: { form: FormRow }) {
         <p className="text-xs text-muted-foreground">Ao publicar, é gravada uma cópia fixa do formulário (versão). Quem respondeu continua com a versão em que respondeu.</p>
       </Card>
 
-      <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="fs-title">Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Endereço do formulário', f.slug]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="fs-title" required>Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-desc">Descrição</Label>
           <textarea id="fs-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-slug">Endereço (final do link)</Label><Input id="fs-slug" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
@@ -82,14 +83,14 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <div className="space-y-1.5"><Label htmlFor="fs-close">Encerra em</Label><DateInput id="fs-close" min={f.opens || undefined} value={f.closes} onChange={(v) => setF({ ...f, closes: v })} /></div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="fs-max">Limite de respostas (opcional)</Label><Input id="fs-max" inputMode="numeric" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value.replace(/\D/g, '') })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="fs-max">Limite de respostas</Label><Input id="fs-max" inputMode="numeric" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value.replace(/\D/g, '') })} /></div>
           <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
           <textarea id="fs-priv" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.privacy} onChange={(e) => setF({ ...f, privacy: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
-        <Button type="submit" disabled={!f.title.trim() || !f.slug || save.isPending} aria-label="Salvar configurações" title="Salvar configurações"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" disabled={save.isPending} aria-label="Salvar configurações" title="Salvar configurações"><Save className="h-4 w-4" /></Button>
       </form>
 
       <Card className="space-y-2 p-4">

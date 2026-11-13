@@ -147,7 +147,7 @@ export function SiteSettings() {
             <div key={i} className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Input className="min-w-56 flex-1" aria-label="Endereço do vídeo" placeholder="https://www.youtube.com/watch?v=" value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} />
-                <Input className="w-56" aria-label="Título (opcional)" placeholder="Título (opcional)" value={v.title} onChange={(e) => setVideo(i, { title: e.target.value })} />
+                <Input className="w-56" aria-label="Título" placeholder="Título" value={v.title} onChange={(e) => setVideo(i, { title: e.target.value })} />
                 <Button type="button" size="icon" variant="ghost" aria-label="Remover vídeo" onClick={() => setF({ ...f, videos: f.videos.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
               </div>
               {!ok && <p className="text-xs text-destructive">Cole o endereço de um vídeo do YouTube.</p>}
