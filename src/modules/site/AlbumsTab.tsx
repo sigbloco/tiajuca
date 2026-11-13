@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ExternalLink, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowDown, ArrowUp, ExternalLink, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { Pager } from '@/components/shared/Pager'
@@ -101,6 +101,15 @@ export function AlbumsTab() {
     onSuccess: () => { refresh(); notifySaved('Álbum atualizado.') },
     onError,
   })
+  // Edição do cartão: salva sozinha, em silêncio (sem aviso a cada alteração).
+  const autosave = useMutation({
+    mutationFn: async (v: { id: string; fields: Partial<Album> }) => {
+      const { error } = await supabase.from('site_albums').update(v.fields).eq('id', v.id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: refresh,
+    onError,
+  })
   const purge = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('site_albums').delete().eq('id', id).eq('organization_id', orgId)
@@ -170,7 +179,7 @@ export function AlbumsTab() {
       )}
       {visible.map((a, i) => (
         <AlbumRow key={a.id} album={a} index={(cur - 1) * PER_PAGE + i} total={inYear.length} dnd={dnd} onMove={move} onDrag={drag}
-          onSave={(fields) => patch.mutateAsync({ id: a.id, fields })}
+          onSave={(fields) => autosave.mutateAsync({ id: a.id, fields })}
           onTrash={() => patch.mutate({ id: a.id, fields: { is_active: false } })}
           onRefresh={async () => {
             const info = await previewAlbum(orgId, a.url)
@@ -188,11 +197,24 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
   onMove: (i: number, d: number) => void; onDrag: (from: string, to: string) => void
   onSave: (fields: Partial<Album>) => Promise<unknown>; onTrash: () => void; onRefresh: () => Promise<unknown>
 }) {
-  const [d, setD] = useState({ title: a.title, event_date: a.event_date, authors: a.authors })
+  const snap = (x: Album) => ({ title: x.title, event_date: x.event_date, authors: x.authors })
+  const clean = (x: ReturnType<typeof snap>) => ({ title: x.title.trim(), event_date: x.event_date, authors: x.authors.filter((u) => u.value.trim()).map((u) => ({ kind: u.kind, value: u.value.trim() })) })
+  const [d, setD] = useState(snap(a))
   const [busy, setBusy] = useState(false)
-  const dirty = d.title !== a.title || d.event_date !== a.event_date || JSON.stringify(d.authors) !== JSON.stringify(a.authors)
-  // Chegou título/capa/autores novos do Google (reler): o rascunho acompanha.
-  useEffect(() => { setD({ title: a.title, event_date: a.event_date, authors: a.authors }) }, [a.title, a.event_date, a.authors])
+  const base = useRef(JSON.stringify(snap(a)))
+  const dirty = JSON.stringify(clean(d)) !== JSON.stringify(clean(snap(a)))
+  // Chegou título/capa/autores novos (reler, ou o próprio salvamento): o rascunho acompanha só se a pessoa não estiver no meio de uma edição.
+  useEffect(() => {
+    const next = JSON.stringify(snap(a))
+    if (JSON.stringify(d) === base.current) setD(snap(a))
+    base.current = next
+  }, [a.title, a.event_date, a.authors]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Salva sozinho, meio segundo depois da última alteração (título vazio espera ser preenchido).
+  useEffect(() => {
+    if (!dirty || !d.title.trim()) return
+    const t = setTimeout(() => { void onSave(clean(d)) }, 700)
+    return () => clearTimeout(t)
+  }, [JSON.stringify(clean(d)), dirty]) // eslint-disable-line react-hooks/exhaustive-deps
   const setAuthor = (i: number, p: Partial<Author>) => setD((x) => ({ ...x, authors: x.authors.map((u, k) => (k === i ? { ...u, ...p } : u)) }))
   return (
     <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${dnd.cls(a.id)}`}>
@@ -202,7 +224,7 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
         <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label="Descer álbum" disabled={index === total - 1} onClick={() => onMove(index, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>
       <div className="min-w-0 flex-1 space-y-2">
-        {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-[4/3] w-full max-w-xs rounded-lg object-cover" /> : <div aria-hidden className="flex aspect-[4/3] w-full max-w-xs items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">sem capa</div>}
+        {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-[4/3] w-full max-w-[13rem] rounded-lg object-cover" /> : <div aria-hidden className="flex aspect-[4/3] w-full max-w-xs items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">sem capa</div>}
         {/* PC: data (largura fixa) e título lado a lado; celular: uma linha cada. */}
         <div className="grid gap-2 sm:grid-cols-[9.5rem_1fr]">
           <DateInput aria-label="Data do evento" value={d.event_date ?? ''} onChange={(v) => setD({ ...d, event_date: v || null })} />
@@ -215,8 +237,8 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
               onClick={() => setD({ ...d, authors: [...d.authors, { kind: 'instagram', value: '' }] })}><Plus className="h-3.5 w-3.5" /></button>
           </div>
           {d.authors.map((u, i) => (
-            <div key={i} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-2">
-              <Select aria-label="Rede do autor" value={u.kind} onChange={(e) => setAuthor(i, { kind: e.target.value as LinkKind })}>
+            <div key={i} className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[7.5rem_1fr_auto]">
+              <Select className="col-span-2 sm:col-span-1" aria-label="Rede do autor" value={u.kind} onChange={(e) => setAuthor(i, { kind: e.target.value as LinkKind })}>
                 {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </Select>
               <Input aria-label="Usuário ou endereço do autor" placeholder={LINK_KINDS[u.kind].placeholder} value={u.value} onChange={(e) => setAuthor(i, { value: e.target.value })} />
@@ -226,10 +248,6 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
         </div>
         {/* Ações: dividem 100% da largura; texto só onde há espaço (PC), no celular só o ícone. */}
         <ButtonRow>
-          {dirty && (
-            <Button type="button" onClick={() => { if (requireFields([['Título', d.title.trim()]])) void onSave({ title: d.title.trim(), event_date: d.event_date, authors: d.authors.filter((u) => u.value.trim()).map((u) => ({ kind: u.kind, value: u.value.trim() })) }) }}
-              aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>
-          )}
           <Button asChild variant="outline"><a href={a.url} target="_blank" rel="noreferrer noopener" aria-label="Abrir no Google Photos" title="Abrir no Google Photos"><ExternalLink className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Google Photos</span></a></Button>
           <Button type="button" variant="outline" disabled={busy} aria-label="Reler título e capa do Google" title="Reler título e capa do Google"
             onClick={async () => { setBusy(true); try { await onRefresh() } catch (e) { toast.error(e instanceof Error ? e.message : friendlyError(e)) } finally { setBusy(false) } }}><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /><span className="ml-2 hidden sm:inline">Reler</span></Button>
