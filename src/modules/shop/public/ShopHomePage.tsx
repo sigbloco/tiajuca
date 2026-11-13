@@ -45,12 +45,16 @@ export function ShopHomePage() {
 
   function renderGrid(products: typeof store.products) {
     return (
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {products.map((p) => {
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+        {products.map((p, idx) => {
+          // Última linha incompleta estica para ocupar 100% da largura (celular: 2 colunas; telas maiores: 3).
+          const n = products.length, last = idx === n - 1, prev = idx === n - 2
+          const phone = last && n % 2 === 1 ? 'col-span-2' : ''
+          const wide = n % 3 === 1 && last ? 'sm:col-span-6' : n % 3 === 2 && (last || prev) ? 'sm:col-span-3' : 'sm:col-span-2'
           const a = productAvailability(p.kind, p.variants.map((v) => ({ stock: v.available, reserved: 0, is_active: true })))
           const soldOut = a.status === 'sold_out'
           return (
-            <li key={p.id}>
+            <li key={p.id} className={`${phone || 'col-span-1'} ${wide}`}>
               <Link to={`${basePath}/produto/${p.slug}`} className="block h-full">
                 <Card className={cn('h-full overflow-hidden transition hover:shadow-md', soldOut && 'opacity-70 grayscale')}>
                   {p.images[0]
