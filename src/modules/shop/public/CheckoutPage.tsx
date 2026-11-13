@@ -6,7 +6,9 @@ import { PhoneInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Input, Label, Select, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { formatCurrency } from '@/core/format'
+import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
+import { commonPickupIds } from '../cart'
 import { METHOD_LABELS, availableMethods, checkoutBlockers } from '../payments/pix'
 import { invokeShop, saveSnapshot, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
@@ -14,23 +16,29 @@ import { useStore } from './StoreContext'
 const money = (cents: number) => formatCurrency(fromCents(cents))
 
 export function CheckoutPage() {
-  const { store, cart, basePath, clear, isMember } = useStore()
+  const { store, cart, basePath, clear, isMember, index } = useStore()
   const { session } = useAuth()
   const navigate = useNavigate()
   const methods = availableMethods(store.payment_methods)
   const meta = session?.user.user_metadata as { full_name?: string } | undefined
   const [f, setF] = useState({
     name: meta?.full_name ?? '', phone: '', email: session?.user.email ?? '',
-    pickup: store.pickup_points.length === 1 ? store.pickup_points[0].id : '', method: methods[0] ?? '',
+    pickup: '', method: methods[0] ?? '',
   })
   const [accepted, setAccepted] = useState(false)
   const blockers = f.method ? checkoutBlockers(f.method as 'pix', store) : ['Esta loja ainda não tem forma de pagamento ativa.']
   const noPickup = store.pickup_points.length === 0
+  // Só os pontos que servem a TODOS os itens do carrinho (cada produto pode ter os seus).
+  const cartProducts = cart.lines.map((l) => index.get(l.variantId)?.product).filter((p): p is NonNullable<typeof p> => !!p)
+  const allowed = commonPickupIds(cartProducts, store.pickup_points.map((p) => p.id))
+  const points = store.pickup_points.filter((p) => allowed.includes(p.id))
+  const noCommon = !noPickup && points.length === 0
+  const pickup = allowed.includes(f.pickup) ? f.pickup : allowed.length === 1 ? allowed[0] : ''
 
   const submit = useMutation({
     mutationFn: async () => {
       return invokeShop<{ order: CreatedOrder; payment: { url?: string } }>('shop-checkout', {
-        org_slug: store.org.slug, name: f.name, phone: f.phone, email: f.email, pickup_point_id: f.pickup, payment_method: f.method, accept_privacy: accepted,
+        org_slug: store.org.slug, name: f.name, phone: f.phone, email: f.email, pickup_point_id: pickup, payment_method: f.method, accept_privacy: accepted,
         items: cart.lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity })),
       })
     },
@@ -45,7 +53,7 @@ export function CheckoutPage() {
   })
 
   if (cart.lines.length === 0) return <Navigate to={`${basePath}/carrinho`} replace />
-  const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || !f.pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
+  const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || noCommon || !pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_20rem]">
@@ -66,14 +74,29 @@ export function CheckoutPage() {
           <h2 className="text-lg font-bold">Retirada</h2>
           {noPickup
             ? <p className="text-destructive">A loja ainda não tem pontos de retirada disponíveis.</p>
+            : noCommon
+            ? <p role="alert" className="text-destructive">Os itens do carrinho não têm um ponto de retirada em comum. Faça um pedido para cada grupo de itens.</p>
             : (
               <div className="space-y-1.5"><Label htmlFor="ck-pickup">Ponto de retirada</Label>
-                <Select id="ck-pickup" required value={f.pickup} onChange={(e) => setF({ ...f, pickup: e.target.value })}>
+                <Select id="ck-pickup" required value={pickup} onChange={(e) => setF({ ...f, pickup: e.target.value })}>
                   <option value="" disabled>Escolha</option>
-                  {store.pickup_points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>
-                {f.pickup && (() => { const p = store.pickup_points.find((x) => x.id === f.pickup); return p && (
-                  <p className="text-sm text-muted-foreground">{p.address}{p.opening_hours ? ` · ${p.opening_hours}` : ''}</p>) })()}
+                {pickup && (() => {
+                  const p = store.pickup_points.find((x) => x.id === pickup)
+                  if (!p) return null
+                  const digits = (p.contact_phone ?? '').replace(/\D/g, '')
+                  if (p.kind === 'person' && digits.length >= 10) {
+                    return (
+                      <a href={`https://wa.me/${digits.startsWith('55') ? digits : '55' + digits}`} target="_blank" rel="noreferrer noopener"
+                        className="flex items-start gap-2 text-sm text-primary hover:underline">
+                        <WhatsAppIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>Clique aqui e combine a entrega direto com {p.contact_name ?? 'o responsável'} ({digits}). Pode ser encontro ao vivo, entrega por aplicativo ou ensaio.</span>
+                      </a>
+                    )
+                  }
+                  return <p className="text-sm text-muted-foreground">{p.address}{p.opening_hours ? ` · ${p.opening_hours}` : ''}</p>
+                })()}
               </div>
             )}
           <p className="rounded-lg bg-muted p-3 text-sm">A <strong>retirada é combinada</strong>: não há entrega. O dia e o horário são combinados depois que o pedido estiver pronto.</p>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_QTY_PER_LINE, addToCart, indexCatalog, priceCart, reconcileCart, removeLine, setQuantity, type StoreProduct } from './cart'
+import { MAX_QTY_PER_LINE, addToCart, commonPickupIds, indexCatalog, priceCart, reconcileCart, removeLine, setQuantity, type StoreProduct } from './cart'
 
 const camisa: StoreProduct = {
   id: 'p1', slug: 'camisa', name: 'Camisa', description: '', kind: 'stock', price_cents: 6000, member_discount_pct: 10, lead_time_days: null, images: ['a.jpg'],
@@ -72,5 +72,14 @@ describe('totais', () => {
   })
   it('ignora variações que não existem mais', () => {
     expect(priceCart([{ variantId: 'x', quantity: 1 }], idx, false).totalCents).toBe(0)
+  })
+})
+
+describe('commonPickupIds', () => {
+  it('produto sem ponto marcado vale para todos; o resto exige o ponto em comum', () => {
+    const all = ['a', 'b', 'c']
+    expect(commonPickupIds([{ pickup_ids: [] }, {}], all)).toEqual(all)
+    expect(commonPickupIds([{ pickup_ids: ['a', 'c'] }, { pickup_ids: ['c', 'b'] }], all)).toEqual(['c'])
+    expect(commonPickupIds([{ pickup_ids: ['a'] }, { pickup_ids: ['b'] }], all)).toEqual([])
   })
 })

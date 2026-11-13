@@ -12,7 +12,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, setProductHidden, updateProduct, uploadProductImage, type ShopProduct, type StockItem } from './service'
+import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, deleteProductImage, imageUrl, reorderProductImages, saveProductPickups, setProductActive, setProductHidden, updateProduct, uploadProductImage, type PickupPoint, type ShopProduct, type StockItem } from './service'
 
 interface Use { stock_item_id: string; quantity: string }
 interface VariantRow { id?: string; label: string; uses: Use[]; reserved: number; is_active: boolean }
@@ -85,7 +85,7 @@ function ActionBar({ product, saving, hiding, trashing, onHide, onTrash }: {
 }
 
 
-export function ProductSheet({ product, kit = false, others = [], stockItems = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; kit?: boolean; others?: ShopProduct[]; stockItems?: StockItem[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
+export function ProductSheet({ product, kit = false, others = [], stockItems = [], pickupPoints = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; kit?: boolean; others?: ShopProduct[]; stockItems?: StockItem[]; pickupPoints?: PickupPoint[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
@@ -95,6 +95,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
   const isKit = product ? product.is_kit : kit
+  const [pickups, setPickups] = useState<string[]>(product?.shop_product_pickups?.map((x) => x.pickup_point_id) ?? [])
   const [photos, setPhotos] = useState(product?.kit_component_photos ?? true)
   const [variants, setVariants] = useState<VariantRow[]>(
     product?.shop_product_variants.map((v) => ({
@@ -150,8 +151,9 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         ...(isKit ? { is_kit: true, kit_component_photos: photos } : {}),
       }
       const rows = variants.map((v) => ({ id: v.id, label: v.label, is_active: v.is_active, items: v.uses.filter((u) => u.stock_item_id).map((u) => ({ stock_item_id: u.stock_item_id, quantity: Number(u.quantity) })) }))
-      if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); return product.id }
+      if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); await saveProductPickups(orgId, product.id, pickups); return product.id }
       const created = await createProduct(orgId, { ...input, kind: f.kind }, rows)
+      await saveProductPickups(orgId, created, pickups)
       await sendPending(created)
       return created
     },
@@ -271,6 +273,19 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir (opcional)</Label>
             <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
             <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p></div>
+        )}
+        {pickupPoints.length > 0 && (
+          <fieldset className="space-y-1 rounded-lg border border-border p-3">
+            <legend className="px-1 font-semibold">Pontos de retirada</legend>
+            <p className="text-xs text-muted-foreground">Marque onde este produto pode ser retirado (mais de um). Nenhum marcado = todos os pontos. No carrinho só aparecem os pontos comuns a todos os itens.</p>
+            {pickupPoints.map((pt) => (
+              <label key={pt.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="h-4 w-4" checked={pickups.includes(pt.id)}
+                  onChange={(e) => setPickups(e.target.checked ? [...pickups, pt.id] : pickups.filter((id) => id !== pt.id))} />
+                {pt.name}
+              </label>
+            ))}
+          </fieldset>
         )}
         {others.length > 0 && (
           <fieldset className="space-y-1 rounded-lg border border-border p-3">

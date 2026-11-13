@@ -10,11 +10,16 @@ export interface StoreVariant { id: string; label: string; available: number | n
 export interface StoreProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
   price_cents: number; member_discount_pct: number; lead_time_days: string | null; is_featured?: boolean
-  is_kit?: boolean; components?: { name: string; quantity: number }[] | null; min_units?: number | null; confirmed_units?: number | null; suggested_ids?: string[]
+  pickup_ids?: string[]; is_kit?: boolean; components?: { name: string; quantity: number }[] | null; min_units?: number | null; confirmed_units?: number | null; suggested_ids?: string[]
   images: string[]; variants: StoreVariant[]
 }
 export interface CatalogEntry { product: StoreProduct; variant: StoreVariant }
 export type CatalogIndex = Map<string, CatalogEntry>
+
+/** Pontos de retirada que servem a todos os produtos do carrinho (produto sem ponto marcado vale para todos). */
+export function commonPickupIds(products: Pick<StoreProduct, 'pickup_ids'>[], allIds: string[]): string[] {
+  return allIds.filter((id) => products.every((p) => !p.pickup_ids?.length || p.pickup_ids.includes(id)))
+}
 
 export function indexCatalog(products: StoreProduct[]): CatalogIndex {
   const idx: CatalogIndex = new Map()

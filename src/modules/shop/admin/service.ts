@@ -10,7 +10,7 @@ export interface ShopImage { id: string; product_id: string; storage_path: strin
 export interface ShopProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
   price_cents: number; member_discount_pct: number; lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean; sort_order: number
-  is_kit: boolean; kit_component_photos: boolean; is_hidden: boolean
+  is_kit: boolean; kit_component_photos: boolean; is_hidden: boolean; shop_product_pickups: { id: string; pickup_point_id: string }[]
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
 export interface PickupPoint {
@@ -27,7 +27,7 @@ export const imageUrl = (path: string) => supabase.storage.from(IMAGE_BUCKET).ge
 
 export async function listProducts(orgId: string) {
   const { data, error } = await supabase.from('shop_products')
-    .select('*, shop_product_variants(*, shop_variant_stock(*)), shop_product_images(*)').eq('organization_id', orgId).order('sort_order').order('name')
+    .select('*, shop_product_variants(*, shop_variant_stock(*)), shop_product_images(*), shop_product_pickups(*)').eq('organization_id', orgId).order('sort_order').order('name')
   if (error) throw error
   return (data as ShopProduct[]).map((p) => ({
     ...p,
@@ -119,6 +119,15 @@ export async function createStockItem(orgId: string, name: string, stock: number
 
 export async function updateStockItem(id: string, patch: Partial<Pick<StockItem, 'name' | 'stock' | 'is_active'>>) {
   const { error } = await supabase.from('shop_stock_items').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/** Pontos de retirada do produto (nenhum marcado = vale para todos). */
+export async function saveProductPickups(orgId: string, productId: string, ids: string[]) {
+  const del = await supabase.from('shop_product_pickups').delete().eq('product_id', productId)
+  if (del.error) throw del.error
+  if (ids.length === 0) return
+  const { error } = await supabase.from('shop_product_pickups').insert(ids.map((pickup_point_id) => ({ organization_id: orgId, product_id: productId, pickup_point_id })))
   if (error) throw error
 }
 
