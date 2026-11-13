@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowDownUp, ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
@@ -39,7 +39,10 @@ export function AlbumsPage() {
   const thisYear = String(new Date().getFullYear())
   const year = picked && options.includes(picked) ? picked : years.includes(thisYear) ? thisYear : options[0] ?? ''
   const shown = all.filter((a) => a.event_date?.startsWith(year))
-  const prog = useProgressive(shown, 6, year)
+  // Botão de inverter: mostra do mais antigo ao mais novo (ou o contrário, se já estiver invertido).
+  const [reversed, setReversed] = useState(false)
+  const ordered = reversed ? [...shown].reverse() : shown
+  const prog = useProgressive(ordered, 6, year + String(reversed))
   const heroColor = data ? areaOverrides(data.org.theme, 'site').header ?? null : null
   const heroText = heroColor ? areaOverrides(data!.org.theme, 'site').headerText ?? textOn(heroColor) : undefined
 
@@ -52,7 +55,11 @@ export function AlbumsPage() {
           {data && (
             <div className="flex items-center gap-3">
               <OrgLogo name={data.org.name} logoPath={data.org.logo_path} className="h-10 w-10 shrink-0 ring-2 ring-secondary" />
-              <h1 className="font-display text-2xl font-extrabold">{data.label}</h1>
+              <h1 className="min-w-0 flex-1 font-display text-2xl font-extrabold">{data.label}</h1>
+              <button type="button" aria-pressed={reversed} onClick={() => setReversed((r) => !r)} aria-label="Inverter a ordem cronológica" title="Inverter a ordem cronológica"
+                className={`inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border-2 border-transparent px-3 py-1.5 text-sm font-bold ${reversed ? 'bg-secondary text-secondary-foreground' : 'bg-card text-foreground hover:bg-muted'}`}>
+                <ArrowDownUp className="h-4 w-4" /><span className="hidden sm:inline">Inverter ordem</span>
+              </button>
             </div>
           )}
           {options.length > 1 && (
