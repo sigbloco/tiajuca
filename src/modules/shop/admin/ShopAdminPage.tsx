@@ -1,6 +1,6 @@
 import { FitWord } from '@/components/shared/FitText'
 import { useQuery } from '@tanstack/react-query'
-import { Palette, Settings } from 'lucide-react'
+import { ExternalLink, Palette, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -38,6 +38,9 @@ export function ShopAdminPage() {
       <div className="flex items-center justify-between gap-2">
         <h1>Loja</h1>
         <div className="flex gap-2">
+          <Button asChild variant="outline" className="min-h-11 min-w-11 px-3">
+            <a href={`/${membership?.slug}/loja`} target="_blank" rel="noreferrer" aria-label="Ver a página" title="Ver a página"><ExternalLink className="h-5 w-5" /><span className="ml-2 hidden md:inline">Ver a página</span></a>
+          </Button>
           <Button role="tab" aria-selected={tab === 'payments'} aria-label="Configurações" title="Configurações" variant={tab === 'payments' ? 'default' : 'outline'}
             size="icon" className="min-h-11 min-w-11" onClick={() => setTab('payments')}><Settings className="h-5 w-5" /></Button>
           {canTheme && (
