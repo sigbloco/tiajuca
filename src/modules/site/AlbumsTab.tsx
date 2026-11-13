@@ -1,0 +1,193 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowDown, ArrowUp, ExternalLink, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { useProgressive } from '@/components/shared/LoadMore'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { DateInput } from '@/components/ui/masked-inputs'
+import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
+import { friendlyError } from '@/core/errors'
+import { useHoldReorder } from '@/core/holdReorder'
+import { useOrgId } from '@/core/organization'
+import { requireFields } from '@/core/required'
+import { supabase } from '@/core/supabase'
+import { notifySaved } from '@/core/undo'
+import { albumDate, listAlbums, parseAlbumTitle, previewAlbum, type Album } from './albums'
+import { LINK_KINDS, type LinkKind } from './links'
+
+const isPhotosUrl = (u: string) => /^https:\/\/(photos\.app\.goo\.gl|photos\.google\.com)\//.test(u)
+
+/** Álbuns de fotos: cole o link público do Google Fotos; o sistema lê o título e a capa e monta o cartão. */
+export function AlbumsTab() {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const { data, isLoading } = useQuery({ queryKey: ['site-albums', orgId], queryFn: () => listAlbums(orgId) })
+  const [url, setUrl] = useState('')
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['site-albums', orgId] }); qc.invalidateQueries({ queryKey: ['public-albums'] }) }
+  const onError = (e: unknown) => toast.error(e instanceof Error ? e.message : friendlyError(e))
+  const all = data ?? []
+  const active = all.filter((a) => a.is_active)
+  const trashed = all.filter((a) => !a.is_active)
+  const prog = useProgressive(active, 5)
+  const dnd = useHoldReorder()
+  // Relê, de 3 em 3, título e capa dos álbuns que ainda não têm capa.
+  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null)
+  const missing = active.filter((a) => !a.cover_url)
+  const readMissing = async () => {
+    const queue = [...missing]
+    setBulk({ done: 0, total: queue.length })
+    let done = 0, failed = 0
+    const worker = async () => {
+      for (let a = queue.shift(); a; a = queue.shift()) {
+        try {
+          const info = await previewAlbum(orgId, a.url)
+          const p = parseAlbumTitle(info.title)
+          const fields: Partial<Album> = { cover_url: info.cover_url ?? a.cover_url }
+          if (info.title) Object.assign(fields, { title: p.title, event_date: p.event_date ?? a.event_date, author_value: p.handle ?? a.author_value })
+          const { error } = await supabase.from('site_albums').update(fields).eq('id', a.id).eq('organization_id', orgId)
+          if (error) throw error
+        } catch { failed++ }
+        setBulk({ done: ++done, total: missing.length })
+      }
+    }
+    await Promise.all([worker(), worker(), worker()])
+    setBulk(null)
+    refresh()
+    notifySaved(failed ? `Capas lidas. ${failed} álbum(ns) não deram certo: abra o link e confira se está compartilhado.` : 'Capas e títulos atualizados.')
+  }
+
+  const add = useMutation({
+    mutationFn: async () => {
+      const link = url.trim()
+      if (all.some((a) => a.url === link)) throw new Error('Esse álbum já está na lista.')
+      const info = await previewAlbum(orgId, link).catch(() => ({ title: '', cover_url: null as string | null }))
+      const p = parseAlbumTitle(info.title)
+      const top = active.reduce((m, a) => Math.min(m, a.sort_order), 0) - 1
+      const { error } = await supabase.from('site_albums').insert({
+        organization_id: orgId, url: link, title: p.title, event_date: p.event_date, author_kind: 'instagram', author_value: p.handle, cover_url: info.cover_url, sort_order: top,
+      })
+      if (error) throw error
+      return info
+    },
+    onSuccess: (info) => { setUrl(''); prog.showAll(); refresh(); notifySaved(info.title ? 'Álbum adicionado.' : 'Álbum adicionado, mas o Google não mostrou título nem capa: preencha à mão.') },
+    onError,
+  })
+  const patch = useMutation({
+    mutationFn: async (v: { id: string; fields: Partial<Album> }) => {
+      const { error } = await supabase.from('site_albums').update(v.fields).eq('id', v.id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { refresh(); notifySaved('Álbum atualizado.') },
+    onError,
+  })
+  const purge = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('site_albums').delete().eq('id', id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { refresh(); notifySaved('Álbum excluído.') },
+    onError,
+  })
+  // Reordena renumerando a lista ativa inteira.
+  const reorder = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await Promise.all(ids.map((id, i) => supabase.from('site_albums').update({ sort_order: i }).eq('id', id).eq('organization_id', orgId)))
+      const bad = res.find((r) => r.error)
+      if (bad?.error) throw bad.error
+    },
+    onSuccess: refresh,
+    onError,
+  })
+  const move = (i: number, d: number) => {
+    const ids = active.map((a) => a.id)
+    const [it] = ids.splice(i, 1)
+    ids.splice(i + d, 0, it)
+    reorder.mutate(ids)
+  }
+  const drag = (from: string, to: string) => {
+    const a = active.findIndex((x) => x.id === from), b = active.findIndex((x) => x.id === to)
+    if (a >= 0 && b >= 0) move(a, b - a)
+  }
+
+  if (isLoading) return <Skeleton className="h-40" />
+  return (
+    <Card className="space-y-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3>Álbuns de fotos</h3>
+        <TrashDrawer iconOnly entries={trashed.map((a) => ({ id: a.id, name: a.title || a.url, detail: albumDate(a.event_date) }))}
+          onRestore={(id) => patch.mutate({ id, fields: { is_active: true } })} onPurge={(id) => purge.mutate(id)} />
+      </div>
+      <p className="text-xs text-muted-foreground">Cole o link público de compartilhamento do álbum (photos.app.goo.gl ou photos.google.com/share…). O sistema lê o título e a capa. Nomes no padrão “250608 Aniversário do Museu Nacional (@brunosarlas)” viram data, título e autor.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input className="min-w-56 flex-1" aria-label="Link do álbum" placeholder="https://photos.app.goo.gl/…" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <Button type="button" disabled={add.isPending}
+          onClick={() => { if (requireFields([['Link do álbum', url.trim()], ['Link do Google Fotos (photos.app.goo.gl ou photos.google.com)', !url.trim() || isPhotosUrl(url.trim())]])) add.mutate() }}>
+          <Plus className="h-4 w-4" /> {add.isPending ? 'Lendo o álbum' : 'Adicionar'}
+        </Button>
+      </div>
+      {missing.length > 0 && (
+        <Button type="button" variant="outline" className="w-full" disabled={!!bulk} onClick={() => void readMissing()}>
+          <RefreshCw className={`h-4 w-4 ${bulk ? 'animate-spin' : ''}`} /> {bulk ? `Lendo ${bulk.done}/${bulk.total}` : `Ler capas e títulos que faltam (${missing.length})`}
+        </Button>
+      )}
+      {active.length === 0 && <p className="text-muted-foreground">Nenhum álbum ainda.</p>}
+      {prog.visible.map((a, i) => (
+        <AlbumRow key={a.id} album={a} index={i} total={active.length} dnd={dnd} onMove={move} onDrag={drag}
+          onSave={(fields) => patch.mutateAsync({ id: a.id, fields })}
+          onTrash={() => patch.mutate({ id: a.id, fields: { is_active: false } })}
+          onRefresh={async () => {
+            const info = await previewAlbum(orgId, a.url)
+            const p = parseAlbumTitle(info.title)
+            await patch.mutateAsync({ id: a.id, fields: { cover_url: info.cover_url ?? a.cover_url, ...(info.title ? { title: p.title, event_date: p.event_date ?? a.event_date, author_value: p.handle ?? a.author_value } : {}) } })
+          }} />
+      ))}
+      {prog.button}
+    </Card>
+  )
+}
+
+function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash, onRefresh }: {
+  album: Album; index: number; total: number; dnd: ReturnType<typeof useHoldReorder>
+  onMove: (i: number, d: number) => void; onDrag: (from: string, to: string) => void
+  onSave: (fields: Partial<Album>) => Promise<unknown>; onTrash: () => void; onRefresh: () => Promise<unknown>
+}) {
+  const [d, setD] = useState({ title: a.title, event_date: a.event_date, author_kind: a.author_kind, author_value: a.author_value ?? '' })
+  const [busy, setBusy] = useState(false)
+  const dirty = d.title !== a.title || d.event_date !== a.event_date || d.author_kind !== a.author_kind || d.author_value !== (a.author_value ?? '')
+  return (
+    <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${dnd.cls(a.id)}`}>
+      <div className="flex items-center gap-1 pt-1">
+        {dnd.handle(a.id, onDrag, 'albums')}
+        <div className="flex flex-col">
+          <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir álbum" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+          <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer álbum" disabled={index === total - 1} onClick={() => onMove(index, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex items-start gap-3">
+          {a.cover_url ? <img src={a.cover_url} alt="" className="h-16 w-24 shrink-0 rounded-md object-cover" /> : <div aria-hidden className="flex h-16 w-24 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">sem capa</div>}
+          <div className="min-w-0 flex-1 space-y-2">
+            <Input aria-label="Título" placeholder="Título" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
+            <DateInput aria-label="Data do evento" value={d.event_date ?? ''} onChange={(v) => setD({ ...d, event_date: v || null })} />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label>Autor (link “por …”)</Label>
+          <div className="grid grid-cols-[8rem_1fr] gap-2">
+            <Select aria-label="Rede do autor" value={d.author_kind} onChange={(e) => setD({ ...d, author_kind: e.target.value as LinkKind })}>
+              {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </Select>
+            <Input aria-label="Usuário ou endereço do autor" placeholder={LINK_KINDS[d.author_kind].placeholder} value={d.author_value} onChange={(e) => setD({ ...d, author_value: e.target.value })} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          <Button asChild size="icon" variant="ghost" className="h-9 w-9"><a href={a.url} target="_blank" rel="noreferrer noopener" aria-label="Abrir o álbum" title="Abrir o álbum"><ExternalLink className="h-4 w-4" /></a></Button>
+          <Button type="button" size="icon" variant="ghost" className="h-9 w-9" disabled={busy} aria-label="Reler título e capa do Google" title="Reler título e capa do Google"
+            onClick={async () => { setBusy(true); try { await onRefresh() } catch (e) { toast.error(e instanceof Error ? e.message : friendlyError(e)) } finally { setBusy(false) } }}><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /></Button>
+          {dirty && <Button type="button" size="sm" onClick={() => { if (requireFields([['Título', d.title.trim()]])) void onSave({ title: d.title.trim(), event_date: d.event_date, author_kind: d.author_kind, author_value: d.author_value.trim() || null }) }}><Save className="h-4 w-4" /> Salvar</Button>}
+          <Button type="button" size="icon" variant="ghost" className="ml-auto h-9 w-9 text-destructive" aria-label="Mover para a lixeira" title="Mover para a lixeira" onClick={onTrash}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+    </div>
+  )
+}

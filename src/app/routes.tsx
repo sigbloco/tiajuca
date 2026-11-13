@@ -40,6 +40,7 @@ import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
 import { ShopLayout } from '@/modules/shop/public/ShopLayout'
 import { LandingPage } from '@/modules/site/LandingPage'
+import { AlbumsPage } from '@/modules/site/AlbumsPage'
 import { AppShell } from './AppShell'
 import { FinanceHome, HubHome, HubLayout } from './Hub'
 import { TeamPage } from '@/modules/finance/TeamPage'
@@ -99,6 +100,7 @@ export const router = createBrowserRouter(
         { path: '/redefinir-senha', element: <ResetPasswordPage /> },
         { path: '/convite/:token', element: <ClaimInvitePage /> },
         { path: '/f/:orgSlug/:formSlug', element: <PublicFormPage /> },
+        { path: '/:orgSlug/fotos', element: <AlbumsPage /> }, // álbuns públicos, fora do guard de login
         {
           path: '/:orgSlug/loja', // vitrine pública, fora do guard de login
           element: <ShopLayout />,
