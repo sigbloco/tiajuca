@@ -25,6 +25,7 @@ export function TrashSection({ entries, onRestore, onPurge }: {
   onPurge?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  const paged = usePaged(entries)
   if (entries.length === 0) return null
   return (
     <section className="space-y-2 rounded-xl border border-dashed border-border p-2">
@@ -33,7 +34,7 @@ export function TrashSection({ entries, onRestore, onPurge }: {
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         <Trash2 className="h-4 w-4" /> Lixeira ({entries.length})
       </button>
-      {open && entries.map((e) => (
+      {open && paged.visible.map((e) => (
         <Card key={e.id} className="flex items-center justify-between gap-3 p-3">
           <div className="min-w-0">
             <p className="break-words font-semibold">{e.name}</p>
@@ -48,6 +49,7 @@ export function TrashSection({ entries, onRestore, onPurge }: {
           </div>
         </Card>
       ))}
+      {open && <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />}
     </section>
   )
 }
