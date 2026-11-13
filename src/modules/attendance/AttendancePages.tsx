@@ -64,7 +64,6 @@ function useInstrumentCatalog() {
   })
 }
 
-const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/s$/, '')
 
 /** Instrumentos que têm alunos (categoria Aluno, principal ou acumulada) participando no ciclo. */
 function useStudentInstruments(cycleId: string | null | undefined) {
@@ -96,12 +95,10 @@ function useStudentInstruments(cycleId: string | null | undefined) {
 /** Um horário do dia: título e os instrumentos com alunos; cada um abre a chamada só daquele instrumento. */
 function ActivityCard({ a, instruments, studentIds, slug, audience }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string; audience?: AudienceInput[] }) {
   // Evento com PÚBLICO definido: os botões são os instrumentos desse público (naipe escolhido ou o próprio instrumento).
-  // Sem público: naipe pelo título ("Oficina de percussão" → Percussão); sem coincidência única, todos os instrumentos com alunos.
-  const title = plain(a.title)
-  const hit = [...new Set(instruments.map((i) => i.section))].filter((n) => title.includes(plain(n)))
+  // Sem público: todos os instrumentos com alunos.
   const shown = (audience && audience.length > 0
     ? instruments.filter((i) => audience.some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
-    : instruments.filter((i) => studentIds.has(i.id) && (hit.length === 1 ? i.section === hit[0] : true)))
+    : instruments.filter((i) => studentIds.has(i.id)))
     .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
   return (
     <Card className="flex gap-3 p-3">
@@ -262,25 +259,9 @@ export function AttendanceRosterPage() {
   }, [rows])
   const catalog = useInstrumentCatalog()
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
-  // Naipe com instrumentos marcados "Oficina": a chamada mostra só quem toca esses instrumentos.
-  const sectionNames = useQuery({
-    queryKey: ['sections-names', orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('sections').select('id, name').eq('organization_id', orgId).eq('is_active', true)
-      if (error) throw error
-      return new Map((data ?? []).map((x) => [x.id as string, x.name as string]))
-    },
-  })
   // Naipes com alunos.
   const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.instruments.has(i.id))
   const naipes = hasAudience ? [] : [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  // Chamada de "Oficina de percussão": o naipe vem do título e fica fixo (sem os outros naipes).
-  const lockedNaipe = (() => {
-    if (!activity.data) return ''
-    const t = plain(activity.data.title)
-    const hit = [...(sectionNames.data?.values() ?? [])].filter((n) => t.includes(plain(n)))
-    return hit.length === 1 ? hit[0] : ''
-  })()
   // Inteligente: quem é professor/monitor logado abre direto no seu naipe e instrumento.
   const myStaff = useQuery({
     queryKey: ['my-staff', orgId, membership?.member_id, activity.data?.id, cyclesAll.data?.length],
@@ -304,7 +285,7 @@ export function AttendanceRosterPage() {
     const only = a.length === 1 && direct.length === 1 ? list.find((i) => i.id === direct[0].instrument_id) : undefined
     return { section: secs.size === 1 ? [...secs][0] : '', inst: only?.name ?? '' }
   })()
-  const naipe = hasAudience ? '' : lockedNaipe || (naipeSel ?? myScope.section)
+  const naipe = hasAudience ? '' : (naipeSel ?? myScope.section)
   const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
@@ -359,7 +340,7 @@ export function AttendanceRosterPage() {
       ) : naipe && instOptions.length > 0 ? (
         // Dentro de um naipe (ex.: Oficina de percussão): filtra por instrumento (agogô, caixa de guerra…).
         <div className="flex flex-wrap gap-2">
-          {!lockedNaipe && <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>}
+          <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>
           {['', ...instOptions].map((n) => (
             <button key={n || 'todos'} onClick={() => setInst(n)}
               className={cn('h-9 rounded-full border px-3 text-sm font-medium', inst === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
