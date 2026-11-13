@@ -83,4 +83,5 @@ input, textarea, select { font-size: max(16px, 1em); }
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   animation: ring-spin 2.6s linear infinite;
 }
-@media (prefers-reduced-motion: reduce) { .trim-ring::after { display: none; } }
+/* Sem movimento (preferência do aparelho): o destaque vira um contorno vermelho fixo, completo e parado. */
+@media (prefers-reduced-motion: reduce) { .trim-ring::after { animation: none; background: rgb(220 38 38); } }
