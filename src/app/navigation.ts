@@ -51,9 +51,9 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'financeiro', permission: 'scholarships.manage', description: 'Quem tem bolsa e quanto isso pesa.' },
 
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage', description: 'Períodos do bloco (ex.: Carnaval 2026/27).' },
-  { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
+  { to: 'funcoes', label: 'Categorias', icon: Tags, group: 'organizacao', permission: 'structure.manage', description: 'Produção, Apoio e outras funções; refletem em Contribuições.' },
   { to: 'checklists', label: 'Checklists', icon: ListChecks, group: 'organizacao', permission: 'events.manage', description: 'Modelos de checklist para os eventos.' },
-  { to: 'funcoes', label: 'Funções', icon: Tags, group: 'organizacao', permission: 'structure.manage', description: 'Produção, Apoio e outras funções; refletem em Contribuições.' },
+  { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
   { to: 'drive', label: 'Google Drive', icon: FolderOpen, group: 'organizacao', permission: 'drive.read', description: 'Pastas do Drive e quem pode vê-las.' },
 
   { to: 'site', label: 'Site', icon: Globe, admin: true, permission: 'settings.manage' },
@@ -63,7 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'auditoria', label: 'Auditoria e backups', icon: History, admin: true, permission: 'audit.read' },
 ]
 
-const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Funções' }
+const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Categorias' }
 
 /** De onde o usuário saiu: guardado no estado da navegação para o "Voltar". */
 export interface CameFrom { path: string; label: string }
