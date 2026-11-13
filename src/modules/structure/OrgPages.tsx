@@ -1,3 +1,4 @@
+import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
@@ -110,7 +111,7 @@ export function FunctionsPage() {
       </div>
       <ReadMore>
         Integrantes podem acumular categorias (por exemplo, Direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
-        As categorias de Financeiro → Contribuições refletem estas.
+        As categorias de <PageLink to="valores">Financeiro → Contribuições</PageLink> refletem estas.
       </ReadMore>
       {SECTIONS.map((s) => {
         const items = all.filter((f) => f.is_active && kindOf(f) === s.kind)

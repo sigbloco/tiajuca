@@ -1,3 +1,4 @@
+import { PageLink } from '@/components/shared/PageLink'
 import { useQuery } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMemo, useState } from 'react'
@@ -93,7 +94,7 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
       <h2>Mensalidades por naipe <span className="text-base font-normal text-muted-foreground">· {tree.total} {tree.total === 1 ? 'pessoa' : 'pessoas'}</span></h2>
       <p className="text-muted-foreground">Quem não contribui por fazer parte da organização (Direção, professores, monitores e regentes) não aparece aqui.</p>
       {loading && <Skeleton className="h-24" />}
-      {!loading && tree.total === 0 && <EmptyState>Nenhuma cobrança de contribuinte neste mês. Em Financeiro → Mensalidades, use “Gerar cobranças”.</EmptyState>}
+      {!loading && tree.total === 0 && <EmptyState>Nenhuma cobrança de contribuinte neste mês. Em <PageLink to="cobrancas">Financeiro → Mensalidades</PageLink>, use “Gerar cobranças”.</EmptyState>}
       {secList.map((sec, idx) => {
         const subs = tree.map.get(sec.id)!
         const all = [...subs.values()].flat()
