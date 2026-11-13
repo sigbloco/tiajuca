@@ -1,7 +1,7 @@
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useHoldReorder } from '@/core/holdReorder'
 import { toast } from 'sonner'
@@ -44,6 +44,45 @@ const swapped = (imgs: { id: string }[], i: number, d: -1 | 1) => {
 }
 
 const SIZES = ['P', 'M', 'G', 'GG']
+
+/** Salvar, ocultar e apagar dividem a largura por igual; com espaço mostram o texto, senão só o ícone. */
+function ActionBar({ product, saving, hiding, trashing, onHide, onTrash }: {
+  product: { is_hidden: boolean; is_active: boolean } | null
+  saving: boolean; hiding: boolean; trashing: boolean; onHide: () => void; onTrash: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [compact, setCompact] = useState(false)
+  const count = product ? 3 : 1
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => setCompact(el.clientWidth / count < 112)
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [count])
+  const label = (text: string) => (compact ? null : <span>{text}</span>)
+  const hiddenNow = product?.is_hidden ?? false
+  return (
+    <div ref={ref} role="toolbar" aria-label="Ações do produto" className="flex w-full items-center gap-2 py-1.5">
+      <Button type="submit" form="product-form" className="min-w-0 flex-1" aria-label="Salvar" title="Salvar" disabled={saving}><Save className="h-4 w-4" />{label('Salvar')}</Button>
+      {product && (
+        <>
+          <Button type="button" variant="outline" className={`min-w-0 flex-1 ${hiddenNow ? 'border-destructive text-destructive' : ''}`} aria-pressed={hiddenNow} disabled={hiding} onClick={onHide}
+            aria-label={hiddenNow ? 'Exibir na loja' : 'Ocultar'} title={hiddenNow ? 'Exibir na loja' : 'Ocultar: some da loja, mas continua na lista'}>
+            {hiddenNow ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}{label(hiddenNow ? 'Exibir' : 'Ocultar')}
+          </Button>
+          <Button type="button" variant="outline" className={`min-w-0 flex-1 ${product.is_active ? 'text-destructive' : ''}`} disabled={trashing} onClick={onTrash}
+            aria-label={product.is_active ? 'Apagar (mover para a lixeira)' : 'Restaurar na loja'} title={product.is_active ? 'Apagar: move para a lixeira' : 'Restaurar na loja'}>
+            <Trash2 className="h-4 w-4" />{label(product.is_active ? 'Apagar' : 'Restaurar')}
+          </Button>
+        </>
+      )}
+    </div>
+  )
+}
+
 
 export function ProductSheet({ product, kit = false, others = [], stockItems = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; kit?: boolean; others?: ShopProduct[]; stockItems?: StockItem[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
   const orgId = useOrgId()
@@ -126,7 +165,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
 
   const hide = useMutation({
     mutationFn: () => setProductHidden(product!.id, !product!.is_hidden),
-    onSuccess: () => { refresh(); toast.success(product!.is_hidden ? 'Produto reativado na loja.' : 'Produto desativado: não aparece na loja, mas continua na lista.'); onClose() },
+    onSuccess: () => { refresh(); toast.success(product!.is_hidden ? 'Produto exibido na loja.' : 'Produto oculto: não aparece na loja, mas continua na lista.'); onClose() },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const toggle = useMutation({
@@ -185,26 +224,11 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   })
 
   const publicCents = f.price === null ? null : toCents(f.price)
-  const goBack = () => { const b = document.querySelector<HTMLElement>('[data-sheet-close]'); if (b) b.click(); else onClose() }
-  // Botões com ícone: voltar, salvar, desativar e lixeira (os dois últimos só em produto já criado).
   const actionBar = (
-    <div role="toolbar" aria-label="Ações do produto" className="flex items-center gap-2 py-1.5">
-      <Button type="button" size="icon" variant="outline" aria-label="Voltar" title="Voltar" onClick={goBack}><ArrowLeft className="h-4 w-4" /></Button>
-      <Button type="submit" form="product-form" size="icon" aria-label="Salvar" title="Salvar" disabled={save.isPending}><Save className="h-4 w-4" /></Button>
-      {product && (
-        <>
-          <Button type="button" size="icon" variant="outline" aria-label={product.is_hidden ? 'Reativar na loja' : 'Desativar'} title={product.is_hidden ? 'Reativar na loja' : 'Desativar: some da loja, mas continua na lista'}
-            aria-pressed={product.is_hidden} className={product.is_hidden ? 'border-destructive text-destructive' : ''} disabled={hide.isPending} onClick={() => hide.mutate()}>
-            {product.is_hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-          </Button>
-          <Button type="button" size="icon" variant="outline" aria-label={product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'} title={product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'}
-            className={product.is_active ? 'text-destructive' : ''} disabled={toggle.isPending}
-            onClick={async () => (!product.is_active || await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </>
-      )}
-    </div>
+    <ActionBar saving={save.isPending} hiding={hide.isPending} trashing={toggle.isPending}
+      product={product ? { is_hidden: product.is_hidden, is_active: product.is_active } : null}
+      onHide={() => hide.mutate()}
+      onTrash={async () => { if (!product?.is_active || await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) toggle.mutate() }} />
   )
   const topSlot = typeof document === 'undefined' ? null : document.getElementById('edit-actions-slot')
   return (
