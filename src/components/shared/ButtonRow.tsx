@@ -24,6 +24,13 @@ export function ButtonRow({ children, className = '', ...aria }: { children: Rea
       if (el.scrollWidth <= avail + 0.5) { chosen = c; break }
     }
     el.style.gridTemplateColumns = prev
+    // Nada coube numa linha sem quebrar o texto: com 3 ou mais botões, divide em colunas iguais (texto quebra dentro do botão),
+    // sempre sem deixar um botão sozinho embaixo (5 → 3+2, 4 → 2+2).
+    if (chosen === 1 && n >= 3) {
+      const gap = 8, minW = 104
+      const maxCols = Math.min(n, Math.floor((avail + gap) / (minW + gap)))
+      for (let c = maxCols; c >= 2; c--) { if (c < n && n % c === 1) continue; chosen = c; break }
+    }
     setCols(chosen)
   }
   useLayoutEffect(fit)
