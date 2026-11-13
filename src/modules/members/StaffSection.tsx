@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, Plus, Save, X } from 'lucide-react'
 import { useState } from 'react'
@@ -97,7 +98,7 @@ export function StaffSection({ memberId }: { memberId: string }) {
             {canManage ? (
               <>
                 <CompensationPick value={r.compensation} onChange={(c) => c !== r.compensation && patch.mutate({ id: r.id, compensation: c })} />
-                <Button size="icon" variant="outline" aria-label="Encerrar atribuição" title="Encerrar atribuição" onClick={() => { if (window.confirm('Encerrar esta atribuição?')) end.mutate(r.id) }}><X className="h-4 w-4" /></Button>
+                <Button size="icon" variant="outline" aria-label="Encerrar atribuição" title="Encerrar atribuição" onClick={async () => { if (await confirmBox('Encerrar esta atribuição?')) end.mutate(r.id) }}><X className="h-4 w-4" /></Button>
               </>
             ) : <span className="text-muted-foreground">{COMP_LABEL[r.compensation]}</span>}
           </div>

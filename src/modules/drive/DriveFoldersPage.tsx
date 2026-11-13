@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
 import { ReadMore } from '@/components/shared/ReadMore'
@@ -130,8 +131,8 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
         </p>
         <Button type="submit" className="w-full" disabled={!f.name.trim() || !urlOk || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
         {folder && (
-          <Button type="button" variant="ghost" className={folder.is_active ? 'w-full text-destructive' : 'w-full'} onClick={() => {
-            if (!folder.is_active || window.confirm('Mover esta pasta para a lixeira? Ela some do app, o cadastro é mantido e você pode restaurar depois.')) toggleActive.mutate()
+          <Button type="button" variant="ghost" className={folder.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
+            if (!folder.is_active || await confirmBox('Mover esta pasta para a lixeira? Ela some do app, o cadastro é mantido e você pode restaurar depois.')) toggleActive.mutate()
           }}>{folder.is_active ? 'Mover para a lixeira' : 'Restaurar pasta'}</Button>
         )}
       </form>

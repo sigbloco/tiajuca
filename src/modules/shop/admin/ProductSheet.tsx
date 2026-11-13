@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -198,7 +199,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           </Button>
           <Button type="button" size="icon" variant="outline" aria-label={product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'} title={product.is_active ? 'Mover para a lixeira' : 'Restaurar na loja'}
             className={product.is_active ? 'text-destructive' : ''} disabled={toggle.isPending}
-            onClick={() => (!product.is_active || window.confirm('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>
+            onClick={async () => (!product.is_active || await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.')) && toggle.mutate()}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </>
@@ -309,7 +310,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
               <div key={img.id} {...dnd.row(img.id, dragImage, 'images')} className={`relative rounded-lg ${dnd.cls(img.id)}`}>
                 <img src={imageUrl(img.storage_path)} alt={img.alt || product.name} draggable={false} className="aspect-square w-full rounded-lg object-contain bg-muted" />
                 <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 h-7 w-7 bg-card" aria-label="Remover foto"
-                  onClick={() => window.confirm('Remover esta foto?') && removeImage.mutate(img)}><Trash2 className="h-4 w-4" /></Button>
+                  onClick={async () => await confirmBox('Remover esta foto?') && removeImage.mutate(img)}><Trash2 className="h-4 w-4" /></Button>
                 <div className="absolute bottom-1 left-1 flex gap-1">
                   <Button type="button" size="icon" variant="outline" className="h-7 w-7 bg-card" aria-label="Mover foto para antes" disabled={i === 0 || moveImage.isPending} onClick={() => moveImage.mutate({ ids: swapped(all, i, -1) })}><ArrowLeft className="h-4 w-4" /></Button>
                   <Button type="button" size="icon" variant="outline" className="h-7 w-7 bg-card" aria-label="Mover foto para depois" disabled={i === all.length - 1 || moveImage.isPending} onClick={() => moveImage.mutate({ ids: swapped(all, i, 1) })}><ArrowRight className="h-4 w-4" /></Button>

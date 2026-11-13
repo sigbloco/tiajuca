@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, FileUp, Link2, Save } from 'lucide-react'
 import { useRef, useState } from 'react'
@@ -122,7 +123,7 @@ function Attachments({ song, canManage }: { song: Song; canManage: boolean }) {
             <p className="flex items-center gap-1.5 break-words font-semibold"><ExternalLink className="h-4 w-4 shrink-0" />{a.description || a.file_name || a.url}</p>
             <p className="text-muted-foreground"><Badge>{KIND_LABEL[a.kind]}</Badge> {label(a)}{a.source === 'storage' ? ' · arquivo' : ' · link'}</p>
           </button>
-          {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (window.confirm('Remover este anexo?')) remove.mutate(a.id) }}>Remover</Button>}
+          {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Remover este anexo?')) remove.mutate(a.id) }}>Remover</Button>}
         </Card>
       ))}
 
@@ -255,7 +256,7 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
       )}
       {song && <Attachments song={song} canManage={canManage} />}
       {song && canManage && (
-        <Button variant="ghost" className={song.is_active ? 'text-destructive' : ''} onClick={() => { if (!song.is_active || window.confirm('Mover esta música para a lixeira? Os anexos são mantidos e você pode restaurar depois.')) toggle.mutate() }}>
+        <Button variant="ghost" className={song.is_active ? 'text-destructive' : ''} onClick={async () => { if (!song.is_active || await confirmBox('Mover esta música para a lixeira? Os anexos são mantidos e você pode restaurar depois.')) toggle.mutate() }}>
           {song.is_active ? 'Mover para a lixeira' : 'Restaurar música'}
         </Button>
       )}

@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
@@ -101,7 +102,7 @@ function BlockersSheet({ cycle, onClose }: { cycle: Cycle; onClose: () => void }
           </ul>
           <p className="rounded-lg bg-warning/15 p-3 text-sm">Para excluir, é preciso apagar tudo isso junto. <strong>Isso não pode ser desfeito</strong> e remove o histórico do ciclo. Se só quiser tirá-lo da vista, edite as datas em vez de excluir.</p>
           <Button variant="destructive" disabled={wipe.isPending}
-            onClick={() => { if (window.confirm(`Apagar o ciclo “${cycle.name}” e tudo que depende dele? Isso não pode ser desfeito.`)) wipe.mutate() }}>{wipe.isPending ? 'Apagando' : 'Apagar tudo isso e o ciclo'}</Button>
+            onClick={async () => { if (await confirmBox(`Apagar o ciclo “${cycle.name}” e tudo que depende dele? Isso não pode ser desfeito.`)) wipe.mutate() }}>{wipe.isPending ? 'Apagando' : 'Apagar tudo isso e o ciclo'}</Button>
           <Button variant="outline" onClick={onClose} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </>
       )}
@@ -169,7 +170,7 @@ export function CyclesPage() {
                   <div className="flex items-center">
                     <Button size="icon" variant="ghost" aria-label={`Editar ${c.name}`} title="Editar" onClick={() => setSheet({ cycle: c })}><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${c.name}`} title="Excluir"
-                      onClick={() => { if (window.confirm(`Excluir o ciclo “${c.name}”? Isso não pode ser desfeito.`)) del.mutate(c) }}><Trash2 className="h-4 w-4" /></Button>
+                      onClick={async () => { if (await confirmBox(`Excluir o ciclo “${c.name}”? Isso não pode ser desfeito.`)) del.mutate(c) }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 )}
               </Card>

@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button, Card, EmptyState, Sheet, SheetContent } from '@/components/ui/primitives'
@@ -40,7 +41,7 @@ export function TrashDrawer({ title = 'Lixeira', entries, onRestore, onPurge, gr
                         <Button size="icon" variant="outline" aria-label={`Restaurar ${e.name}`} title="Restaurar" onClick={() => g.onRestore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
                         {g.onPurge && (
                           <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${e.name} de vez`} title="Excluir de vez"
-                            onClick={() => { if (window.confirm(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) g.onPurge?.(e.id) }}><Trash2 className="h-4 w-4" /></Button>
+                            onClick={async () => { if (await confirmBox(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) g.onPurge?.(e.id) }}><Trash2 className="h-4 w-4" /></Button>
                         )}
                       </div>
                     </Card>

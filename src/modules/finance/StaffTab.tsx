@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Plus } from 'lucide-react'
@@ -96,7 +97,7 @@ function PaySheet({ payment, onClose }: { payment: StaffPayment; onClose: () => 
               <Select id="pp-m" value={method} onChange={(e) => setMethod(e.target.value)}>{['PIX', 'Dinheiro', 'Transferência', 'Outro'].map((m) => <option key={m}>{m}</option>)}</Select></div>
           </div>
           <Button disabled={!paidOn || pay.isPending} onClick={() => pay.mutate()}>Marcar como pago</Button>
-          <Button variant="ghost" className="text-destructive" onClick={() => { if (window.confirm('Cancelar este pagamento?')) cancel.mutate() }}>Cancelar pagamento</Button>
+          <Button variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Cancelar este pagamento?')) cancel.mutate() }}>Cancelar pagamento</Button>
         </>
       )}
     </SheetContent>

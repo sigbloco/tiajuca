@@ -1,3 +1,4 @@
+import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
@@ -127,8 +128,8 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
             <div className="flex items-center gap-2">
               <span className={cn('font-semibold', kind === 'income' ? 'text-success' : 'text-foreground')}>{formatCurrency(Number(r.amount))}</span>
               {canManage && r.source === 'lancamento' && (
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => {
-                  const reason = window.prompt('Motivo do cancelamento (obrigatório):')
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
+                  const reason = await promptBox({ title: 'Cancelar lançamento', message: 'Informe o motivo do cancelamento.', required: true, confirmLabel: 'Cancelar lançamento', cancelLabel: 'Voltar' })
                   if (reason?.trim()) cancel.mutate({ id: r.ref.replace('entry:', ''), reason })
                 }} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
               )}

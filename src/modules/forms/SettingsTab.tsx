@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Copy, Rocket, Save } from 'lucide-react'
 import { useState } from 'react'
@@ -61,7 +62,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <Button disabled={publish.isPending || form.status === 'archived'} onClick={() => publish.mutate()}><Rocket className="h-4 w-4" /> {form.published_version_id ? 'Publicar nova versão' : 'Publicar'}</Button>
           {form.status === 'published' && <Button variant="outline" onClick={() => setStatus.mutate('closed')}>Encerrar inscrições</Button>}
           {form.status === 'closed' && <Button variant="outline" onClick={() => setStatus.mutate('published')}>Reabrir</Button>}
-          {form.status !== 'archived' && <Button variant="ghost" onClick={() => { if (window.confirm('Arquivar este formulário? O link deixa de funcionar e as respostas são mantidas.')) setStatus.mutate('archived') }}>Arquivar</Button>}
+          {form.status !== 'archived' && <Button variant="ghost" onClick={async () => { if (await confirmBox('Arquivar este formulário? O link deixa de funcionar e as respostas são mantidas.')) setStatus.mutate('archived') }}>Arquivar</Button>}
           {form.status === 'archived' && <Button variant="outline" onClick={() => setStatus.mutate('draft')}>Voltar para rascunho</Button>}
         </div>
         <p className="text-xs text-muted-foreground">Ao publicar, é gravada uma cópia fixa do formulário (versão). Quem respondeu continua com a versão em que respondeu.</p>

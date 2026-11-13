@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -147,7 +148,7 @@ function RuleLine({ rule, memberId, cycleId, canEdit, summary, detail }: { rule:
       {canEdit && (
         <div className="flex shrink-0">
           <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Editar regra" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label="Remover regra" title="Remover regra" onClick={() => { if (window.confirm('Remover esta regra de pagamento?')) del.mutate() }}><Trash2 className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label="Remover regra" title="Remover regra" onClick={async () => { if (await confirmBox('Remover esta regra de pagamento?')) del.mutate() }}><Trash2 className="h-4 w-4" /></Button>
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Save } from 'lucide-react'
 import { useState } from 'react'
@@ -158,7 +159,7 @@ export function DistributionTab({ competence }: { competence: string }) {
                 {r.mode === 'fixed' ? `${formatCurrency(Number(r.fixed_amount))} fixos por mês` : `${Number(r.percent).toLocaleString('pt-BR')}% ${BASE_LABEL[r.base!]}`}
               </p>
             </div>
-            {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (window.confirm('Encerrar esta regra? O histórico é mantido.')) endRule.mutate(r.id) }}>Encerrar</Button>}
+            {canManage && <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Encerrar esta regra? O histórico é mantido.')) endRule.mutate(r.id) }}>Encerrar</Button>}
           </Card>
         ))}
       </section>

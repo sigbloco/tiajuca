@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive } from 'lucide-react'
 import { toast } from 'sonner'
@@ -39,7 +40,7 @@ export function OrdersTab() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Pedidos</h2>
         {toCheck > 0 && filters.status === 'all' && <Badge className="bg-secondary text-secondary-foreground">{toCheck} pagamento(s) para conferir</Badge>}
-        <Button size="sm" variant="outline" disabled={bulk.isPending} onClick={() => window.confirm('Arquivar todos os pedidos cancelados ou já totalmente retirados? Eles saem desta lista, mas nada é apagado (veja em "Arquivados").') && bulk.mutate()}>
+        <Button size="sm" variant="outline" disabled={bulk.isPending} onClick={async () => await confirmBox('Arquivar todos os pedidos cancelados ou já totalmente retirados? Eles saem desta lista, mas nada é apagado (veja em "Arquivados").') && bulk.mutate()}>
           <Archive className="h-4 w-4" /> Arquivar encerrados
         </Button>
       </div>

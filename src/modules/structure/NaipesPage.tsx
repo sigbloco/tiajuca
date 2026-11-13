@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
@@ -304,8 +305,8 @@ export function NaipesPage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
   /** A lixeira move para a Lixeira (menu): dá para restaurar ou excluir de vez por lá. */
-  const confirmDelete = (table: CatalogTable, item: CatalogItem, what: string) => {
-    if (window.confirm(`Tirar ${what} “${item.name}” do ciclo ${cur?.name ?? ''} e mover para a Lixeira? Os outros ciclos não mudam e você pode restaurar depois.`)) leave.mutate({ table, id: item.id })
+  const confirmDelete = async (table: CatalogTable, item: CatalogItem, what: string) => {
+    if (await confirmBox(`Tirar ${what} “${item.name}” do ciclo ${cur?.name ?? ''} e mover para a Lixeira? Os outros ciclos não mudam e você pode restaurar depois.`)) leave.mutate({ table, id: item.id })
   }
 
   /** Arrastar um instrumento sobre outro do mesmo naipe reordena. */
@@ -356,7 +357,7 @@ export function NaipesPage() {
           )}
           {canEdit && prev && cur && (
             <Button variant="outline" size="icon" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
-              onClick={() => { if (window.confirm(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
+              onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
           )}
         </div>
       </div>

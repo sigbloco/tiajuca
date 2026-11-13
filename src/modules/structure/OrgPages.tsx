@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { Lock, Plus, Trash2 } from 'lucide-react'
@@ -100,7 +101,7 @@ export function FunctionsPage() {
               {canEdit && !locked && (
                 <>
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Mover ${f.name} para a lixeira`} title="Mover para a lixeira"
-                    onClick={() => { if (window.confirm(`Mover a função “${f.name}” para a lixeira? Você pode restaurar depois.`)) patch.mutate({ f, fields: { is_active: false } }) }}><Trash2 className="h-4 w-4" /></Button>
+                    onClick={async () => { if (await confirmBox(`Mover a função “${f.name}” para a lixeira? Você pode restaurar depois.`)) patch.mutate({ f, fields: { is_active: false } }) }}><Trash2 className="h-4 w-4" /></Button>
                 </>
               )}
             </Card>

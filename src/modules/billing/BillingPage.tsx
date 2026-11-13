@@ -1,3 +1,4 @@
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { ChevronLeft, ChevronRight, ClipboardCopy, Search } from 'lucide-react'
@@ -96,9 +97,9 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
       )}
 
       <div className="mt-auto flex flex-col gap-2">
-        {editable && <Button variant="ghost" className="text-destructive" onClick={() => { if (window.confirm('Cancelar esta cobrança? Ela permanece no histórico.')) status.mutate('cancelled') }}>Cancelar cobrança</Button>}
+        {editable && <Button variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Cancelar esta cobrança? Ela permanece no histórico.')) status.mutate('cancelled') }}>Cancelar cobrança</Button>}
         {(charge.status === 'paid' || charge.status === 'cancelled') && (
-          <Button variant="outline" onClick={() => { if (window.confirm('Reabrir esta cobrança como pendente?')) status.mutate('pending') }}>Reabrir cobrança</Button>
+          <Button variant="outline" onClick={async () => { if (await confirmBox('Reabrir esta cobrança como pendente?')) status.mutate('pending') }}>Reabrir cobrança</Button>
         )}
       </div>
     </SheetContent>
@@ -216,7 +217,7 @@ function AdminBilling() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button disabled={gen.isPending} onClick={() => { if (window.confirm(`Gerar cobranças de ${formatCompetence(competence)}? Quem já tem cobrança no mês não será duplicado.`)) gen.mutate() }}>
+        <Button disabled={gen.isPending} onClick={async () => { if (await confirmBox(`Gerar cobranças de ${formatCompetence(competence)}? Quem já tem cobrança no mês não será duplicado.`)) gen.mutate() }}>
           {gen.isPending ? 'Gerando' : 'Gerar cobranças'}
         </Button>
         <Button variant="outline" disabled={copy.isPending} onClick={() => copy.mutate()}><ClipboardCopy className="h-4 w-4" /> Copiar inadimplentes</Button>
