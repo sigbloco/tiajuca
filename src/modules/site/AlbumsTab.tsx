@@ -204,7 +204,11 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
           <Input aria-label="Título" placeholder="Título" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
         </div>
         <div className="space-y-1.5">
-          <Label>Autores (“por …”)</Label>
+          <div className="flex items-center gap-1.5">
+            <Label>Autores (“por …”)</Label>
+            <button type="button" disabled={d.authors.length >= 10} className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar autor" title="Adicionar autor"
+              onClick={() => setD({ ...d, authors: [...d.authors, { kind: 'instagram', value: '' }] })}><Plus className="h-3.5 w-3.5" /></button>
+          </div>
           {d.authors.map((u, i) => (
             <div key={i} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-2">
               <Select aria-label="Rede do autor" value={u.kind} onChange={(e) => setAuthor(i, { kind: e.target.value as LinkKind })}>
@@ -214,7 +218,6 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
               <Button type="button" size="icon" variant="ghost" className="h-9 w-9" aria-label="Remover autor" title="Remover autor" onClick={() => setD({ ...d, authors: d.authors.filter((_, k) => k !== i) })}><X className="h-4 w-4" /></Button>
             </div>
           ))}
-          <Button type="button" size="sm" variant="outline" disabled={d.authors.length >= 10} onClick={() => setD({ ...d, authors: [...d.authors, { kind: 'instagram', value: '' }] })}><Plus className="h-4 w-4" /> Autor</Button>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1">
           {dirty && <Button type="button" size="sm" onClick={() => { if (requireFields([['Título', d.title.trim()]])) void onSave({ title: d.title.trim(), event_date: d.event_date, authors: d.authors.filter((u) => u.value.trim()).map((u) => ({ kind: u.kind, value: u.value.trim() })) }) }}><Save className="h-4 w-4" /> Salvar</Button>}
