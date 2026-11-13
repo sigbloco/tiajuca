@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
@@ -69,6 +69,7 @@ export function StockTab() {
     onError: (e) => toast.error(friendlyError(e)),
   })
   const list = (items.data ?? []).filter((i) => i.is_active)
+  const paged = usePaged(list)
   const current = sheet && sheet !== 'new' ? items.data?.find((i) => i.id === sheet) ?? null : null
 
   return (
@@ -76,7 +77,6 @@ export function StockTab() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Estoque</h2>
         <div className="flex gap-2">
-          <TrashDrawer entries={(items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))} onRestore={(id) => setActive.mutate({ id, active: true })} />
           <Button onClick={() => setSheet('new')}><Plus className="h-4 w-4" /> Novo item</Button>
         </div>
       </div>
@@ -84,7 +84,7 @@ export function StockTab() {
       {items.isLoading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>}
       {items.isError && <EmptyState>Não foi possível carregar o estoque.</EmptyState>}
       {items.data && list.length === 0 && <EmptyState>Nenhum item de estoque ainda. Crie o primeiro.</EmptyState>}
-      {list.map((it) => {
+      {paged.visible.map((it) => {
         const uses = usedBy.get(it.id) ?? []
         const avail = availableUnits(it)
         return (
@@ -105,6 +105,8 @@ export function StockTab() {
           </Card>
         )
       })}
+      <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
+      <TrashSection entries={(items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))} onRestore={(id) => setActive.mutate({ id, active: true })} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet === 'new' && <ItemSheet key="new" item={null} minStock={0} onClose={() => setSheet(null)} />}
         {current && <ItemSheet key={current.id} item={current} minStock={current.reserved} onClose={() => setSheet(null)} />}

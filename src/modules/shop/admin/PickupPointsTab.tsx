@@ -3,7 +3,7 @@ import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, PhoneInput, TimeInput } from '@/components/ui/masked-inputs'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
@@ -135,6 +135,8 @@ export function PickupPointsTab() {
     onSuccess: (_d, v) => { refresh(); toast.success(v.active ? 'Ponto restaurado.' : 'Ponto movido para a lixeira.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const activePoints = (q.data ?? []).filter((p) => p.is_active)
+  const paged = usePaged(activePoints)
   const del = useMutation({
     mutationFn: (id: string) => deletePickupPoint(id),
     onSuccess: () => { refresh(); toast.success('Ponto de retirada excluído de vez.') },
@@ -145,15 +147,13 @@ export function PickupPointsTab() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">Pontos de retirada</h2>
         <div className="flex gap-2">
-          <TrashDrawer entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: p.address }))}
-            onRestore={(id) => setActive.mutate({ id, active: true })} onPurge={(id) => del.mutate(id)} />
           <Button onClick={() => setSheet({ point: null })}><Plus className="h-4 w-4" /> Novo ponto</Button>
         </div>
       </div>
       {q.isLoading && <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-16" />)}</div>}
       {q.isError && <EmptyState>Não foi possível carregar os pontos de retirada.</EmptyState>}
       {q.data?.length === 0 && <EmptyState>Nenhum ponto de retirada ainda.</EmptyState>}
-      {q.data?.filter((p) => p.is_active).map((p) => {
+      {paged.visible.map((p) => {
         const when = scheduleText(p.schedule, p.opening_hours, today).text
         const expired = !hasFutureSlot(p.schedule, today)
         return (
@@ -170,6 +170,9 @@ export function PickupPointsTab() {
           </Card>
         )
       })}
+      <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
+      <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active).map((p) => ({ id: p.id, name: p.name, detail: p.address }))}
+        onRestore={(id) => setActive.mutate({ id, active: true })} onPurge={(id) => del.mutate(id)} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <PickupSheet key={sheet.point?.id ?? 'new'} point={sheet.point} onClose={() => setSheet(null)} />}
       </Sheet>

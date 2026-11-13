@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ban, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useHoldReorder } from '@/core/holdReorder'
 import { toast } from 'sonner'
@@ -10,7 +10,7 @@ import { friendlyError } from '@/core/errors'
 import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
-import { createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, setProductHidden, updateProduct, uploadProductImage, type ShopProduct, type StockItem } from './service'
+import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, deleteProductImage, imageUrl, reorderProductImages, setProductActive, setProductHidden, updateProduct, uploadProductImage, type ShopProduct, type StockItem } from './service'
 
 interface Use { stock_item_id: string; quantity: string }
 interface VariantRow { id?: string; label: string; uses: Use[]; reserved: number; is_active: boolean }
@@ -64,6 +64,24 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   const [removed, setRemoved] = useState<string[]>([])
   const [errors, setErrors] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+  // Produto novo: as fotos escolhidas ficam na tela e são enviadas junto com o salvar.
+  const pendingRef = useRef<HTMLInputElement>(null)
+  const [pending, setPending] = useState<File[]>([])
+  const previews = useMemo(() => pending.map((file) => URL.createObjectURL(file)), [pending])
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews])
+  const addPending = (files: File[]) => {
+    const ok = files.filter((file) => {
+      if (!IMAGE_MIME.includes(file.type)) { toast.error(`"${file.name}": use uma imagem PNG, JPG ou WebP.`); return false }
+      if (file.size > MAX_IMAGE_BYTES) { toast.error(`"${file.name}" passa de 5 MB.`); return false }
+      return true
+    })
+    if (ok.length) setPending((cur) => [...cur, ...ok])
+  }
+  const sendPending = async (id: string) => {
+    let failed = 0
+    for (const [i, file] of pending.entries()) { try { await uploadProductImage(orgId, id, file, i) } catch { failed++ } }
+    if (failed) toast.error(`${failed} foto(s) não puderam ser enviadas. Adicione de novo na edição.`)
+  }
   const refresh = () => qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] })
   const isStock = f.kind === 'stock'
   const discount = Number(f.discount.replace(',', '.'))
@@ -92,12 +110,14 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
       }
       const rows = variants.map((v) => ({ id: v.id, label: v.label, is_active: v.is_active, items: v.uses.filter((u) => u.stock_item_id).map((u) => ({ stock_item_id: u.stock_item_id, quantity: Number(u.quantity) })) }))
       if (product) { await updateProduct(orgId, product.id, input, product.kind, rows, removed); return product.id }
-      return createProduct(orgId, { ...input, kind: f.kind }, rows)
+      const created = await createProduct(orgId, { ...input, kind: f.kind }, rows)
+      await sendPending(created)
+      return created
     },
     onSuccess: (id) => {
       if (!id) return
       refresh()
-      toast.success(product ? (isKit ? 'Kit atualizado.' : 'Produto atualizado.') : (isKit ? 'Kit criado. Agora você pode adicionar fotos próprias dele.' : 'Produto criado. Agora você pode adicionar as fotos.'))
+      toast.success(product ? (isKit ? 'Kit atualizado.' : 'Produto atualizado.') : (isKit ? 'Kit criado.' : 'Produto criado.'))
       if (product) onClose(); else onSaved(id)
     },
     onError: (e) => toast.error(friendlyError(e)),
@@ -306,7 +326,24 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         </div>
       ) : (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">As fotos podem ser adicionadas logo depois de criar o produto.</p>
+          <p className="font-semibold">Fotos</p>
+          {previews.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {previews.map((src, i) => (
+                <div key={src} className="relative rounded-lg">
+                  <img src={src} alt={`Foto ${i + 1} a enviar`} className="aspect-square w-full rounded-lg object-contain bg-muted" />
+                  <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 h-7 w-7 bg-card" aria-label="Tirar foto"
+                    onClick={() => setPending((cur) => cur.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input ref={pendingRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden
+            onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ''; if (files.length) addPending(files) }} />
+          <Button type="button" variant="outline" className="w-full" onClick={() => pendingRef.current?.click()}>
+            <ImagePlus className="h-4 w-4" /> Adicionar fotos
+          </Button>
+          <p className="text-xs text-muted-foreground">As fotos são enviadas quando você salvar, e depois você pode reordenar.</p>
           {actionBar}
         </div>
       )}

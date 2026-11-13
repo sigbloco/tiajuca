@@ -1,6 +1,6 @@
 import { ArrowLeft, Construction, Globe, LogOut, Menu, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
 import { OrgLogo } from '@/components/shared/OrgLogo'
@@ -36,6 +36,7 @@ export function AppShell() {
   const { membership, realMembership } = useOrganization()
   const { signOut } = useAuth()
   const { pathname, state } = useLocation()
+  const navigate = useNavigate()
   const cameFrom = (state as { from?: CameFrom } | null)?.from
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
@@ -127,8 +128,18 @@ export function AppShell() {
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
-          {cameFrom && (
-            <Link to={cameFrom.path} className="mb-1 inline-flex items-center gap-1 font-semibold text-primary hover:underline"><ArrowLeft className="h-4 w-4" /> Voltar para {cameFrom.label}</Link>
+          {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
+            <button type="button" className="mb-1 inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              onClick={() => {
+                // Com um formulário aberto na página, "voltar" fecha o formulário (e pergunta se há algo sem salvar).
+                const close = document.querySelector<HTMLElement>('#edit-slot [data-sheet-close]')
+                if (close) { close.click(); return }
+                if (cameFrom) navigate(cameFrom.path)
+                else if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
+                else navigate(base)
+              }}>
+              <ArrowLeft className="h-4 w-4" /> Voltar{cameFrom ? ` para ${cameFrom.label}` : ''}
+            </button>
           )}
           <Breadcrumbs crumbs={crumbs} home={base} />
           <div id="edit-actions-slot" />

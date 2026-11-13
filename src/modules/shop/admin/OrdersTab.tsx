@@ -61,7 +61,7 @@ export function OrdersTab() {
         </Select>
         <Select aria-label="Filtrar por ponto de retirada" value={filters.pickup} onChange={(e) => setFilters({ ...filters, pickup: e.target.value })}>
           <option value="all">Todos os pontos de retirada</option>
-          {(points.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {(points.data ?? []).filter((p) => p.is_active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </Select>
       </div>
 
