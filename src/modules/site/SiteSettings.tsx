@@ -1,15 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Plus, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Palette, Plus, Save, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
+import { useHoldReorder } from '@/core/holdReorder'
+import { useRegisterCrumb } from '@/core/breadcrumb'
+import { useRememberedState } from '@/core/rememberedState'
 import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
+
+const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'links', label: 'Redes sociais e contatos' }, { key: 'videos', label: 'Vídeos do YouTube' }] as const
+type TabKey = (typeof TABS)[number]['key']
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
@@ -71,19 +78,49 @@ export function SiteSettings() {
   const setLink = (i: number, p: Partial<SiteLink>) => setF((x) => ({ ...x, links: x.links.map((l, k) => (k === i ? { ...l, ...p } : l)) }))
   const moveLink = (i: number, d: number) => setF((x) => { const a = [...x.links]; const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, links: a } })
   const setVideo = (i: number, p: Partial<SiteVideo>) => setF((x) => ({ ...x, videos: x.videos.map((v, k) => (k === i ? { ...v, ...p } : v)) }))
+  const moveVideo = (i: number, d: number) => setF((x) => { const a = [...x.videos]; const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, videos: a } })
+  // Arrastar pela alça: o id da linha é o índice (escopo "links" ou "videos").
+  const dnd = useHoldReorder()
+  const dragLink = (from: string, to: string) => moveLink(Number(from), Number(to) - Number(from))
+  const dragVideo = (from: string, to: string) => moveVideo(Number(from), Number(to) - Number(from))
+  const [tab, setTab] = useRememberedState<TabKey>('site-aba', 'header', TABS.map((t) => t.key))
+  useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('header'), true, 0)
+
+  /** Alça de arrastar + setas (uma acima da outra), como nas variações do produto. */
+  const reorderCol = (id: string, i: number, total: number, move: (i: number, d: number) => void, drag: (f: string, t: string) => void, scope: string, what: string) => (
+    <>
+      {dnd.handle(id, drag, scope)}
+      <div className="flex flex-col">
+        <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label={`Subir ${what}`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+        <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label={`Descer ${what}`} disabled={i === total - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+      </div>
+    </>
+  )
 
   if (isLoading) return <Skeleton className="h-40" />
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>Página inicial do site</h2>
-        <a className="inline-flex items-center gap-1 font-semibold text-primary underline" href="/site" target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Ver a página</a>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="min-w-0">Página inicial do site</h2>
+        <div className="flex shrink-0 gap-2">
+          <Button asChild variant="outline" className="min-h-11 min-w-11 px-3">
+            <a href="/site" target="_blank" rel="noreferrer" aria-label="Ver a página" title="Ver a página"><ExternalLink className="h-5 w-5" /><span className="ml-2 hidden md:inline">Ver a página</span></a>
+          </Button>
+          <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11">
+            <Link to={`/${membership?.slug}/interface?area=site`} aria-label="Interface (cores)" title="Interface (cores)"><Palette className="h-5 w-5" /></Link>
+          </Button>
+        </div>
       </div>
       <UnsavedGuard dirty={dirty} onSave={() => save.mutateAsync()} />
       <p className="text-muted-foreground">É a página que as pessoas veem ao abrir o endereço do site (antes de entrar): foto, descrição, redes e contatos, menu e vídeos.</p>
 
-      <Card className="p-4 text-sm">As <strong>cores</strong> do sistema, da página inicial e da loja (cabeçalho, fundo, botões) agora ficam em <Link className="font-semibold text-primary underline" to={`/${membership?.slug}/interface`}>Interface</Link>.</Card>
+      <ButtonRow role="tablist" aria-label="Seções da página inicial">
+        {TABS.map((t) => (
+          <Button key={t.key} role="tab" aria-selected={tab === t.key} variant={tab === t.key ? 'default' : 'outline'} className="min-h-11" onClick={() => setTab(t.key)}>{t.label}</Button>
+        ))}
+      </ButtonRow>
 
+      {tab === 'header' && (
       <Card className="space-y-3 p-4">
         <h3>Cabeçalho</h3>
         <div className="flex flex-wrap items-center gap-3">
@@ -104,22 +141,26 @@ export function SiteSettings() {
           <textarea id="st-desc" rows={4} maxLength={600} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <p className="text-xs text-muted-foreground">{(f.description ?? '').length}/600</p></div>
       </Card>
+      )}
 
+      {tab === 'links' && (
       <Card className="space-y-3 p-4">
         <h3>Redes sociais e contatos</h3>
         <p className="text-xs text-muted-foreground">Aparecem como botões redondos, lado a lado. Digite só o número, o @ ou o endereço: o link é montado sozinho.</p>
         {f.links.map((l, i) => {
           const ok = !l.value.trim() || !!hrefOf(l)
+          const id = String(i)
           return (
             <div key={i} className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Select className="w-36" aria-label="Tipo" value={l.kind} onChange={(e) => setLink(i, { kind: e.target.value as LinkKind })}>
-                  {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </Select>
-                <Input className="min-w-44 flex-1" aria-label="Número, @ ou endereço" placeholder={LINK_KINDS[l.kind].placeholder} value={l.value} onChange={(e) => setLink(i, { value: e.target.value })} />
-                <Button type="button" size="icon" variant="ghost" aria-label="Subir" disabled={i === 0} onClick={() => moveLink(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
-                <Button type="button" size="icon" variant="ghost" aria-label="Descer" disabled={i === f.links.length - 1} onClick={() => moveLink(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
-                <Button type="button" size="icon" variant="ghost" aria-label="Remover" onClick={() => setF({ ...f, links: f.links.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+              <div {...dnd.row(id, dragLink, 'links')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
+                {reorderCol(id, i, f.links.length, moveLink, dragLink, 'links', 'item')}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Select aria-label="Tipo" value={l.kind} onChange={(e) => setLink(i, { kind: e.target.value as LinkKind })}>
+                    {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </Select>
+                  <Input aria-label="Número, @ ou endereço" placeholder={LINK_KINDS[l.kind].placeholder} value={l.value} onChange={(e) => setLink(i, { value: e.target.value })} />
+                </div>
+                <Button type="button" size="icon" variant="ghost" aria-label="Remover" title="Remover" onClick={() => setF({ ...f, links: f.links.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
               </div>
               {!ok && <p className="text-xs text-destructive">Esse valor não forma um link válido para {LINK_KINDS[l.kind].label}.</p>}
             </div>
@@ -127,7 +168,9 @@ export function SiteSettings() {
         })}
         <Button type="button" variant="outline" disabled={f.links.length >= 20} onClick={() => setF({ ...f, links: [...f.links, { kind: 'whatsapp', label: '', value: '' }] })}><Plus className="h-4 w-4" /> Adicionar rede ou contato</Button>
       </Card>
+      )}
 
+      {tab === 'menu' && (
       <Card className="space-y-3 p-4">
         <h3>Menu</h3>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -151,17 +194,23 @@ export function SiteSettings() {
           ))}
         </div>
       </Card>
+      )}
 
+      {tab === 'videos' && (
       <Card className="space-y-3 p-4">
         <h3>Vídeos do YouTube</h3>
         {f.videos.map((v, i) => {
           const ok = !v.url.trim() || !!youtubeId(v.url)
+          const id = String(i)
           return (
             <div key={i} className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <Input className="min-w-56 flex-1" aria-label="Endereço do vídeo" placeholder="https://www.youtube.com/watch?v=" value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} />
-                <Input className="w-56" aria-label="Título" placeholder="Título" value={v.title} onChange={(e) => setVideo(i, { title: e.target.value })} />
-                <Button type="button" size="icon" variant="ghost" aria-label="Remover vídeo" onClick={() => setF({ ...f, videos: f.videos.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+              <div {...dnd.row(id, dragVideo, 'videos')} className={`flex items-center gap-2 rounded-lg ${dnd.cls(id)}`}>
+                {reorderCol(id, i, f.videos.length, moveVideo, dragVideo, 'videos', 'vídeo')}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Input aria-label="Endereço do vídeo" placeholder="https://www.youtube.com/watch?v=" value={v.url} onChange={(e) => setVideo(i, { url: e.target.value })} />
+                  <Input aria-label="Título" placeholder="Título" value={v.title} onChange={(e) => setVideo(i, { title: e.target.value })} />
+                </div>
+                <Button type="button" size="icon" variant="ghost" aria-label="Remover vídeo" title="Remover vídeo" onClick={() => setF({ ...f, videos: f.videos.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
               </div>
               {!ok && <p className="text-xs text-destructive">Cole o endereço de um vídeo do YouTube.</p>}
             </div>
@@ -169,6 +218,7 @@ export function SiteSettings() {
         })}
         <Button type="button" variant="outline" disabled={f.videos.length >= 12} onClick={() => setF({ ...f, videos: [...f.videos, { url: '', title: '' }] })}><Plus className="h-4 w-4" /> Adicionar vídeo</Button>
       </Card>
+      )}
 
       <div className="sticky bottom-20 z-10 flex justify-end md:bottom-4">
         <Button disabled={!dirty || save.isPending || f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))} onClick={() => {
