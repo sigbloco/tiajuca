@@ -19,7 +19,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; menu_construction?: string[]; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   shop_product?: { slug: string; name: string; image_path: string | null } | null
   open_forms: { slug: string; title: string }[]
@@ -66,6 +66,10 @@ export function LandingPage() {
   const slug = org.slug
   const links = (site.links ?? []).map((l) => ({ l, href: hrefOf(l) })).filter((x): x is { l: SiteLink; href: string } => !!x.href)
   const videos = (site.videos ?? []).map((v) => ({ v, id: youtubeId(v.url) })).filter((x): x is { v: SiteVideo; id: string } => !!x.id)
+  // "Em construção": o botão aparece com a etiqueta e não abre (exceto o de entrada, que a Direção ainda precisa usar).
+  const under = (k: string) => (site.menu_construction ?? []).includes(k)
+  const off = (k: string) => (under(k) && k !== 'login' ? 'pointer-events-none opacity-70' : '')
+  const chip = <span className="ml-2 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold">em construção</span>
   const photo = site.photo_url || org.logo_path
   // Fundo do topo: só a cor escolhida para o Site (sem ela, usa a cor principal).
   const heroColor = areaOverrides(org.theme, 'site').header ?? null
@@ -102,11 +106,11 @@ export function LandingPage() {
           {[...(site.menu_order ?? []), 'enrollment', 'shop', 'albums', 'release', 'login'].filter((k, i, all) => all.indexOf(k) === i).map((k) => (
             <Fragment key={k}>
               {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.map((f) => (
-                <Link key={f.slug} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
-                  <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}
+                <Link key={f.slug} to={`/f/${slug}/${f.slug}`} aria-disabled={under('enrollment') || undefined} className={`${pill} bg-secondary text-secondary-foreground ${off('enrollment')} ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
+                  <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}{under('enrollment') && chip}
                 </Link>
               ))}
-              {k === 'shop' && site.show_shop !== false && data.shop_product && (
+              {k === 'shop' && site.show_shop !== false && data.shop_product && !under('shop') && (
                 <Link to={`/${slug}/loja/produto/${data.shop_product.slug}`}
                   className={`flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-card p-2 pr-5 text-left font-display text-lg font-bold text-foreground shadow-card transition hover:-translate-y-0.5 hover:shadow-lg`}>
                   {data.shop_product.image_path
@@ -116,15 +120,15 @@ export function LandingPage() {
                 </Link>
               )}
               {k === 'shop' && site.show_shop !== false && (
-                <Link to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}</Link>
+                <Link to={`/${slug}/loja`} aria-disabled={under('shop') || undefined} className={`${pill} bg-card text-foreground ${off('shop')} ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}{under('shop') && chip}</Link>
               )}
               {k === 'albums' && site.show_albums !== false && (
-                <Link to={`/${slug}/fotos`} className={`${pill} bg-card text-foreground ${site.shake_button === 'albums' ? 'animate-attention trim-ring' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}</Link>
+                <Link to={`/${slug}/fotos`} aria-disabled={under('albums') || undefined} className={`${pill} bg-card text-foreground ${off('albums')} ${site.shake_button === 'albums' ? 'animate-attention trim-ring' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}{under('albums') && chip}</Link>
               )}
               {k === 'release' && site.show_release !== false && site.release_url && (
-                <a href={site.release_url} target="_blank" rel="noreferrer noopener" className={`${pill} bg-card text-foreground ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}</a>
+                <a href={site.release_url} target="_blank" rel="noreferrer noopener" aria-disabled={under('release') || undefined} className={`${pill} bg-card text-foreground ${off('release')} ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}{under('release') && chip}</a>
               )}
-              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
+              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}{under('login') && chip}</button>}
             </Fragment>
           ))}
         </nav>
