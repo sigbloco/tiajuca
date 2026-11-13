@@ -30,7 +30,7 @@ interface Rule {
   until: string | null
   is_active: boolean
   itinerary: ItineraryStep[] | null
-  audiences: { kind: 'section' | 'instrument'; ref: string }[]
+  audiences: { kind: 'section' | 'instrument' | 'category'; ref: string }[]
 }
 
 function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }) {

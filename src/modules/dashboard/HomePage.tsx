@@ -92,6 +92,7 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
     const aud = audiences.data?.get(a.id)
     if (aud && aud.length > 0) {
       const sids = audienceSectionIds(aud, my.data.instSection)
+      if (sids.size === 0) return true // público só de categoria: aparece para todos
       return [...sids].some((sid) => my.data!.mine.has(my.data!.sectionPlain.get(sid) ?? ''))
     }
     return true

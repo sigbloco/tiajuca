@@ -1,4 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
+import { supabase } from '@/core/supabase'
+import { useOrgId } from '@/core/organization'
 import { Label, Select } from '@/components/ui/primitives'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { AudienceKind } from './service'
@@ -16,11 +19,20 @@ const labelOf = (l?: string | null) => l?.trim() || 'Instrumento'
 export function AudiencePicker({ value, onChange }: { value: AudRow[]; onChange: (v: AudRow[]) => void }) {
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
+  const orgId = useOrgId()
+  const categories = useQuery({
+    queryKey: ['fee-categories-audience', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('fee_categories').select('id, name').eq('organization_id', orgId).eq('is_active', true).order('sort_order')
+      if (error) throw error
+      return (data ?? []) as { id: string; name: string }[]
+    },
+  })
   const activeSections = (sections.data ?? []).filter((s) => s.is_active)
   const sectionLabel = (id?: string | null) => labelOf(activeSections.find((s) => s.id === id)?.item_label)
   const labels = [...new Set(activeSections.map((s) => labelOf(s.item_label)))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  const typeOf = (a: AudRow) => a.type ?? (a.kind === 'section' ? 'section' : sectionLabel(instruments.data?.find((i) => i.id === a.ref)?.section_id))
-  const optionsFor = (type: string) => type === 'section'
+  const typeOf = (a: AudRow) => a.type ?? (a.kind === 'section' ? 'section' : a.kind === 'category' ? 'category' : sectionLabel(instruments.data?.find((i) => i.id === a.ref)?.section_id))
+  const optionsFor = (type: string) => type === 'category' ? (categories.data ?? []) : type === 'section'
     ? activeSections
     : (instruments.data ?? []).filter((i) => i.is_active && activeSections.some((s) => s.id === i.section_id) && sectionLabel(i.section_id) === type)
   const set = (i: number, patch: Partial<AudRow>) => onChange(value.map((a, k) => (k === i ? { ...a, ...patch } : a)))
@@ -38,8 +50,9 @@ export function AudiencePicker({ value, onChange }: { value: AudRow[]; onChange:
         return (
           <div key={i} className="flex items-center gap-2">
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-              <Select aria-label="Tipo de público" value={type} onChange={(e) => set(i, { kind: e.target.value === 'section' ? 'section' : 'instrument', ref: '', type: e.target.value })}>
+              <Select aria-label="Tipo de público" value={type} onChange={(e) => set(i, { kind: e.target.value === 'section' ? 'section' : e.target.value === 'category' ? 'category' : 'instrument', ref: '', type: e.target.value })}>
                 <option value="section">Naipe</option>
+                <option value="category">Categoria</option>
                 {labels.map((l) => <option key={l} value={l}>{l}</option>)}
               </Select>
               <Select aria-label="Público" value={a.ref} onChange={(e) => set(i, { ref: e.target.value })}>

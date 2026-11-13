@@ -15,6 +15,7 @@ import { hasPermission } from '@/core/permissions'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { HUBS, NAV_ITEMS, crumbsFor, type CameFrom, type HubKey, type NavItem } from './navigation'
 import { InactiveNotice } from '@/modules/members/Reactivation'
+import { BulletTrail } from '@/components/shared/BulletTrail'
 import { ViewAsBar } from './ViewAsBar'
 
 interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; /** Traço separador acima do item. */ sep?: boolean }
@@ -149,7 +150,7 @@ export function AppShell() {
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
-            <button type="button" className="mb-1 inline-flex items-center gap-1 text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
+            <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
               onClick={() => {
                 // Com um formulário aberto na página, "voltar" fecha o formulário (e pergunta se há algo sem salvar).
                 const close = document.querySelector<HTMLElement>('#edit-slot [data-sheet-close]')
@@ -158,7 +159,8 @@ export function AppShell() {
                 else if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
                 else navigate(base)
               }}>
-              <ArrowLeft className="h-4 w-4" /> Voltar{cameFrom ? ` para ${cameFrom.label}` : backTrail ? ` para ${backTrail}` : ''}
+              <ArrowLeft className="mt-0.5 h-4 w-4 shrink-0" />
+              <BulletTrail items={(() => { const t = cameFrom ? cameFrom.label : backTrail; if (!t) return ['Voltar']; const p = t.split(' • '); return [`Voltar para ${p[0]}`, ...p.slice(1)] })()} />
             </button>
           )}
           <Breadcrumbs crumbs={crumbs} home={base} />

@@ -13,6 +13,7 @@ import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
 import { getAudiences, getAudiencesFor, listActivities, type Activity, type AudienceInput } from '@/modules/events/service'
+import { GroupLink } from '@/modules/members/GroupLink'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
@@ -96,8 +97,9 @@ function useStudentInstruments(cycleId: string | null | undefined) {
 function ActivityCard({ a, instruments, studentIds, slug, audience }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string; audience?: AudienceInput[] }) {
   // Evento com PÚBLICO definido: os botões são os instrumentos desse público (naipe escolhido ou o próprio instrumento).
   // Sem público: todos os instrumentos com alunos.
-  const shown = (audience && audience.length > 0
-    ? instruments.filter((i) => audience.some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
+  const places = (audience ?? []).filter((x) => x.kind !== 'category') // categorias (Aluno…) não escolhem instrumento
+  const shown = (places.length > 0
+    ? instruments.filter((i) => places.some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
     : instruments.filter((i) => studentIds.has(i.id)))
     .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
   return (
@@ -292,7 +294,7 @@ export function AttendanceRosterPage() {
     && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
   // Evento com público: dá para filtrar a chamada pelos instrumentos do público (ex.: Pernalta).
   const audInstOptions = hasAudience
-    ? [...new Set((catalog.data?.list ?? []).filter((i) => (audience.data ?? []).some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id))).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    ? [...new Set((catalog.data?.list ?? []).filter((i) => (audience.data ?? []).some((x) => x.kind !== 'category' && (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id))).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
     : []
   const instOptions = [...new Set(studentInsts.filter((i) => i.section === naipe).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const cancelled = activity.data?.status === 'cancelled'
@@ -370,7 +372,7 @@ export function AttendanceRosterPage() {
             <div className="mb-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
-                <p className="break-words text-muted-foreground">{r.instruments ?? '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
+                <p className="break-words text-muted-foreground">{r.instruments ? r.instruments.split(', ').map((n, i) => <span key={n}>{i > 0 && ', '}<GroupLink naipe={catalog.data?.byName.get(n)?.section} inst={n}>{n}</GroupLink></span>) : '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
               </div>
               <Button size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpenNote(openNote === r.member_id ? null : r.member_id)}>
                 <MessageSquare className={cn('h-4 w-4', r.notes && 'text-primary')} />
