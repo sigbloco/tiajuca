@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
 import { Pencil, Plus, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
 import { toast } from 'sonner'
@@ -250,6 +250,18 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const forceOpen = tree.searching || sectionFilter !== ''
   // auto: grupo que é filho único do pai abre sozinho (evita clique redundante), mas o usuário ainda pode fechá-lo.
   const isOpen = (k: string, auto = false) => forceOpen || (open[k] ?? auto)
+  // Link de naipe/instrumento (?naipe=Percussão&inst=Caixa): abre esse grupo na lista.
+  const wantNaipe = params.get('naipe'), wantInst = params.get('inst')
+  const openedFor = useRef('')
+  useEffect(() => {
+    if (!wantNaipe || tree.searching || openedFor.current === wantNaipe + '|' + wantInst) return
+    const sec = tree.data.sectionList.find((s) => s.name === wantNaipe)
+    if (!sec) return
+    openedFor.current = wantNaipe + '|' + wantInst
+    const sk0 = `${activeCycleId}:${sec.id}`
+    const leaves = [...(tree.data.map.get(sec.id)?.get('')?.values() ?? [])].filter((l) => !wantInst || l.label === wantInst)
+    setOpen((o) => ({ ...o, [sk0]: true, ...Object.fromEntries(leaves.map((l) => [`${sk0}:${l.key}`, true])) }))
+  }, [wantNaipe, wantInst, tree, activeCycleId])
   const loading = members.isLoading || sections.isLoading || instruments.isLoading || allRows.isLoading
 
   const memberRow = (m: GroupMember) => {
