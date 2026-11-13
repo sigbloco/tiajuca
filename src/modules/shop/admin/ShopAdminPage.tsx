@@ -1,3 +1,4 @@
+import { FitWord } from '@/components/shared/FitText'
 import { useQuery } from '@tanstack/react-query'
 import { Palette, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -55,7 +56,7 @@ export function ShopAdminPage() {
       <ButtonRow role="tablist" aria-label="Seções da loja">
         {TABS.map((t) => (
           <Button key={t.key} role="tab" aria-selected={tab === t.key} variant={tab === t.key ? 'default' : 'outline'} className="min-h-11" onClick={() => setTab(t.key)}>
-            {t.label}
+            <FitWord>{t.label}</FitWord>
           </Button>
         ))}
       </ButtonRow>

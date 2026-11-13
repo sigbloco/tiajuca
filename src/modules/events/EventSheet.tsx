@@ -204,7 +204,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         </div>
         <AudiencePicker value={auds} onChange={setAuds} />
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!valid || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <Button type="submit" className="flex-1" disabled={!valid || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
       </form>

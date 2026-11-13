@@ -43,7 +43,7 @@ export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onCl
       <form onSubmit={(e) => { e.preventDefault(); if (f.name.trim()) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="rp-name">Nome</Label><Input id="rp-name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="rp-desc">Descrição</Label><Input id="rp-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
-        <Button type="submit" className="w-full" disabled={!f.name.trim() || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" className="w-full" disabled={!f.name.trim() || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
         {rep && (
           <Button type="button" variant="ghost" className={rep.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
             if (!rep.is_active || await confirmBox('Mover este repertório para a lixeira? As músicas e o histórico são mantidos e você pode restaurar depois.')) toggle.mutate()

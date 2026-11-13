@@ -1,3 +1,4 @@
+import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -115,7 +116,7 @@ export function EventsPage() {
     <ButtonRow role="tablist">
       {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
         <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-          className={cn('shrink-0 rounded-full px-4 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}>{label}</button>
+          className={cn('rounded-full px-2 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}><FitWord>{label}</FitWord></button>
       ))}
     </ButtonRow>
   )

@@ -1,3 +1,4 @@
+import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -29,7 +30,7 @@ export function FormEditorPage() {
       <ButtonRow role="tablist">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-            className={cn('whitespace-nowrap rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'bg-primary text-primary-foreground hover:bg-primary')}>{t.label}</button>
+            className={cn('whitespace-nowrap rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{t.label}</FitWord></button>
         ))}
       </ButtonRow>
       {tab === 'fields' && <FieldsTab formId={form.id} />}

@@ -1,3 +1,4 @@
+import { audienceSectionIds, getAudiencesFor } from '@/modules/events/service'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
@@ -269,9 +270,17 @@ export function TeamPage() {
     }, 0)
   }, [paid.data, parts.data, instruments.data])
   /** Aulas do mês que entram na regra por hora (todas as oficinas ou as de um naipe, pelo nome no título). */
+  // Aula com público definido conta para o naipe do público; sem público, vale o nome do naipe no título.
+  const lessonAudiences = useQuery({ queryKey: ['audiences-lessons', orgId, competence, (lessons.data ?? []).length], enabled: (lessons.data?.length ?? 0) > 0, queryFn: () => getAudiencesFor((lessons.data ?? []).map((l) => l.id)) })
   const lessonsOf = (rule: Rule) => {
     const sec = rule.scope === 'section' ? sections.data?.find((s) => s.id === rule.section_id) : undefined
-    return (lessons.data ?? []).filter((l) => rule.scope !== 'section' || (sec && plain(l.title).includes(plain(sec.name))))
+    const instSection = new Map((instruments.data ?? []).map((i) => [i.id, i.section_id as string]))
+    return (lessons.data ?? []).filter((l) => {
+      if (rule.scope !== 'section') return true
+      const aud = lessonAudiences.data?.get(l.id)
+      if (aud && aud.length > 0) return audienceSectionIds(aud, instSection).has(rule.section_id as string)
+      return !!sec && plain(l.title).includes(plain(sec.name))
+    })
   }
   const hoursFor = (rule: Rule) => lessonsOf(rule).reduce((n, l) => n + hoursOf(l), 0)
   const amountOf = (r: Rule) => (r.kind === 'fixed' ? Number(r.fixed_amount ?? 0)

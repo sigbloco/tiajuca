@@ -1,3 +1,4 @@
+import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -157,7 +158,7 @@ export function AccessPage() {
       <ButtonRow role="tablist">
         {[['people', 'Pessoas'], ['perms', 'Permissões dos papéis']].map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k as typeof tab)}
-            className={cn('rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === k && 'bg-primary text-primary-foreground hover:bg-primary')}>{l}</button>
+            className={cn('rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === k && 'bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{l}</FitWord></button>
         ))}
       </ButtonRow>
       {tab === 'people' ? <PeopleTabContainer /> : <PermissionsTab />}

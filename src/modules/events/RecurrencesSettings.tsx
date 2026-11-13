@@ -114,7 +114,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             </Select>
           </div>
         </div>
-        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+        <Button type="submit" className="w-full" disabled={!f.title.trim() || !f.starts_on || auds.some((a) => !a.ref) || save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
       </form>
     </SheetContent>
   )
