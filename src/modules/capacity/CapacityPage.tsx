@@ -26,21 +26,25 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const save = useMutation({
-    mutationFn: async (capacity: number) => {
-      const { error } = await supabase
-        .from('instrument_cycle_capacity')
-        .upsert({ organization_id: orgId, instrument_id: row.instrument_id, cycle_id: cycleId, capacity }, { onConflict: 'instrument_id,cycle_id' })
+    // capacity null = sem limite (infinito): a linha do limite é apagada.
+    mutationFn: async (capacity: number | null) => {
+      const { error } = capacity === null
+        ? await supabase.from('instrument_cycle_capacity').delete().eq('instrument_id', row.instrument_id).eq('cycle_id', cycleId)
+        : await supabase.from('instrument_cycle_capacity')
+          .upsert({ organization_id: orgId, instrument_id: row.instrument_id, cycle_id: cycleId, capacity }, { onConflict: 'instrument_id,cycle_id' })
       if (error) throw error
     },
     onSuccess: (_d, capacity) => {
       const before = row.capacity
       qc.invalidateQueries({ queryKey: ['capacity', orgId] })
-      notifyChange('Limite atualizado.', before !== null ? async () => {
-        const { error } = await supabase.from('instrument_cycle_capacity')
-          .upsert({ organization_id: orgId, instrument_id: row.instrument_id, cycle_id: cycleId, capacity: before }, { onConflict: 'instrument_id,cycle_id' })
+      notifyChange('Limite atualizado.', async () => {
+        const { error } = before === null
+          ? await supabase.from('instrument_cycle_capacity').delete().eq('instrument_id', row.instrument_id).eq('cycle_id', cycleId)
+          : await supabase.from('instrument_cycle_capacity')
+            .upsert({ organization_id: orgId, instrument_id: row.instrument_id, cycle_id: cycleId, capacity: before }, { onConflict: 'instrument_id,cycle_id' })
         if (error) throw error
         qc.invalidateQueries({ queryKey: ['capacity', orgId] })
-      } : undefined)
+      })
       void capacity
     },
     onError: (e) => toast.error(friendlyError(e)),
@@ -51,10 +55,12 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
       inputClassName="w-[3.25rem] flex-none px-1 text-center"
       numeric
       autoSave
+      allowEmpty
       aria-label={`Limite de vagas de ${row.instrument_name}`}
       placeholder="∞"
       value={row.capacity === null ? '' : String(row.capacity)}
       onSave={(v) => {
+        if (v === '') return save.mutateAsync(null)
         const n = Number(v)
         if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
         return save.mutateAsync(n)
@@ -101,15 +107,15 @@ export function CapacityPage() {
       {Object.entries(bySection).map(([section, rows]) => (
         <section key={section} className="space-y-2">
           <h3>{section}</h3>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
             <ProgressiveList items={rows} render={(r) => (
-              <Card key={r.instrument_id} className={cn('flex items-stretch gap-3 p-3', r.is_full && 'border-destructive/50')}>
+              <Card key={r.instrument_id} className={cn('flex items-stretch gap-2 p-2.5', r.is_full && 'border-destructive/50')}>
                 {/* Esquerda: nome e, embaixo, o número de vagas. Direita: ocupadas/vagas, ocupando a altura toda do cartão. */}
-                <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                   <p className="font-semibold">{r.instrument_name}</p>
                   {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
                 </div>
-                <div className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-muted/60 px-3 font-display text-xl font-bold"
+                <div className="flex min-w-0 flex-1 items-center justify-center self-stretch rounded-lg bg-muted/60 px-2 font-display text-xl font-bold"
                   title={r.capacity === null ? 'Sem limite de vagas' : `${r.occupied} ocupadas de ${r.capacity} vagas`}>
                   {r.occupied}/{r.capacity ?? '∞'}
                 </div>
