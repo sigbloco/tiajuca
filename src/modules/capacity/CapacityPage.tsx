@@ -10,6 +10,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
+import { NaipesTabs } from '@/modules/structure/NaipesTabs'
 
 interface Row {
   instrument_id: string
@@ -134,6 +135,7 @@ export function CapacityPage() {
 
   return (
     <div className="space-y-4">
+      <NaipesTabs />
       {cycleId && <p className="text-muted-foreground">{full} {full === 1 ? 'instrumento lotado' : 'instrumentos lotados'}. A contagem considera integrantes ativos no ciclo.</p>}
       {isLoading && <Skeleton className="h-32" />}
       {!cycleId && <EmptyState>Crie um ciclo em “Ciclos” para definir vagas.</EmptyState>}
