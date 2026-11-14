@@ -11,6 +11,6 @@ describe('texto formatado', () => {
     expect(parseInline('[x](javascript:alert(1))')).toEqual([{ t: 'text', s: '[x](javascript:alert(1))' }])
   })
   it('agrupa linhas com "- " em lista e ignora linhas vazias', () => {
-    expect(parseBlocks('Olá\n\n- um\n- dois\nfim')).toEqual([{ kind: 'p', text: 'Olá' }, { kind: 'ul', items: ['um', 'dois'] }, { kind: 'p', text: 'fim' }])
+    expect(parseBlocks('Olá\n\n- um\n- dois\nfim')).toEqual([{ kind: 'p', text: 'Olá' }, { kind: 'gap' }, { kind: 'ul', items: ['um', 'dois'] }, { kind: 'p', text: 'fim' }])
   })
 })

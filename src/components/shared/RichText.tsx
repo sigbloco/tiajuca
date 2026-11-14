@@ -25,7 +25,7 @@ export function parseInline(text: string): Inline[] {
   return out
 }
 
-export type Block = { kind: 'p'; text: string } | { kind: 'ul'; items: string[] }
+export type Block = { kind: 'p'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'gap' }
 
 export function parseBlocks(text: string): Block[] {
   const out: Block[] = []
@@ -34,7 +34,9 @@ export function parseBlocks(text: string): Block[] {
     const last = out[out.length - 1]
     if (li) { if (last?.kind === 'ul') last.items.push(li[1]); else out.push({ kind: 'ul', items: [li[1]] }) }
     else if (line.trim() !== '') out.push({ kind: 'p', text: line })
+    else if (out.length > 0) out.push({ kind: 'gap' }) // linha em branco = espaço (cada uma conta)
   }
+  while (out[out.length - 1]?.kind === 'gap') out.pop()
   return out
 }
 
@@ -51,7 +53,7 @@ function renderInline(text: string): ReactNode {
 export function RichText({ text, className }: { text: string; className?: string }) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      {parseBlocks(text).map((b, i) => b.kind === 'ul'
+      {parseBlocks(text).map((b, i) => b.kind === 'gap' ? <div key={i} aria-hidden className="h-3" /> : b.kind === 'ul'
         ? <ul key={i} className="list-disc space-y-0.5 pl-5">{b.items.map((it, k) => <li key={k}>{renderInline(it)}</li>)}</ul>
         : <p key={i}>{renderInline(b.text)}</p>)}
     </div>

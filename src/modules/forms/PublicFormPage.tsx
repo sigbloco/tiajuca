@@ -261,16 +261,16 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
         {blocks.filter((_, bi) => bi === stepIdx).map((b, bi) => (
           <section key={b.head?.key ?? `b${bi}`} className="space-y-3" aria-label={b.head?.label}>
             {b.head && (
-              <div className="border-l-4 border-primary pl-3 pt-2">
+              <div className="space-y-3 border-l-4 border-primary pl-3 pt-2">
                 <h2 className="font-display text-2xl font-extrabold">{b.head.label}</h2>
                 {b.head.description && <RichText text={b.head.description} />}
               </div>
             )}
             {b.items.map((f) => f.type === 'info' ? (
-              <Card key={f.key} className="p-4"><p className="font-semibold">{f.label}</p>{f.description && <RichText text={f.description} />}</Card>
+              <Card key={f.key} className="space-y-3 p-4"><p className="font-display text-lg font-bold">{f.label}</p>{f.description && <RichText text={f.description} />}</Card>
             ) : (
               <Card key={f.key} className="space-y-2 p-4">
-                {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`}>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
+                {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`} className="font-display text-lg font-bold">{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
                 {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                 <FieldInput f={f} value={answers[f.key]} onChange={(v) => set(f.key, v)} files={files}
                   onFiles={(fn, pick) => handleFiles(f.key, fn, pick)} />
