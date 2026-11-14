@@ -103,12 +103,16 @@ export function CapacityPage() {
           <h3>{section}</h3>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             <ProgressiveList items={rows} render={(r) => (
-              <Card key={r.instrument_id} className={cn('flex items-center justify-between gap-3 p-3', r.is_full && 'border-destructive/50')}>
-                <div>
+              <Card key={r.instrument_id} className={cn('flex items-stretch gap-3 p-3', r.is_full && 'border-destructive/50')}>
+                {/* Esquerda: nome e, embaixo, o número de vagas. Direita: ocupadas/vagas, ocupando a altura toda do cartão. */}
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <p className="font-semibold">{r.instrument_name}</p>
-                  <p className="text-muted-foreground" title={r.capacity === null ? 'Sem limite de vagas' : `${r.occupied} ocupadas de ${r.capacity} vagas`}>{r.occupied}/{r.capacity ?? '∞'}</p>
+                  {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
                 </div>
-                {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
+                <div className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-muted/60 px-3 font-display text-xl font-bold"
+                  title={r.capacity === null ? 'Sem limite de vagas' : `${r.occupied} ocupadas de ${r.capacity} vagas`}>
+                  {r.occupied}/{r.capacity ?? '∞'}
+                </div>
               </Card>
             )} />
           </div>
