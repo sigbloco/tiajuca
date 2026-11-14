@@ -57,7 +57,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
   return (
     <div className="space-y-4">
       <Card className="space-y-2 p-4">
-        <div className="flex items-center justify-between"><h3>Situação</h3><Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge></div>
+        <div className="flex items-center gap-2"><h3>Situação</h3><Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge></div>
         {form.status !== 'draft' && <div className="flex items-center gap-2"><Input readOnly value={url} onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" size="icon" aria-label="Copiar link" onClick={copy}><Copy className="h-4 w-4" /></Button></div>}
         <div className="space-y-1.5">
           <Label htmlFor="fs-preview">Link de pré-visualização</Label>

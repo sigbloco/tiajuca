@@ -4,10 +4,11 @@ import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { ArrowLeft, Eye } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { Badge, Button, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, Skeleton, cn } from '@/components/ui/primitives'
+import { FitButton } from '@/components/shared/FitButton'
 import { useOrganization } from '@/core/organization'
 import { FieldsTab } from './FieldsTab'
-import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, useForm } from './service'
+import { useForm } from './service'
 import { SettingsTab } from './SettingsTab'
 import { SubmissionsTab } from './SubmissionsTab'
 
@@ -25,8 +26,7 @@ export function FormEditorPage() {
       <div className="flex items-center gap-2">
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/inscricoes`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <h1 className="min-w-0 flex-1 break-words">{form.title}</h1>
-        <Button asChild size="icon" variant="outline" aria-label="Pré-visualizar" title="Pré-visualizar"><a href={`/${membership?.slug}/previa/${form.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" /></a></Button>
-        <Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge>
+        <FitButton icon={Eye} label="Visualizar" href={`/${membership?.slug}/previa/${form.id}`} newTab />
       </div>
       <ButtonRow role="tablist">
         {TABS.map((t) => (
