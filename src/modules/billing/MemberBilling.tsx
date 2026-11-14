@@ -205,7 +205,8 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   const changed = valid && (n !== Math.round(Number(info.data?.sch?.percent ?? 0)) || reason.trim() !== (info.data?.sch?.reason ?? ''))
   const autoSave = () => { if (changed && !saveSch.isPending) saveSch.mutate() }
 
-  if (!canBilling || !info.data || info.data.paid) return null
+  if (!canBilling || !info.data) return null
+  if (info.data.paid) return <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />
   const catName = categories.data?.find((c) => c.id === catId)?.name
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
@@ -290,7 +291,8 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   })
 
   if (canBilling && cycle && !cycle.is_current) return <CycleBilling memberId={memberId} cycle={cycle} />
-  if (!canBilling || paid.data) return null
+  if (!canBilling) return null
+  if (paid.data) return currentCycleId ? <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment?.fee_category_id ?? ''} /> : null
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="space-y-1">

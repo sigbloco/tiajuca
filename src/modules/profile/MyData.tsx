@@ -109,7 +109,7 @@ const tri = (v: boolean | null) => (v === null ? '' : v ? 'yes' : 'no')
 const fromTri = (v: string) => (v === '' ? null : v === 'yes')
 
 /** Dados pessoais sensíveis (LGPD): opcionais; só o titular e a Direção veem; nunca em listas, chamadas, financeiro ou painéis. */
-export function MySensitiveData({ memberId, admin = false }: { memberId: string; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
+export function MySensitiveData({ memberId, admin = false, readOnly = false }: { memberId: string; /** Só leitura: os campos ficam travados até a pessoa clicar no lápis de editar. */ readOnly?: boolean; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
   const orgId = useOrgId()
   useEffect(() => { if (admin) void supabase.rpc('log_sensitive_access', { p_member: memberId }) }, [admin, memberId])
   const { membership } = useOrganization()
@@ -164,7 +164,8 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
       {open && (
         <>
           {row.isLoading ? <Skeleton className="h-24" /> : (
-            <form onSubmit={(e) => { e.preventDefault(); save.mutate(false) }} className="space-y-3">
+            <form onSubmit={(e) => { e.preventDefault(); if (!readOnly) save.mutate(false) }} className="space-y-3">
+              <fieldset disabled={readOnly} className="min-w-0 space-y-3 border-0 p-0">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor="s-gender">Gênero</Label>
                   <Select id="s-gender" value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}><option value="">Não informar</option>{withCurrent(GENDERS, f.gender)}</Select></div>
@@ -176,13 +177,14 @@ export function MySensitiveData({ memberId, admin = false }: { memberId: string;
                   <Select id="s-pcd" value={f.is_pcd} onChange={(e) => setF({ ...f, is_pcd: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
               </div>
               {f.is_pcd === 'yes' && <div className="space-y-1.5"><Label htmlFor="s-pcd-d">Qual?</Label><Input id="s-pcd-d" value={f.pcd_description} onChange={(e) => setF({ ...f, pcd_description: e.target.value })} /></div>}
-              <ButtonRow>
-                <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+              </fieldset>
+              {!readOnly && <ButtonRow>
+                <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>
                 <Button type="button" variant="ghost" className="text-destructive" disabled={save.isPending}
                   onClick={async () => { if (await confirmBox(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
                   {admin ? 'Apagar dados sensíveis' : 'Apagar meus dados sensíveis'}
                 </Button>
-              </ButtonRow>
+              </ButtonRow>}
             </form>
           )}
           {(consents.data?.length ?? 0) > 0 && (
