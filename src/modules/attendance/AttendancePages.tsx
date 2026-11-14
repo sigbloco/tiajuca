@@ -4,15 +4,16 @@ import { Ban, ChevronLeft, ChevronRight, MessageSquare, Search, Undo2 } from 'lu
 import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { FitText } from '@/components/shared/FitText'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatDayShort, formatTime, shortName, todayIso } from '@/core/format'
+import { formatDayShort, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
-import { cancelWord, getAudiences, getAudiencesFor, listActivities, setActivityStatus, type Activity, type AudienceInput } from '@/modules/events/service'
+import { cancelWord, getAudiencesFor, listActivities, setActivityStatus, type Activity, type AudienceInput } from '@/modules/events/service'
 import { promptBox } from '@/components/shared/DialogHost'
 import { usePermission } from '@/core/permissions'
 import { notifyChange } from '@/core/undo'
@@ -286,6 +287,8 @@ export function AttendanceRosterPage() {
   const [naipeSel, setNaipe] = useState<string | null>(searchParams.get('naipe'))
   const [instSel, setInst] = useState<string | null>(searchParams.get('inst'))
   const [openNote, setOpenNote] = useState<string | null>(null)
+  // Filtro "Professores e Monitores" (não acumula com naipe/instrumento).
+  const [staffOnly, setStaffOnly] = useState(false)
   // Painel clicável: filtra a lista por situação (padrão: Total = todos).
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const rosterKey = ['roster', orgId, activityId]
@@ -300,8 +303,6 @@ export function AttendanceRosterPage() {
     },
   })
   // Evento com público definido (ex.: ensaio de um naipe): a chamada segue esse público, sem filtros de naipe/instrumento nem regra de alunos.
-  const audience = useQuery({ queryKey: ['audience', activityId], queryFn: () => getAudiences(activityId) })
-  const hasAudience = (audience.data?.length ?? 0) > 0
   const roster = useQuery({
     queryKey: rosterKey,
     queryFn: async () => {
@@ -360,14 +361,20 @@ export function AttendanceRosterPage() {
   // Aula/oficina: só alunos (categoria Aluno no ciclo) contam. Professores e monitores ficam fixados no topo e têm a presença marcada, mas fora da contagem.
   const isClass = /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
   const isStaff = (r: RosterRow) => !!staffIds.data?.has(r.member_id)
-  const rowsAll = (roster.data ?? []).filter((r) => (isClass
-    ? !isStaff(r) && (r.is_off_roster || !students.data || students.data.members.has(r.member_id))
-    : hasAudience || !isStaff(r)))
   const catalog = useInstrumentCatalog()
-  const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
-  // Naipes com alunos.
-  const studentInsts = (catalog.data?.list ?? []).filter((i) => students.data?.instruments.has(i.id))
-  const naipes = hasAudience ? [] : [...new Set(studentInsts.map((i) => i.section))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const catList = catalog.data?.list ?? []
+  // Professores e monitores têm a mesma linha dos alunos, fixados no topo; só nas aulas ficam fora da contagem.
+  const rowsAll = (roster.data ?? []).filter((r) => isStaff(r) || !isClass || r.is_off_roster || !students.data || students.data.members.has(r.member_id))
+  // Instrumentos de uma pessoa: os que toca e, se for professor/monitor, os que ministra (de naipe inteiro = todos do naipe).
+  const instsOf = (r: RosterRow) => {
+    const set = new Set((r.instruments ?? '').split(', ').filter(Boolean))
+    for (const a of staffAssign.data ?? []) if (a.member_id === r.member_id) for (const i of catList) if (a.instrument_id === i.id || (!!a.section_id && a.section_id === i.section_id)) set.add(i.name)
+    return set
+  }
+  const sectionsOf = (r: RosterRow) => [...new Set([...instsOf(r)].map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
+  const staffKind = (id: string) => { const l = (staffAssign.data ?? []).filter((a) => a.member_id === id); return l.length === 0 ? null : l.some((a) => a.staff_kind === 'professor') ? 'Professor' : 'Monitor' }
+  // Naipes de quem está na chamada (hierarquia: naipe → instrumento).
+  const naipes = [...new Set(rowsAll.flatMap(sectionsOf))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   // Inteligente: quem é professor/monitor logado abre direto no seu naipe e instrumento.
   const myStaff = useQuery({
     queryKey: ['my-staff', orgId, membership?.member_id, activity.data?.id, cyclesAll.data?.length],
@@ -391,8 +398,8 @@ export function AttendanceRosterPage() {
     const only = a.length === 1 && direct.length === 1 ? list.find((i) => i.id === direct[0].instrument_id) : undefined
     return { section: secs.size === 1 ? [...secs][0] : '', inst: only?.name ?? '' }
   })()
-  const naipe = hasAudience ? '' : (naipeSel ?? myScope.section)
-  const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
+  const naipe = staffOnly ? '' : (naipeSel ?? myScope.section)
+  const inst = staffOnly ? '' : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   // Aula cancelada só para este instrumento: avisa quando ele está em foco.
   const itemCancel = useQuery({
     queryKey: ['item-cancel', activityId],
@@ -418,40 +425,19 @@ export function AttendanceRosterPage() {
       return by
     },
   })
-  const inFocus = (r: RosterRow) => (!naipe || sectionsOf(r).includes(naipe)) && (!inst || (r.instruments ?? '').split(', ').includes(inst))
+  const inFocus = (r: RosterRow) => (!staffOnly || isStaff(r)) && (!naipe || sectionsOf(r).includes(naipe)) && (!inst || instsOf(r).has(inst))
   // Contadores: só quem conta (alunos nas aulas), dentro do naipe/instrumento escolhido.
-  const rows = rowsAll.filter(inFocus)
+  const rows = rowsAll.filter(inFocus).filter((r) => !(isClass && isStaff(r) && !staffOnly))
   const counts: Record<string, number> = {}
   for (const r of rows) if (r.status_id) counts[r.status_id] = (counts[r.status_id] ?? 0) + 1
   const filtered = rowsAll.filter((r) => inFocus(r) && r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (statusFilter === 'all' || r.status_id === statusFilter))
-  const ordered = filtered
-  // Equipe da aula (chips): quem ministra o instrumento/naipe em foco. Instrumento em foco → os dele; naipe → os do naipe; nada escolhido → os do público do evento (ou todos).
-  // Vale o que a pessoa MINISTRA (atribuição de professor/monitor), não o instrumento que toca. Monitor de naipe inteiro aparece em todos os instrumentos do naipe.
-  const catList = catalog.data?.list ?? []
-  const focusInstruments: InstrumentInfo[] = inst ? catList.filter((i) => i.name === inst)
-    : naipe ? catList.filter((i) => i.section === naipe)
-    : hasAudience ? catList.filter((i) => (audience.data ?? []).some((x) => x.kind !== 'category' && (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
-    : catList.filter((i) => rowsAll.some((r) => (r.instruments ?? '').split(', ').includes(i.name))) // sem filtro: quem ministra os instrumentos dos alunos desta chamada
-  const teaches = (a: StaffAssign) => focusInstruments.some((i) => a.instrument_id === i.id || (!!a.section_id && a.section_id === i.section_id))
-  const staffChips = (() => {
-    if (!isClass) return []
-    const by = new Map<string, { id: string; name: string; kind: 'professor' | 'monitor' }>()
-    for (const a of staffAssign.data ?? []) {
-      if (!teaches(a)) continue
-      const kind = a.staff_kind === 'professor' ? 'professor' : 'monitor'
-      const cur = by.get(a.member_id)
-      const name = shortName(a.members?.full_name ?? '', a.members?.display_name)
-      if (!cur) by.set(a.member_id, { id: a.member_id, name, kind })
-      else if (kind === 'professor') cur.kind = 'professor'
-    }
-    return [...by.values()].sort((x, y) => (x.kind === y.kind ? 0 : x.kind === 'professor' ? -1 : 1) || x.name.localeCompare(y.name, 'pt-BR'))
-  })()
-  // Evento com público: dá para filtrar a chamada pelos instrumentos do público (ex.: Pernalta).
-  const audInstOptions = hasAudience
-    ? [...new Set((catalog.data?.list ?? []).filter((i) => (audience.data ?? []).some((x) => x.kind !== 'category' && (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id))).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-    : []
-  const instOptions = [...new Set(studentInsts.filter((i) => i.section === naipe).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const ordered = [...filtered.filter(isStaff), ...filtered.filter((r) => !isStaff(r))]
+  const hasBoth = ordered.some(isStaff) && ordered.some((r) => !isStaff(r))
+  // Instrumentos do naipe escolhido que alguém toca nesta chamada.
+  const instOptions = naipe ? [...new Set(rowsAll.flatMap((r) => (r.instruments ?? '').split(', ')).filter((n) => catalog.data?.byName.get(n)?.section === naipe))].sort((a, b) => a.localeCompare(b, 'pt-BR')) : []
+  const hasStaff = rowsAll.some(isStaff)
+  const chipCls = (on: boolean) => cn('h-9 rounded-full border px-3 text-sm font-medium', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
   const cancelled = activity.data?.status === 'cancelled'
 
   return (
@@ -463,34 +449,27 @@ export function AttendanceRosterPage() {
         </div>
       </div>
 
-      {hasAudience && audInstOptions.length > 1 ? (
-        <div className="flex flex-wrap gap-2">
-          {['', ...audInstOptions].map((n) => (
-            <button key={n || 'todos'} onClick={() => setInst(n)}
-              className={cn('h-9 rounded-full border px-3 text-sm font-medium', inst === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
-              {n || 'Todos'}
-            </button>
-          ))}
-        </div>
-      ) : naipe && instOptions.length > 0 ? (
-        // Dentro de um naipe (ex.: Oficina de percussão): filtra por instrumento (agogô, caixa de guerra…).
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => { setNaipe(''); setInst('') }} className="h-9 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted">Todos os naipes</button>
-          {['', ...instOptions].map((n) => (
-            <button key={n || 'todos'} onClick={() => setInst(n)}
-              className={cn('h-9 rounded-full border px-3 text-sm font-medium', inst === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
-              {n || 'Todos'}
-            </button>
-          ))}
-        </div>
-      ) : naipes.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {['', ...naipes].map((n) => (
-            <button key={n || 'todos'} onClick={() => setNaipe(n)}
-              className={cn('h-9 rounded-full border px-3 text-sm font-medium', naipe === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')}>
-              {n || 'Todos'}
-            </button>
-          ))}
+      {(naipes.length > 0 || hasStaff) && (
+        <div className="space-y-2">
+          {naipes.length > 0 && (
+            <ButtonRow role="group" aria-label="Naipes">
+              {naipes.map((n) => (
+                <button key={n} type="button" aria-pressed={naipe === n} className={chipCls(naipe === n)}
+                  onClick={() => { setStaffOnly(false); setNaipe(naipe === n ? '' : n); setInst('') }}>{n}</button>
+              ))}
+            </ButtonRow>
+          )}
+          {naipe && instOptions.length > 0 && (
+            <ButtonRow role="group" aria-label="Instrumentos">
+              {instOptions.map((n) => (
+                <button key={n} type="button" aria-pressed={inst === n} className={chipCls(inst === n)} onClick={() => setInst(inst === n ? '' : n)}>{n}</button>
+              ))}
+            </ButtonRow>
+          )}
+          {hasStaff && (
+            <button type="button" aria-pressed={staffOnly} className={cn(chipCls(staffOnly), 'w-full')}
+              onClick={() => { setStaffOnly(!staffOnly); setNaipe(''); setInst('') }}>Professores e Monitores</button>
+          )}
         </div>
       )}
 
@@ -512,16 +491,6 @@ export function AttendanceRosterPage() {
       {focusCancelled && !cancelled && <Card className="p-3 text-destructive">Sem aula de {inst} neste dia (cancelada).</Card>}
       {roster.isError && <Card className="p-3 text-destructive">{friendlyError(roster.error)}</Card>}
 
-      {staffChips.length > 0 && (
-        <div className="flex flex-wrap gap-2" aria-label="Professores e monitores">
-          {staffChips.map((p) => (
-            <span key={p.id} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm">
-              <span className="font-semibold">{p.name}</span>
-              <span className="text-xs text-muted-foreground">{p.kind === 'professor' ? 'Professor' : 'Monitor'}</span>
-            </span>
-          ))}
-        </div>
-      )}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -533,16 +502,17 @@ export function AttendanceRosterPage() {
       )}
 
       <div className="grid gap-2">
-        {ordered.map((r) => (
+        {ordered.map((r, oi) => (
           <Fragment key={r.member_id}>
+          {hasBoth && (oi === 0 || isStaff(ordered[oi - 1]) !== isStaff(r)) && <p className="mt-1 font-semibold text-muted-foreground">{isStaff(r) ? 'Professores e monitores' : 'Integrantes'}</p>}
           <Card className="p-3">
             <div className="mb-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
                 <p className="break-words text-muted-foreground">{r.instruments ? r.instruments.split(', ').map((n, i) => <span key={n}>{i > 0 && ', '}<GroupLink naipe={catalog.data?.byName.get(n)?.section} inst={n}>{n}</GroupLink></span>) : '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
-                {(memberCats.data?.get(r.member_id) ?? []).length > 0 && (
+                {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(memberCats.data?.get(r.member_id) ?? [])].length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {(memberCats.data?.get(r.member_id) ?? []).map((c) => <Badge key={c} className="bg-muted">{c}</Badge>)}
+                    {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(memberCats.data?.get(r.member_id) ?? [])].map((c) => <Badge key={c} className="bg-muted">{c}</Badge>)}
                   </div>
                 )}
               </div>
