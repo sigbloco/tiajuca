@@ -238,7 +238,8 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     </div>
   ) : null
 
-  const Shell = ({ children }: { children: React.ReactNode }) => (
+  // Função (não componente): um componente declarado aqui dentro seria recriado a cada renderização e remontaria o formulário inteiro.
+  const shell = (children: React.ReactNode) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
       <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 backdrop-blur">
@@ -264,16 +265,16 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     </main>
   )
 
-  if (form.isLoading) return <Shell><Skeleton className="h-64" /></Shell>
-  if (form.isError || form.data?.state === 'not_found') return <Shell><Card className="p-6 text-center"><h1>Formulário não encontrado</h1><p className="text-muted-foreground">Confira o link com a organização.</p></Card></Shell>
-  if (done) return <Shell><Card className="space-y-2 p-6 text-center"><h1>Tudo certo!</h1><p className="whitespace-pre-wrap">{done}</p></Card></Shell>
+  if (form.isLoading) return shell(<Skeleton className="h-64" />)
+  if (form.isError || form.data?.state === 'not_found') return shell(<Card className="p-6 text-center"><h1>Formulário não encontrado</h1><p className="text-muted-foreground">Confira o link com a organização.</p></Card>)
+  if (done) return shell(<Card className="space-y-2 p-6 text-center"><h1>Tudo certo!</h1><p className="whitespace-pre-wrap">{done}</p></Card>)
   if (form.data!.state !== 'open') {
     const msg = { not_open: 'As inscrições ainda não abriram.', closed: 'As inscrições estão encerradas.', full: 'As vagas desta inscrição foram preenchidas.' }[form.data!.state as 'not_open' | 'closed' | 'full']
-    return <Shell><Card className="space-y-2 p-6 text-center"><h1>{f0?.title}</h1><p className="text-muted-foreground">{msg}</p></Card></Shell>
+    return shell(<Card className="space-y-2 p-6 text-center"><h1>{f0?.title}</h1><p className="text-muted-foreground">{msg}</p></Card>)
   }
 
-  return (
-    <Shell>
+  return shell(
+    <>
       <form onSubmit={(e) => { e.preventDefault(); if (isLast) finish(); else next() }} className="space-y-4" noValidate>
         {stepIdx === 0 && (
           <div ref={setTitleEl}><Card className="space-y-1 p-5 text-center">
@@ -345,6 +346,6 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             : <Button type="submit" size="lg" className="flex-1" disabled={uploading}>Próximo <ArrowRight className="h-4 w-4" /></Button>}
         </div>
       </form>
-    </Shell>
+    </>
   )
 }
