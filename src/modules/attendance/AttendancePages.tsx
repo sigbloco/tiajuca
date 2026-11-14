@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { FitText } from '@/components/shared/FitText'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatDayShort, formatTime, todayIso } from '@/core/format'
+import { formatDayShort, formatTime, shortName, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
@@ -263,24 +263,28 @@ export function AttendanceRosterPage() {
   // Professores e monitores do ciclo não fazem parte da chamada de aulas sem público definido. Quando o evento tem PÚBLICO (ex.: Pernalta),
   // quem está no público entra mesmo sendo monitor ou professor (o servidor só inclui quem toca aquele instrumento/naipe).
   const cyclesAll = useCycles()
-  const staffIds = useQuery({
-    queryKey: ['staff-ids', orgId, activity.data?.id, cyclesAll.data?.length],
+  interface StaffAssign { member_id: string; staff_kind: string; section_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+  const staffAssign = useQuery({
+    queryKey: ['staff-assign', orgId, activity.data?.id, cyclesAll.data?.length],
     enabled: Boolean(activity.data) && Boolean(cyclesAll.data),
     queryFn: async () => {
       const cid = cycleOf(activity.data!, cyclesAll.data ?? [])
-      let q = supabase.from('staff_assignments').select('member_id').eq('organization_id', orgId).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
+      let q = supabase.from('staff_assignments').select('member_id, staff_kind, section_id, instrument_id, members(full_name, display_name)').eq('organization_id', orgId).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
       if (cid) q = q.eq('cycle_id', cid)
       const { data, error } = await q.limit(3000)
       if (error) throw error
-      return new Set((data ?? []).map((r) => r.member_id as string))
+      return (data ?? []) as unknown as StaffAssign[]
     },
   })
+  const staffIds = { data: staffAssign.data ? new Set(staffAssign.data.map((r) => r.member_id)) : undefined }
   const cycles = cyclesAll
   const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
   // Aula/oficina: só alunos (categoria Aluno no ciclo) contam. Professores e monitores ficam fixados no topo e têm a presença marcada, mas fora da contagem.
   const isClass = /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
   const isStaff = (r: RosterRow) => !!staffIds.data?.has(r.member_id)
-  const rowsAll = (roster.data ?? []).filter((r) => !isClass || isStaff(r) || r.is_off_roster || !students.data || students.data.members.has(r.member_id))
+  const rowsAll = (roster.data ?? []).filter((r) => (isClass
+    ? !isStaff(r) && (r.is_off_roster || !students.data || students.data.members.has(r.member_id))
+    : hasAudience || !isStaff(r)))
   const catalog = useInstrumentCatalog()
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
   // Naipes com alunos.
@@ -313,13 +317,33 @@ export function AttendanceRosterPage() {
   const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   const inFocus = (r: RosterRow) => (!naipe || sectionsOf(r).includes(naipe)) && (!inst || (r.instruments ?? '').split(', ').includes(inst))
   // Contadores: só quem conta (alunos nas aulas), dentro do naipe/instrumento escolhido.
-  const rows = rowsAll.filter((r) => inFocus(r) && !(isClass && isStaff(r)))
+  const rows = rowsAll.filter(inFocus)
   const counts: Record<string, number> = {}
   for (const r of rows) if (r.status_id) counts[r.status_id] = (counts[r.status_id] ?? 0) + 1
   const filtered = rowsAll.filter((r) => inFocus(r) && r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (statusFilter === 'all' || r.status_id === statusFilter))
-  const staffList = filtered.filter(isStaff)
-  const ordered = [...staffList, ...filtered.filter((r) => !isStaff(r))]
+  const ordered = filtered
+  // Equipe da aula (chips): quem ministra o instrumento/naipe em foco. Instrumento em foco → os dele; naipe → os do naipe; nada escolhido → os do público do evento (ou todos).
+  // Vale o que a pessoa MINISTRA (atribuição de professor/monitor), não o instrumento que toca. Monitor de naipe inteiro aparece em todos os instrumentos do naipe.
+  const catList = catalog.data?.list ?? []
+  const focusInstruments: InstrumentInfo[] = inst ? catList.filter((i) => i.name === inst)
+    : naipe ? catList.filter((i) => i.section === naipe)
+    : hasAudience ? catList.filter((i) => (audience.data ?? []).some((x) => x.kind !== 'category' && (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
+    : catList.filter((i) => rowsAll.some((r) => (r.instruments ?? '').split(', ').includes(i.name))) // sem filtro: quem ministra os instrumentos dos alunos desta chamada
+  const teaches = (a: StaffAssign) => focusInstruments.some((i) => a.instrument_id === i.id || (!!a.section_id && a.section_id === i.section_id))
+  const staffChips = (() => {
+    if (!isClass) return []
+    const by = new Map<string, { id: string; name: string; kind: 'professor' | 'monitor' }>()
+    for (const a of staffAssign.data ?? []) {
+      if (!teaches(a)) continue
+      const kind = a.staff_kind === 'professor' ? 'professor' : 'monitor'
+      const cur = by.get(a.member_id)
+      const name = shortName(a.members?.full_name ?? '', a.members?.display_name)
+      if (!cur) by.set(a.member_id, { id: a.member_id, name, kind })
+      else if (kind === 'professor') cur.kind = 'professor'
+    }
+    return [...by.values()].sort((x, y) => (x.kind === y.kind ? 0 : x.kind === 'professor' ? -1 : 1) || x.name.localeCompare(y.name, 'pt-BR'))
+  })()
   // Evento com público: dá para filtrar a chamada pelos instrumentos do público (ex.: Pernalta).
   const audInstOptions = hasAudience
     ? [...new Set((catalog.data?.list ?? []).filter((i) => (audience.data ?? []).some((x) => x.kind !== 'category' && (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id))).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
@@ -384,6 +408,16 @@ export function AttendanceRosterPage() {
       {cancelled && <Card className="p-3 text-destructive">Este evento foi cancelado. A chamada está bloqueada.</Card>}
       {roster.isError && <Card className="p-3 text-destructive">{friendlyError(roster.error)}</Card>}
 
+      {staffChips.length > 0 && (
+        <div className="flex flex-wrap gap-2" aria-label="Professores e monitores">
+          {staffChips.map((p) => (
+            <span key={p.id} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm">
+              <span className="font-semibold">{p.name}</span>
+              <span className="text-xs text-muted-foreground">{p.kind === 'professor' ? 'Professor' : 'Monitor'}</span>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -395,10 +429,8 @@ export function AttendanceRosterPage() {
       )}
 
       <div className="grid gap-2">
-        {ordered.map((r, i) => (
+        {ordered.map((r) => (
           <Fragment key={r.member_id}>
-            {i === 0 && isStaff(r) && <p className="text-xs font-bold uppercase text-muted-foreground">Professores e monitores{isClass ? ' (não entram na contagem)' : ''}</p>}
-            {!isStaff(r) && staffList.length > 0 && (i === 0 || isStaff(ordered[i - 1])) && <p className="pt-1 text-xs font-bold uppercase text-muted-foreground">{isClass ? 'Alunos' : 'Integrantes'}</p>}
           <Card className="p-3">
             <div className="mb-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
