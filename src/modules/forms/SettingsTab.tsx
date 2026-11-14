@@ -4,8 +4,8 @@ import { RichTextarea } from '@/components/shared/RichText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy, Eye, Rocket } from 'lucide-react'
-import { useState } from 'react'
+import { Copy, Eye, Rocket, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Select } from '@/components/ui/primitives'
@@ -27,7 +27,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
   const [f, setF] = useState({
     title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
     opens: toDate(form.opens_at), closes: toDate(form.closes_at), confirmation: form.confirmation_message,
-    privacy: form.privacy_text ?? '', consent: form.requires_consent, dedupe: form.prevent_duplicates,
+    privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
   const refresh = () => { qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }); qc.invalidateQueries({ queryKey: ['forms', orgId] }) }
   const save = useMutation({
@@ -35,12 +35,26 @@ export function SettingsTab({ form }: { form: FormRow }) {
       const { error } = await supabase.from('forms').update({
         title: f.title.trim(), description: f.description.trim() || null, slug: f.slug, cycle_id: f.cycle_id || null,
         opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), confirmation_message: f.confirmation.trim() || 'Inscrição recebida!',
-        max_responses: null, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe,
+        header_image_url: f.headerImage || null, max_responses: null, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe,
       }).eq('id', form.id)
       if (error) throw error
     },
     onSuccess: () => { toast.success('Configurações salvas. Republique para aplicar ao link público.'); refresh() },
     onError: (e) => toast.error(/23505|duplicate/i.test(JSON.stringify(e)) ? 'Já existe um formulário com este endereço.' : /check/i.test(JSON.stringify(e)) ? 'Confira as datas: o encerramento deve ser depois da abertura.' : friendlyError(e)),
+  })
+  const fileRef = useRef<HTMLInputElement>(null)
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error('Use uma imagem PNG, JPG ou WebP.')
+      if (file.size > 5 * 1024 * 1024) throw new Error('A imagem passa de 5 MB.')
+      const ext = file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg'
+      const path = `${orgId}/formulario-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('site-public').upload(path, file, { contentType: file.type, upsert: false })
+      if (error) throw error
+      return supabase.storage.from('site-public').getPublicUrl(path).data.publicUrl
+    },
+    onSuccess: (url) => setF((x) => ({ ...x, headerImage: url })),
+    onError: (e) => toast.error(friendlyError(e)),
   })
   const publish = useMutation({
     mutationFn: async () => { const { error } = await supabase.rpc('publish_form', { p_form: form.id }); if (error) throw error },
@@ -92,6 +106,14 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <div className="space-y-1.5"><Label htmlFor="fs-open">Abre em</Label><DateInput id="fs-open" value={f.opens} onChange={(v) => setF({ ...f, opens: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="fs-close">Encerra em</Label><DateInput id="fs-close" min={f.opens || undefined} value={f.closes} onChange={(v) => setF({ ...f, closes: v })} /></div>
         </div>
+        <div className="space-y-1.5"><Label>Foto de fundo do cabeçalho</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            {f.headerImage && <img src={f.headerImage} alt="Foto de fundo do cabeçalho" className="h-16 w-28 rounded-lg object-cover ring-1 ring-border" />}
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} />
+            <Button type="button" variant="outline" disabled={upload.isPending} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {upload.isPending ? 'Enviando' : f.headerImage ? 'Trocar foto' : 'Escolher foto'}</Button>
+            {f.headerImage && <Button type="button" variant="ghost" onClick={() => setF({ ...f, headerImage: '' })}>Remover</Button>}
+          </div>
+          <p className="text-xs text-muted-foreground">Fica atrás da logo, no topo do formulário. Salve para aplicar (vale na hora, sem republicar).</p></div>
         <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
           <RichTextarea id="fs-priv" rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} /></div>
