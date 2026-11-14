@@ -60,10 +60,10 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
       placeholder="∞"
       value={row.capacity === null ? '' : String(row.capacity)}
       onSave={(v) => {
-        if (v === '') return save.mutateAsync(null)
-        const n = Number(v)
+        // Vazio ou 0 = sem limite (infinito).
+        const n = v === '' ? 0 : Number(v)
         if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
-        return save.mutateAsync(n)
+        return save.mutateAsync(n === 0 ? null : n)
       }}
     />
   )
