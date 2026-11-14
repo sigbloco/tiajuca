@@ -5,6 +5,7 @@ import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { FitChoice } from '@/components/shared/FitLabel'
 import { FitText } from '@/components/shared/FitText'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -437,7 +438,8 @@ export function AttendanceRosterPage() {
   // Instrumentos do naipe escolhido que alguém toca nesta chamada.
   const instOptions = naipe ? [...new Set(rowsAll.flatMap((r) => (r.instruments ?? '').split(', ')).filter((n) => catalog.data?.byName.get(n)?.section === naipe))].sort((a, b) => a.localeCompare(b, 'pt-BR')) : []
   const hasStaff = rowsAll.some(isStaff)
-  const chipCls = (on: boolean) => cn('h-9 rounded-full border px-3 text-sm font-medium', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
+  // Todos os botões de filtro têm a mesma altura (a do mais alto: duas linhas), respiro padrão e texto que nunca vaza.
+  const chipCls = (on: boolean) => cn('relative flex min-h-11 items-center justify-center break-words rounded-full border px-3 py-1.5 text-center text-sm font-medium leading-tight', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
   const cancelled = activity.data?.status === 'cancelled'
 
   return (
@@ -451,24 +453,24 @@ export function AttendanceRosterPage() {
 
       {(naipes.length > 0 || hasStaff) && (
         <div className="space-y-2">
-          {naipes.length > 0 && (
-            <ButtonRow role="group" aria-label="Naipes">
-              {naipes.map((n) => (
-                <button key={n} type="button" aria-pressed={naipe === n} className={chipCls(naipe === n)}
-                  onClick={() => { setStaffOnly(false); setNaipe(naipe === n ? '' : n); setInst('') }}>{n}</button>
-              ))}
-            </ButtonRow>
-          )}
+          <ButtonRow role="group" aria-label="Filtros">
+            {naipes.map((n) => (
+              <button key={n} type="button" aria-pressed={naipe === n} className={chipCls(naipe === n)}
+                onClick={() => { setStaffOnly(false); setNaipe(naipe === n ? '' : n); setInst('') }}>{n}</button>
+            ))}
+            {hasStaff && (
+              <button type="button" aria-pressed={staffOnly} className={chipCls(staffOnly)} aria-label="Professores e Monitores"
+                onClick={() => { setStaffOnly(!staffOnly); setNaipe(''); setInst('') }}>
+                <FitChoice options={['Professores + Monitores', 'Profs. + Monitores', 'Profs. + Mons.', 'Docentes']} />
+              </button>
+            )}
+          </ButtonRow>
           {naipe && instOptions.length > 0 && (
             <ButtonRow role="group" aria-label="Instrumentos">
               {instOptions.map((n) => (
                 <button key={n} type="button" aria-pressed={inst === n} className={chipCls(inst === n)} onClick={() => setInst(inst === n ? '' : n)}>{n}</button>
               ))}
             </ButtonRow>
-          )}
-          {hasStaff && (
-            <button type="button" aria-pressed={staffOnly} className={cn(chipCls(staffOnly), 'w-full')}
-              onClick={() => { setStaffOnly(!staffOnly); setNaipe(''); setInst('') }}>Professores e Monitores</button>
           )}
         </div>
       )}
