@@ -172,7 +172,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
             <p className="break-words font-semibold">
               {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :[l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
             </p>
-            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name].filter(Boolean).join(' · ')}</p>}
+            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name ? `${l.skill_levels.name} (autodeclarado)` : null].filter(Boolean).join(' · ')}</p>}
           </div>
           {canManage && (
             <div className="flex shrink-0 gap-1">

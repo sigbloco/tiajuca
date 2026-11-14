@@ -13,7 +13,7 @@ export interface FieldOption { value: string; label: string }
 export interface FieldCondition { field: string; op: 'eq' | 'neq'; value: string }
 
 /** `section`: o campo é o cabeçalho de uma seção. `consent` (numa seção): a seção termina com o consentimento (texto de privacidade + "estou ciente e concordo"). */
-export interface FieldValidation { min?: number; max?: number; maxLength?: number; section?: boolean; consent?: boolean }
+export interface FieldValidation { min?: number; max?: number; maxLength?: number; section?: boolean; consent?: boolean; /** Seleção com a opção "Outro" (texto livre). */ other?: boolean; /** Campo de redes sociais (rede + usuário). */ social?: boolean }
 export const isSection = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => (f.type ?? f.field_type) === 'info' && !!f.validation.section
 /** Seção que termina com o consentimento. */
 export const hasConsent = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => isSection(f) && !!f.validation.consent
