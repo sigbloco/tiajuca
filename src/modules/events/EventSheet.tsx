@@ -14,9 +14,10 @@ import { usePermission } from '@/core/permissions'
 import { ChecklistSection } from '@/modules/checklists/ChecklistSection'
 import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
 import { useCycles } from '@/modules/cycles/service'
+import { TypePicker } from './TypePicker'
 import { AudiencePicker, type AudRow } from './AudiencePicker'
 import {
-  COLOR_BADGE, COLOR_DOT, typeIdForColor, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord,
+  COLOR_BADGE, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord,
   type Activity, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -52,11 +53,10 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
   // Rótulos acumuláveis (o primeiro é o principal e dá a cor no calendário).
   const types = useQuery({ queryKey: ['activity-types', orgId], queryFn: () => listActivityTypes(orgId) })
   const [labelIds, setLabelIds] = useState<string[]>(() => (activity ? labelsOf(activity).map((l) => l.id) : []))
-  const toggleLabel = (id: string, attendanceDefault: boolean) => {
-    const on = labelIds.includes(id)
-    const next = on ? labelIds.filter((x) => x !== id) : [...labelIds, id]
-    setLabelIds(next)
-    if (isNew && next.length === 1 && !on) setF((x) => ({ ...x, has_attendance: attendanceDefault }))
+  const changeTypes = (ids: string[], primaryChanged: boolean) => {
+    setLabelIds(ids)
+    const p = types.data?.find((t) => t.id === ids[0])
+    if (isNew && primaryChanged && p) setF((x) => ({ ...x, has_attendance: p.attendance_default }))
   }
   // Ocorrência de recorrência: horário, local e descrição vêm do roteiro (como na recorrência), então esses campos não aparecem.
   const fromRule = Boolean(activity?.recurrence_rule_id)
@@ -83,7 +83,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
   const refresh = () => qc.invalidateQueries({ queryKey: ['activities', orgId] })
   const save = useMutation({
     mutationFn: async () => {
-      const typeId = labelIds[0] ?? await typeIdForColor(orgId, 'primary')
+      const typeId = labelIds[0]
       const items = cleanSteps(steps) ?? []
       const fromSteps = fromRule ? {
         start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
@@ -170,23 +170,9 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
 
   return (
     <SheetContent title={isNew ? 'Novo evento' : 'Editar evento'} description="Data e horário no horário de Brasília.">
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Data', f.activity_date], ['Ciclo', f.cycle_id], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Tipo', labelIds[0]], ['Data', f.activity_date], ['Ciclo', f.cycle_id], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-        <div className="space-y-1.5">
-          <Label>Rótulos</Label>
-          <p className="text-xs text-muted-foreground">Escolha quantos quiser; o primeiro dá a cor no calendário.</p>
-          <div className="flex flex-wrap gap-2">
-            {(types.data ?? []).filter((t) => t.is_active || labelIds.includes(t.id)).map((t) => {
-              const idx = labelIds.indexOf(t.id)
-              return (
-                <button key={t.id} type="button" aria-pressed={idx >= 0} onClick={() => toggleLabel(t.id, t.attendance_default)}
-                  className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold', idx >= 0 ? 'border-primary bg-muted ring-2 ring-primary' : 'border-border')}>
-                  <span className={cn('h-3 w-3 rounded-full', COLOR_DOT[t.color])} />{t.name}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <TypePicker types={types.data ?? []} ids={labelIds} onChange={changeTypes} />
         <label className="flex items-center gap-2 font-semibold">
           <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
         </label>

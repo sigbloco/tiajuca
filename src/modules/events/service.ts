@@ -168,20 +168,27 @@ export async function materialize(orgId: string, until: string): Promise<number>
 
 /** Leva o horário, local, descrição e roteiro das recorrências (ativas, ou só a indicada) para as próximas ocorrências já geradas e ainda agendadas. */
 export async function syncOccurrences(orgId: string, today: string, ruleId?: string): Promise<number> {
-  let q = supabase.from('recurrence_rules').select('id, title, start_time, end_time, location, description, itinerary, audiences').eq('organization_id', orgId).eq('is_active', true)
+  let q = supabase.from('recurrence_rules').select('id, title, start_time, end_time, location, description, itinerary, audiences, has_attendance, extra_type_ids, activity_type_id').eq('organization_id', orgId).eq('is_active', true)
   if (ruleId) q = q.eq('id', ruleId)
   const { data: rules, error } = await q
   if (error) throw error
   let n = 0
   for (const r of rules ?? []) {
     const { data, error: e2 } = await supabase.from('activities')
-      .update({ title: r.title, start_time: r.start_time, end_time: r.end_time, location: r.location, description: r.description, itinerary: r.itinerary })
+      .update({ title: r.title, start_time: r.start_time, end_time: r.end_time, location: r.location, description: r.description, itinerary: r.itinerary, has_attendance: r.has_attendance, activity_type_id: r.activity_type_id })
       .eq('recurrence_rule_id', r.id).eq('status', 'scheduled').eq('customized', false).gte('activity_date', today).select('id')
     if (e2) throw e2
     n += data?.length ?? 0
     // Público da chamada da recorrência vai para essas mesmas datas.
     const ids = (data ?? []).map((x) => x.id as string)
     if (ids.length > 0) {
+      const dl = await supabase.from('activity_type_links').delete().in('activity_id', ids)
+      if (dl.error) throw dl.error
+      const extra = ((r.extra_type_ids ?? []) as string[]).filter((t) => t !== r.activity_type_id)
+      if (extra.length > 0) {
+        const il = await supabase.from('activity_type_links').insert(ids.flatMap((id) => extra.map((t) => ({ organization_id: orgId, activity_id: id, activity_type_id: t }))))
+        if (il.error) throw il.error
+      }
       const del = await supabase.from('activity_audiences').delete().in('activity_id', ids)
       if (del.error) throw del.error
       const auds = (r.audiences ?? []) as { kind: string; ref: string }[]

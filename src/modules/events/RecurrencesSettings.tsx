@@ -6,15 +6,15 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
+import { Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { TypePicker } from './TypePicker'
 import { AudiencePicker, type AudRow } from './AudiencePicker'
 import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
-import { COLOR_DOT, COLOR_LABEL, VISIBILITY_LABEL, materialize, syncOccurrences, typeIdForColor, type ItineraryStep, type TypeColor } from './service'
+import { VISIBILITY_LABEL, listActivityTypes, materialize, syncOccurrences, type ItineraryStep } from './service'
 
 interface Rule {
   id: string
@@ -30,6 +30,8 @@ interface Rule {
   until: string | null
   is_active: boolean
   itinerary: ItineraryStep[] | null
+  has_attendance: boolean
+  extra_type_ids: string[]
   audiences: { kind: 'section' | 'instrument' | 'category'; ref: string }[]
 }
 
@@ -37,10 +39,11 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
-  const types = useCatalog('activity_types')
+  const types = useQuery({ queryKey: ['activity-types', orgId], queryFn: () => listActivityTypes(orgId) })
+  const [typeIds, setTypeIds] = useState<string[]>(() => (rule ? [rule.activity_type_id, ...(rule.extra_type_ids ?? [])] : []))
   const [f, setF] = useState({
     title: rule?.title ?? '',
-    color: (types.data?.find((t) => t.id === rule?.activity_type_id)?.color ?? 'primary') as TypeColor,
+    has_attendance: rule?.has_attendance ?? true,
     visibility: (rule?.visibility ?? 'members') as Rule['visibility'],
     weekday: String(rule?.weekday ?? 1),
     starts_on: rule?.starts_on ?? todayIso(membership?.timezone),
@@ -56,7 +59,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
     mutationFn: async () => {
       const items = cleanSteps(steps)
       const row = {
-        title: f.title.trim(), activity_type_id: await typeIdForColor(orgId, f.color), visibility: f.visibility, weekday: Number(f.weekday),
+        title: f.title.trim(), activity_type_id: typeIds[0], extra_type_ids: typeIds.slice(1), has_attendance: f.has_attendance, visibility: f.visibility, weekday: Number(f.weekday),
         // Horário, local e descrição do evento vêm do roteiro: começa no primeiro item e termina no último fim.
         start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
         location: items.find((x) => x.location)?.location ?? null, description: items.map((x) => x.description).filter(Boolean).join('\n') || null,
@@ -82,19 +85,12 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   })
   return (
     <SheetContent title={rule ? 'Editar recorrência' : 'Nova recorrência'} description="Gera um evento toda semana no dia escolhido. Ao salvar, as próximas datas já geradas são atualizadas; as passadas não mudam.">
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['A partir de', f.starts_on], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Tipo', typeIds[0]], ['A partir de', f.starts_on], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="r-title" required>Título</Label><Input id="r-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-        <div className="space-y-1.5">
-          <Label>Cor no calendário</Label>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor no calendário">
-            {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => (
-              <button key={c} type="button" role="radio" aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} aria-checked={f.color === c} onClick={() => setF({ ...f, color: c })}
-                className={cn('flex items-center rounded-full border p-2', f.color === c ? 'border-primary bg-muted ring-2 ring-primary' : 'border-border')}>
-                <span className={cn('h-4 w-4 rounded-full', COLOR_DOT[c])} />
-              </button>
-            ))}
-          </div>
-        </div>
+        <TypePicker types={types.data ?? []} ids={typeIds} onChange={(ids, pc) => { setTypeIds(ids); const p = types.data?.find((t) => t.id === ids[0]); if (!rule && pc && p) setF((x) => ({ ...x, has_attendance: p.attendance_default })) }} />
+        <label className="flex items-center gap-2 font-semibold">
+          <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
+        </label>
         <div className="space-y-1.5">
           <Label htmlFor="r-day">Dia da semana</Label>
           <Select id="r-day" value={f.weekday} onChange={(e) => setF({ ...f, weekday: e.target.value })}>
