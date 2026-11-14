@@ -39,7 +39,6 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
-  const levels = useCatalog('skill_levels')
   // null = fechado · 'new' = novo vínculo · id = editando aquele vínculo
   const [editing, setEditing] = useState<string | null>(null)
   const [f, setF] = useState<Draft>(EMPTY)
@@ -68,7 +67,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
 
   const save = useMutation({
     mutationFn: async () => {
-      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id), is_student: f.is_student, skill_level_id: f.is_student ? nn(f.skill_level_id) : null }
+      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id), is_student: f.is_student }
       if (editing === 'new') {
         const { data: ins, error } = await supabase.from(table).insert({
           organization_id: orgId, member_id: memberId, ...(byCycle ? { cycle_id: cycle!.id } : {}), ...row, is_primary: (data?.length ?? 0) === 0,
@@ -149,13 +148,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
                 onPick={(o) => setF({ ...f, instrument_id: o.id })} />
             )}
           </div>
-          <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked, skill_level_id: e.target.checked ? f.skill_level_id : '' })} /> Aluno</label>
-          {f.is_student && (
-            <Select value={f.skill_level_id} aria-label="Nível" onChange={(e) => setF({ ...f, skill_level_id: e.target.value })}>
-              <option value="">Nível</option>
-              {active(levels.data).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </Select>
-          )}
+          <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked })} /> Aluno</label>
         </>
       )}
       <div className="flex gap-2">
