@@ -216,13 +216,26 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   }
   const pct = blocks.length > 0 ? Math.round(((stepIdx + 1) / blocks.length) * 100) : 100
 
+  const progress = blocks.length > 1 ? (
+    <div className="space-y-1.5 pt-2">
+      <p className="flex items-center justify-between gap-2 text-sm font-semibold">
+        <span>{blocks[stepIdx]?.head?.label ?? f0?.title}</span><span className="text-muted-foreground">Etapa {stepIdx + 1} de {blocks.length}</span>
+      </p>
+      <div role="progressbar" aria-label="Progresso do formulário" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="h-3 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  ) : null
+
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
-      <div className="mb-4 space-y-2 text-center">
-        {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="mx-auto h-24 w-24 ring-4 ring-secondary" />}
-        <p className="font-display text-3xl font-extrabold text-primary">{org?.name ?? ''}</p>
-      </div>
+      <header className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 backdrop-blur">
+        <div className="flex justify-center overflow-hidden rounded-2xl bg-cover bg-center py-3" style={f0?.header_image_url ? { backgroundImage: `url(${f0.header_image_url})` } : undefined}>
+          {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="h-20 w-20" />}
+        </div>
+        {progress}
+      </header>
       {children}
     </main>
   )
@@ -239,22 +252,12 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     <Shell>
       <form onSubmit={(e) => { e.preventDefault(); if (isLast) finish(); else next() }} className="space-y-4" noValidate>
         {stepIdx === 0 && (
-          <Card className="space-y-1 p-5">
+          <Card className="space-y-1 p-5 text-center">
             <h1>{f0?.title}</h1>
             {f0?.description && <RichText text={f0.description} className="text-muted-foreground" />}
             {f0?.closes_at && <p className="text-xs text-muted-foreground">Inscrições até {formatDate(f0.closes_at.slice(0, 10))}.</p>}
             <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
           </Card>
-        )}
-        {blocks.length > 1 && (
-          <div className="space-y-1.5">
-            <p className="flex items-center justify-between gap-2 text-sm font-semibold">
-              <span>{blocks[stepIdx]?.head?.label ?? f0?.title}</span><span className="text-muted-foreground">Etapa {stepIdx + 1} de {blocks.length}</span>
-            </p>
-            <div role="progressbar" aria-label="Progresso do formulário" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="h-3 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
-            </div>
-          </div>
         )}
         {error && <Card role="alert" className="border-destructive p-3 text-destructive">{error}</Card>}
 
