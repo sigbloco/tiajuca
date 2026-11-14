@@ -94,7 +94,31 @@ function useStudentInstruments(cycleId: string | null | undefined) {
 }
 
 /** Um horário do dia: título e os instrumentos com alunos; cada um abre a chamada só daquele instrumento. */
-function ActivityCard({ a, instruments, studentIds, slug, audience }: { a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string; audience?: AudienceInput[] }) {
+/** Linhas da chamada que valem para contagem: mesmas regras da tela da chamada (sem monitores/professores quando não há público; só alunos em aulas). */
+function countable(rows: RosterRow[], a: Activity, hasAudience: boolean, staff: Set<string>, studentMembers: Set<string> | undefined) {
+  const onlyStudents = !hasAudience && /oficina|aula/i.test(`${a.activity_types?.name ?? ''} ${a.title}`)
+  return rows.filter((r) => (hasAudience || !staff.has(r.member_id)) && (!onlyStudents || r.is_off_roster || !studentMembers || studentMembers.has(r.member_id)))
+}
+
+function ActivityCard({ a, instruments, studentIds, slug, audience, staff, studentMembers, presentIds }: {
+  a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string; audience?: AudienceInput[]
+  staff: Set<string>; studentMembers?: Set<string>; presentIds: Set<string>
+}) {
+  // Presentes / total por instrumento (ex.: "Agogô 0/2"), a partir da lista de quem é esperado na chamada.
+  const roster = useQuery({
+    queryKey: ['roster-counts', a.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_attendance_roster', { p_activity: a.id })
+      if (error) throw error
+      return (data ?? []) as RosterRow[]
+    },
+  })
+  const rows = roster.data ? countable(roster.data, a, (audience ?? []).length > 0, staff, studentMembers) : null
+  const countOf = (name: string) => {
+    if (!rows) return null
+    const mine = rows.filter((r) => (r.instruments ?? '').split(', ').includes(name))
+    return `${mine.filter((r) => r.status_id && presentIds.has(r.status_id)).length}/${mine.length}`
+  }
   // Evento com PÚBLICO definido: os botões são os instrumentos desse público (naipe escolhido ou o próprio instrumento).
   // Sem público: todos os instrumentos com alunos.
   const places = (audience ?? []).filter((x) => x.kind !== 'category') // categorias (Aluno…) não escolhem instrumento
@@ -111,7 +135,7 @@ function ActivityCard({ a, instruments, studentIds, slug, audience }: { a: Activ
           <div className="flex flex-wrap gap-2">
             {shown.map((i) => (
               <Link key={i.id} to={`/${slug}/presenca/${a.id}?naipe=${encodeURIComponent(i.section)}&inst=${encodeURIComponent(i.name)}`}
-                className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">{i.name}</Link>
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">{i.name}{countOf(i.name) && <span className="ml-1.5 text-muted-foreground">{countOf(i.name)}</span>}</Link>
             ))}
           </div>
         )}
@@ -142,10 +166,20 @@ export function AttendanceListPage() {
   const idx = current ? days.indexOf(current) : -1
   const dayItems = items.filter((a) => a.activity_date === current)
     .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '') || a.title.localeCompare(b.title, 'pt-BR'))
+  const statuses = useStatuses()
+  const presentIds = new Set((statuses.data ?? []).filter((x) => x.counts_as_present).map((x) => x.id))
+  const staffSet = useQuery({
+    queryKey: ['staff-ids-cycle', orgId, cycleId],
+    enabled: Boolean(cycleId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('staff_assignments').select('member_id').eq('organization_id', orgId).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).limit(3000)
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.member_id as string))
+    },
+  })
   const audiences = useQuery({ queryKey: ['audiences-day', dayItems.map((a) => a.id).join(',')], enabled: dayItems.length > 0, queryFn: () => getAudiencesFor(dayItems.map((a) => a.id)) })
   return (
     <div className="space-y-4">
-      <h1>Presença</h1>
       {isLoading && <Skeleton className="h-24" />}
       {data && days.length === 0 && <EmptyState>Nenhuma atividade neste ciclo.</EmptyState>}
       {current && (
@@ -156,7 +190,7 @@ export function AttendanceListPage() {
         </div>
       )}
       <div className="grid gap-2">
-        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data?.instruments ?? new Set()} slug={membership?.slug} audience={audiences.data?.get(a.id)} />)}
+        {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data?.instruments ?? new Set()} slug={membership?.slug} audience={audiences.data?.get(a.id)} staff={staffSet.data ?? new Set()} studentMembers={students.data?.members} presentIds={presentIds} />)}
       </div>
     </div>
   )
@@ -174,6 +208,8 @@ export function AttendanceRosterPage() {
   const [naipeSel, setNaipe] = useState<string | null>(searchParams.get('naipe'))
   const [instSel, setInst] = useState<string | null>(searchParams.get('inst'))
   const [openNote, setOpenNote] = useState<string | null>(null)
+  // Painel clicável: filtra a lista por situação (padrão: Total = todos).
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [extra, setExtra] = useState('')
   const rosterKey = ['roster', orgId, activityId]
 
@@ -292,6 +328,7 @@ export function AttendanceRosterPage() {
   const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
   const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
     && (!naipe || sectionsOf(r).includes(naipe))
+    && (statusFilter === 'all' || r.status_id === statusFilter)
     && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
   // Evento com público: dá para filtrar a chamada pelos instrumentos do público (ex.: Pernalta).
   const audInstOptions = hasAudience
@@ -307,28 +344,6 @@ export function AttendanceRosterPage() {
           <h1 className="break-words">{activity.data?.title ?? 'Chamada'}</h1>
           {activity.data && <p className="text-muted-foreground">{formatDayShort(activity.data.activity_date, activity.data.start_time)}</p>}
         </div>
-      </div>
-
-      {/* Contadores fixos no topo */}
-      <div className="sticky top-[calc(var(--viewas-h,0px)+var(--topbar-h,0px))] z-10 -mx-4 grid grid-cols-4 gap-2 border-b border-border bg-background px-4 py-2 md:mx-0 md:px-0">
-        {statuses.data?.map((s) => (
-          <div key={s.id} className="rounded-lg bg-card p-2 text-center shadow-card">
-            <p className="font-display text-xl font-bold leading-none">{counts[s.id] ?? 0}</p>
-            <FitText className="text-xs text-muted-foreground" min={9}>{s.name}s</FitText>
-          </div>
-        ))}
-        <div className="rounded-lg bg-card p-2 text-center shadow-card">
-          <p className="font-display text-xl font-bold leading-none">{rows.length}</p>
-          <FitText className="text-xs text-muted-foreground" min={9}>Total</FitText>
-        </div>
-      </div>
-
-      {cancelled && <Card className="p-3 text-destructive">Este evento foi cancelado. A chamada está bloqueada.</Card>}
-      {roster.isError && <Card className="p-3 text-destructive">{friendlyError(roster.error)}</Card>}
-
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {hasAudience && audInstOptions.length > 1 ? (
@@ -361,6 +376,28 @@ export function AttendanceRosterPage() {
           ))}
         </div>
       )}
+
+      {/* Contadores fixos no topo */}
+      <div className="sticky top-[calc(var(--viewas-h,0px)+var(--topbar-h,0px))] z-10 -mx-4 grid grid-cols-4 gap-2 border-b border-border bg-background px-4 py-2 md:mx-0 md:px-0">
+        {statuses.data?.map((s) => (
+          <button type="button" key={s.id} aria-pressed={statusFilter === s.id} onClick={() => setStatusFilter(statusFilter === s.id ? 'all' : s.id)} className={cn('rounded-lg bg-card p-2 text-center shadow-card', statusFilter === s.id && 'ring-2 ring-primary')}>
+            <p className="font-display text-xl font-bold leading-none">{counts[s.id] ?? 0}</p>
+            <FitText className="text-xs text-muted-foreground" min={9}>{s.name}s</FitText>
+          </button>
+        ))}
+        <button type="button" aria-pressed={statusFilter === 'all'} onClick={() => setStatusFilter('all')} className={cn('rounded-lg bg-card p-2 text-center shadow-card', statusFilter === 'all' && 'ring-2 ring-primary')}>
+          <p className="font-display text-xl font-bold leading-none">{rows.length}</p>
+          <FitText className="text-xs text-muted-foreground" min={9}>Total</FitText>
+        </button>
+      </div>
+
+      {cancelled && <Card className="p-3 text-destructive">Este evento foi cancelado. A chamada está bloqueada.</Card>}
+      {roster.isError && <Card className="p-3 text-destructive">{friendlyError(roster.error)}</Card>}
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input className="pl-9" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
 
       {roster.isLoading && Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
       {roster.data && rows.length === 0 && (

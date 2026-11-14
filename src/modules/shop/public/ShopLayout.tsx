@@ -36,7 +36,7 @@ function Header() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link to={basePath} className="flex min-w-0 flex-1 items-center gap-2">
           <OrgLogo name={store.org.name} logoPath={store.org.logo_path} className="h-10 w-10 shrink-0" />
-          <span className="min-w-0 text-balance font-display text-lg font-extrabold leading-tight">{shopLabel}</span>
+          <span className="min-w-0 text-balance font-display text-lg font-extrabold leading-[1.05]">{shopLabel}</span>
         </Link>
         <nav className="flex shrink-0 items-center gap-3 text-sm">
           <Link to={`${basePath}/consultar`} className="font-semibold text-primary hover:underline">Pedidos</Link>
