@@ -4,6 +4,7 @@ import { Ban, ChevronLeft, ChevronRight, MessageSquare, Search, Undo2 } from 'lu
 import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ChipRows } from '@/components/shared/ChipRows'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { FitChoice } from '@/components/shared/FitLabel'
 import { FitText } from '@/components/shared/FitText'
@@ -485,11 +486,11 @@ export function AttendanceRosterPage() {
             )}
           </ButtonRow>
           {naipe && instOptions.length > 0 && (
-            <ButtonRow role="group" aria-label="Instrumentos">
+            <ChipRows role="group" aria-label="Instrumentos">
               {instOptions.map((n) => (
                 <button key={n} type="button" aria-pressed={inst === n} className={chipCls(inst === n)} disabled={instOptions.length === 1} onClick={() => setInst(inst === n ? '' : n)}>{n}</button>
               ))}
-            </ButtonRow>
+            </ChipRows>
           )}
         </div>
       )}
