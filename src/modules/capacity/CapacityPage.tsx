@@ -50,6 +50,7 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
       className="flex-none"
       inputClassName="w-[3.25rem] flex-none px-1 text-center"
       numeric
+      autoSave
       aria-label={`Limite de vagas de ${row.instrument_name}`}
       placeholder="∞"
       value={row.capacity === null ? '' : String(row.capacity)}
