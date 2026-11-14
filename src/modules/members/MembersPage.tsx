@@ -7,6 +7,7 @@ import type { CameFrom } from '@/app/navigation'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -96,7 +97,7 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
 const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
-const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor', 'Professores'], ['monitor', 'Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
+const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['equipe', 'Professores e Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
@@ -247,7 +248,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         if (showInactive && (st?.counts_as_active || st?.is_waitlist)) continue
       }
       if (!lockedCategory && types.size > 0) {
-        const mine = typesOf(m.id)
+        const mine = typesOf(m.id); if (mine.has('professor') || mine.has('monitor')) mine.add('equipe')
         if (![...types].some((t) => mine.has(t))) continue
       }
       if (wantedCategory && !allCategories(m.id).includes(wantedCategory)) continue
@@ -336,7 +337,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     )
   })
 
-  const chip = (on: boolean) => cn('rounded-full border px-2.5 py-1 text-xs font-semibold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
+  const chip = (on: boolean) => cn('rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold leading-tight', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
 
   return (
     <div className="space-y-4">
@@ -368,12 +369,12 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </div>
       </div>
       {!lockedCategory && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo de integrante">
+        <ButtonRow role="group" aria-label="Tipo de integrante">
           {TYPE_OPTIONS.map(([k, label]) => (
             <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
               onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
           ))}
-        </div>
+        </ButtonRow>
       )}
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
       <div className="relative">
