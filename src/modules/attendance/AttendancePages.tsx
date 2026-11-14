@@ -235,7 +235,8 @@ export function AttendanceRosterPage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  // Professores e monitores do ciclo não fazem parte da chamada.
+  // Professores e monitores do ciclo não fazem parte da chamada de aulas sem público definido. Quando o evento tem PÚBLICO (ex.: Pernalta),
+  // quem está no público entra mesmo sendo monitor ou professor (o servidor só inclui quem toca aquele instrumento/naipe).
   const cyclesAll = useCycles()
   const staffIds = useQuery({
     queryKey: ['staff-ids', orgId, activity.data?.id, cyclesAll.data?.length],
@@ -253,7 +254,7 @@ export function AttendanceRosterPage() {
   const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
   // Aula/oficina: só alunos (categoria Aluno no ciclo); quem foi adicionado fora da lista continua.
   const onlyStudents = !hasAudience && /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
-  const rows = (roster.data ?? []).filter((r) => !staffIds.data?.has(r.member_id) && (!onlyStudents || r.is_off_roster || !students.data || students.data.members.has(r.member_id)))
+  const rows = (roster.data ?? []).filter((r) => (hasAudience || !staffIds.data?.has(r.member_id)) && (!onlyStudents || r.is_off_roster || !students.data || students.data.members.has(r.member_id)))
   const counts = useMemo(() => {
     const by: Record<string, number> = {}
     for (const r of rows) if (r.status_id) by[r.status_id] = (by[r.status_id] ?? 0) + 1
