@@ -135,9 +135,6 @@ export function CapacityPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Vagas por instrumento</h1>
-      </div>
       <VagasTabs />
       {cycleId && <p className="text-muted-foreground">{full} {full === 1 ? 'instrumento lotado' : 'instrumentos lotados'}. A contagem considera integrantes ativos no ciclo.</p>}
       {isLoading && <Skeleton className="h-32" />}

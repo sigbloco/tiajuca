@@ -88,6 +88,8 @@ export function crumbsFor(segs: string[], base: string): { label: string; to?: s
     if (item.group) out.push({ label: HUBS[item.group].label, to: `${base}/${item.group}` })
     out.push({ label: item.crumb ?? item.label, to: segs.length > 1 ? `${base}/${first}` : undefined, solo: first === 'eventos' })
   }
+  // Lista de espera é uma aba de Vagas, mas tem o próprio nome no caminho.
+  if (segs[0] === 'lista-de-espera' && out.length) out[out.length - 1] = { ...out[out.length - 1], label: 'Lista de espera' }
   if (segs.length > 1 && !hubKey) {
     let path = `${base}/${first}`
     segs.slice(1).forEach((seg, i, rest) => {
