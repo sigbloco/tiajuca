@@ -48,7 +48,7 @@ function MembersTrash() {
     onError: (e) => toast.error(friendlyError(e)),
   })
   if (!can) return null
-  return <TrashDrawer iconOnly title="Lixeira de integrantes" entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
+  return <TrashDrawer iconOnly compact title="Lixeira de integrantes" entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
 }
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
