@@ -1,6 +1,6 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
+import { Ban, ChevronLeft, ChevronRight, MessageSquare, Search, Undo2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,7 +12,10 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
-import { getAudiences, getAudiencesFor, listActivities, type Activity, type AudienceInput } from '@/modules/events/service'
+import { cancelWord, getAudiences, getAudiencesFor, listActivities, setActivityStatus, type Activity, type AudienceInput } from '@/modules/events/service'
+import { promptBox } from '@/components/shared/DialogHost'
+import { usePermission } from '@/core/permissions'
+import { notifyChange } from '@/core/undo'
 import { GroupLink } from '@/modules/members/GroupLink'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
@@ -104,6 +107,40 @@ function ActivityCard({ a, instruments, studentIds, slug, audience, staff, stude
   a: Activity; instruments: InstrumentInfo[]; studentIds: Set<string>; slug?: string; audience?: AudienceInput[]
   staff: Set<string>; studentMembers?: Set<string>; presentIds: Set<string>
 }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const canManage = usePermission('events.manage')
+  // Cancelar o evento inteiro: igual ao botão do calendário (pede o motivo; dá para desfazer).
+  const cancel = useMutation({
+    mutationFn: (reason: string) => setActivityStatus(orgId, a.id, 'cancelled', reason),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities', orgId] }); notifyChange('Cancelado.', async () => { await setActivityStatus(orgId, a.id, 'scheduled'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  // Cancelar só um instrumento neste dia (o evento segue para os demais).
+  const cancelledQ = useQuery({
+    queryKey: ['item-cancel', a.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('activity_item_cancellations').select('instrument_id').eq('activity_id', a.id)
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.instrument_id as string))
+    },
+  })
+  const cancelledInst = cancelledQ.data ?? new Set<string>()
+  const toggleInst = useMutation({
+    mutationFn: async (v: { id: string; name: string; cancel: boolean }) => {
+      if (v.cancel) {
+        const reason = await promptBox({ title: 'Cancelar', message: `Cancelar a aula de ${v.name} neste dia?\nMotivo (ex.: professor ausente):`, confirmLabel: 'Cancelar', cancelLabel: 'Voltar' })
+        if (reason === null) return
+        const { error } = await supabase.from('activity_item_cancellations').insert({ organization_id: orgId, activity_id: a.id, instrument_id: v.id, reason: reason.trim() || null })
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('activity_item_cancellations').delete().eq('activity_id', a.id).eq('instrument_id', v.id)
+        if (error) throw error
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['item-cancel', a.id] }),
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   // Presentes / total por instrumento (ex.: "Agogô 0/2"), a partir da lista de quem é esperado na chamada.
   const roster = useQuery({
     queryKey: ['roster-counts', a.id],
@@ -130,13 +167,34 @@ function ActivityCard({ a, instruments, studentIds, slug, audience, staff, stude
     <Card className="flex gap-3 p-3">
       <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
       <div className="min-w-0 flex-1 space-y-2">
-        <Link to={`/${slug}/presenca/${a.id}`} className="block break-words font-semibold hover:underline">{a.title}</Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link to={`/${slug}/presenca/${a.id}`} className="block min-w-0 break-words font-semibold hover:underline">{a.title}</Link>
+          {canManage && (
+            <Button size="icon" variant="ghost" className="-mt-1 h-8 w-8 shrink-0 text-destructive" aria-label={`Cancelar ${cancelWord(a.activity_types?.name)}`} title={`Cancelar ${cancelWord(a.activity_types?.name)}`}
+              disabled={cancel.isPending}
+              onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(a.activity_types?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /></Button>
+          )}
+        </div>
         {shown.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {shown.map((i) => (
-              <Link key={i.id} to={`/${slug}/presenca/${a.id}?naipe=${encodeURIComponent(i.section)}&inst=${encodeURIComponent(i.name)}`}
-                className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">{i.name}{countOf(i.name) && <span className="ml-1.5 text-muted-foreground">{countOf(i.name)}</span>}</Link>
-            ))}
+            {shown.map((i) => {
+              const off = cancelledInst.has(i.id)
+              return (
+                <span key={i.id} className={cn('inline-flex items-center rounded-full border border-border bg-card text-sm font-medium', off && 'opacity-60')}>
+                  <Link to={`/${slug}/presenca/${a.id}?naipe=${encodeURIComponent(i.section)}&inst=${encodeURIComponent(i.name)}`}
+                    className={cn('rounded-l-full py-1.5 pl-3 hover:bg-muted', canManage ? 'pr-1.5' : 'rounded-r-full pr-3')}>
+                    <span className={off ? 'line-through' : undefined}>{i.name}</span>
+                    {off ? <span className="ml-1.5 text-xs text-muted-foreground">sem aula</span> : countOf(i.name) && <span className="ml-1.5 text-muted-foreground">{countOf(i.name)}</span>}
+                  </Link>
+                  {canManage && (
+                    <button type="button" disabled={toggleInst.isPending} aria-label={off ? `Desfazer o cancelamento de ${i.name}` : `Cancelar a aula de ${i.name}`} title={off ? 'Desfazer o cancelamento' : 'Cancelar a aula deste instrumento'}
+                      className="mr-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-destructive" onClick={() => toggleInst.mutate({ id: i.id, name: i.name, cancel: !off })}>
+                      {off ? <Undo2 className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+                    </button>
+                  )}
+                </span>
+              )
+            })}
           </div>
         )}
       </div>
@@ -315,6 +373,16 @@ export function AttendanceRosterPage() {
   })()
   const naipe = hasAudience ? '' : (naipeSel ?? myScope.section)
   const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
+  // Aula cancelada só para este instrumento: avisa quando ele está em foco.
+  const itemCancel = useQuery({
+    queryKey: ['item-cancel', activityId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('activity_item_cancellations').select('instrument_id').eq('activity_id', activityId)
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.instrument_id as string))
+    },
+  })
+  const focusCancelled = !!inst && (catalog.data?.list ?? []).some((i) => i.name === inst && itemCancel.data?.has(i.id))
   const inFocus = (r: RosterRow) => (!naipe || sectionsOf(r).includes(naipe)) && (!inst || (r.instruments ?? '').split(', ').includes(inst))
   // Contadores: só quem conta (alunos nas aulas), dentro do naipe/instrumento escolhido.
   const rows = rowsAll.filter(inFocus)
@@ -406,6 +474,7 @@ export function AttendanceRosterPage() {
       </div>
 
       {cancelled && <Card className="p-3 text-destructive">Este evento foi cancelado. A chamada está bloqueada.</Card>}
+      {focusCancelled && !cancelled && <Card className="p-3 text-destructive">Sem aula de {inst} neste dia (cancelada).</Card>}
       {roster.isError && <Card className="p-3 text-destructive">{friendlyError(roster.error)}</Card>}
 
       {staffChips.length > 0 && (
