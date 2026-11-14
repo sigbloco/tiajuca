@@ -60,12 +60,16 @@ export function ExtraEmails({ memberId }: { memberId: string }) {
           onClick={() => setAdding((a) => !a)}><Plus className="h-3.5 w-3.5" /></button>
       </div>
       {(list.data ?? []).length === 0 && !adding && <p className="text-xs text-muted-foreground">Nenhum. Qualquer e-mail da pessoa serve para entrar com a conta Google.</p>}
-      {(list.data ?? []).map((e, i) => (
-        <div key={e.id} className={`flex items-center justify-between gap-2 rounded-md px-2 py-1 ${i % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'}`}>
-          <span className="min-w-0 break-all">{e.email}</span>
-          <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label={`Remover ${e.email}`} title="Remover" disabled={remove.isPending} onClick={() => remove.mutate(e.id)}><X className="h-4 w-4" /></Button>
+      {(list.data ?? []).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(list.data ?? []).map((e) => (
+            <span key={e.id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-sm text-muted-foreground">
+              <span className="break-all">{e.email}</span>
+              <button type="button" aria-label={`Remover ${e.email}`} title="Remover" disabled={remove.isPending} className="rounded-full px-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(e.id)}><X className="h-3.5 w-3.5" /></button>
+            </span>
+          ))}
         </div>
-      ))}
+      )}
       {adding && (
         <div className="flex items-center gap-2">
           <Input type="email" autoFocus className="min-w-0 flex-1" aria-label="Novo e-mail" placeholder="outro@email.com" value={value} onChange={(e) => setValue(e.target.value)}
