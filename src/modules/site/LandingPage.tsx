@@ -120,7 +120,7 @@ export function LandingPage() {
                 <Link to={`/${slug}/loja/produto/${data.shop_product.slug}`}
                   className={`flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-card p-2 pr-5 text-left font-display text-lg font-bold text-foreground shadow-card transition hover:-translate-y-0.5 hover:shadow-lg`}>
                   {data.shop_product.image_path
-                    ? <img src={imageUrl(data.shop_product.image_path)} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+                    ? <img src={imageUrl(data.shop_product.image_path)} alt="" className="h-16 w-16 shrink-0 rounded-2xl bg-muted object-contain" />
                     : <ShoppingBag className="mx-4 h-8 w-8 shrink-0" aria-hidden />}
                   <span className="min-w-0 flex-1 leading-tight">{data.shop_product.name}</span>
                 </Link>
