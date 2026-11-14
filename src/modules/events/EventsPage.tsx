@@ -1,10 +1,7 @@
-import { FitWord } from '@/components/shared/FitText'
-import { ButtonRow } from '@/components/shared/ButtonRow'
-import { useRememberedState } from '@/core/rememberedState'
-import { useRegisterCrumb } from '@/core/breadcrumb'
+import { Link } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Cake, ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
@@ -12,11 +9,9 @@ import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
-import { HolidaysSettings } from '@/modules/billing/BillingSettings'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventCard } from './EventCard'
 import { EventSheet } from './EventSheet'
-import { RecurrencesSettings } from './RecurrencesSettings'
 import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
@@ -33,8 +28,6 @@ export function EventsPage() {
   const { cycleId, cycle: selCycle } = useSelectedCycle()
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [sheet, setSheet] = useState<{ activity: Activity | null; edit?: boolean } | null>(null)
-  const [tab, setTab] = useRememberedState<'agenda' | 'recorrencias' | 'feriados'>('calendario-aba', 'agenda', ['agenda', 'recorrencias', 'feriados'])
-  useRegisterCrumb(tab === 'recorrencias' ? 'Recorrências' : tab === 'feriados' ? 'Feriados' : 'Agenda', () => setTab('agenda'), canManage, 0)
 
   const days = useMemo(() => monthGridDays(ym.y, ym.m), [ym])
   const from = days[0].iso
@@ -111,41 +104,20 @@ export function EventsPage() {
     setSelectedDay(null)
   }
 
-  // Recorrências (ensaios e aulas que se repetem) ficam dentro do Calendário, só para quem gerencia eventos.
-  const tabs = canManage && (
-    <ButtonRow role="tablist">
-      {([['agenda', 'Agenda'], ['recorrencias', 'Recorrências'], ['feriados', 'Feriados']] as const).map(([k, label]) => (
-        <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-          className={cn('rounded-full px-2 py-1.5 font-semibold', tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70')}><FitWord>{label}</FitWord></button>
-      ))}
-    </ButtonRow>
-  )
   const header = (
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Calendário</h1>
-        {canManage && <Button variant="add" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
-      </div>
+    <div className="flex items-center justify-end gap-2">
+      {canManage && <Button variant="add" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
+      {canManage && <Button asChild variant="outline" size="icon" aria-label="Configurações" title="Configurações"><Link to={`/${membership?.slug}/eventos/configuracoes`}><Settings className="h-4 w-4" /></Link></Button>}
+    </div>
   )
   const sheetEl = (
     <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
       {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} startEditing={sheet.edit} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
     </Sheet>
   )
-  if (tab !== 'agenda' && canManage) {
-    return (
-      <div className="space-y-4">{header}{tabs}
-        {tab === 'recorrencias' && <RecurrencesSettings />}
-        {tab === 'feriados' && <HolidaysSettings />}
-        {sheetEl}
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
       {header}
-
-      {tabs}
 
       <Card className="p-3">
         <div className="mb-2 flex items-center justify-between">
