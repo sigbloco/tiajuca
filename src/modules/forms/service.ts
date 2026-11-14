@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import type { FieldCondition, FieldOption, FieldType } from './types'
+import type { FieldCondition, FieldOption, FieldType, FieldValidation } from './types'
 
 export type FormStatus = 'draft' | 'published' | 'closed' | 'archived'
 export const FORM_STATUS_LABEL: Record<FormStatus, string> = { draft: 'Rascunho', published: 'Publicado', closed: 'Encerrado', archived: 'Arquivado' }
@@ -17,7 +17,7 @@ export interface FormRow {
 }
 export interface FormFieldRow {
   id: string; form_id: string; field_key: string; label: string; description: string | null; field_type: FieldType; required: boolean
-  sort_order: number; options: FieldOption[]; default_value: string | null; validation: { min?: number; max?: number; maxLength?: number }
+  sort_order: number; options: FieldOption[]; default_value: string | null; validation: FieldValidation
   condition: FieldCondition | null; member_mapping: string | null; is_active: boolean
 }
 export interface SubmissionRow {
