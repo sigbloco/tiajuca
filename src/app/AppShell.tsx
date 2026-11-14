@@ -102,12 +102,13 @@ export function AppShell() {
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
   const crumbs = crumbsFor(segs, base)
   // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
-  trailRender.current = ['Início', ...crumbs.map((c) => c.label), ...extras.filter((e) => e.level === 0).map((e) => e.title)].join(' • ')
+  const trailNow = [...crumbs.map((c) => c.label), ...extras.filter((e) => e.level === 0).map((e) => e.title)]
+  trailRender.current = (trailNow.length ? trailNow : ['Início']).join(' • ')
   const backTrail = (() => {
     if (!previous || previous.path === pathname || !previous.path.startsWith(base)) return null
     if (previous.trail) return previous.trail
     const labels = crumbsFor(previous.path.slice(base.length).split('/').filter(Boolean), base).map((c) => c.label)
-    return ['Início', ...labels].join(' • ')
+    return (labels.length ? labels : ['Início']).join(' • ')
   })()
   const isActive = (e: MenuEntry) => {
     const rest = pathname.slice(base.length).replace(/^\//, '')
