@@ -1,5 +1,6 @@
 import { FitWord } from '@/components/shared/FitText'
 import { SaveButton } from '@/components/shared/SaveButton'
+import { StickySave } from '@/components/shared/StickySave'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRegisterCrumb } from '@/core/breadcrumb'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -139,10 +140,10 @@ function ColorsEditor({ area, intro }: { area: ThemeArea; intro: string }) {
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
-          <SaveButton disabled={!dirty || save.isPending} onClick={() => save.mutate()} hint="Salvar cores" />
           {dirty && <Button variant="ghost" onClick={() => setColors(saved)}>Descartar</Button>}
           <Button variant="outline" onClick={restore}>Restaurar cores de fábrica</Button>
         </div>
+        <StickySave><SaveButton className="w-full" disabled={!dirty || save.isPending} onClick={() => save.mutate()} hint="Salvar cores" /></StickySave>
       </Card>
       <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
         <p className="text-sm font-semibold">Prévia</p>

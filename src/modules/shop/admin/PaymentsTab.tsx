@@ -1,5 +1,7 @@
+import { SaveButton } from '@/components/shared/SaveButton'
+import { StickySave } from '@/components/shared/StickySave'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Save, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { ShopNameField, getShopLabel, saveShopLabel } from '@/modules/site/ShopNameField'
 import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
@@ -152,7 +154,7 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
       </Card>
 
       {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-      <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+      <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} /></StickySave>
     </form>
   )
 }

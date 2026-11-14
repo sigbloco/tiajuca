@@ -38,6 +38,17 @@ export function AppShell() {
     ro.observe(el)
     return () => ro.disconnect()
   })
+  // Altura da barra inferior do celular (0 no computador), para botões fixos na base ficarem acima dela.
+  const bottomRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = bottomRef.current
+    if (!el) return
+    const set = () => document.documentElement.style.setProperty('--bottombar-h', el.offsetHeight + 'px')
+    set()
+    const ro = new ResizeObserver(set)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
   const { membership, realMembership } = useOrganization()
   const { signOut } = useAuth()
   const { pathname, search, state } = useLocation()
@@ -197,7 +208,7 @@ export function AppShell() {
       </SelectedCycleProvider>
 
       {/* Mobile: barra inferior fixa + "Mais" */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-header text-header-foreground pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav ref={bottomRef} className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-header text-header-foreground pb-[env(safe-area-inset-bottom)] md:hidden">
         {primary.map((e) => (
           <NavLink
             key={e.to || 'home'}

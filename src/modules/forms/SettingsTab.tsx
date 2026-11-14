@@ -1,5 +1,6 @@
 import { requireFields } from '@/core/required'
 import { SaveButton } from '@/components/shared/SaveButton'
+import { StickySave } from '@/components/shared/StickySave'
 import { RichTextarea } from '@/components/shared/RichText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
@@ -137,7 +138,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
         <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
-        <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar configurações" />
+        <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar configurações" /></StickySave>
       </form>
 
     </div>
