@@ -42,10 +42,11 @@ export function WaitlistPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('member_cycles')
-        .select('id, member_id, waitlisted_at, members(full_name, display_name), instruments(name), member_cycle_statuses!inner(is_waitlist)')
+        .select('id, member_id, waitlisted_at, members!inner(full_name, display_name, archived_at), instruments(name), member_cycle_statuses!inner(is_waitlist)')
         .eq('organization_id', orgId)
         .eq('cycle_id', cycleId)
         .eq('member_cycle_statuses.is_waitlist', true)
+        .is('members.archived_at', null) // quem foi para a lixeira sai da fila
         .order('waitlisted_at', { ascending: true })
       if (error) throw error
       return (data ?? []) as unknown as WaitRow[]
@@ -81,9 +82,6 @@ export function WaitlistPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Lista de espera</h1>
-      </div>
       <VagasTabs />
 
       {canManage && cycleId && (
