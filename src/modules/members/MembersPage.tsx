@@ -98,7 +98,7 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
 const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
-const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['equipe', 'Professores e Monitores'], ['senior', 'Sêniors'], ['musico', 'Músicos'], ['aluno', 'Alunos']]
+const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['musico', 'Músicos'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes'], ['senior', 'Sêniors']]
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
@@ -112,7 +112,11 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   // Situação: Ativos (padrão) e Inativos acumulam; os dois marcados = todos.
   const [showActive, setShowActive] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
-  const [types, setTypes] = useState<Set<string>>(new Set())
+  // "?tipo=aluno" (vindo de Oficina → Alunos) já abre com esse filtro marcado.
+  const [types, setTypes] = useState<Set<string>>(() => {
+    const t = new URLSearchParams(window.location.search).get('tipo')
+    return new Set(t && TYPE_OPTIONS.some(([k]) => k === t) ? [t] : [])
+  })
   const staffKinds = useQuery({
     queryKey: ['staff-assignments', orgId, 'kinds'],
     queryFn: async () => {
