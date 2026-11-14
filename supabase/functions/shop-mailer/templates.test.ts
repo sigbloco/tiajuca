@@ -99,3 +99,16 @@ describe('demais avisos por mudança de status', () => {
     }
   })
 })
+
+describe('produção começou (mínimo atingido)', () => {
+  const m = buildEmail(ctx({ template: 'production_started', product: { name: 'Camiseta oficial', min_units: 50, lead_time_days: '10-15 dias úteis' } }))
+  it('assunto com o produto; corpo com o mínimo, o prazo e o pedido', () => {
+    expect(m.subject).toBe('Camiseta oficial: chegamos ao mínimo, a produção começou!')
+    for (const part of ['50 unidades pagas', '10-15 dias úteis', 'HN5XCGA4', 'Quadra']) { expect(m.html).toContain(part); expect(m.text).toContain(part) }
+  })
+  it('sem prazo cadastrado, não inventa um', () => {
+    const n = buildEmail(ctx({ template: 'production_started', product: { name: 'Boné', min_units: 20, lead_time_days: null } }))
+    expect(n.text).toContain('Avisaremos quando estiver pronto')
+    expect(n.text).not.toContain('conta a partir de agora')
+  })
+})
