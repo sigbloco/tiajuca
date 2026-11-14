@@ -8,10 +8,11 @@ import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
@@ -108,9 +109,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const [search, setSearch] = useState('')
   const filter: FilterValue = { ...EMPTY_FILTER, search }
   const sectionFilter = ''
-  const [situation, setSituation] = useState<'ativos' | 'inativos' | 'todos'>('ativos')
-  const showActive = situation !== 'inativos'
-  const showInactive = situation !== 'ativos'
+  // Situação: Ativos (padrão) e Inativos acumulam; os dois marcados = todos.
+  const [showActive, setShowActive] = useState(true)
+  const [showInactive, setShowInactive] = useState(false)
   const [types, setTypes] = useState<Set<string>>(new Set())
   const staffKinds = useQuery({
     queryKey: ['staff-assignments', orgId, 'kinds'],
@@ -129,7 +130,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     }
     return out
   }
-  const [cycleSel, setCycleSel] = useState('')
+  const { cycleId: globalCycleId } = useSelectedCycle()
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [sheetOpen, setSheetOpen] = useState(false)
   const [selected, setSelected] = useState<MemberRow | null>(null)
@@ -165,12 +166,8 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       return (data ?? []) as { member_id: string; cycle_id: string; status_id: string }[]
     },
   })
-  const cycleButtons = useMemo(() => {
-    const withPeople = new Set((allRows.data ?? []).map((r) => r.cycle_id))
-    return (cycles ?? []).filter((c) => c.is_active).map((c) => ({ ...c, empty: !withPeople.has(c.id) && !c.is_current })).sort((a, b) => Number(b.is_current) - Number(a.is_current) || b.starts_on.localeCompare(a.starts_on))
-  }, [cycles, allRows.data])
   const currentCycle = cycles?.find((c) => c.is_current)
-  const activeCycleId = cycleSel || currentCycle?.id || cycleButtons[0]?.id || ''
+  const activeCycleId = globalCycleId || currentCycle?.id || ''
   const activeCycle = cycles?.find((c) => c.id === activeCycleId)
   const pastCycle = !!activeCycle && isPastCycle(activeCycle)
 
@@ -352,22 +349,11 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         <MembersTrash />
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_9.5rem] gap-2 sm:max-w-lg">
-        <div className="space-y-1">
-          <Label htmlFor="mb-cycle" className="text-xs">Ciclo</Label>
-          <Select id="mb-cycle" value={activeCycleId} onChange={(e) => setCycleSel(e.target.value)}>
-            {cycleButtons.map((c) => <option key={c.id} value={c.id} disabled={c.empty}>{c.name}{c.is_current ? ' · atual' : ''}</option>)}
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="mb-situation" className="text-xs">Situação</Label>
-          <Select id="mb-situation" value={situation} onChange={(e) => setSituation(e.target.value as 'ativos' | 'inativos' | 'todos')}>
-            <option value="ativos">{pastCycle ? 'Participaram' : 'Ativos'}</option>
-            <option value="inativos">{pastCycle ? 'Não participaram' : 'Inativos'}</option>
-            <option value="todos">Todos</option>
-          </Select>
-        </div>
-      </div>
+      <ButtonRow role="group" aria-label="Situação">
+        {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
+          <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
+        ))}
+      </ButtonRow>
       {!lockedCategory && (
         <ButtonRow role="group" aria-label="Tipo de integrante">
           {TYPE_OPTIONS.map(([k, label]) => (
