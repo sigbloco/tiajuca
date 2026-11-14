@@ -159,6 +159,31 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   const [titleEl, setTitleEl] = useState<HTMLElement | null>(null)
   const [titlePast, setTitlePast] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
+  // Navegação pelos blocos informativos da etapa: clicar rola até o bloco; o da vez "acende" conforme a página rola.
+  const anchors = (blocks[stepIdx]?.items ?? []).filter((f) => f.type === 'info').map((f) => ({ key: f.key, label: f.label }))
+  const anchorKeys = anchors.map((a) => a.key).join('|')
+  const [activeAnchor, setActiveAnchor] = useState<string | null>(null)
+  useEffect(() => {
+    if (!anchorKeys) { setActiveAnchor(null); return }
+    const keys = anchorKeys.split('|')
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const line = (headerRef.current?.offsetHeight ?? 0) + 24
+      let cur: string | null = null
+      for (const k of keys) { const el = document.getElementById(`bloco-${k}`); if (el && el.getBoundingClientRect().top <= line) cur = k }
+      setActiveAnchor(cur)
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (raf) cancelAnimationFrame(raf) }
+  }, [anchorKeys, stepIdx])
+  const goAnchor = (k: string) => {
+    const el = document.getElementById(`bloco-${k}`)
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (headerRef.current?.offsetHeight ?? 0) - 12, behavior: 'smooth' })
+  }
   useEffect(() => {
     if (!titleEl) { setTitlePast(false); return }
     const h = headerRef.current?.offsetHeight ?? 0
@@ -243,7 +268,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   const shell = (children: React.ReactNode) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
-      <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 backdrop-blur">
+      <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 shadow-[0_6px_14px_-6px_rgba(0,0,0,0.3)] backdrop-blur">
         <HeaderBand frame={f0?.header ?? DEFAULT_FRAME} logo={org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="h-20 w-20 shadow-lg shadow-black/40" /> : null} />
         {progress}
         {f0 && (stepIdx > 0 || titlePast) && (
@@ -251,6 +276,14 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             <span className="font-display text-sm font-bold">{f0.title}</span>
             <span className="text-xs text-muted-foreground">Campos com * são obrigatórios.</span>
           </p>
+        )}
+        {(stepIdx > 0 || titlePast) && anchors.length > 1 && (
+          <nav aria-label="Blocos desta etapa" className="mt-1.5 flex flex-wrap gap-1">
+            {anchors.map((a) => (
+              <button key={a.key} type="button" aria-current={activeAnchor === a.key ? 'true' : undefined} onClick={() => goAnchor(a.key)}
+                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${activeAnchor === a.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}>{a.label}</button>
+            ))}
+          </nav>
         )}
       </header>
       {children}
@@ -287,7 +320,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
               </div>
             )}
             {b.items.map((f) => f.type === 'info' ? (
-              <div key={f.key} className="space-y-2">
+              <div key={f.key} id={`bloco-${f.key}`} className="space-y-2">
                 <p className="font-display text-lg font-bold">{f.label}</p>
                 {f.description && <Card className="p-4"><RichText text={f.description} /></Card>}
               </div>
