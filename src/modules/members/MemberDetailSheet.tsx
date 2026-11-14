@@ -187,7 +187,22 @@ function CyclesSection({ memberId }: { memberId: string }) {
   )
 }
 
+/** Copia o e-mail para a área de transferência (em vez de abrir o programa de e-mail). */
+async function copyEmail(email: string) {
+  try { await navigator.clipboard.writeText(email); toast.success('E-mail copiado.') } catch { toast.error('Não foi possível copiar. Selecione e copie à mão: ' + email) }
+}
+
 function ContactLinks({ member }: { member: MemberRow }) {
+  const canManage = usePermission('members.manage')
+  const extraEmails = useQuery({
+    queryKey: ['member-emails', member.id],
+    enabled: canManage,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('member_emails').select('id, email').eq('member_id', member.id).order('created_at')
+      if (error) throw error
+      return (data ?? []) as { id: string; email: string }[]
+    },
+  })
   const socials = (member.social_handle ?? '').split('\n').map((x) => socialUrl(x)).filter((x): x is string => !!x)
   const wa = whatsappUrl(member.phone)
   if (!member.phone && socials.length === 0 && !member.email && !member.birth_date) return null
@@ -200,7 +215,9 @@ function ContactLinks({ member }: { member: MemberRow }) {
           {/instagram\.com/i.test(social) ? <InstagramIcon className="h-4 w-4" /> : <Globe className="h-4 w-4" />} {socialLabel(social)}
         </a>
       ))}
-      {member.email && <a className={cls} href={`mailto:${member.email}`} aria-label="E-mail"><Mail className="h-4 w-4" /> {member.email}</a>}
+      {[member.email, ...(extraEmails.data ?? []).map((e) => e.email)].filter((e): e is string => !!e).map((email) => (
+        <button key={email} type="button" className={cls} onClick={() => void copyEmail(email)} aria-label={`Copiar e-mail ${email}`} title="Clique para copiar"><Mail className="h-4 w-4" /> {email}</button>
+      ))}
       {member.birth_date && <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm" aria-label="Data de nascimento"><Cake className="h-4 w-4" /> {formatDate(member.birth_date)}</span>}
     </div>
   )
@@ -283,7 +300,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
         {fld('rd-aff', 'Relação com a Grande Tijuca', <textarea id="rd-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} />)}
         {fld('rd-other', 'Outros blocos', <Input id="rd-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} />)}
         <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <Button type="submit" size="sm" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       </form>
@@ -352,7 +369,7 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
       <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
     )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
-      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin /></MemberSection>}
+      {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin readOnly={!editing} /></MemberSection>}
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
       <CyclesSection memberId={member.id} />
       <RelationWithBlock memberId={member.id} />
