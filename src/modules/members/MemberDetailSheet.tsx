@@ -335,20 +335,24 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   // Mais recente primeiro (por rótulo do ciclo e, no mesmo ciclo, pela inscrição mais nova).
   const rows = [...(answers.data ?? [])].sort((x, y) => y.cycle_label.localeCompare(x.cycle_label, 'pt-BR') || y.created_at.localeCompare(x.created_at))
   const isCurrent = (r: { cycle_id: string | null }) => !!cycle && r.cycle_id === cycle.id
-  const section = (title: string, key: 'affective_relation' | 'other_blocks', fixed: string | null | undefined) => {
+  // Sem resposta no ciclo atual: carrega sozinha a última resposta (com o nome do ciclo dela). "Ler mais" mostra as demais.
+  type Key = 'affective_relation' | 'other_blocks'
+  const pick = (key: Key) => {
     const list = rows.filter((r) => !!r[key]?.trim())
-    const shown = more ? list : list.filter(isCurrent)
-    const visible = !more && shown.length === 0 && list.length > 0 ? [] : shown // sem resposta no ciclo atual: nada até "Ler mais"
+    const current = list.filter(isCurrent)
+    return { list, shown: more ? list : current.length > 0 ? current : list.slice(0, 1) }
+  }
+  const section = (title: string, key: Key, fixed: string | null | undefined) => {
+    const { list, shown } = pick(key)
     return (
       <div className="space-y-0.5">
         <h3 className="font-display text-base font-bold">{title}</h3>
         {list.length === 0 && <p className="min-h-5 whitespace-pre-wrap text-sm">{fixed?.trim() || (field.data ? <Blank /> : '')}</p>}
-        {visible.map((r) => <p key={r.id} className="whitespace-pre-wrap text-sm"><span className="font-semibold">{r.cycle_label}:</span> {r[key]}</p>)}
-        {list.length > 0 && visible.length === 0 && <p className="text-sm text-muted-foreground">Sem resposta neste ciclo.</p>}
+        {shown.map((r) => <p key={r.id} className="whitespace-pre-wrap text-sm"><span className="font-semibold">{r.cycle_label}:</span> {r[key]}</p>)}
       </div>
     )
   }
-  const hasOlder = rows.some((r) => !isCurrent(r) && (r.affective_relation?.trim() || r.other_blocks?.trim()))
+  const hasOlder = (['affective_relation', 'other_blocks'] as Key[]).some((k) => { const list = rows.filter((r) => !!r[k]?.trim()); return list.length > Math.max(1, list.filter(isCurrent).length) })
   return (
     <section className="space-y-3 border-t border-border pt-3">
       {section('Relação com a Grande Tijuca', 'affective_relation', field.data?.affective_relation)}
