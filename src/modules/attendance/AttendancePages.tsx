@@ -400,7 +400,11 @@ export function AttendanceRosterPage() {
     return { section: secs.size === 1 ? [...secs][0] : '', inst: only?.name ?? '' }
   })()
   const naipe = staffOnly ? '' : (naipeSel ?? myScope.section)
-  const inst = staffOnly ? '' : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
+  const instOptions = naipe ? [...new Set(rowsAll.flatMap((r) => (r.instruments ?? '').split(', ')).filter((n) => catalog.data?.byName.get(n)?.section === naipe))].sort((a, b) => a.localeCompare(b, 'pt-BR')) : []
+  // Naipe com um instrumento só (ex.: Performance → Pernalta): vem selecionado e não dá para desmarcar.
+  const soloInst = instOptions.length === 1 ? instOptions[0] : ''
+  const instPick = instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
+  const inst = staffOnly ? '' : soloInst || instPick
   // Aula cancelada só para este instrumento: avisa quando ele está em foco.
   const itemCancel = useQuery({
     queryKey: ['item-cancel', activityId],
@@ -436,7 +440,6 @@ export function AttendanceRosterPage() {
   const ordered = [...filtered.filter(isStaff), ...filtered.filter((r) => !isStaff(r))]
   const hasBoth = ordered.some(isStaff) && ordered.some((r) => !isStaff(r))
   // Instrumentos do naipe escolhido que alguém toca nesta chamada.
-  const instOptions = naipe ? [...new Set(rowsAll.flatMap((r) => (r.instruments ?? '').split(', ')).filter((n) => catalog.data?.byName.get(n)?.section === naipe))].sort((a, b) => a.localeCompare(b, 'pt-BR')) : []
   const hasStaff = rowsAll.some(isStaff)
   // Todos os botões de filtro têm a mesma altura (a do mais alto: duas linhas), respiro padrão e texto que nunca vaza.
   const chipCls = (on: boolean) => cn('relative flex min-h-11 items-center justify-center break-words rounded-full border px-3 py-1.5 text-center text-sm font-medium leading-tight', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
@@ -468,7 +471,7 @@ export function AttendanceRosterPage() {
           {naipe && instOptions.length > 0 && (
             <ButtonRow role="group" aria-label="Instrumentos">
               {instOptions.map((n) => (
-                <button key={n} type="button" aria-pressed={inst === n} className={chipCls(inst === n)} onClick={() => setInst(inst === n ? '' : n)}>{n}</button>
+                <button key={n} type="button" aria-pressed={inst === n} className={chipCls(inst === n)} disabled={instOptions.length === 1} onClick={() => setInst(inst === n ? '' : n)}>{n}</button>
               ))}
             </ButtonRow>
           )}
