@@ -356,6 +356,19 @@ export function AttendanceRosterPage() {
       return (data ?? []) as unknown as StaffAssign[]
     },
   })
+  // Regentes: só ganham o chip "Regente" (não entram no grupo de professores e monitores).
+  const regentes = useQuery({
+    queryKey: ['regentes', orgId, activity.data?.id, cyclesAll.data?.length],
+    enabled: Boolean(activity.data) && Boolean(cyclesAll.data),
+    queryFn: async () => {
+      const cid = cycleOf(activity.data!, cyclesAll.data ?? [])
+      let q = supabase.from('staff_assignments').select('member_id').eq('organization_id', orgId).is('valid_to', null).eq('staff_kind', 'regente')
+      if (cid) q = q.eq('cycle_id', cid)
+      const { data, error } = await q.limit(500)
+      if (error) throw error
+      return new Set((data ?? []).map((r) => r.member_id as string))
+    },
+  })
   const staffIds = { data: staffAssign.data ? new Set(staffAssign.data.map((r) => r.member_id)) : undefined }
   const cycles = cyclesAll
   const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
@@ -515,9 +528,9 @@ export function AttendanceRosterPage() {
               <div className="min-w-0">
                 <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
                 <p className="break-words text-muted-foreground">{r.instruments ? r.instruments.split(', ').map((n, i) => <span key={n}>{i > 0 && ', '}<GroupLink naipe={catalog.data?.byName.get(n)?.section} inst={n}>{n}</GroupLink></span>) : '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
-                {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(memberCats.data?.get(r.member_id) ?? [])].length > 0 && (
+                {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(regentes.data?.has(r.member_id) ? ['Regente'] : []), ...(memberCats.data?.get(r.member_id) ?? [])].length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(memberCats.data?.get(r.member_id) ?? [])].map((c) => <Badge key={c} className="bg-muted">{c}</Badge>)}
+                    {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(regentes.data?.has(r.member_id) ? ['Regente'] : []), ...(memberCats.data?.get(r.member_id) ?? [])].map((c) => <Badge key={c} className="bg-muted">{c}</Badge>)}
                   </div>
                 )}
               </div>
