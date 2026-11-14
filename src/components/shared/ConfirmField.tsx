@@ -14,7 +14,9 @@ function Confirm({ label, busy, onConfirm, onCancel }: { label: string; busy: bo
 }
 
 /** Texto editável: nada é gravado até clicar em "Salvar" (ou Enter). Esc volta ao valor anterior. */
-export function SaveInput({ value, onSave, disabled, className, inputClassName, numeric, autoSave, 'aria-label': ariaLabel, placeholder }: {
+export function SaveInput({ value, onSave, disabled, className, inputClassName, numeric, autoSave, allowEmpty, 'aria-label': ariaLabel, placeholder }: {
+  /** Deixa gravar o campo vazio (ex.: "sem limite"). */
+  allowEmpty?: boolean
   /** Só aceita dígitos (teclado numérico no celular). */
   numeric?: boolean
   /** Grava sozinho ao sair do campo ou apertar Enter (sem botão de confirmar). */
@@ -31,7 +33,7 @@ export function SaveInput({ value, onSave, disabled, className, inputClassName, 
   const [text, setText] = useState(value)
   const [busy, setBusy] = useState(false)
   useEffect(() => setText(value), [value])
-  const dirty = text.trim() !== value && text.trim() !== ''
+  const dirty = text.trim() !== value && (allowEmpty || text.trim() !== '')
   const commit = async () => {
     if (!dirty || busy) return
     setBusy(true)
