@@ -20,10 +20,12 @@ const MAX_BYTES = 5 * 1024 * 1024
 const OK_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 
 /** Redes sociais: escolher a rede (padrão Instagram) e, embaixo, o nome de usuário. Dá para adicionar mais de uma. O valor guardado são os links, um por linha. */
-function SocialInput({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+function SocialInput({ id, value, onChange, networks }: { id: string; value: string; onChange: (v: string) => void; networks?: string[] }) {
+  const options = SOCIAL_NETWORKS.filter((n) => !networks?.length || networks.includes(n.key))
+  const first = (options[0] ?? SOCIAL_NETWORKS[0]).key
   const [rows, setRows] = useState<{ network: string; user: string }[]>(() => {
     const parsed = value.split('\n').map((l) => l.trim()).filter(Boolean).map(splitNetwork)
-    return parsed.length > 0 ? parsed : [{ network: 'instagram', user: '' }]
+    return parsed.length > 0 ? parsed : [{ network: first, user: '' }]
   })
   const update = (next: { network: string; user: string }[]) => {
     setRows(next)
@@ -35,14 +37,14 @@ function SocialInput({ id, value, onChange }: { id: string; value: string; onCha
         <div key={i} className="space-y-1.5 rounded-lg border border-border bg-card p-2.5">
           <div className="flex items-center gap-2">
             <Select aria-label="Rede social" id={i === 0 ? id : undefined} value={r.network} onChange={(e) => update(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
-              {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
+              {options.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
             </Select>
             {rows.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Remover rede social" onClick={() => update(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
           </div>
           <Input aria-label="Nome de usuário" placeholder="Nome de usuário (ex.: @cordaodatiajuca)" autoCapitalize="none" autoCorrect="off" value={r.user} onChange={(e) => update(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
         </div>
       ))}
-      <Button type="button" size="sm" variant="outline" onClick={() => update([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => update([...rows, { network: first, user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>
     </div>
   )
 }
@@ -67,7 +69,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
 }) {
   const id = `f-${f.key}`
   const str = typeof value === 'string' ? value : ''
-  if (f.type === 'long_text' && f.validation.social) return <SocialInput id={id} value={str} onChange={onChange} />
+  if (f.type === 'long_text' && f.validation.social) return <SocialInput id={id} value={str} onChange={onChange} networks={f.validation.networks} />
   switch (f.type) {
     case 'short_text': return <Input id={id} value={str} maxLength={f.validation.maxLength ?? 255} onChange={(e) => onChange(e.target.value)} />
     case 'long_text':

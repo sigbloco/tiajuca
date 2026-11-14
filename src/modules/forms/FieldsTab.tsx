@@ -3,7 +3,7 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { ArrowDown, ArrowUp, Ban, GitBranch, Layers, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, ChevronDown, ChevronRight, GitBranch, Layers, Plus, Trash2 } from 'lucide-react'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import { supabase } from '@/core/supabase'
 import { keyify, useFormFields, type FormFieldRow } from './service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
+import { SOCIAL_NETWORKS, parseNetworks } from '@/core/social'
 import { FIELD_TYPE_LABEL, MAPPING_LABEL, hasConsent, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
@@ -48,6 +49,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const [f, setF] = useState({
     label: field?.label ?? '', description: field?.description ?? '',
     type: (asSection ? 'info' : field?.field_type === 'long_text' && field.validation.social ? 'social' : field?.field_type ?? 'short_text') as TypeChoice,
+    networks: (field?.validation.networks?.length ? SOCIAL_NETWORKS.filter((n) => field.validation.networks!.includes(n.key)) : SOCIAL_NETWORKS).map((n) => n.label).join(', '),
     other: !!field?.validation.other, consent: !!field?.validation.consent, required: field?.required ?? false,
     options: (field?.options ?? []).map((o) => o.label).join('\n'),
     min: field?.validation.min?.toString() ?? '', max: field?.validation.max?.toString() ?? '',
@@ -97,7 +99,13 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     mutationFn: async () => {
       const num = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(',', '.')))
       const validation: Record<string, unknown> = Object.fromEntries(Object.entries({ min: num(f.min), max: num(f.max) }).filter(([, v]) => v !== undefined && !Number.isNaN(v)))
-      if (f.type === 'social') validation.social = true
+      if (f.type === 'social') {
+        validation.social = true
+        const { keys, unknown } = parseNetworks(f.networks)
+        if (unknown.length > 0) throw new Error(`Rede não reconhecida: ${unknown.join(', ')}. Use: ${SOCIAL_NETWORKS.map((n) => n.label).join(', ')}.`)
+        if (keys.length === 0) throw new Error('Escolha ao menos uma rede.')
+        if (keys.length < SOCIAL_NETWORKS.length) validation.networks = keys
+      }
       if (f.other && OPTION_TYPES.includes(f.type as FieldType) && !f.mapping.startsWith('link.')) validation.other = true
       const opts = OPTION_TYPES.includes(f.type as FieldType) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
@@ -166,6 +174,11 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
             <label className="mt-6 flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.required} onChange={(e) => setF({ ...f, required: e.target.checked })} /> Obrigatório</label>
           )}
         </div>}
+        {f.type === 'social' && (
+          <div className="space-y-1.5"><Label htmlFor="fl-networks">Redes no menu</Label>
+            <Input id="fl-networks" value={f.networks} onChange={(e) => setF({ ...f, networks: e.target.value })} />
+            <p className="text-xs text-muted-foreground">Escreva as redes que vão aparecer para escolher, separadas por vírgula. Disponíveis: {SOCIAL_NETWORKS.map((n) => n.label).join(', ')}. A primeira é a padrão.</p></div>
+        )}
         <div className="space-y-1.5"><Label htmlFor="fl-label" required>{asSection ? 'Nome da seção' : f.type === 'info' ? 'Título' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
         {f.type === 'info'
           ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
@@ -270,6 +283,9 @@ export function FieldsTab({ formId }: { formId: string }) {
     if (await confirmBox(msg)) remove.mutate(x)
   }
   const drag = useHoldReorder()
+  // Seções recolhíveis na edição: recolhida, mostra só o cabeçalho (com a contagem de campos).
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const toggleCollapsed = (id: string) => setCollapsed((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const applyOrder = useMutation({
     mutationFn: async (order: FormFieldRow[]) => {
       const r = await Promise.all(order.map((x, i) => (x.sort_order === i + 1 ? null : supabase.from('form_fields').update({ sort_order: i + 1 }).eq('id', x.id))))
@@ -315,6 +331,9 @@ export function FieldsTab({ formId }: { formId: string }) {
           const nextIsHead = i === fields.length - 1 || isSection(fields[i + 1])
           const section = sectionIds(fields).get(x.id) ?? ''
           const hi = heads.findIndex((g) => g.head?.id === x.id)
+          if (!sec && section !== '' && collapsed.has(section)) return null
+          const isClosed = sec && collapsed.has(x.id)
+          const count = sec ? (groups.find((g) => g.head?.id === x.id)?.items.length ?? 0) : 0
           return (
             <div key={x.id} className="grid gap-2">
               <Card {...drag.row(x.id, sec ? moveSection : moveFieldTo, sec ? 'sections' : 'fields')}
@@ -326,10 +345,16 @@ export function FieldsTab({ formId }: { formId: string }) {
                   <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={sec ? hi === heads.length - 1 : i === fields.length - 1}
                     onClick={() => (sec ? moveSection(x.id, heads[hi + 1].head!.id) : move.mutate({ from: i, to: i + 1 }))}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
+                {sec && (
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" aria-expanded={!isClosed} aria-label={isClosed ? `Expandir ${x.label}` : `Recolher ${x.label}`} title={isClosed ? 'Expandir a seção' : 'Recolher a seção'} onClick={() => toggleCollapsed(x.id)}>
+                    {isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                )}
                 <button className="min-w-0 flex-1 basis-40 text-left" onClick={() => setSheet({ field: x, section: sec })}>
                   <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
                   <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                     <Badge>{sec ? 'Seção' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
+                      {sec && <Badge className="bg-muted text-muted-foreground">{count} {count === 1 ? 'campo' : 'campos'}</Badge>}
                     {hasConsent(x) && <Badge className="bg-success/15 text-success">consentimento</Badge>}
                     {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
                     {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
