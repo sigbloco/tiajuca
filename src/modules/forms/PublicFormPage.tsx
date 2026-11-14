@@ -2,6 +2,7 @@ import { BackButton } from '@/components/shared/BackButton'
 import { RichText } from '@/components/shared/RichText'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -150,6 +151,10 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     return out
   }, [visible])
   const hasConsentBlock = visible.some(isConsentBlock)
+  // Uma seção por vez: só avança quando a seção atual está completa.
+  const [step, setStep] = useState(0)
+  const stepIdx = Math.min(step, Math.max(0, blocks.length - 1))
+  const isLast = stepIdx >= blocks.length - 1
 
   const set = (key: string, v: Answers[string]) => { setAnswers((a) => ({ ...a, [key]: v })); setError('') }
   const handleFiles = async (key: string, fn: (p: UploadedFile[]) => UploadedFile[], pick: File | null) => {
@@ -190,8 +195,26 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
 
   const org = form.data?.organization
   const f0 = form.data?.form
-  const missing = visible.find((f) => f.required && f.type !== 'info' && (f.type === 'file' ? !files.some((x) => x.field_key === f.key)
-    : f.type === 'checkbox' ? answers[f.key] !== true : answers[f.key] === undefined || answers[f.key] === '' || (Array.isArray(answers[f.key]) && (answers[f.key] as string[]).length === 0)))
+  const isEmpty = (f: PublicField) => f.required && f.type !== 'info' && (f.type === 'file' ? !files.some((x) => x.field_key === f.key)
+    : f.type === 'checkbox' ? answers[f.key] !== true : answers[f.key] === undefined || answers[f.key] === '' || (Array.isArray(answers[f.key]) && (answers[f.key] as string[]).length === 0))
+  /** O que falta na seção bi (nome da pergunta ou o aceite), ou null se está completa. */
+  const pendingOf = (bi: number): string | null => {
+    const blk = blocks[bi]
+    if (!blk) return null
+    const miss = blk.items.find(isEmpty)
+    if (miss) return miss.label
+    const hasConsentHere = blk.items.some(isConsentBlock) || (bi === blocks.length - 1 && !hasConsentBlock && Boolean(f0?.privacy_text))
+    if (hasConsentHere && f0?.requires_consent && !consent) return 'concordar com o tratamento dos dados'
+    return null
+  }
+  const go = (to: number, msg = '') => { setStep(to); setError(msg); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const next = () => { const m = pendingOf(stepIdx); if (m) setError(`Falta preencher: ${m}`); else go(stepIdx + 1) }
+  const finish = () => {
+    if (uploading || submit.isPending) return
+    for (let i = 0; i < blocks.length; i++) { const m = pendingOf(i); if (m) return go(i, `Falta preencher: ${m}`) }
+    submit.mutate()
+  }
+  const pct = blocks.length > 0 ? Math.round(((stepIdx + 1) / blocks.length) * 100) : 100
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
@@ -214,16 +237,28 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
 
   return (
     <Shell>
-      <form onSubmit={(e) => { e.preventDefault(); if (!missing && !uploading) submit.mutate() }} className="space-y-4" noValidate>
-        <Card className="space-y-1 p-5">
-          <h1>{f0?.title}</h1>
-          {f0?.description && <RichText text={f0.description} className="text-muted-foreground" />}
-          {f0?.closes_at && <p className="text-xs text-muted-foreground">Inscrições até {formatDate(f0.closes_at.slice(0, 10))}.</p>}
-          <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
-        </Card>
+      <form onSubmit={(e) => { e.preventDefault(); if (isLast) finish(); else next() }} className="space-y-4" noValidate>
+        {stepIdx === 0 && (
+          <Card className="space-y-1 p-5">
+            <h1>{f0?.title}</h1>
+            {f0?.description && <RichText text={f0.description} className="text-muted-foreground" />}
+            {f0?.closes_at && <p className="text-xs text-muted-foreground">Inscrições até {formatDate(f0.closes_at.slice(0, 10))}.</p>}
+            <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
+          </Card>
+        )}
+        {blocks.length > 1 && (
+          <div className="space-y-1.5">
+            <p className="flex items-center justify-between gap-2 text-sm font-semibold">
+              <span>{blocks[stepIdx]?.head?.label ?? f0?.title}</span><span className="text-muted-foreground">Etapa {stepIdx + 1} de {blocks.length}</span>
+            </p>
+            <div role="progressbar" aria-label="Progresso do formulário" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="h-3 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )}
         {error && <Card role="alert" className="border-destructive p-3 text-destructive">{error}</Card>}
 
-        {blocks.map((b, bi) => (
+        {blocks.filter((_, bi) => bi === stepIdx).map((b, bi) => (
           <section key={b.head?.key ?? `b${bi}`} className="space-y-3" aria-label={b.head?.label}>
             {b.head && (
               <div className="border-l-4 border-primary pl-3 pt-2">
@@ -254,7 +289,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
           </section>
         ))}
 
-        {f0?.privacy_text && !hasConsentBlock && (
+        {isLast && f0?.privacy_text && !hasConsentBlock && (
           <Card className="space-y-2 p-4">
             <h3>Privacidade e proteção de dados</h3>
             <RichText text={f0.privacy_text} className="text-xs text-muted-foreground" />
@@ -272,10 +307,12 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
           <label>Não preencha este campo<input tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} /></label>
         </div>
 
-        <Button type="submit" size="lg" className="w-full" disabled={submit.isPending || uploading || Boolean(missing) || (Boolean(f0?.requires_consent) && !consent)}>
-          {submit.isPending ? 'Enviando' : uploading ? 'Enviando arquivo' : 'Enviar inscrição'}
-        </Button>
-        {missing && <p className="text-center text-xs text-muted-foreground">Falta preencher: {missing.label}</p>}
+        <div className="flex gap-2">
+          {stepIdx > 0 && <Button type="button" size="lg" variant="outline" className="flex-1" onClick={() => go(stepIdx - 1)}><ArrowLeft className="h-4 w-4" /> Voltar</Button>}
+          {isLast
+            ? <Button type="submit" size="lg" className="flex-1" disabled={submit.isPending || uploading}>{submit.isPending ? 'Enviando' : uploading ? 'Enviando arquivo' : 'Enviar inscrição'}</Button>
+            : <Button type="submit" size="lg" className="flex-1" disabled={uploading}>Próximo <ArrowRight className="h-4 w-4" /></Button>}
+        </div>
       </form>
     </Shell>
   )
