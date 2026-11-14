@@ -111,7 +111,7 @@ export function AppShell() {
   }
   const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
-    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('repertorio'), ...direct('naipes'),
+    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('inscricoes'), ...direct('repertorio'), ...direct('naipes'),
     ...withSep([...hubEntry('organizacao'), ...hubEntry('financeiro')]),
     ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
   ]
