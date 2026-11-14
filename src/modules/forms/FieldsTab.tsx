@@ -283,9 +283,10 @@ export function FieldsTab({ formId }: { formId: string }) {
     if (await confirmBox(msg)) remove.mutate(x)
   }
   const drag = useHoldReorder()
-  // Seções recolhíveis na edição: recolhida, mostra só o cabeçalho (com a contagem de campos).
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const toggleCollapsed = (id: string) => setCollapsed((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  // Seções recolhíveis na edição: por padrão todas recolhidas (só o cabeçalho, com a contagem de campos); a pessoa abre as que quer.
+  const [opened, setOpened] = useState<Set<string>>(new Set())
+  const collapsed = { has: (id: string) => !opened.has(id) }
+  const toggleCollapsed = (id: string) => setOpened((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const applyOrder = useMutation({
     mutationFn: async (order: FormFieldRow[]) => {
       const r = await Promise.all(order.map((x, i) => (x.sort_order === i + 1 ? null : supabase.from('form_fields').update({ sort_order: i + 1 }).eq('id', x.id))))
