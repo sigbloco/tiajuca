@@ -106,6 +106,11 @@ export function LandingPage() {
         <nav className="space-y-3" aria-label="Menu">
           {[...(site.menu_order ?? []), 'enrollment', 'shop', 'albums', 'release', 'login'].filter((k, i, all) => all.indexOf(k) === i).map((k) => (
             <Fragment key={k}>
+              {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.length === 0 && (
+                <span aria-disabled className={`${pill} pointer-events-none bg-secondary text-secondary-foreground opacity-70`}>
+                  <ClipboardList className="h-5 w-5" /> {site.enrollment_label || 'Inscrições'}{under('enrollment') && chip}
+                </span>
+              )}
               {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.map((f) => (
                 <Link key={f.slug} to={`/f/${slug}/${f.slug}`} aria-disabled={under('enrollment') || undefined} className={`${pill} bg-secondary text-secondary-foreground ${off('enrollment')} ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
                   <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}{under('enrollment') && chip}
@@ -129,7 +134,7 @@ export function LandingPage() {
               {k === 'release' && site.show_release !== false && site.release_url && (
                 <a href={site.release_url} target="_blank" rel="noreferrer noopener" aria-disabled={under('release') || undefined} className={`${pill} bg-card text-foreground ${off('release')} ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}{under('release') && chip}</a>
               )}
-              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}{under('login') && chip}</button>}
+              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
             </Fragment>
           ))}
         </nav>
