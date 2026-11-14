@@ -11,10 +11,11 @@ export const FIELD_TYPE_LABEL: Record<FieldType, string> = {
 export interface FieldOption { value: string; label: string }
 export interface FieldCondition { field: string; op: 'eq' | 'neq'; value: string }
 
-/** `section`: o campo é o cabeçalho de uma seção. `consent`: o campo marca onde fica o consentimento (texto de privacidade + "estou ciente e concordo"). */
+/** `section`: o campo é o cabeçalho de uma seção. `consent` (numa seção): a seção termina com o consentimento (texto de privacidade + "estou ciente e concordo"). */
 export interface FieldValidation { min?: number; max?: number; maxLength?: number; section?: boolean; consent?: boolean }
 export const isSection = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => (f.type ?? f.field_type) === 'info' && !!f.validation.section
-export const isConsentBlock = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => (f.type ?? f.field_type) === 'info' && !!f.validation.consent
+/** Seção que termina com o consentimento. */
+export const hasConsent = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => isSection(f) && !!f.validation.consent
 
 export interface PublicField {
   key: string

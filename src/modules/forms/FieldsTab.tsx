@@ -12,7 +12,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { keyify, useFormFields, type FormFieldRow } from './service'
-import { FIELD_TYPE_LABEL, MAPPING_LABEL, isConsentBlock, isSection, type FieldOption, type FieldType } from './types'
+import { FIELD_TYPE_LABEL, MAPPING_LABEL, hasConsent, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
 const CATALOG_MAPPINGS = ['link.instrument', 'link.function']
@@ -74,7 +74,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       const validation = Object.fromEntries(Object.entries({ min: num(f.min), max: num(f.max), maxLength: num(f.maxLength) }).filter(([, v]) => v !== undefined && !Number.isNaN(v)))
       const opts = OPTION_TYPES.includes(f.type) && !CATALOG_MAPPINGS.includes(f.mapping) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
-      const marks = asSection ? { section: true } : f.type === 'info' && f.consent ? { consent: true } : {}
+      const marks = asSection ? { section: true, ...(f.consent ? { consent: true } : {}) } : {}
       const row = {
         label: f.label.trim(), description: f.description.trim() || null, field_type: f.type, required: f.type === 'info' ? false : f.required, options: opts, validation: f.type === 'info' ? marks : validation,
         condition: f.condField && f.condValue !== '' ? { field: f.condField, op: f.condOp, value: f.condValue } : null,
@@ -127,8 +127,8 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {f.type === 'info'
           ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
-        {f.type === 'info' && !asSection && (
-          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Bloco de consentimento: mostra o texto de privacidade do formulário e a caixa de marcar com o título acima. Sem este bloco, o consentimento fica no fim do formulário.</span></label>
+        {asSection && (
+          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
         {needsOptions && (
           <div className="space-y-1.5"><Label htmlFor="fl-opts">Opções (uma por linha)</Label>
@@ -281,7 +281,8 @@ export function FieldsTab({ formId }: { formId: string }) {
                 <button className="min-w-0 flex-1 basis-40 text-left" onClick={() => setSheet({ field: x, section: sec })}>
                   <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
                   <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                    <Badge>{sec ? 'Seção' : isConsentBlock(x) ? 'Consentimento' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
+                    <Badge>{sec ? 'Seção' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
+                    {hasConsent(x) && <Badge className="bg-success/15 text-success">consentimento</Badge>}
                     {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
                     {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
                   </p>
