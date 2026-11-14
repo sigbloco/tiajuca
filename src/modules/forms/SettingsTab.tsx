@@ -64,8 +64,8 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <Button disabled={publish.isPending || form.status === 'archived'} onClick={() => publish.mutate()}><Rocket className="h-4 w-4" /> {form.published_version_id ? 'Publicar nova versão' : 'Publicar'}</Button>
           {form.status === 'published' && <Button variant="outline" onClick={() => setStatus.mutate('closed')}>Encerrar inscrições</Button>}
           {form.status === 'closed' && <Button variant="outline" onClick={() => setStatus.mutate('published')}>Reabrir</Button>}
-          {form.status !== 'archived' && <Button variant="ghost" onClick={async () => { if (await confirmBox('Arquivar este formulário? O link deixa de funcionar e as respostas são mantidas.')) setStatus.mutate('archived') }}>Arquivar</Button>}
-          {form.status === 'archived' && <Button variant="outline" onClick={() => setStatus.mutate('draft')}>Voltar para rascunho</Button>}
+          {form.status !== 'archived' && <Button variant="ghost" onClick={async () => { if (await confirmBox('Apagar este formulário? Ele vai para a lixeira (em Inscrições), o link deixa de funcionar e as respostas são mantidas.')) setStatus.mutate('archived') }}>Arquivar</Button>}
+          {form.status === 'archived' && <Button variant="outline" onClick={() => setStatus.mutate('draft')}>Restaurar como rascunho</Button>}
         </ButtonRow>
         <p className="text-xs text-muted-foreground">Ao publicar, é gravada uma cópia fixa do formulário (versão). Quem respondeu continua com a versão em que respondeu.</p>
       </Card>
