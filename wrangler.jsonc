@@ -1,8 +1,18 @@
 {
   "name": "tiajuca",
+  "main": "worker/index.js",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Só a página inicial passa pelo Worker (título/descrição da prévia do link); o resto é servido direto pelos arquivos.
+    "run_worker_first": ["/", "/site"]
+  },
+  // Chave pública (a mesma que já vai no site): só permite o que o banco libera para visitantes.
+  "vars": {
+    "SUPABASE_URL": "https://dzyvtqrxmladsxceqzud.supabase.co",
+    "SUPABASE_KEY": "sb_publishable_DVlf0EUGrvuVSQLRf2p62g_3EVPF37Z",
+    "ORG_SLUG": "tiajuca"
   }
 }

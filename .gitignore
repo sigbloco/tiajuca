@@ -12,3 +12,6 @@ data-private/
 
 # preview local
 .claude/launch.json
+
+# cache local do wrangler dev
+.wrangler/
