@@ -17,6 +17,20 @@ import { Plus, Save } from 'lucide-react'
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
 
+/** Função isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria. */
+function useExemptFunction(memberId: string, cycleId: string | undefined) {
+  return useQuery({
+    queryKey: ['exempt-function', memberId, cycleId],
+    enabled: Boolean(cycleId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cycle_participations').select('artistic_functions(name, is_exempt, exempt_locked)').eq('member_id', memberId).eq('cycle_id', cycleId!).not('function_id', 'is', null)
+      if (error) throw error
+      const f = ((data ?? []) as unknown as { artistic_functions: { name: string; is_exempt: boolean; exempt_locked: boolean } | null }[]).map((r) => r.artistic_functions).find((x) => x && (x.is_exempt || x.exempt_locked))
+      return f?.name ?? null
+    },
+  }).data ?? null
+}
+
 /** Categorias extras do ciclo (ex.: Aluno + Sênior): só marcações; a cobrança segue a categoria principal. Botão "+" abre a escolha. */
 function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; cycleId: string; primaryId: string }) {
   const orgId = useOrgId()
@@ -157,6 +171,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
     },
   })
   const catId = info.data?.catId ?? ''
+  const exemptBy = useExemptFunction(memberId, cycle.id)
   const priceDate = cycle.ends_on < today ? cycle.ends_on : today
   const price = useQuery({
     queryKey: ['cycle-price', orgId, catId, priceDate],
@@ -222,17 +237,17 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   }
   const catName = categories.data?.find((c) => c.id === catId)?.name
   return (
-    <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
+    <MemberSection title={<>Contribuição mensal{exemptBy ? <span className="font-normal text-muted-foreground"> • Isento</span> : price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
       <div className="space-y-1">
         <Label htmlFor={'cc-cat-' + cycle.id} className="block">Categoria principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
-        <p className="text-xs text-muted-foreground">Só ela define o valor cobrado.</p>
+        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela função ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
       {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
-      {canSchol && catId && catName !== 'Isento' && (
+      {canSchol && catId && catName !== 'Isento' && !exemptBy && (
         <div className="space-y-1.5 border-t border-border pt-3">
           <p className="text-sm font-semibold">Bolsa</p>
           <div className="flex items-end gap-2">
@@ -257,6 +272,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   const categories = useCatalog('fee_categories')
   const [livePct, setLivePct] = useState(0)
   const currentCycleId = useCycles().data?.find((c) => c.is_current)?.id ?? ''
+  const exemptBy = useExemptFunction(memberId, currentCycleId || undefined)
   // Quem tem atividade remunerada não contribui: a seção some.
   const paid = useQuery({
     queryKey: ['member-links', orgId, memberId, 'has-paid'],
@@ -320,17 +336,17 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
     )
   }
   return (
-    <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
+    <MemberSection title={<>Contribuição mensal{exemptBy ? <span className="font-normal text-muted-foreground"> • Isento</span> : price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="space-y-1">
         <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
           <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
-        <p className="text-xs text-muted-foreground">Só ela define o valor cobrado.</p>
+        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela função ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
       {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
-      {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && (
+      {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && !exemptBy && (
         <div className="space-y-1.5 border-t border-border pt-3">
           <p className="text-sm font-semibold">Bolsa</p>
           <ScholarshipForm memberId={memberId} auto onPercent={setLivePct} />
