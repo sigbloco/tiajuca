@@ -237,7 +237,7 @@ export function AttendanceListPage() {
   const cycles = useCycles()
   const catalog = useInstrumentCatalog()
   const students = useStudentInstruments(cycleId)
-  const items = (data ?? []).filter((a) => cycleOf(a, cycles.data ?? []) === cycleId)
+  const items = (data ?? []).filter((a) => a.has_attendance !== false && cycleOf(a, cycles.data ?? []) === cycleId)
   const days = [...new Set(items.map((a) => a.activity_date))].sort()
   const [picked, setPicked] = useState<string | null>(null)
   const current = (picked && days.includes(picked) ? picked : null) ?? days.find((d) => d >= today) ?? days[days.length - 1] ?? null
@@ -403,6 +403,21 @@ export function AttendanceRosterPage() {
     },
   })
   const focusCancelled = !!inst && (catalog.data?.list ?? []).some((i) => i.name === inst && itemCancel.data?.has(i.id))
+  const memberCats = useQuery({
+    queryKey: ['roster-member-cats', orgId, activity.data?.id, cyclesAll.data?.length],
+    enabled: Boolean(activity.data) && Boolean(cyclesAll.data),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: cycleOf(activity.data!, cyclesAll.data ?? []) })
+      if (error) throw error
+      const by = new Map<string, string[]>()
+      for (const r of (data ?? []) as { member_id: string; category_name: string; is_extra?: boolean }[]) {
+        const list = by.get(r.member_id) ?? []
+        if (r.is_extra) list.push(r.category_name); else list.unshift(r.category_name) // principal primeiro
+        by.set(r.member_id, list)
+      }
+      return by
+    },
+  })
   const inFocus = (r: RosterRow) => (!naipe || sectionsOf(r).includes(naipe)) && (!inst || (r.instruments ?? '').split(', ').includes(inst))
   // Contadores: só quem conta (alunos nas aulas), dentro do naipe/instrumento escolhido.
   const rows = rowsAll.filter(inFocus)
@@ -525,6 +540,11 @@ export function AttendanceRosterPage() {
               <div className="min-w-0">
                 <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
                 <p className="break-words text-muted-foreground">{r.instruments ? r.instruments.split(', ').map((n, i) => <span key={n}>{i > 0 && ', '}<GroupLink naipe={catalog.data?.byName.get(n)?.section} inst={n}>{n}</GroupLink></span>) : '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
+                {(memberCats.data?.get(r.member_id) ?? []).length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {(memberCats.data?.get(r.member_id) ?? []).map((c) => <Badge key={c} className="bg-muted">{c}</Badge>)}
+                  </div>
+                )}
               </div>
               <Button size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpenNote(openNote === r.member_id ? null : r.member_id)}>
                 <MessageSquare className={cn('h-4 w-4', r.notes && 'text-primary')} />
@@ -536,7 +556,7 @@ export function AttendanceRosterPage() {
                   key={s.id}
                   disabled={cancelled}
                   onClick={() => mark.mutate({ member: r.member_id, status: s, clear: r.status_id === s.id })}
-                  className={cn('h-12 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, r.status_id === s.id))}
+                  className={cn('h-9 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, r.status_id === s.id))}
                 >
                   {s.name}
                 </button>

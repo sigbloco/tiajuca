@@ -1,7 +1,7 @@
 import { requireFields } from '@/core/required'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, Pencil, Save } from 'lucide-react'
+import { Ban, ClipboardCheck, Pencil, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -16,7 +16,7 @@ import { ItineraryEditor, cleanSteps, loadSteps } from './ItineraryEditor'
 import { useCycles } from '@/modules/cycles/service'
 import { AudiencePicker, type AudRow } from './AudiencePicker'
 import {
-  COLOR_BADGE, COLOR_DOT, typeIdForColor, COLOR_LABEL, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord,
+  COLOR_BADGE, COLOR_DOT, typeIdForColor, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord,
   type Activity, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -40,7 +40,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
   const [editing, setEditing] = useState(isNew || Boolean(startEditing))
   const [f, setF] = useState({
     title: activity?.title ?? '',
-    color: (activity?.activity_types?.color ?? 'primary') as TypeColor,
+    has_attendance: activity?.has_attendance ?? true,
     activity_date: activity?.activity_date ?? defaultDate,
     start_time: activity?.start_time?.slice(0, 5) ?? '',
     end_time: activity?.end_time?.slice(0, 5) ?? '',
@@ -49,6 +49,15 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     cycle_id: activity?.cycle_id ?? '',
     visibility: activity?.visibility ?? ('members' as Activity['visibility']),
   })
+  // Rótulos acumuláveis (o primeiro é o principal e dá a cor no calendário).
+  const types = useQuery({ queryKey: ['activity-types', orgId], queryFn: () => listActivityTypes(orgId) })
+  const [labelIds, setLabelIds] = useState<string[]>(() => (activity ? labelsOf(activity).map((l) => l.id) : []))
+  const toggleLabel = (id: string, attendanceDefault: boolean) => {
+    const on = labelIds.includes(id)
+    const next = on ? labelIds.filter((x) => x !== id) : [...labelIds, id]
+    setLabelIds(next)
+    if (isNew && next.length === 1 && !on) setF((x) => ({ ...x, has_attendance: attendanceDefault }))
+  }
   // Ocorrência de recorrência: horário, local e descrição vêm do roteiro (como na recorrência), então esses campos não aparecem.
   const fromRule = Boolean(activity?.recurrence_rule_id)
   const [steps, setSteps] = useState<ItineraryStep[]>(() => (fromRule && !activity?.itinerary?.length && activity?.start_time
@@ -74,7 +83,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
   const refresh = () => qc.invalidateQueries({ queryKey: ['activities', orgId] })
   const save = useMutation({
     mutationFn: async () => {
-      const typeId = await typeIdForColor(orgId, f.color)
+      const typeId = labelIds[0] ?? await typeIdForColor(orgId, 'primary')
       const items = cleanSteps(steps) ?? []
       const fromSteps = fromRule ? {
         start_time: items[0]?.time ?? null, end_time: items.map((x) => x.end ?? x.time).sort().pop() ?? null,
@@ -91,7 +100,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         cycle_id: f.cycle_id || null,
         visibility: f.visibility,
         itinerary: cleanSteps(steps),
-      }, auds.filter((a) => a.ref).map((a) => ({ kind: a.kind, ref_id: a.ref })))
+        has_attendance: f.has_attendance,
+      }, auds.filter((a) => a.ref).map((a) => ({ kind: a.kind, ref_id: a.ref })), labelIds.slice(1))
     },
     onSuccess: () => {
       toast.success(isNew ? 'Evento criado.' : 'Evento atualizado.')
@@ -112,12 +122,13 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
 
   if (!editing && activity) {
     const t = activity.activity_types
+    const labels = labelsOf(activity)
     const theThing = `${cancelWord(t?.name) === 'evento' ? 'este' : 'esta'} ${cancelWord(t?.name)}`.replace('esta ensaio', 'este ensaio')
     return (
       <SheetContent title={activity.title} description={formatDayLong(activity.activity_date)}>
         <div className="flex flex-wrap items-center gap-2">
-          {t && <Badge className={COLOR_BADGE[t.color]}>{t.name}</Badge>}
-          <Badge>{STATUS_LABEL[activity.status]}</Badge>
+          {labels.map((l) => <Badge key={l.id} className={COLOR_BADGE[l.color]}>{l.name}</Badge>)}
+          {activity.status !== 'scheduled' && <Badge>{STATUS_LABEL[activity.status]}</Badge>}
           {activity.visibility === 'staff' && <Badge>{VISIBILITY_LABEL.staff}</Badge>}
         </div>
         <dl className="space-y-2">
@@ -138,14 +149,14 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         <ChecklistSection activityId={activity.id} />
         <div className="mt-auto flex flex-col gap-2">
           <div className="flex gap-2">
-            {canRecord && activity.status !== 'cancelled' && (
-              <Button asChild variant="outline" className="flex-1"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>
+            {canRecord && activity.has_attendance && activity.status !== 'cancelled' && (
+              <Button asChild variant="outline" className="flex-1"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Presença</span></Link></Button>
             )}
-            {canManage && <Button variant="outline" size="icon" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>}
+            {canManage && <Button variant="outline" className="flex-1" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Editar</span></Button>}
             {canManage && activity.status !== 'cancelled' && (
               <Button variant="outline" className="flex-1 text-destructive" disabled={changeStatus.isPending}
                 onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
-                Cancelar {cancelWord(activity.activity_types?.name)}
+                <Ban className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Cancelar</span>
               </Button>
             )}
           </div>
@@ -162,16 +173,23 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Data', f.activity_date], ['Ciclo', f.cycle_id], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5">
-          <Label>Cor no calendário</Label>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor no calendário">
-            {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => (
-              <button key={c} type="button" role="radio" aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} aria-checked={f.color === c} onClick={() => setF({ ...f, color: c })}
-                className={cn('flex items-center rounded-full border p-2', f.color === c ? 'border-primary bg-muted ring-2 ring-primary' : 'border-border')}>
-                <span className={cn('h-4 w-4 rounded-full', COLOR_DOT[c])} />
-              </button>
-            ))}
+          <Label>Rótulos</Label>
+          <p className="text-xs text-muted-foreground">Escolha quantos quiser; o primeiro dá a cor no calendário.</p>
+          <div className="flex flex-wrap gap-2">
+            {(types.data ?? []).filter((t) => t.is_active || labelIds.includes(t.id)).map((t) => {
+              const idx = labelIds.indexOf(t.id)
+              return (
+                <button key={t.id} type="button" aria-pressed={idx >= 0} onClick={() => toggleLabel(t.id, t.attendance_default)}
+                  className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold', idx >= 0 ? 'border-primary bg-muted ring-2 ring-primary' : 'border-border')}>
+                  <span className={cn('h-3 w-3 rounded-full', COLOR_DOT[t.color])} />{t.name}
+                </button>
+              )
+            })}
           </div>
         </div>
+        <label className="flex items-center gap-2 font-semibold">
+          <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
+        </label>
         <div className="space-y-1.5"><Label htmlFor="ev-date" required>Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
         {!fromRule && (
           <>

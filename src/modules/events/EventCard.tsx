@@ -58,10 +58,10 @@ export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index
         </button>
         {a.status === 'scheduled' && (canRecord || canManage) && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {canRecord && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>}
-            {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>}
+            {canRecord && a.has_attendance !== false && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /> Presença</Link></Button>}
+            {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Editar</span></Button>}
             {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
-              onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(t?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /> Cancelar</Button>}
+              onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(t?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Cancelar</span></Button>}
           </div>
         )}
         {canManage && a.status === 'cancelled' && (

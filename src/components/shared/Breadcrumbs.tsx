@@ -2,7 +2,7 @@ import { Fragment, useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useExtraCrumbs } from '@/core/breadcrumb'
 
-export interface Crumb { label: string; to?: string }
+export interface Crumb { label: string; to?: string; /** Mostra o caminho mesmo sendo um item só (página sem título próprio). */ solo?: boolean }
 
 /**
  * Caminho de navegação no lugar dos "Voltar": Organização • Naipes e instrumentos • Novo naipe.
@@ -31,7 +31,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
     if (all.length > 0) all[all.length - 1] = { ...all[all.length - 1], close: e.close }
     all.push({ label: e.title })
   }
-  if (all.length <= 1) return null
+  if (all.length <= 1 && !all[0]?.solo) return null
   return (
     <nav ref={navRef} aria-label="Você está em" className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       {all.map((c, i) => {

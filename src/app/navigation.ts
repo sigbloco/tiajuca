@@ -76,17 +76,17 @@ export function pageLabel(pathname: string, base: string): string {
 }
 
 /** Caminho de navegação (breadcrumb) a partir das partes da URL depois do slug. O último item é a página atual (sem link). */
-export function crumbsFor(segs: string[], base: string): { label: string; to?: string }[] {
+export function crumbsFor(segs: string[], base: string): { label: string; to?: string; solo?: boolean }[] {
   if (segs.length === 0) return []
   const first = segs[0] === 'lista-de-espera' ? 'vagas' : segs[0]
   const hubKey = (HUB_ORDER as string[]).includes(first) ? (first as HubKey) : undefined
   const item = NAV_ITEMS.find((i) => i.to === first)
-  const out: { label: string; to?: string }[] = []
+  const out: { label: string; to?: string; solo?: boolean }[] = []
   if (hubKey) {
     out.push({ label: HUBS[hubKey].label, to: segs.length > 1 ? `${base}/${hubKey}` : undefined })
   } else if (item) {
     if (item.group) out.push({ label: HUBS[item.group].label, to: `${base}/${item.group}` })
-    out.push({ label: item.crumb ?? item.label, to: segs.length > 1 ? `${base}/${first}` : undefined })
+    out.push({ label: item.crumb ?? item.label, to: segs.length > 1 ? `${base}/${first}` : undefined, solo: first === 'eventos' })
   }
   if (segs.length > 1 && !hubKey) {
     let path = `${base}/${first}`

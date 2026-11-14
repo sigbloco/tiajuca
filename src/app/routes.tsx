@@ -9,6 +9,7 @@ import { CapacityPage } from '@/modules/capacity/CapacityPage'
 import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
 import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/AttendancePages'
 import { EventsPage } from '@/modules/events/EventsPage'
+import { EventSettingsPage } from '@/modules/events/EventSettingsPage'
 import { BillingPage } from '@/modules/billing/BillingPage'
 import { ScholarshipsPage } from '@/modules/billing/ScholarshipsPage'
 import { ProfilePage } from '@/modules/profile/ProfilePage'
@@ -171,6 +172,7 @@ export const router = createBrowserRouter(
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
+                { path: 'eventos/configuracoes', element: <EventSettingsPage /> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                 { path: 'site', element: <SiteSettings /> },
                 { path: 'interface', element: <InterfacePage /> },

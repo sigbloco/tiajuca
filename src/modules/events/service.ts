@@ -31,13 +31,26 @@ export interface Activity {
   visibility: 'members' | 'staff'
   recurrence_rule_id: string | null
   itinerary: ItineraryStep[] | null
-  activity_types: { name: string; color: TypeColor } | null
+  activity_types: { id?: string; name: string; color: TypeColor } | null
+  /** Evento com chamada de presença? (nem tudo tem). */
+  has_attendance: boolean
+  /** Rótulos extras (além do principal, que é o tipo do evento). */
+  activity_type_links?: { activity_types: { id: string; name: string; color: TypeColor } | null }[] | null
+}
+
+export interface EventLabel { id: string; name: string; color: TypeColor }
+/** Rótulos do evento: o principal (tipo, que dá a cor) primeiro e depois os demais, sem repetir. */
+export function labelsOf(a: Pick<Activity, 'activity_types' | 'activity_type_links' | 'activity_type_id'>): EventLabel[] {
+  const out: EventLabel[] = []
+  if (a.activity_types) out.push({ id: a.activity_types.id ?? a.activity_type_id, name: a.activity_types.name, color: a.activity_types.color })
+  for (const l of a.activity_type_links ?? []) if (l.activity_types && !out.some((x) => x.id === l.activity_types!.id)) out.push(l.activity_types)
+  return out
 }
 
 export const STATUS_LABEL: Record<Activity['status'], string> = { scheduled: 'Agendado', done: 'Realizado', cancelled: 'Cancelado' }
 export const VISIBILITY_LABEL: Record<Activity['visibility'], string> = { members: 'Todos os integrantes', staff: 'Somente equipe' }
 
-const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, cancel_reason, activity_types(name, color)'
+const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, cancel_reason, has_attendance, activity_types(id, name, color), activity_type_links(activity_types(id, name, color))'
 
 export async function listActivities(p: { orgId: string; from: string; to: string; cycleId?: string; typeId?: string }) {
   let q = supabase
@@ -66,6 +79,7 @@ export interface ActivityInput {
   cycle_id: string | null
   visibility: Activity['visibility']
   itinerary: ItineraryStep[] | null
+  has_attendance: boolean
 }
 
 export type AudienceKind = 'section' | 'instrument' | 'category'
@@ -111,18 +125,30 @@ async function replaceAudience(orgId: string, activityId: string, audiences: Aud
   }
 }
 
-export async function saveActivity(orgId: string, id: string | null, input: ActivityInput, audiences: AudienceInput[]) {
+async function replaceLabels(orgId: string, activityId: string, typeIds: string[]) {
+  const del = await supabase.from('activity_type_links').delete().eq('activity_id', activityId)
+  if (del.error) throw del.error
+  if (typeIds.length > 0) {
+    const ins = await supabase.from('activity_type_links').insert(typeIds.map((t) => ({ organization_id: orgId, activity_id: activityId, activity_type_id: t })))
+    if (ins.error) throw ins.error
+  }
+}
+
+/** `typeIds`: rótulos escolhidos (o primeiro é o tipo principal, que dá a cor). */
+export async function saveActivity(orgId: string, id: string | null, input: ActivityInput, audiences: AudienceInput[], typeIds?: string[]) {
   if (id) {
     // Ocorrência de recorrência editada à mão fica "personalizada": a sincronização da regra não a sobrescreve.
     const { data: cur } = await supabase.from('activities').select('recurrence_rule_id').eq('id', id).maybeSingle()
     const { error } = await supabase.from('activities').update(cur?.recurrence_rule_id ? { ...input, customized: true } : input).eq('id', id).eq('organization_id', orgId)
     if (error) throw error
     await replaceAudience(orgId, id, audiences)
+    if (typeIds) await replaceLabels(orgId, id, typeIds)
     return id
   }
   const { data, error } = await supabase.from('activities').insert({ ...input, organization_id: orgId }).select('id').single()
   if (error) throw error
   await replaceAudience(orgId, data.id as string, audiences)
+  if (typeIds) await replaceLabels(orgId, data.id as string, typeIds)
   return data.id as string
 }
 
@@ -179,4 +205,11 @@ export async function typeIdForColor(orgId: string, color: TypeColor): Promise<s
     .insert({ organization_id: orgId, name: COLOR_LABEL[color], color, sort_order: list.reduce((m, t) => Math.max(m, t.sort_order ?? 0), 0) + 1 }).select('id').single()
   if (e2) throw e2
   return created.id
+}
+
+export interface ActivityTypeRow { id: string; name: string; color: TypeColor; sort_order: number; is_active: boolean; attendance_default: boolean }
+export async function listActivityTypes(orgId: string): Promise<ActivityTypeRow[]> {
+  const { data, error } = await supabase.from('activity_types').select('id, name, color, sort_order, is_active, attendance_default').eq('organization_id', orgId).order('sort_order').order('name')
+  if (error) throw error
+  return (data ?? []) as ActivityTypeRow[]
 }

@@ -8,7 +8,11 @@ export function ItineraryEditor({ steps, onChange }: { steps: ItineraryStep[]; o
   const setStep = (i: number, p: Partial<ItineraryStep>) => onChange(steps.map((x, k) => (k === i ? { ...x, ...p } : x)))
   return (
     <div className="space-y-2">
-      <Label>Roteiro</Label>
+      <div className="flex items-center gap-1.5">
+        <Label>Roteiro</Label>
+        <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar item ao roteiro" title="Adicionar item"
+          onClick={() => onChange([...steps, { time: '', label: '' }])}><Plus className="h-3.5 w-3.5" /></button>
+      </div>
       {steps.map((x, i) => (
         <div key={i} className="space-y-2 rounded-md bg-muted/40 p-2">
           <div className="flex items-end gap-2">
@@ -22,7 +26,6 @@ export function ItineraryEditor({ steps, onChange }: { steps: ItineraryStep[]; o
             <textarea id={`it-desc-${i}`} rows={2} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={x.description ?? ''} onChange={(e) => setStep(i, { description: e.target.value })} /></div>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...steps, { time: '', label: '' }])}><Plus className="h-4 w-4" /> Item</Button>
     </div>
   )
 }
