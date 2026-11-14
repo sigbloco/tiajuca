@@ -82,7 +82,15 @@ function OrgRoute() {
 
 function OrgPreview() {
   const { orgSlug = '' } = useParams()
-  return <OrganizationProvider slug={orgSlug}><FormPreviewPage /></OrganizationProvider>
+  return <OrganizationProvider slug={orgSlug}><PreviewGate /></OrganizationProvider>
+}
+
+/** Só mostra a pré-visualização depois que a organização carregou (e se a pessoa faz parte dela). */
+function PreviewGate() {
+  const { membership, loading } = useOrganization()
+  if (loading) return <Loading />
+  if (!membership) return <Navigate to="/" replace />
+  return <FormPreviewPage />
 }
 
 function OrgGate() {
