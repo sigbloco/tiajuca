@@ -11,7 +11,7 @@ import { friendlyError } from '@/core/errors'
 import { formatDate } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { applyTheme } from '@/core/theme'
-import { isConsentBlock, isSection, isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
+import { hasConsent, isSection, isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
 
 interface UploadedFile { field_key: string; path: string; name: string; mime: string; size: number }
 const MAX_BYTES = 5 * 1024 * 1024
@@ -150,7 +150,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     }
     return out
   }, [visible])
-  const hasConsentBlock = visible.some(isConsentBlock)
+  const hasConsentBlock = visible.some(hasConsent)
   // Uma seção por vez: só avança quando a seção atual está completa.
   const [step, setStep] = useState(0)
   const stepIdx = Math.min(step, Math.max(0, blocks.length - 1))
@@ -203,7 +203,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     if (!blk) return null
     const miss = blk.items.find(isEmpty)
     if (miss) return miss.label
-    const hasConsentHere = blk.items.some(isConsentBlock) || (bi === blocks.length - 1 && !hasConsentBlock && Boolean(f0?.privacy_text))
+    const hasConsentHere = (blk.head ? hasConsent(blk.head) : false) || (bi === blocks.length - 1 && !hasConsentBlock && Boolean(f0?.privacy_text))
     if (hasConsentHere && f0?.requires_consent && !consent) return 'concordar com o tratamento dos dados'
     return null
   }
@@ -266,17 +266,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
                 {b.head.description && <RichText text={b.head.description} />}
               </div>
             )}
-            {b.items.map((f) => isConsentBlock(f) ? (
-              <Card key={f.key} className="space-y-2 p-4">
-                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={f0.privacy_text} className="text-xs text-muted-foreground" /></>}
-                {f0?.requires_consent && (
-                  <label className="flex items-start gap-3 pt-1">
-                    <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-                    <span>{f.label} <span className="text-destructive">*</span></span>
-                  </label>
-                )}
-              </Card>
-            ) : f.type === 'info' ? (
+            {b.items.map((f) => f.type === 'info' ? (
               <Card key={f.key} className="p-4"><p className="font-semibold">{f.label}</p>{f.description && <RichText text={f.description} />}</Card>
             ) : (
               <Card key={f.key} className="space-y-2 p-4">
@@ -286,6 +276,17 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
                   onFiles={(fn, pick) => handleFiles(f.key, fn, pick)} />
               </Card>
             ))}
+            {b.head && hasConsent(b.head) && (
+              <Card className="space-y-2 p-4">
+                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={f0.privacy_text} className="text-xs text-muted-foreground" /></>}
+                {f0?.requires_consent && (
+                  <label className="flex items-start gap-3 pt-1">
+                    <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                    <span>Estou ciente e concordo <span className="text-destructive">*</span></span>
+                  </label>
+                )}
+              </Card>
+            )}
           </section>
         ))}
 
