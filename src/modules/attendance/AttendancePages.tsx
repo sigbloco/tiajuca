@@ -1,6 +1,6 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, ChevronLeft, ChevronRight, Search, Undo2 } from 'lucide-react'
+import { Ban, Check, ChevronLeft, ChevronRight, Pencil, Search, Undo2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -291,6 +291,9 @@ export function AttendanceRosterPage() {
   const [instSel, setInst] = useState<string | null>(searchParams.get('inst'))
   // Filtro "Professores e Monitores" (não acumula com naipe/instrumento).
   const [staffOnly, setStaffOnly] = useState(false)
+  // Justificado exige motivo: ao tocar no botão abre o campo (rascunho por pessoa) e só conta depois do OK.
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const dropDraft = (id: string) => setDraft((d) => { const n = { ...d }; delete n[id]; return n })
   // Painel clicável: filtra a lista por situação (padrão: Total = todos).
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const rosterKey = ['roster', orgId, activityId]
@@ -539,25 +542,51 @@ export function AttendanceRosterPage() {
               </div>
             </div>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${statuses.data?.length ?? 3}, minmax(0, 1fr))` }}>
-              {statuses.data?.map((s) => (
-                <button
-                  key={s.id}
-                  disabled={cancelled}
-                  onClick={() => mark.mutate({ member: r.member_id, status: s, clear: r.status_id === s.id })}
-                  className={cn('h-9 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, r.status_id === s.id))}
-                >
-                  {s.name}
-                </button>
-              ))}
+              {statuses.data?.map((s) => {
+                const isJust = s.key === 'justified'
+                const active = r.status_id === s.id || (isJust && r.member_id in draft)
+                return (
+                  <button
+                    key={s.id}
+                    disabled={cancelled}
+                    onClick={() => {
+                      if (isJust && r.status_id !== s.id) { if (r.member_id in draft) dropDraft(r.member_id); else setDraft((d) => ({ ...d, [r.member_id]: r.notes ?? '' })); return }
+                      dropDraft(r.member_id)
+                      mark.mutate({ member: r.member_id, status: s, clear: r.status_id === s.id })
+                    }}
+                    className={cn('h-9 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, active))}
+                  >
+                    {s.name}
+                  </button>
+                )
+              })}
             </div>
-            {statuses.data?.find((s) => s.id === r.status_id)?.key === 'justified' && (
-              <Input key={r.status_id} className="mt-2" placeholder="Motivo da justificativa" defaultValue={r.notes ?? ''} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                onBlur={(e) => {
-                  const cur = statuses.data?.find((s) => s.id === r.status_id)
-                  if (!cur) return toast.message('Marque a presença antes de salvar a observação.')
-                  if (e.target.value !== (r.notes ?? '')) mark.mutate({ member: r.member_id, status: cur, notes: e.target.value })
-                }} />
-            )}
+            {(() => {
+              const just = statuses.data?.find((x) => x.key === 'justified')
+              if (!just) return null
+              const editing = r.member_id in draft
+              if (editing) {
+                const text = draft[r.member_id]
+                const ok = text.trim().length > 0
+                const confirm = () => { if (!ok) return; mark.mutate({ member: r.member_id, status: just, notes: text.trim() }); dropDraft(r.member_id) }
+                return (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input autoFocus className="min-w-0 flex-1" placeholder="Motivo da justificativa *" value={text} onChange={(e) => setDraft((d) => ({ ...d, [r.member_id]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirm() } }} />
+                    <Button size="icon" variant="outline" aria-label="Confirmar motivo" title="Confirmar" disabled={!ok} onClick={confirm}><Check className="h-4 w-4" /></Button>
+                  </div>
+                )
+              }
+              if (r.status_id === just.id) {
+                return (
+                  <div className="mt-2 flex items-center gap-2">
+                    <p className="min-w-0 flex-1 break-words text-sm">{r.notes?.trim() || <span className="italic text-muted-foreground">Sem motivo</span>}</p>
+                    <Button size="icon" variant="outline" aria-label="Editar motivo" title="Editar motivo" onClick={() => setDraft((d) => ({ ...d, [r.member_id]: r.notes ?? '' }))}><Pencil className="h-4 w-4" /></Button>
+                  </div>
+                )
+              }
+              return null
+            })()}
           </Card>
           </Fragment>
         ))}
