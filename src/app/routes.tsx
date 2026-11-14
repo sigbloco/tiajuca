@@ -23,6 +23,7 @@ import { ReportsPage } from '@/modules/reports/ReportsPage'
 import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
+import { FormPreviewPage } from '@/modules/forms/FormPreviewPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
 import { NaipesPage } from '@/modules/structure/NaipesPage'
@@ -79,6 +80,11 @@ function OrgRoute() {
   )
 }
 
+function OrgPreview() {
+  const { orgSlug = '' } = useParams()
+  return <OrganizationProvider slug={orgSlug}><FormPreviewPage /></OrganizationProvider>
+}
+
 function OrgGate() {
   const { membership, loading } = useOrganization()
   if (loading) return <Loading />
@@ -121,6 +127,7 @@ export const router = createBrowserRouter(
         {
           element: <RequireAuth />,
           children: [
+            { path: '/:orgSlug/previa/:formId', element: <OrgPreview /> },
             {
               path: '/:orgSlug',
               element: <OrgRoute />,

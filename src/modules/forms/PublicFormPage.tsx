@@ -111,7 +111,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
 }
 
 /** Formulário público de inscrição: sem login, identidade visual do bloco, validação no servidor. */
-export function PublicFormPage() {
+export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes dados em vez do servidor e não envia nada. */ preview?: PublicFormPayload } = {}) {
   const { orgSlug = '', formSlug = '' } = useParams()
   const [answers, setAnswers] = useState<Answers>({})
   const [consent, setConsent] = useState(false)
@@ -123,8 +123,9 @@ export function PublicFormPage() {
   const token = useRef<string | null>(null)
   const orgId = useRef<string | null>(null)
 
-  const form = useQuery({
+  const live = useQuery({
     queryKey: ['public-form', orgSlug, formSlug],
+    enabled: !preview,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_public_form', { p_org_slug: orgSlug, p_form_slug: formSlug })
       if (error) throw error
@@ -134,6 +135,7 @@ export function PublicFormPage() {
     },
   })
 
+  const form = preview ? { data: preview, isLoading: false, isError: false } : live
   const fields = form.data?.form?.fields ?? []
   const visible = useMemo(() => fields.filter((f) => isVisible(f, answers)), [fields, answers])
 
@@ -173,6 +175,7 @@ export function PublicFormPage() {
 
   const submit = useMutation({
     mutationFn: async () => {
+      if (preview) return 'Pré-visualização: nada foi enviado.'
       const { data, error } = await supabase.rpc('submit_public_form', {
         p_org_slug: orgSlug, p_form_slug: formSlug, p_answers: Object.fromEntries(visible.filter((f) => f.type !== 'info' && f.type !== 'file').map((f) => [f.key, answers[f.key] ?? null])),
         p_consent: consent, p_hp: honeypot, p_upload_token: token.current, p_files: files.filter((x) => visible.some((f) => f.key === x.field_key)),
@@ -191,7 +194,7 @@ export function PublicFormPage() {
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
-      <BackButton to="/site" name="a página inicial" />
+      {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
       <div className="mb-4 space-y-2 text-center">
         {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="mx-auto h-24 w-24 ring-4 ring-secondary" />}
         <p className="font-display text-3xl font-extrabold text-primary">{org?.name ?? ''}</p>

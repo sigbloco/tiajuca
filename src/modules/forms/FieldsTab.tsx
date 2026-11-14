@@ -11,7 +11,7 @@ import { keyify, useFormFields, type FormFieldRow } from './service'
 import { FIELD_TYPE_LABEL, MAPPING_LABEL, isConsentBlock, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
-const CATALOG_MAPPINGS = ['link.instrument', 'link.function', 'link.skill_level']
+const CATALOG_MAPPINGS = ['link.instrument', 'link.function']
 
 function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { asSection?: boolean; formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
   const orgId = useOrgId()
@@ -117,7 +117,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { 
           <div className="space-y-1.5"><Label htmlFor="fl-map">Ligar ao cadastro do integrante</Label>
             <Select id="fl-map" value={f.mapping} onChange={(e) => setF({ ...f, mapping: e.target.value })}>
               <option value="">Não ligar (fica só no histórico da inscrição)</option>
-              {Object.entries(MAPPING_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {Object.entries(MAPPING_LABEL).filter(([k]) => k !== 'link.skill_level' || f.mapping === k).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </Select>
             <p className="text-xs text-muted-foreground">Ao aprovar, o valor vai direto para o cadastro, sem digitar de novo.</p></div>
         )}

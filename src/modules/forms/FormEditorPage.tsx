@@ -2,7 +2,7 @@ import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Eye } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { Badge, Button, Skeleton, cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
@@ -25,6 +25,7 @@ export function FormEditorPage() {
       <div className="flex items-center gap-2">
         <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/inscricoes`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <h1 className="min-w-0 flex-1 break-words">{form.title}</h1>
+        <Button asChild size="icon" variant="outline" aria-label="Pré-visualizar" title="Pré-visualizar"><a href={`/${membership?.slug}/previa/${form.id}`} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" /></a></Button>
         <Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge>
       </div>
       <ButtonRow role="tablist">
