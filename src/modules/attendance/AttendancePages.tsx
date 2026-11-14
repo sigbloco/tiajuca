@@ -1,7 +1,7 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { FitText } from '@/components/shared/FitText'
@@ -94,9 +94,10 @@ function useStudentInstruments(cycleId: string | null | undefined) {
 
 /** Um horário do dia: título e os instrumentos com alunos; cada um abre a chamada só daquele instrumento. */
 /** Linhas da chamada que valem para contagem: mesmas regras da tela da chamada (sem monitores/professores quando não há público; só alunos em aulas). */
-function countable(rows: RosterRow[], a: Activity, hasAudience: boolean, staff: Set<string>, studentMembers: Set<string> | undefined) {
-  const onlyStudents = !hasAudience && /oficina|aula/i.test(`${a.activity_types?.name ?? ''} ${a.title}`)
-  return rows.filter((r) => (hasAudience || !staff.has(r.member_id)) && (!onlyStudents || r.is_off_roster || !studentMembers || studentMembers.has(r.member_id)))
+function countable(rows: RosterRow[], a: Activity, _hasAudience: boolean, staff: Set<string>, studentMembers: Set<string> | undefined) {
+  // Aula/oficina: só alunos contam (professores e monitores aparecem na chamada, mas não entram na contagem).
+  const isClass = /oficina|aula/i.test(`${a.activity_types?.name ?? ''} ${a.title}`)
+  return rows.filter((r) => !isClass || (!staff.has(r.member_id) && (r.is_off_roster || !studentMembers || studentMembers.has(r.member_id))))
 }
 
 function ActivityCard({ a, instruments, studentIds, slug, audience, staff, studentMembers, presentIds }: {
@@ -276,14 +277,10 @@ export function AttendanceRosterPage() {
   })
   const cycles = cyclesAll
   const students = useStudentInstruments(activity.data ? cycleOf(activity.data, cycles.data ?? []) : null)
-  // Aula/oficina: só alunos (categoria Aluno no ciclo); quem foi adicionado fora da lista continua.
-  const onlyStudents = !hasAudience && /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
-  const rows = (roster.data ?? []).filter((r) => (hasAudience || !staffIds.data?.has(r.member_id)) && (!onlyStudents || r.is_off_roster || !students.data || students.data.members.has(r.member_id)))
-  const counts = useMemo(() => {
-    const by: Record<string, number> = {}
-    for (const r of rows) if (r.status_id) by[r.status_id] = (by[r.status_id] ?? 0) + 1
-    return by
-  }, [rows])
+  // Aula/oficina: só alunos (categoria Aluno no ciclo) contam. Professores e monitores ficam fixados no topo e têm a presença marcada, mas fora da contagem.
+  const isClass = /oficina|aula/i.test(`${activity.data?.activity_types?.name ?? ''} ${activity.data?.title ?? ''}`)
+  const isStaff = (r: RosterRow) => !!staffIds.data?.has(r.member_id)
+  const rowsAll = (roster.data ?? []).filter((r) => !isClass || isStaff(r) || r.is_off_roster || !students.data || students.data.members.has(r.member_id))
   const catalog = useInstrumentCatalog()
   const sectionsOf = (r: RosterRow) => [...new Set((r.instruments ?? '').split(', ').map((n) => catalog.data?.byName.get(n)?.section).filter((x): x is string => !!x))]
   // Naipes com alunos.
@@ -314,10 +311,15 @@ export function AttendanceRosterPage() {
   })()
   const naipe = hasAudience ? '' : (naipeSel ?? myScope.section)
   const inst = hasAudience ? (instSel ?? '') : instSel ?? (myScope.inst && catalog.data?.byName.get(myScope.inst)?.section === naipe ? myScope.inst : '')
-  const filtered = rows.filter((r) => r.display_name.toLowerCase().includes(search.trim().toLowerCase())
-    && (!naipe || sectionsOf(r).includes(naipe))
-    && (statusFilter === 'all' || r.status_id === statusFilter)
-    && (!inst || (r.instruments ?? '').split(', ').includes(inst)))
+  const inFocus = (r: RosterRow) => (!naipe || sectionsOf(r).includes(naipe)) && (!inst || (r.instruments ?? '').split(', ').includes(inst))
+  // Contadores: só quem conta (alunos nas aulas), dentro do naipe/instrumento escolhido.
+  const rows = rowsAll.filter((r) => inFocus(r) && !(isClass && isStaff(r)))
+  const counts: Record<string, number> = {}
+  for (const r of rows) if (r.status_id) counts[r.status_id] = (counts[r.status_id] ?? 0) + 1
+  const filtered = rowsAll.filter((r) => inFocus(r) && r.display_name.toLowerCase().includes(search.trim().toLowerCase())
+    && (statusFilter === 'all' || r.status_id === statusFilter))
+  const staffList = filtered.filter(isStaff)
+  const ordered = [...staffList, ...filtered.filter((r) => !isStaff(r))]
   // Evento com público: dá para filtrar a chamada pelos instrumentos do público (ex.: Pernalta).
   const audInstOptions = hasAudience
     ? [...new Set((catalog.data?.list ?? []).filter((i) => (audience.data ?? []).some((x) => x.kind !== 'category' && (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id))).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
@@ -388,13 +390,16 @@ export function AttendanceRosterPage() {
       </div>
 
       {roster.isLoading && Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
-      {roster.data && rows.length === 0 && (
+      {roster.data && rowsAll.length === 0 && (
         <EmptyState>Ninguém elegível para esta atividade. Confira o ciclo, o status “Ativo” e o público do evento.</EmptyState>
       )}
 
       <div className="grid gap-2">
-        {filtered.map((r) => (
-          <Card key={r.member_id} className="p-3">
+        {ordered.map((r, i) => (
+          <Fragment key={r.member_id}>
+            {i === 0 && isStaff(r) && <p className="text-xs font-bold uppercase text-muted-foreground">Professores e monitores{isClass ? ' (não entram na contagem)' : ''}</p>}
+            {!isStaff(r) && staffList.length > 0 && (i === 0 || isStaff(ordered[i - 1])) && <p className="pt-1 text-xs font-bold uppercase text-muted-foreground">{isClass ? 'Alunos' : 'Integrantes'}</p>}
+          <Card className="p-3">
             <div className="mb-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
@@ -425,6 +430,7 @@ export function AttendanceRosterPage() {
                 }} />
             )}
           </Card>
+          </Fragment>
         ))}
       </div>
     </div>
