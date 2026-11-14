@@ -1,6 +1,7 @@
 import { FitWord } from '@/components/shared/FitText'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, Palette, Settings } from 'lucide-react'
+import { ExternalLink, Palette } from 'lucide-react'
+import { SettingsButton } from '@/components/shared/SettingsButton'
 import { Link } from 'react-router-dom'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -42,8 +43,7 @@ export function ShopAdminPage() {
           <Button asChild variant="outline" className="min-h-11 min-w-11 px-3">
             <a href={`/${membership?.slug}/loja`} target="_blank" rel="noreferrer" aria-label="Ver a página" title="Ver a página"><ExternalLink className="h-5 w-5" /><span className="ml-2 hidden md:inline">Ver a página</span></a>
           </Button>
-          <Button role="tab" aria-selected={tab === 'payments'} aria-label="Configurações" title="Configurações" variant={tab === 'payments' ? 'default' : 'outline'}
-            size="icon" className="min-h-11 min-w-11" onClick={() => setTab('payments')}><Settings className="h-5 w-5" /></Button>
+          <SettingsButton role="tab" aria-selected={tab === 'payments'} active={tab === 'payments'} className="min-h-11 min-w-11" onClick={() => setTab('payments')} />
           {canTheme && (
             <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11">
               <Link to={`/${membership?.slug}/interface?area=shop`} aria-label="Interface" title="Interface"><Palette className="h-5 w-5" /></Link>

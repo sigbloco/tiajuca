@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom'
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { SettingsButton } from '@/components/shared/SettingsButton'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Cake, ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react'
+import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
@@ -12,6 +13,7 @@ import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventCard } from './EventCard'
 import { EventSheet } from './EventSheet'
+import { EventsArchive } from './EventsArchive'
 import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
@@ -46,7 +48,7 @@ export function EventsPage() {
     queryFn: () => listActivities({ orgId, from, to }),
   })
   // Só o ciclo escolhido no menu fixo: o marcado na atividade ou, sem marca, o que cobre a data dela.
-  const data = useMemo(() => raw?.filter((a) => (a.cycle_id ? a.cycle_id === cycleId : !selCycle || (a.activity_date >= selCycle.starts_on && a.activity_date <= selCycle.ends_on))), [raw, cycleId, selCycle])
+  const data = useMemo(() => raw?.filter((a) => a.status !== 'cancelled').filter((a) => (a.cycle_id ? a.cycle_id === cycleId : !selCycle || (a.activity_date >= selCycle.starts_on && a.activity_date <= selCycle.ends_on))), [raw, cycleId, selCycle])
   // Ao trocar de ciclo, o mês vai para dentro dele.
   useEffect(() => {
     if (!selCycle) return
@@ -104,11 +106,27 @@ export function EventsPage() {
     setSelectedDay(null)
   }
 
-  const header = (
-    <div className="flex items-center justify-start gap-2">
-      {canManage && <Button variant="add" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
-      {canManage && <Button asChild variant="outline" size="icon" aria-label="Configurações" title="Configurações"><Link to={`/${membership?.slug}/eventos/configuracoes`}><Settings className="h-4 w-4" /></Link></Button>}
-    </div>
+  // Cancelados e Lixeira: lista de todo o ciclo escolhido (sem depender do mês aberto no calendário).
+  const rangeFrom = selCycle?.starts_on ?? '2000-01-01'
+  const rangeTo = selCycle?.ends_on ?? '2100-12-31'
+  const archived = useQuery({
+    queryKey: ['activities', orgId, 'archive', rangeFrom, rangeTo],
+    enabled: canManage,
+    queryFn: async () => {
+      const [all, trashed] = await Promise.all([
+        listActivities({ orgId, from: rangeFrom, to: rangeTo }),
+        listActivities({ orgId, from: rangeFrom, to: rangeTo, trashed: true }),
+      ])
+      return { cancelled: all.filter((a) => a.status === 'cancelled'), trashed }
+    },
+  })
+  const header = canManage && (
+    <ButtonRow>
+      <Button variant="add" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4 shrink-0" /> Novo evento</Button>
+      <EventsArchive kind="cancelled" items={archived.data?.cancelled ?? []} />
+      <EventsArchive kind="trash" items={archived.data?.trashed ?? []} />
+      <SettingsButton to={`/${membership?.slug}/eventos/configuracoes`} />
+    </ButtonRow>
   )
   const sheetEl = (
     <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>

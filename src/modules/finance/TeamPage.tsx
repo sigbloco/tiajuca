@@ -227,7 +227,7 @@ export function TeamPage() {
     queryFn: async () => {
       const last = new Date(Date.UTC(ym.y, ym.m + 1, 0)).toISOString().slice(0, 10)
       const { data, error } = await supabase.from('activities').select('id, title, activity_date, start_time, end_time, status, activity_types(name)')
-        .eq('organization_id', orgId).gte('activity_date', competence).lte('activity_date', last).neq('status', 'cancelled').limit(2000)
+        .eq('organization_id', orgId).gte('activity_date', competence).lte('activity_date', last).neq('status', 'cancelled').is('deleted_at', null).limit(2000)
       if (error) throw error
       return ((data ?? []) as unknown as Lesson[]).filter((l) => l.activity_types?.name === 'Oficina')
     },
