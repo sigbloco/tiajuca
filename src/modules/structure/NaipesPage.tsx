@@ -3,9 +3,8 @@ import { MemberLink } from '@/modules/members/MemberLink'
 import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, UserRoundCheck, X } from 'lucide-react'
-import { LabelFitRow } from '@/components/shared/LabelFitRow'
-import { Link } from 'react-router-dom'
+import { ArrowDown, ArrowUp, CopyPlus, Pencil, Plus, Save, Trash2, UserPlus, X } from 'lucide-react'
+import { NaipesTabs } from './NaipesTabs'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
@@ -218,7 +217,6 @@ function RenameForm({ name, label, onSave, onCancel }: { name: string; label: st
 /** Naipes e instrumentos numa página só, todos com o mesmo padrão. */
 export function NaipesPage() {
   const canEdit = usePermission('structure.manage')
-  const canVagas = usePermission('capacity.read')
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
@@ -353,19 +351,15 @@ export function NaipesPage() {
             <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
               onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
           )}
-        </div>
-      </div>
-      <LabelFitRow role="group" aria-label="Ações">
-          {canVagas && <Button asChild variant="outline" aria-label="Vagas" title="Vagas"><Link to="../vagas" relative="path"><UserRoundCheck className="h-4 w-4 shrink-0" /><span className="fit-label">Vagas</span></Link></Button>}
-          <Button asChild variant="outline" aria-label="Organograma" title="Organograma"><Link to="organograma"><Network className="h-4 w-4 shrink-0" /><span className="fit-label">Organograma</span></Link></Button>
-          {canEdit && <Button asChild variant="outline" aria-label="Configurações" title="Configurações"><Link to="configuracoes"><Settings className="h-4 w-4 shrink-0" /><span className="fit-label">Configurações</span></Link></Button>}
           {canEdit && (
-            <TrashDrawer fitLabel groups={[
+            <TrashDrawer iconOnly groups={[
               { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
               { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => loaded && !instOn(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
             ]} />
           )}
-      </LabelFitRow>
+        </div>
+      </div>
+      <NaipesTabs />
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
       {sections.isLoading && <Skeleton className="h-24" />}
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}

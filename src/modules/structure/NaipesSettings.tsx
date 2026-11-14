@@ -10,6 +10,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { useCatalog } from './CatalogEditor'
+import { NaipesTabs } from './NaipesTabs'
 import { PITCH_LABEL, invalidateCatalog, saveCatalogItem, type PitchMode } from './service'
 import { ItemRow, byOrder, nextOrder, useStructureMutations } from './StructureManagers'
 
@@ -29,6 +30,7 @@ export function SectionNamesPage() {
   })
   return (
     <div className="space-y-3">
+      <NaipesTabs />
       <h2>Nomes de naipes</h2>
       <ReadMore>
         Os nomes que “Novo naipe” oferece. Cada um define a altura dos itens (definida, indefinida ou não se aplica) e como eles se chamam (instrumento, atividade, voz).

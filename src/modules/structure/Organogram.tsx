@@ -6,6 +6,7 @@ import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { usePersonLabeler } from '@/modules/members/personLabel'
 import { hasTuning } from '@/modules/repertoire/service'
+import { NaipesTabs } from './NaipesTabs'
 import { useCatalog } from './CatalogEditor'
 import { byOrder } from './StructureManagers'
 
@@ -47,7 +48,8 @@ export function Organogram() {
   const loading = sections.isLoading || staff.isLoading
   return (
     <div className="space-y-4">
-      <div><h1>Organograma</h1><p className="text-muted-foreground">Naipes e instrumentos com seus regentes, professores e monitores. Para mudar, volte a Naipes e instrumentos.</p></div>
+      <NaipesTabs />
+      <p className="text-muted-foreground">Naipes e instrumentos com seus regentes, professores e monitores. Para mudar, vá a Naipes.</p>
       {loading && <Skeleton className="h-32" />}
       {!loading && secs.length === 0 && <EmptyState>Nenhum naipe cadastrado.</EmptyState>}
       <div className="grid gap-4 md:grid-cols-2">
