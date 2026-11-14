@@ -105,7 +105,7 @@ export function EventsPage() {
   }
 
   const header = (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex items-center justify-start gap-2">
       {canManage && <Button variant="add" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4" /> Novo evento</Button>}
       {canManage && <Button asChild variant="outline" size="icon" aria-label="Configurações" title="Configurações"><Link to={`/${membership?.slug}/eventos/configuracoes`}><Settings className="h-4 w-4" /></Link></Button>}
     </div>
