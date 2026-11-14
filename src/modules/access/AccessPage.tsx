@@ -72,7 +72,7 @@ export function AccessPage() {
       <ButtonRow role="tablist">
         {[['people', 'Pessoas'], ['perms', 'Permissões dos papéis']].map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k as typeof tab)}
-            className={cn('rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === k && 'bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{l}</FitWord></button>
+            className={cn('rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === k && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{l}</FitWord></button>
         ))}
       </ButtonRow>
       {tab === 'people' ? <PeopleTabContainer /> : <PermissionsMatrix />}

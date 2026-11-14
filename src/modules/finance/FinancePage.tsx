@@ -33,7 +33,7 @@ export function FinancePage() {
       <ButtonRow role="tablist">
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-            className={cn('whitespace-nowrap rounded-lg px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'bg-primary text-primary-foreground hover:bg-primary')}>
+            className={cn('whitespace-nowrap rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}>
             <FitWord>{t.label}</FitWord>
           </button>
         ))}
