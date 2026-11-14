@@ -231,8 +231,15 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
       <header className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 backdrop-blur">
-        <div className="flex justify-center overflow-hidden rounded-2xl bg-cover bg-center py-3" style={f0?.header_image_url ? { backgroundImage: `url(${f0.header_image_url})` } : undefined}>
-          {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="h-20 w-20" />}
+        <div className="relative flex justify-center overflow-hidden rounded-2xl py-3">
+          {f0?.header_image_url && (
+            <>
+              {/* Foto de fundo: levemente desfocada e escurecida, com um degradê do vermelho da marca para transparente */}
+              <div aria-hidden className="absolute inset-0 scale-110 bg-cover bg-center blur-[3px] brightness-75" style={{ backgroundImage: `url(${f0.header_image_url})` }} />
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-primary/80 to-transparent" />
+            </>
+          )}
+          {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="relative h-20 w-20" />}
         </div>
         {progress}
       </header>
