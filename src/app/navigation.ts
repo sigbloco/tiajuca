@@ -7,7 +7,7 @@ import type { PermissionKey, PermissionScope } from '@/core/permissions'
 /** Áreas do menu: cada uma é UM item à esquerda; as subpáginas ficam dentro dela (página inicial com cartões). */
 export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
 export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
-  oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, vagas e novas inscrições.' },
+  oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, vagas e relatórios.' },
   financeiro: { label: 'Financeiro', icon: Banknote, description: 'Equipe, valores, cobranças e bolsas, por ciclo.', homePermission: 'finance.read' },
   organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, checklists, funções e Google Drive.' },
 }
@@ -36,13 +36,13 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
   { to: 'naipes', label: 'Naipes', crumb: 'Naipes e instrumentos', icon: Drum, permission: 'structure.manage' },
   { to: 'membros', label: 'Integrantes', icon: Users, permission: 'members.read' },
+  { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, permission: 'forms.manage' },
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },
   { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read' },
 
   { to: 'presenca', label: 'Presença', icon: ClipboardCheck, group: 'oficina', permission: 'attendance.record', description: 'Chamada dos ensaios e das aulas.' },
   { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group', description: 'Quem está na oficina como aluno.' },
   { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, group: 'oficina', permission: 'capacity.read', description: 'Vagas por instrumento e lista de espera.' },
-  { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, group: 'oficina', permission: 'forms.manage', description: 'Formulários e novas inscrições para confirmar.' },
   { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
   { to: 'equipe', label: 'Equipe', icon: Users, group: 'financeiro', permission: 'finance.read', description: 'Quem recebe no ciclo e como: fixo e/ou porcentagem.' },

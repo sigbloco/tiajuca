@@ -130,6 +130,8 @@ export const router = createBrowserRouter(
                 { path: 'oficina', element: <HubLayout hub="oficina" />, children: [{ index: true, element: <HubHome hub="oficina" /> }] },
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
+                { path: 'inscricoes', element: <FormsPage /> },
+                { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                 { path: 'naipes', element: <NaipesPage /> },
                 { path: 'naipes/organograma', element: <Organogram /> },
                 { path: 'naipes/configuracoes', element: <SectionNamesPage /> },
@@ -157,8 +159,6 @@ export const router = createBrowserRouter(
                   element: <HubLayout hub="oficina" />,
                   children: [
                     { path: 'alunos', element: <Navigate to="../membros?tipo=aluno" replace relative="path" /> },
-                    { path: 'inscricoes', element: <FormsPage /> },
-                    { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                     { path: 'relatorios', element: <ReportsPage /> },
                     { path: 'presenca', element: <AttendanceListPage /> },
                     { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },
