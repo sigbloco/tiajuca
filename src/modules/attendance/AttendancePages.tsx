@@ -1,6 +1,6 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, ChevronLeft, ChevronRight, MessageSquare, Search, Undo2 } from 'lucide-react'
+import { Ban, ChevronLeft, ChevronRight, Search, Undo2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -289,7 +289,6 @@ export function AttendanceRosterPage() {
   const { membership } = useOrganization()
   const [naipeSel, setNaipe] = useState<string | null>(searchParams.get('naipe'))
   const [instSel, setInst] = useState<string | null>(searchParams.get('inst'))
-  const [openNote, setOpenNote] = useState<string | null>(null)
   // Filtro "Professores e Monitores" (não acumula com naipe/instrumento).
   const [staffOnly, setStaffOnly] = useState(false)
   // Painel clicável: filtra a lista por situação (padrão: Total = todos).
@@ -538,9 +537,6 @@ export function AttendanceRosterPage() {
                   </div>
                 )}
               </div>
-              <Button size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpenNote(openNote === r.member_id ? null : r.member_id)}>
-                <MessageSquare className={cn('h-4 w-4', r.notes && 'text-primary')} />
-              </Button>
             </div>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${statuses.data?.length ?? 3}, minmax(0, 1fr))` }}>
               {statuses.data?.map((s) => (
@@ -554,8 +550,8 @@ export function AttendanceRosterPage() {
                 </button>
               ))}
             </div>
-            {openNote === r.member_id && (
-              <Input className="mt-2" placeholder="Observação (ex.: motivo da justificativa)" defaultValue={r.notes ?? ''}
+            {statuses.data?.find((s) => s.id === r.status_id)?.key === 'justified' && (
+              <Input key={r.status_id} className="mt-2" placeholder="Motivo da justificativa" defaultValue={r.notes ?? ''} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
                 onBlur={(e) => {
                   const cur = statuses.data?.find((s) => s.id === r.status_id)
                   if (!cur) return toast.message('Marque a presença antes de salvar a observação.')
