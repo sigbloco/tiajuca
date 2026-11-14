@@ -13,7 +13,8 @@ function ageOf(iso: string | null | undefined): number | null {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toast } from 'sonner'
-import { Cake, Globe, Mail, Pencil, Plus, Save, X } from 'lucide-react'
+import { Cake, Globe, Mail, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Input, Label, Select, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
@@ -359,14 +360,27 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   )
 }
 
-export function MemberDetailSheet({ member, category, onChanged = () => {}, onCrumbClick }: { member: MemberRow; category?: string; onCrumbClick?: () => void; onChanged?: (p: Partial<MemberRow>) => void }) {
+export function MemberDetailSheet({ member, category, onChanged = () => {}, onCrumbClick, onArchived }: { member: MemberRow; category?: string; onCrumbClick?: () => void; onChanged?: (p: Partial<MemberRow>) => void; onArchived?: () => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   const [editing, setEditing] = useState(false)
   void category
+  // "Excluir": move para a lixeira (some das listas e da chamada; o histórico fica e dá para restaurar).
+  const archive = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('members').update({ archived_at: new Date().toISOString() }).eq('id', member.id)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Integrante movido para a lixeira.'); onArchived?.() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   return (
     <SheetContent onCrumbClick={onCrumbClick} title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
-      <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
+      <>
+        <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" aria-label="Excluir integrante" title="Excluir integrante" disabled={archive.isPending}
+          onClick={async () => { if (await confirmBox(`Excluir ${shortName(member.full_name, member.display_name)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
+      </>
     )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin readOnly={!editing} /></MemberSection>}

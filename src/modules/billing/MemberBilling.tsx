@@ -206,7 +206,20 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   const autoSave = () => { if (changed && !saveSch.isPending) saveSch.mutate() }
 
   if (!canBilling || !info.data) return null
-  if (info.data.paid) return <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />
+  if (info.data.paid) {
+    return (
+      <MemberSection title="Categoria">
+        <div className="space-y-1">
+          <Label htmlFor={'cc-cat-' + cycle.id} className="block">Categoria principal</Label>
+          <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
+            <option value="">Não contribui</option>
+            {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </OkSelect>
+        </div>
+        {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
+      </MemberSection>
+    )
+  }
   const catName = categories.data?.find((c) => c.id === catId)?.name
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
@@ -292,7 +305,20 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
 
   if (canBilling && cycle && !cycle.is_current) return <CycleBilling memberId={memberId} cycle={cycle} />
   if (!canBilling) return null
-  if (paid.data) return currentCycleId ? <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment?.fee_category_id ?? ''} /> : null
+  if (paid.data) {
+    return (
+      <MemberSection title="Categoria">
+        <div className="space-y-1">
+          <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
+          <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
+            <option value="">Não contribui</option>
+            {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </OkSelect>
+        </div>
+        {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
+      </MemberSection>
+    )
+  }
   return (
     <MemberSection title={<>Contribuição mensal{price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="space-y-1">

@@ -6,6 +6,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
+import { TrashSection } from '@/components/shared/TrashSection'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -13,7 +14,7 @@ import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleto
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId } from '@/core/organization'
-import { Can } from '@/core/permissions'
+import { Can, usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { hrefOf } from '@/modules/site/links'
 import { maskPhone } from '@/components/ui/masked-inputs'
@@ -23,6 +24,32 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
 import { ReactivationRequests } from './Reactivation'
 import { createMember, type MemberRow } from './service'
+
+/** Lixeira de integrantes: quem foi excluído fica aqui e pode ser restaurado. */
+function MembersTrash() {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const can = usePermission('members.manage')
+  const q = useQuery({
+    queryKey: ['members-archived', orgId],
+    enabled: can,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('members').select('id, full_name, display_name, email').eq('organization_id', orgId).not('archived_at', 'is', null).order('full_name').limit(500)
+      if (error) throw error
+      return (data ?? []) as { id: string; full_name: string; display_name: string | null; email: string | null }[]
+    },
+  })
+  const restore = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('members').update({ archived_at: null }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Integrante restaurado.'); qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  if (!can) return null
+  return <TrashSection entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
+}
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
   const orgId = useOrgId()
@@ -73,6 +100,7 @@ const TYPE_OPTIONS: [string, string][] = [['regente', 'Regentes'], ['professor',
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
+  const qc = useQueryClient()
   const wantedCategory = lockedCategory ?? ''
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
@@ -359,8 +387,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       {renderSections(tree.data)}
       {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
 
+      <MembersTrash />
+
       <Sheet open={selected !== null} onOpenChange={(o) => !o && closeSheet()}>
-        {selected && <MemberDetailSheet onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
+        {selected && <MemberDetailSheet onArchived={() => { qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }); closeSheet() }} onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
       </Sheet>
 
     </div>
