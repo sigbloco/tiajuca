@@ -24,7 +24,7 @@ export function ChecklistsPage() {
 }
 
 /**
- * Funções: tudo é editável. "Isento" garante a isenção de quem tem a função. As categorias de Financeiro → Contribuições refletem estas funções.
+ * Categorias: tudo é editável. "Isento" garante a isenção de quem tem a função. As categorias de Financeiro → Contribuições refletem estas funções.
  */
 type Kind = 'paid' | 'collab' | 'artistic'
 const SECTIONS: { kind: Kind; title: string; hint?: string }[] = [

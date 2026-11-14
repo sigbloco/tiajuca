@@ -18,7 +18,7 @@ import { Plus } from 'lucide-react'
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
 
-/** Função isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria. */
+/** Categoria isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria. */
 function useExemptFunction(memberId: string, cycleId: string | undefined) {
   return useQuery({
     queryKey: ['exempt-function', memberId, cycleId],
@@ -245,7 +245,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
-        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela função ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
+        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
       {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
       {canSchol && catId && catName !== 'Isento' && !exemptBy && (
@@ -344,7 +344,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => MEMBER_CATEGORIES.includes(c.name) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
-        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela função ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
+        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
       {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
       {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && !exemptBy && (

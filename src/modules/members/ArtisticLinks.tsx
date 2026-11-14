@@ -27,9 +27,9 @@ interface LinkRow {
 interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_student: boolean; is_paid: boolean }
 const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false, is_paid: false }
 
-/** Vínculos artísticos do integrante: naipe → instrumento e/ou função. Editáveis. */
+/** Vínculos artísticos do integrante: naipe → instrumento e/ou categoria. Editáveis. */
 export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo atual: vínculos vigentes hoje. Outro ciclo (passado ou futuro): os do próprio ciclo, editáveis. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
-  const collab = mode !== 'artistic' // colaborativa e remunerada só têm função
+  const collab = mode !== 'artistic' // colaborativa e remunerada só têm categoria
   const paid = mode === 'paid'
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -91,7 +91,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         refresh()
       })
     },
-    onError: (e) => toast.error(/check|violat/i.test(String(e)) ? collab ? 'Escolha uma função.' : 'Escolha uma atividade.' : friendlyError(e)),
+    onError: (e) => toast.error(/check|violat/i.test(String(e)) ? collab ? 'Escolha uma categoria.' : 'Escolha uma atividade.' : friendlyError(e)),
   })
   const end = useMutation({
     mutationFn: async (id: string) => {
@@ -127,8 +127,8 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
     <div className="space-y-2 rounded-md bg-muted/40 p-2">
       {collab ? (
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Select value={f.function_id} aria-label="Função" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
-            <option value="">Escolha a função</option>
+          <Select value={f.function_id} aria-label="Categoria" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
+            <option value="">Escolha a categoria</option>
             {active(functions.data).filter((i) => (i.kind ?? 'collab') === (f.is_paid ? 'paid' : 'collab')).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </Select>
           <Select value={f.is_paid ? 'paid' : 'collaborative'} aria-label="Remunerada ou colaborativa" onChange={(e) => setF({ ...f, is_paid: e.target.value === 'paid', function_id: '' })}>

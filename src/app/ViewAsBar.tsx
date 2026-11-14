@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
 import { Eye, X } from 'lucide-react'
-import { useMemo, useRef, useEffect } from 'react'
+import { useMemo, useRef, useEffect, useState } from 'react'
 import { Button, Select, cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
@@ -12,12 +12,25 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 interface Row {
   id: string; full_name: string; display_name: string | null; user_id: string | null
   member_access_roles: { revoked_at: string | null; access_roles: { key: string } | null }[]
-  member_artistic_links: { instrument_id: string | null; ended_at: string | null }[]
 }
 interface Staff { member_id: string; staff_kind: 'professor' | 'monitor'; section_id: string | null; instrument_id: string | null }
 interface Cat { member_id: string; category_name: string }
+interface Person { id: string; name: string; label: string; virtual?: { key: string; roles: string[]; inactive?: boolean } }
 
-/** Barra fixa no topo (só Titular/Direção): escolhe um PERFIL de exemplo e a interface passa a mostrar o que ele veria. */
+/** Categorias de perfil para visualizar. "Titular" (eu mesmo) é o valor vazio: sai da visualização. */
+const CATEGORIES = [
+  { key: 'direcao', label: 'Direção' },
+  { key: 'professor', label: 'Professor' },
+  { key: 'monitor', label: 'Monitor' },
+  { key: 'ativo', label: 'Integrante ativo' },
+  { key: 'inativo', label: 'Integrante inativo' },
+] as const
+type CatKey = (typeof CATEGORIES)[number]['key']
+
+// Sem ninguém na categoria, dá para visualizar mesmo assim: simula só os papéis (os dados continuam os seus).
+const virtualRoles = (key: CatKey) => (key === 'direcao' ? ['direcao', 'integrante'] : key === 'professor' ? ['professor', 'integrante'] : key === 'monitor' ? ['monitor', 'integrante'] : ['integrante'])
+
+/** Barra fixa no topo (só Titular/Direção): escolhe uma CATEGORIA e, depois, uma pessoa dela; a interface passa a mostrar o que ela veria. */
 export function ViewAsBar() {
   const { realMembership, viewAs, viewAsLoading, setViewAs } = useOrganization()
   const allowed = !!realMembership && hasPermission(realMembership.permissions, 'roles.manage')
@@ -26,6 +39,7 @@ export function ViewAsBar() {
   const instruments = useCatalog('instruments')
   const { isInactive } = useMemberStatus()
   const barRef = useRef<HTMLDivElement>(null)
+  const [chosen, setChosen] = useState<CatKey | ''>('')
   // Altura da barra, para o topo fixo do app ficar logo abaixo dela (sem sobrepor).
   useEffect(() => {
     const el = barRef.current
@@ -41,7 +55,7 @@ export function ViewAsBar() {
     enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
-        .select('id, full_name, display_name, user_id, member_access_roles(revoked_at, access_roles(key)), member_artistic_links(instrument_id, ended_at)')
+        .select('id, full_name, display_name, user_id, member_access_roles(revoked_at, access_roles(key))')
         .eq('organization_id', orgId!).is('archived_at', null).order('full_name').limit(2000)
       if (error) throw error
       return (data ?? []) as unknown as Row[]
@@ -66,84 +80,81 @@ export function ViewAsBar() {
     },
   })
 
-  // Um exemplo de cada perfil: Direção, Professor e Monitor por naipe, Aluno por naipe e um Inativo.
-  const profiles = useMemo(() => {
-    const out: { key: string; label: string; id: string; name: string; virtual?: { key: string; roles: string[]; inactive?: boolean } }[] = []
+  // Pessoas de cada categoria (sem o titular e sem você mesmo, que não mudam a visão).
+  const byCategory = useMemo(() => {
     const rows = people.data ?? []
-    const byId = new Map(rows.map((r) => [r.id, r]))
-    const nameOf = (r: Row) => shortName(r?.full_name, r?.display_name)
+    const nameOf = (r: Row) => shortName(r.full_name, r.display_name)
     const rolesOf = (r: Row) => new Set(r.member_access_roles.filter((x) => !x.revoked_at && x.access_roles).map((x) => x.access_roles!.key))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
-    const secList = (sections.data ?? []).filter((s) => s.is_active)
-    const sectionOfStaff = (a: Staff) => a.section_id ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id : null) ?? null
-    const sectionOfLinks = (r: Row) => r.member_artistic_links.filter((l) => !l.ended_at).map((l) => (l.instrument_id ? instById.get(l.instrument_id)?.section_id : null)).filter(Boolean) as string[]
-    // Sem ninguém no perfil, dá para visualizar mesmo assim: simula só os papéis (os dados continuam os seus).
-    const rolesFor = (key: string) => (key === 'direcao' ? ['direcao', 'integrante'] : key.startsWith('professor:') ? ['professor', 'integrante'] : key.startsWith('monitor:') ? ['monitor', 'integrante'] : ['integrante'])
-    const add = (key: string, label: string, r: Row | undefined) => {
-      if (r && r.id !== realMembership?.member_id) out.push({ key, label, id: r.id, name: nameOf(r) })
-      else out.push({ key, label, id: `virtual:${key}`, name: label, virtual: { key, roles: rolesFor(key), inactive: key === 'inativo' } })
+    const secName = new Map((sections.data ?? []).map((s) => [s.id, s.name]))
+    const sectionsOf = (id: string, kind: 'professor' | 'monitor') => [...new Set((staff.data ?? []).filter((a) => a.member_id === id && a.staff_kind === kind)
+      .map((a) => secName.get(a.section_id ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id ?? '' : '')) ?? '').filter(Boolean))]
+    const catOf = new Map<string, string>()
+    for (const c of cats.data ?? []) if (!catOf.has(c.member_id)) catOf.set(c.member_id, c.category_name)
+    const others = rows.filter((r) => r.id !== realMembership?.member_id && !rolesOf(r).has('titular'))
+    const isStaff = (r: Row) => rolesOf(r).has('professor') || rolesOf(r).has('monitor')
+    const person = (r: Row, extra?: string): Person => ({ id: r.id, name: nameOf(r), label: extra ? `${nameOf(r)} · ${extra}` : nameOf(r) })
+    const staffOf = (kind: 'professor' | 'monitor') => others
+      .filter((r) => rolesOf(r).has(kind) || (staff.data ?? []).some((a) => a.member_id === r.id && a.staff_kind === kind))
+      .map((r) => person(r, sectionsOf(r.id, kind).join(', ')))
+    const out: Record<CatKey, Person[]> = {
+      direcao: others.filter((r) => rolesOf(r).has('direcao')).map((r) => person(r)),
+      professor: staffOf('professor'),
+      monitor: staffOf('monitor'),
+      ativo: others.filter((r) => !isInactive(r.id) && !isStaff(r) && !rolesOf(r).has('direcao')).map((r) => person(r, catOf.get(r.id))),
+      inativo: others.filter((r) => isInactive(r.id) && !rolesOf(r).has('direcao')).map((r) => person(r, catOf.get(r.id))),
     }
-    const active = (r: Row) => !isInactive(r.id)
-    const used = new Set<string>()
-    const pick = (list: Row[]) => { const r = list.find((x) => !used.has(x.id)) ?? list[0]; if (r) used.add(r.id); return r }
-    const isStaff = (r: Row) => rolesOf(r).has('monitor') || rolesOf(r).has('professor')
-
-    add('direcao', 'Direção', pick(rows.filter((r) => rolesOf(r).has('direcao') && !rolesOf(r).has('titular') && active(r))))
-    for (const kind of ['professor', 'monitor'] as const) {
-      for (const sec of secList) {
-        const candidates = (staff.data ?? []).filter((a) => a.staff_kind === kind && sectionOfStaff(a) === sec.id).map((a) => byId.get(a.member_id)).filter((r): r is Row => !!r && active(r) && rolesOf(r).has(kind))
-        add(`${kind}:${sec.id}`, `${kind === 'professor' ? 'Professor' : 'Monitor'} (${sec.name})`, pick(candidates))
-      }
+    for (const c of CATEGORIES) {
+      if (out[c.key].length === 0) out[c.key] = [{ id: `virtual:${c.key}`, name: c.label, label: `${c.label} (sem pessoa)`, virtual: { key: c.key, roles: virtualRoles(c.key), inactive: c.key === 'inativo' } }]
     }
-    // Músico e Senior enxergam o mesmo: um só perfil.
-    const musico = new Set((cats.data ?? []).filter((c) => c.category_name === 'Senior' || c.category_name === 'Músico').map((c) => c.member_id))
-    add('musico', 'Músico/Senior', pick(rows.filter((x) => musico.has(x.id) && active(x) && !isStaff(x) && !rolesOf(x).has('direcao'))))
-    // Alunos: Sopro por afinação (C, Eb, Bb) e Percussão.
-    const aluno = new Set((cats.data ?? []).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
-    const alunos = rows.filter((x) => aluno.has(x.id) && active(x) && !isStaff(x))
-    const linkInsts = (r: Row) => r.member_artistic_links.filter((l) => !l.ended_at && l.instrument_id).map((l) => instById.get(l.instrument_id!)).filter(Boolean) as { section_id?: string | null; tuning?: string | null }[]
-    const sopro = secList.find((x) => /sopro/i.test(x.name))
-    const percussao = secList.find((x) => /percuss/i.test(x.name))
-    for (const t of ['C', 'Eb', 'Bb']) {
-      add(`aluno:sopro:${t}`, `Aluno (Sopro: ${t})`, sopro ? pick(alunos.filter((x) => linkInsts(x).some((i) => i.section_id === sopro.id && i.tuning === t))) : undefined)
-    }
-    add('aluno:percussao', 'Aluno (Percussão)', percussao ? pick(alunos.filter((x) => sectionOfLinks(x).includes(percussao.id))) : undefined)
-    // Pernalta: quem está vinculado à atividade Pernalta (naipe Performance).
-    const pernalta = (instruments.data ?? []).find((i) => /pernalta/i.test(i.name))
-    add('pernalta', 'Pernalta', pernalta ? pick(rows.filter((x) => active(x) && !isStaff(x) && !rolesOf(x).has('direcao') && x.member_artistic_links.some((l) => !l.ended_at && l.instrument_id === pernalta.id))) : undefined)
-    const ina = pick(rows.filter((x) => isInactive(x.id) && !rolesOf(x).has('direcao') && !rolesOf(x).has('titular')))
-    add('inativo', 'Inativo', ina)
     return out
   }, [people.data, staff.data, cats.data, sections.data, instruments.data, isInactive, realMembership?.member_id])
 
   if (!allowed) return null
-  const selected = profiles.find((p) => p.id === viewAs?.member_id || (!!viewAs?.virtual && p.key === viewAs.virtual.key))
+
+  // Categoria em uso: a da pessoa visualizada (se a visualização continua depois de recarregar) ou a que acabou de ser escolhida.
+  const derived = viewAs ? CATEGORIES.find((c) => byCategory[c.key].some((p) => p.id === viewAs.member_id || (!!viewAs.virtual && p.virtual?.key === viewAs.virtual.key)))?.key : undefined
+  const cat: CatKey | '' = viewAs ? (derived ?? (chosen || '')) : ''
+  const catLabel = CATEGORIES.find((c) => c.key === cat)?.label
+  const apply = (p: Person | undefined) => setViewAs(p ? { member_id: p.id, display_name: p.name, ...(p.virtual ? { virtual: p.virtual } : {}) } : null)
+
   return (
     <div ref={barRef} className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted')}>
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4 shrink-0" aria-hidden />
         <span className="hidden shrink-0 font-semibold sm:inline">{viewAs ? 'Visualizando como' : 'Visualizar como'}</span>
         <Select
-          aria-label="Visualizar como"
-          className="h-8 min-w-0 max-w-sm flex-1 py-0 text-sm"
-          value={selected?.key ?? ''}
+          aria-label="Categoria para visualizar"
+          className="h-8 min-w-0 max-w-[12rem] flex-1 py-0 text-sm"
+          value={cat}
           onChange={(e) => {
-            const p = profiles.find((x) => x.key === e.target.value)
-            setViewAs(p ? { member_id: p.id, display_name: p.name, ...(p.virtual ? { virtual: p.virtual } : {}) } : null)
+            const key = e.target.value as CatKey | ''
+            setChosen(key)
+            apply(key ? byCategory[key][0] : undefined)
           }}
         >
-          <option value="">{realMembership?.roles.includes('titular') ? 'Titular' : 'Eu mesmo'} (eu mesmo)</option>
-          {profiles.map((p) => <option key={p.key} value={p.key}>{p.label}{p.virtual ? ' (sem pessoa)' : ''}</option>)}
+          <option value="">{realMembership?.roles.includes('titular') ? 'Titular (eu mesmo)' : 'Eu mesmo'}</option>
+          {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
         </Select>
+        {cat && (
+          <Select
+            aria-label={`Pessoa da categoria ${catLabel}`}
+            className="h-8 min-w-0 max-w-xs flex-1 py-0 text-sm"
+            value={viewAs?.member_id ?? ''}
+            onChange={(e) => apply(byCategory[cat].find((p) => p.id === e.target.value))}
+          >
+            {byCategory[cat].map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </Select>
+        )}
         {viewAs && (
-          <Button size="sm" variant="outline" className="h-8 shrink-0 bg-card" onClick={() => setViewAs(null)}>
+          <Button size="sm" variant="outline" className="h-8 shrink-0 bg-card" onClick={() => { setViewAs(null); setChosen('') }}>
             <X className="h-4 w-4" /> <span className="hidden sm:inline">Voltar a mim</span><span className="sm:hidden">Sair</span>
           </Button>
         )}
       </div>
       {viewAs && (
         <p className="mt-1 text-xs">
-          {viewAsLoading ? 'Carregando o acesso deste perfil' : 'Menus e telas seguem o acesso de um perfil'}{selected ? <>: <strong>{selected.label}</strong></> : null}.
+          {viewAsLoading ? 'Carregando o acesso deste perfil' : 'Menus e telas seguem o acesso de um perfil'}{catLabel ? <>: <strong>{catLabel}</strong>{viewAs.virtual ? '' : <> · {viewAs.display_name}</>}</> : null}.
           {' '}Os dados e as ações continuam sendo os <strong>seus</strong> (você ainda é Direção): confira o que o perfil vê, mas edite com cuidado.
         </p>
       )}

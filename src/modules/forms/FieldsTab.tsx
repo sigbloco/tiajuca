@@ -72,7 +72,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       return (data ?? []) as { instrument_id: string; instrument_name: string; section_id: string; is_full: boolean }[]
     },
   })
-  // Ligações com o cadastro (instrumento, função, nível): a opção só liga se tiver o mesmo nome de um item do cadastro.
+  // Ligações com o cadastro (instrumento, categoria, nível): a opção só liga se tiver o mesmo nome de um item do cadastro.
   const catalog = f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : undefined
   const byName = new Map((catalog ?? []).filter((i) => i.is_active).map((i) => [i.name.trim().toLowerCase(), i.id]))
   const unmatched = catalog ? f.options.split('\n').map((l) => l.trim()).filter((l) => l && !byName.has(l.toLowerCase())) : []
