@@ -15,3 +15,27 @@ export function socialLabel(url: string): string {
   if (m) return `@${m[1]}`
   return url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '')
 }
+
+/** Redes para escolher no formulário: nome e o começo do endereço do perfil. */
+export const SOCIAL_NETWORKS: { key: string; label: string; base: string; at: boolean }[] = [
+  { key: 'instagram', label: 'Instagram', base: 'https://instagram.com/', at: true },
+  { key: 'tiktok', label: 'TikTok', base: 'https://www.tiktok.com/@', at: true },
+  { key: 'facebook', label: 'Facebook', base: 'https://facebook.com/', at: false },
+  { key: 'youtube', label: 'YouTube', base: 'https://youtube.com/@', at: true },
+  { key: 'x', label: 'X (Twitter)', base: 'https://x.com/', at: true },
+  { key: 'linkedin', label: 'LinkedIn', base: 'https://linkedin.com/in/', at: false },
+]
+/** Link do perfil a partir da rede e do usuário digitado ("@nome", "nome" ou link completo). */
+export function networkUrl(network: string, user: string): string | null {
+  const u = user.trim()
+  if (!u) return null
+  if (/^https?:\/\//i.test(u)) return u
+  const n = SOCIAL_NETWORKS.find((x) => x.key === network) ?? SOCIAL_NETWORKS[0]
+  const clean = u.replace(/^[@#]+/, '').replace(/\s+/g, '')
+  return clean ? n.base + clean : null
+}
+/** Separa um link guardado em rede + usuário (para reabrir o que já foi digitado). */
+export function splitNetwork(url: string): { network: string; user: string } {
+  const n = SOCIAL_NETWORKS.find((x) => url.toLowerCase().startsWith(x.base.toLowerCase()))
+  return n ? { network: n.key, user: url.slice(n.base.length) } : { network: 'instagram', user: url }
+}

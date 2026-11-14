@@ -3,7 +3,8 @@ import { DEFAULT_FRAME, HeaderBand } from './HeaderBand'
 import { RichText } from '@/components/shared/RichText'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react'
+import { SOCIAL_NETWORKS, networkUrl, splitNetwork } from '@/core/social'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -18,6 +19,45 @@ interface UploadedFile { field_key: string; path: string; name: string; mime: st
 const MAX_BYTES = 5 * 1024 * 1024
 const OK_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 
+/** Redes sociais: escolher a rede (padrão Instagram) e, embaixo, o nome de usuário. Dá para adicionar mais de uma. O valor guardado são os links, um por linha. */
+function SocialInput({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) {
+  const [rows, setRows] = useState<{ network: string; user: string }[]>(() => {
+    const parsed = value.split('\n').map((l) => l.trim()).filter(Boolean).map(splitNetwork)
+    return parsed.length > 0 ? parsed : [{ network: 'instagram', user: '' }]
+  })
+  const update = (next: { network: string; user: string }[]) => {
+    setRows(next)
+    onChange(next.map((r) => networkUrl(r.network, r.user)).filter(Boolean).join('\n'))
+  }
+  return (
+    <div className="space-y-3">
+      {rows.map((r, i) => (
+        <div key={i} className="space-y-1.5 rounded-lg border border-border bg-card p-2.5">
+          <div className="flex items-center gap-2">
+            <Select aria-label="Rede social" id={i === 0 ? id : undefined} value={r.network} onChange={(e) => update(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
+              {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
+            </Select>
+            {rows.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Remover rede social" onClick={() => update(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
+          </div>
+          <Input aria-label="Nome de usuário" placeholder="Nome de usuário (ex.: @cordaodatiajuca)" autoCapitalize="none" autoCorrect="off" value={r.user} onChange={(e) => update(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
+        </div>
+      ))}
+      <Button type="button" size="sm" variant="outline" onClick={() => update([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>
+    </div>
+  )
+}
+
+/** Resposta de seleção com "Outro": guardada como "outro: texto". */
+const OTHER = 'outro:'
+const isOtherVal = (x: unknown): x is string => typeof x === 'string' && x.startsWith(OTHER)
+
+const cleanAnswer = (v: Answers[string]): Answers[string] | null => {
+  if (v === undefined) return null
+  if (typeof v === 'string' && v.trim() === OTHER) return null
+  if (Array.isArray(v)) { const k = v.filter((x) => x !== OTHER); return k.length ? k : null }
+  return v
+}
+
 function FieldInput({ f, value, onChange, files, onFiles }: {
   f: PublicField
   value: Answers[string]
@@ -27,6 +67,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
 }) {
   const id = `f-${f.key}`
   const str = typeof value === 'string' ? value : ''
+  if (f.type === 'long_text' && f.validation.social) return <SocialInput id={id} value={str} onChange={onChange} />
   switch (f.type) {
     case 'short_text': return <Input id={id} value={str} maxLength={f.validation.maxLength ?? 255} onChange={(e) => onChange(e.target.value)} />
     case 'long_text':
@@ -36,8 +77,11 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
     case 'phone': return <PhoneInput id={id} value={str} onChange={onChange} />
     case 'number': return <Input id={id} inputMode="decimal" value={str} onChange={(e) => onChange(e.target.value.replace(/[^\d.,-]/g, ''))} />
     case 'date': return <DateInput id={id} value={str} onChange={onChange} />
-    case 'single_select':
-      return f.options.length <= 5 ? (
+    case 'single_select': {
+      const other = Boolean(f.validation.other)
+      const isOther = isOtherVal(str)
+      const otherInput = isOther ? <Input id={`${id}-outro`} aria-label="Outro: escreva aqui" placeholder="Escreva aqui" maxLength={280} value={str.slice(OTHER.length)} onChange={(e) => onChange(OTHER + e.target.value)} /> : null
+      return f.options.length + (other ? 1 : 0) <= 5 ? (
         <div className="grid gap-2" role="radiogroup" aria-labelledby={`${id}-l`}>
           {f.options.map((o) => (
             <button key={o.value} type="button" role="radio" aria-checked={str === o.value} onClick={() => onChange(o.value)}
@@ -45,23 +89,42 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
               {o.label}
             </button>
           ))}
+          {other && (
+            <button type="button" role="radio" aria-checked={isOther} onClick={() => onChange(OTHER)}
+              className={cn('min-h-11 rounded-lg border px-3 text-left font-semibold', isOther ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>Outro</button>
+          )}
+          {otherInput}
         </div>
       ) : (
-        <Select id={id} value={str} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Selecione</option>
-          {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </Select>
+        <div className="grid gap-2">
+          <Select id={id} value={isOther ? '__outro__' : str} onChange={(e) => onChange(e.target.value === '__outro__' ? OTHER : e.target.value)}>
+            <option value="">Selecione</option>
+            {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {other && <option value="__outro__">Outro</option>}
+          </Select>
+          {otherInput}
+        </div>
       )
+    }
     case 'multi_select': {
       const cur = Array.isArray(value) ? value : []
+      const plain = cur.filter((x: string) => !x.startsWith(OTHER))
+      const otherVal = cur.find((x: string) => x.startsWith(OTHER))
       return (
         <div className="grid gap-2">
           {f.options.map((o) => (
             <label key={o.value} className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3">
-              <input type="checkbox" className="h-5 w-5" checked={cur.includes(o.value)} onChange={(e) => onChange(e.target.checked ? [...cur, o.value] : cur.filter((x) => x !== o.value))} />
+              <input type="checkbox" className="h-5 w-5" checked={plain.includes(o.value)} onChange={(e) => onChange([...(e.target.checked ? [...plain, o.value] : plain.filter((x) => x !== o.value)), ...(otherVal !== undefined ? [otherVal] : [])])} />
               {o.label}
             </label>
           ))}
+          {f.validation.other && (
+            <label className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3">
+              <input type="checkbox" className="h-5 w-5" checked={otherVal !== undefined} onChange={(e) => onChange(e.target.checked ? [...plain, OTHER] : plain)} />
+              Outro
+            </label>
+          )}
+          {otherVal !== undefined && <Input aria-label="Outro: escreva aqui" placeholder="Escreva aqui" maxLength={280} value={otherVal.slice(OTHER.length)} onChange={(e) => onChange([...plain, OTHER + e.target.value])} />}
         </div>
       )
     }
@@ -121,6 +184,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [honeypot, setHoneypot] = useState('')
   const [error, setError] = useState('')
+  const [showErrors, setShowErrors] = useState(false)
   const [done, setDone] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const token = useRef<string | null>(null)
@@ -222,7 +286,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     mutationFn: async () => {
       if (preview) return 'Pré-visualização: nada foi enviado.'
       const { data, error } = await supabase.rpc('submit_public_form', {
-        p_org_slug: orgSlug, p_form_slug: formSlug, p_answers: Object.fromEntries(visible.filter((f) => f.type !== 'info' && f.type !== 'file').map((f) => [f.key, answers[f.key] ?? null])),
+        p_org_slug: orgSlug, p_form_slug: formSlug, p_answers: Object.fromEntries(visible.filter((f) => f.type !== 'info' && f.type !== 'file').map((f) => [f.key, cleanAnswer(answers[f.key])])),
         p_consent: consent, p_hp: honeypot, p_upload_token: token.current, p_files: files.filter((x) => visible.some((f) => f.key === x.field_key)),
       })
       if (error) throw error
@@ -233,26 +297,32 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   })
 
   const org = form.data?.organization
+  useEffect(() => { if (form.data?.form?.title && form.data.organization?.name) document.title = `${form.data.form.title} · ${form.data.organization.name}` }, [form.data?.form?.title, form.data?.organization?.name]) // eslint-disable-line react-hooks/exhaustive-deps
   const f0 = form.data?.form
+  const blankOther = (v: Answers[string]) => (typeof v === 'string' ? v === OTHER || v === OTHER + ' ' : Array.isArray(v) && v.some((x) => x === OTHER))
   const isEmpty = (f: PublicField) => f.required && f.type !== 'info' && (f.type === 'file' ? !files.some((x) => x.field_key === f.key)
-    : f.type === 'checkbox' ? answers[f.key] !== true : answers[f.key] === undefined || answers[f.key] === '' || (Array.isArray(answers[f.key]) && (answers[f.key] as string[]).length === 0))
-  /** O que falta na seção bi (nome da pergunta ou o aceite), ou null se está completa. */
-  const pendingOf = (bi: number): string | null => {
+    : f.type === 'checkbox' ? answers[f.key] !== true : answers[f.key] === undefined || answers[f.key] === '' || (Array.isArray(answers[f.key]) && (answers[f.key] as string[]).length === 0) || blankOther(answers[f.key]))
+  const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1)
+  /** Tudo o que falta na seção bi: perguntas obrigatórias vazias e o aceite (quando a seção o tem). */
+  const pendingList = (bi: number): string[] => {
     const blk = blocks[bi]
-    if (!blk) return null
-    const miss = blk.items.find(isEmpty)
-    if (miss) return miss.label
+    if (!blk) return []
+    const out = blk.items.filter(isEmpty).map((x) => lower(x.label))
     const hasConsentHere = (blk.head ? hasConsent(blk.head) : false) || (bi === blocks.length - 1 && !hasConsentBlock && Boolean(f0?.privacy_text))
-    if (hasConsentHere && f0?.requires_consent && !consent) return 'concordar com o tratamento dos dados'
-    return null
+    if (hasConsentHere && f0?.requires_consent && !consent) out.push('concordar com o tratamento dos dados')
+    return out
   }
-  const go = (to: number, msg = '') => { setStep(to); setError(msg); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  const next = () => { const m = pendingOf(stepIdx); if (m) setError(`Falta preencher: ${m}`); else go(stepIdx + 1) }
+  const missingText = (list: string[]) => `Falta preencher: ${list.join(', ')}.`
+  const go = (to: number) => { setStep(to); setError(''); setShowErrors(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  // Faltando algo: os campos ficam vermelhos, a lista acumula tudo o que falta e a página volta ao topo, onde ela aparece.
+  const fail = (bi: number) => { if (bi !== stepIdx) setStep(bi); setError(''); setShowErrors(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const next = () => { if (pendingList(stepIdx).length > 0) fail(stepIdx); else go(stepIdx + 1) }
   const finish = () => {
     if (uploading || submit.isPending) return
-    for (let i = 0; i < blocks.length; i++) { const m = pendingOf(i); if (m) return go(i, `Falta preencher: ${m}`) }
+    for (let i = 0; i < blocks.length; i++) if (pendingList(i).length > 0) return fail(i)
     submit.mutate()
   }
+  const liveMissing = showErrors ? pendingList(stepIdx) : []
   const pct = blocks.length > 0 ? Math.round(((stepIdx + 1) / blocks.length) * 100) : 100
 
   const progress = blocks.length > 1 ? (
@@ -311,7 +381,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
           </Card></div>
         )}
-        {error && <Card role="alert" className="border-destructive p-3 text-destructive">{error}</Card>}
+        {(error || liveMissing.length > 0) && <Card role="alert" className="border-destructive p-3 text-destructive">{error || missingText(liveMissing)}</Card>}
 
         {blocks.filter((_, bi) => bi === stepIdx).map((b, bi) => (
           <section key={b.head?.key ?? `b${bi}`} className="space-y-3" aria-label={b.head?.label}>
@@ -327,15 +397,15 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
                 {f.description && <Card className="p-4"><RichText text={f.description} /></Card>}
               </div>
             ) : (
-              <Card key={f.key} className="space-y-2 p-4">
-                {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`} className="font-display text-lg font-bold">{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
+              <Card key={f.key} className={cn('space-y-2 p-4', showErrors && isEmpty(f) && 'border-destructive ring-1 ring-destructive')}>
+                {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`} className={cn('font-display text-lg font-bold', showErrors && isEmpty(f) && 'text-destructive')}>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
                 {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                 <FieldInput f={f} value={answers[f.key]} onChange={(v) => set(f.key, v)} files={files}
                   onFiles={(fn, pick) => handleFiles(f.key, fn, pick)} />
               </Card>
             ))}
             {b.head && hasConsent(b.head) && (
-              <Card className="space-y-2 p-4">
+              <Card className={cn('space-y-2 p-4', showErrors && f0?.requires_consent && !consent && 'border-destructive ring-1 ring-destructive')}>
                 {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={f0.privacy_text} className="text-xs text-muted-foreground" /></>}
                 {f0?.requires_consent && (
                   <label className="flex items-start gap-3 pt-1">
