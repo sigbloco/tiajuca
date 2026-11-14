@@ -1,6 +1,6 @@
 import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
-import { useRememberedState } from '@/core/rememberedState'
+import { useState } from 'react'
 import { useRegisterCrumb, useSetCrumbOverride } from '@/core/breadcrumb'
 import { ArrowLeft, Eye } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -18,8 +18,9 @@ export function FormEditorPage() {
   const { formId = '' } = useParams()
   const { membership } = useOrganization()
   const { data: form, isLoading } = useForm(formId)
-  const [tab, setTab] = useRememberedState<(typeof TABS)[number]['key']>('formulario-aba', 'fields', TABS.map((t) => t.key))
-  useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('fields'), true, 0)
+  // Cada formulário abre na primeira aba (Configurações).
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('settings')
+  useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('settings'), true, 0)
   // Caminho: Inscrições • nome do formulário • aba aberta.
   useSetCrumbOverride(form ? [{ label: 'Inscrições', to: `/${membership?.slug}/inscricoes` }, { label: form.title }] : null)
   if (isLoading || !form) return <Skeleton className="h-40" />
