@@ -1,7 +1,7 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive } from 'lucide-react'
+import { Archive, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Input, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
@@ -34,12 +34,26 @@ export function OrdersTab() {
     onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'orders'] }); toast.success(n > 0 ? `${n} pedido(s) arquivado(s).` : 'Nenhum pedido encerrado para arquivar.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const toCheck = (orders.data ?? []).filter((o) => o.status === 'payment_review').length
+  // PDF dos pedidos a entregar: usa os pedidos ativos (não arquivados) do ponto de retirada escolhido, sem os outros filtros da tela.
+  const [exporting, setExporting] = useState(false)
+  const exportPdf = async () => {
+    setExporting(true)
+    try {
+      const all = await listOrders(orgId, { ...EMPTY_ORDER_FILTERS, pickup: filters.pickup })
+      const where = filters.pickup === 'all' ? 'todos os pontos' : pointName.get(filters.pickup)?.name ?? 'ponto'
+      const { exportDeliveryPdf } = await import('./deliveryPdf')
+      await exportDeliveryPdf(all, (id) => pointName.get(id)?.name ?? 'Ponto removido', where)
+    } catch (e) { toast.error(friendlyError(e)) } finally { setExporting(false) }
+  }
+  const toCheck =(orders.data ?? []).filter((o) => o.status === 'payment_review').length
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {toCheck > 0 && filters.status === 'all' && <Badge className="bg-secondary text-secondary-foreground">{toCheck} pagamento(s) para conferir</Badge>}
+        <Button size="sm" variant="outline" disabled={exporting || !orders.data} onClick={() => void exportPdf()}>
+          <FileDown className="h-4 w-4" /> {exporting ? 'Gerando' : 'Exportar PDF'}
+        </Button>
         <Button size="sm" variant="outline" disabled={bulk.isPending} onClick={async () => await confirmBox('Arquivar todos os pedidos cancelados ou já totalmente retirados? Eles saem desta lista, mas nada é apagado (veja em "Arquivados").') && bulk.mutate()}>
           <Archive className="h-4 w-4" /> Arquivar encerrados
         </Button>
