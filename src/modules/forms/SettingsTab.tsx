@@ -110,7 +110,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <h3>Cabeçalho</h3>
           <HeaderBand frame={{ image_url: f.headerImage || null, x: f.hx, y: f.hy, zoom: f.hzoom, height: f.hheight }}
             onChange={(p) => setF((x) => ({ ...x, hx: Math.round(p.x * 10) / 10, hy: Math.round(p.y * 10) / 10 }))}
-            logo={<OrgLogo name={membership?.name ?? ''} logoPath={membership?.logo_path ?? null} className="h-20 w-20 shadow-lg shadow-black/40" />} />
+            logo={<OrgLogo name={membership?.name ?? ''} logoPath={membership?.logo_path ?? null} className="h-20 w-20 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" />} />
           <p className="text-xs text-muted-foreground">{f.headerImage ? 'Prévia de como fica no formulário. Arraste a foto para posicioná-la na moldura.' : 'Prévia do cabeçalho. Escolha uma foto para ficar atrás da logo.'}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {f.headerImage && (
