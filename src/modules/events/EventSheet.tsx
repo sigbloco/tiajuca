@@ -1,13 +1,14 @@
 import { requireFields } from '@/core/required'
-import { promptBox } from '@/components/shared/DialogHost'
+import { confirmBox, promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, ClipboardCheck, Pencil, Save } from 'lucide-react'
+import { Ban, ClipboardCheck, Pencil, Save, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DateInput, TimeInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Input, Label, Select, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
+import { supabase } from '@/core/supabase'
 import { formatDayLong, formatTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -111,6 +112,11 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     },
     onError: (e) => toast.error(/ends_at|check/i.test(String(e)) ? 'O horário final deve ser depois do inicial.' : friendlyError(e)),
   })
+  const remove = useMutation({
+    mutationFn: async () => { const { error } = await supabase.rpc('delete_activity', { p_activity: activity!.id }); if (error) throw error },
+    onSuccess: () => { toast.success('Evento apagado.'); qc.invalidateQueries({ queryKey: ['audience'] }); refresh(); onClose() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1)
   const changeStatus = useMutation({
     mutationFn: (v: { s: Activity['status']; reason?: string | null }) => setActivityStatus(orgId, activity!.id, v.s, v.reason),
@@ -211,6 +217,12 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           <Button type="submit" className="flex-1" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
+        {!isNew && !fromRule && (
+          <Button type="button" variant="outline" className="w-full text-destructive" disabled={remove.isPending}
+            onClick={async () => { if (await confirmBox('Apagar este evento de vez? Isso não pode ser desfeito. Se ele já tiver presença registrada, use Cancelar.')) remove.mutate() }}>
+            <Trash2 className="h-4 w-4" /> Apagar evento
+          </Button>
+        )}
       </form>
     </SheetContent>
   )
