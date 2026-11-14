@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { formatCurrency, formatDate } from '@/core/format'
 import { Input } from './primitives'
 
+/**
+ * Mantém o cursor onde o usuário estava depois de a máscara reescrever o texto
+ * (senão o cursor pula para o fim e fica difícil editar o meio, como apagar só o dia).
+ */
+function keepCaret(el: HTMLInputElement, masked: string) {
+  const digitsBefore = el.value.slice(0, el.selectionStart ?? el.value.length).replace(/\D/g, '').length
+  let pos = 0
+  for (let seen = 0; pos < masked.length && seen < digitsBefore; pos++) if (/\d/.test(masked[pos])) seen++
+  requestAnimationFrame(() => { if (document.activeElement === el) el.setSelectionRange(pos, pos) })
+}
+
 /** '15102026' → '15/10/2026' (barras inseridas automaticamente enquanto digita). */
 export function maskDate(raw: string): string {
   const d = raw.replace(/\D/g, '').slice(0, 8)
@@ -69,6 +80,7 @@ export function DateInput({ id, value, onChange, required, min, max, maxMessage,
       value={text}
       onChange={(e) => {
         const masked = maskDate(e.target.value)
+        keepCaret(e.target, masked)
         setText(masked)
         onChange(brToIso(masked) ?? '')
       }}
@@ -88,7 +100,7 @@ export function maskPhone(raw: string): string {
 export function PhoneInput({ value, onChange, id }: { value: string; onChange: (masked: string) => void; id?: string }) {
   return (
     <Input id={id} type="tel" inputMode="numeric" autoComplete="tel" placeholder="(21) 99999-9999" maxLength={15}
-      value={value} onChange={(e) => onChange(maskPhone(e.target.value))} />
+      value={value} onChange={(e) => { const m = maskPhone(e.target.value); keepCaret(e.target, m); onChange(m) }} />
   )
 }
 
@@ -101,6 +113,7 @@ export function TimeInput({ id, value, onChange, required }: { id?: string; valu
       onChange={(e) => {
         const d = e.target.value.replace(/\D/g, '').slice(0, 4)
         const masked = d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d
+        keepCaret(e.target, masked)
         setText(masked)
         const ok = /^([01]\d|2[0-3]):[0-5]\d$/.test(masked)
         onChange(ok ? masked : '')
