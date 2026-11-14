@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { LogIn, ShoppingCart } from 'lucide-react'
+import { LogIn, LogOut, ShoppingCart } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { OrgLogo } from '@/components/shared/OrgLogo'
@@ -29,6 +29,7 @@ function MemberNotice() {
 
 function Header() {
   const { store, cart, basePath } = useStore()
+  const { session, signOut } = useAuth()
   const shopLabel = useShopLabel(store.org.slug)
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-header text-header-foreground">
@@ -43,6 +44,11 @@ function Header() {
             <ShoppingCart className="h-5 w-5" />
             {cart.itemCount > 0 && <span className="ml-1 font-bold">{cart.itemCount}</span>}
           </Link>
+          {session && (
+            <button type="button" aria-label="Sair" title="Sair" onClick={() => void signOut()} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-border px-3 font-semibold hover:bg-muted">
+              <LogOut className="h-5 w-5" /><span className="hidden sm:inline">Sair</span>
+            </button>
+          )}
         </nav>
       </div>
     </header>

@@ -1,3 +1,4 @@
+import { FitText } from '@/components/shared/FitText'
 import { KitChip } from '@/modules/shop/KitChip'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useState } from 'react'
@@ -38,7 +39,7 @@ export function ShopHomePage() {
       )}
       <ButtonRow role="group" aria-label="Filtrar produtos">
         {FILTERS.map((f) => (
-          <Button key={f.key} size="sm" variant={kinds.includes(f.key) ? 'default' : 'outline'} aria-pressed={kinds.includes(f.key)} onClick={() => toggleKind(f.key)}>{f.label}</Button>
+          <Button key={f.key} size="sm" variant={kinds.includes(f.key) ? 'default' : 'outline'} aria-pressed={kinds.includes(f.key)} onClick={() => toggleKind(f.key)}><FitText className="w-full text-center">{f.label}</FitText></Button>
         ))}
       </ButtonRow>
       {store.products.length > 0 && kinds.length === 0 && <p className="-mt-2 text-sm text-muted-foreground">Selecione um filtro.</p>}
