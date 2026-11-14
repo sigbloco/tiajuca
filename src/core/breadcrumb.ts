@@ -24,3 +24,18 @@ export function useRegisterCrumb(title: string, close: () => void, enabled = tru
     return () => { stack = stack.filter((c) => c.id !== id); emit() }
   }, [title, enabled, id])
 }
+
+// Caminho próprio da página: troca o que viria da URL (ex.: a chamada de um evento do Calendário não é da Oficina).
+export interface PathCrumb { label: string; to?: string }
+let override: PathCrumb[] | null = null
+export function useCrumbOverride(): PathCrumb[] | null {
+  return useSyncExternalStore(subscribe, () => override)
+}
+export function useSetCrumbOverride(crumbs: PathCrumb[] | null) {
+  const key = crumbs ? JSON.stringify(crumbs) : ''
+  useEffect(() => {
+    if (!crumbs) return
+    override = crumbs; emit()
+    return () => { override = null; emit() }
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+}

@@ -16,6 +16,7 @@ import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
 import { cancelWord, getAudiencesFor, listActivities, setActivityStatus, type Activity, type AudienceInput } from '@/modules/events/service'
 import { promptBox } from '@/components/shared/DialogHost'
+import { useSetCrumbOverride } from '@/core/breadcrumb'
 import { usePermission } from '@/core/permissions'
 import { notifyChange } from '@/core/undo'
 import { GroupLink } from '@/modules/members/GroupLink'
@@ -457,6 +458,8 @@ export function AttendanceRosterPage() {
   // Todos os botões de filtro têm a mesma altura (a do mais alto: duas linhas), respiro padrão e texto que nunca vaza.
   const chipCls = (on: boolean) => cn('relative flex min-h-11 items-center justify-center break-words rounded-full border px-3 py-1.5 text-center text-sm font-medium leading-tight', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
   const cancelled = activity.data?.status === 'cancelled'
+  // Evento que não é aula/oficina (ex.: Cortejo): o caminho vem do Calendário, não da Oficina.
+  useSetCrumbOverride(activity.data && !isClass && membership ? [{ label: 'Calendário', to: `/${membership.slug}/eventos` }, { label: activity.data.title }, { label: 'Presença' }] : null)
 
   return (
     <div className="space-y-3">

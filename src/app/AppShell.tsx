@@ -1,6 +1,6 @@
 import { ArrowLeft, Construction, Globe, LogOut, Menu, Store, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useExtraCrumbs } from '@/core/breadcrumb'
+import { useCrumbOverride, useExtraCrumbs } from '@/core/breadcrumb'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { GlobalUnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Breadcrumbs } from '@/components/shared/Breadcrumbs'
@@ -43,6 +43,7 @@ export function AppShell() {
   const lastPath = useRef(pathname)
   // O caminho completo da página (inclui a aba aberta) é guardado a cada tela; ao mudar de página, o da anterior vira o destino do Voltar.
   const extras = useExtraCrumbs()
+  const crumbOverride = useCrumbOverride()
   const trailRender = useRef<string | null>(null)
   const trailCommitted = useRef<string | null>(null)
   const lastUrl = useRef(pathname + search)
@@ -100,7 +101,8 @@ export function AppShell() {
     ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
   ]
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
-  const crumbs = crumbsFor(segs, base)
+
+  const crumbs = crumbOverride ?? crumbsFor(segs, base)
   // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
   const trailNow = [...crumbs.map((c) => c.label), ...extras.filter((e) => e.level === 0).map((e) => e.title)]
   trailRender.current = (trailNow.length ? trailNow : ['Início']).join(' • ')
