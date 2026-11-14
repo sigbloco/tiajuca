@@ -93,7 +93,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   const [f, setF] = useState({
     name: product?.name ?? '', description: product?.description ?? '', kind: (product?.kind ?? 'stock') as ProductKind,
     price: product ? fromCents(product.price_cents) : (null as number | null),
-    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '', minUnits: product?.min_units ? String(product.min_units) : '', suggested: product?.suggested_ids ?? ([] as string[]),
+    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '', minUnits: product?.min_units ? String(product.min_units) : '', notifyMin: product?.notify_min_reached ?? true, suggested: product?.suggested_ids ?? ([] as string[]),
     is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
   const isKit = product ? product.is_kit : kit
@@ -149,7 +149,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
       if (errs.length) return null
       const input = {
         name: f.name.trim(), description: f.description.trim(), price_cents: draft.priceCents!, member_discount_pct: discount,
-        lead_time_days: isStock ? null : draft.leadTimeDays, min_units: isStock || !f.minUnits ? null : Number(f.minUnits), suggested_ids: f.suggested.filter((id) => id !== product?.id), is_active: f.is_active, is_featured: f.is_featured,
+        lead_time_days: isStock ? null : draft.leadTimeDays, min_units: isStock || !f.minUnits ? null : Number(f.minUnits), notify_min_reached: f.notifyMin, suggested_ids: f.suggested.filter((id) => id !== product?.id), is_active: f.is_active, is_featured: f.is_featured,
         ...(isKit ? { is_kit: true, kit_component_photos: photos } : {}),
       }
       const rows = variants.map((v) => ({ id: v.id, label: v.label, is_active: v.is_active, items: v.uses.filter((u) => u.stock_item_id).map((u) => ({ stock_item_id: u.stock_item_id, quantity: Number(u.quantity) })) }))
@@ -285,7 +285,11 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         {!isStock && (
           <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir</Label>
             <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
-            <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p></div>
+            <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p>
+            {f.minUnits && (
+              <label className="flex items-start gap-2 pt-1"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.notifyMin} onChange={(e) => setF({ ...f, notifyMin: e.target.checked })} />
+                <span>Avisar por e-mail quem comprou quando o mínimo for atingido (uma vez só, para todos os pedidos pagos deste produto).</span></label>
+            )}</div>
         )}
         {pickupPoints.length > 0 && (
           <fieldset className="space-y-1 rounded-lg border border-border p-3">

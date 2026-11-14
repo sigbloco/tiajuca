@@ -9,7 +9,7 @@ export interface StockItem { id: string; name: string; stock: number | null; res
 export interface ShopImage { id: string; product_id: string; storage_path: string; alt: string; sort_order: number }
 export interface ShopProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
-  price_cents: number; member_discount_pct: number; lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean; sort_order: number
+  price_cents: number; member_discount_pct: number; lead_time_days: string | null; min_units: number | null; notify_min_reached: boolean; suggested_ids: string[]; is_active: boolean; is_featured: boolean; sort_order: number
   is_kit: boolean; kit_component_photos: boolean; is_hidden: boolean; shop_product_pickups: { id: string; pickup_point_id: string }[]
   shop_product_variants: ShopVariant[]; shop_product_images: ShopImage[]
 }
@@ -38,7 +38,7 @@ export async function listProducts(orgId: string) {
 
 export interface ProductInput {
   name: string; description: string; kind: ProductKind; price_cents: number; member_discount_pct: number
-  lead_time_days: string | null; min_units: number | null; suggested_ids: string[]; is_active: boolean; is_featured: boolean
+  lead_time_days: string | null; min_units: number | null; notify_min_reached?: boolean; suggested_ids: string[]; is_active: boolean; is_featured: boolean
   is_kit?: boolean; kit_component_photos?: boolean; is_hidden?: boolean
 }
 export interface VariantInput { id?: string; label: string; items: { stock_item_id: string; quantity: number }[]; is_active: boolean }
@@ -166,7 +166,7 @@ export async function duplicateProduct(orgId: string, p: ShopProduct): Promise<s
   }))
   const id = await createProduct(orgId, {
     name: `${p.name} (cópia)`.slice(0, 120), description: p.description, kind: p.kind, price_cents: p.price_cents, member_discount_pct: p.member_discount_pct,
-    lead_time_days: p.lead_time_days, min_units: p.min_units, suggested_ids: p.suggested_ids, is_active: true, is_featured: false,
+    lead_time_days: p.lead_time_days, min_units: p.min_units, notify_min_reached: p.notify_min_reached, suggested_ids: p.suggested_ids, is_active: true, is_featured: false,
     is_kit: p.is_kit, kit_component_photos: p.kit_component_photos, is_hidden: true,
   }, variants)
   await saveProductPickups(orgId, id, p.shop_product_pickups.map((x) => x.pickup_point_id))

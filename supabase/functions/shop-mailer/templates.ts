@@ -2,7 +2,7 @@
 // Entrada: o contexto que a função SQL `shop_mail_claim` monta para cada item da fila. Saída: assunto, HTML e texto simples.
 // Todo texto vindo de cliente/produto é escapado (nome, itens, motivo de cancelamento) para não injetar HTML no e-mail.
 
-export type TemplateKey = 'order_created' | 'payment_review' | 'paid' | 'cancelled' | 'fulfillment_in_preparation' | 'fulfillment_ready' | 'fulfillment_picked_up'
+export type TemplateKey = 'order_created' | 'payment_review' | 'paid' | 'cancelled' | 'fulfillment_in_preparation' | 'fulfillment_ready' | 'fulfillment_picked_up' | 'production_started'
 
 export interface MailItem { name: string; variant: string; quantity: number; unit_final_cents: number; kind: 'stock' | 'made_to_order' }
 export interface MailContext {
@@ -11,6 +11,8 @@ export interface MailContext {
   to_email: string
   kind: 'stock' | 'made_to_order' | null
   cancel_reason: string | null
+  /** Só no aviso "production_started": o produto que chegou ao mínimo. */
+  product?: { name: string; min_units: number | null; lead_time_days: string | null } | null
   order: {
     code: string; customer_name: string; status: string; payment_method: 'pix' | 'infinitepay'
     subtotal_cents: number; discount_cents: number; total_cents: number; expires_at: string | null; payment_url: string | null; items: MailItem[]
@@ -127,6 +129,19 @@ export function buildEmail(c: MailContext): BuiltEmail {
       subject = `Pedido ${code}: itens ${kindName} prontos para retirada`
       body = [hello, p(`Os itens ${kindName} do pedido ${code} estão prontos para retirada. Combine o dia e o horário com a gente pelos contatos abaixo.`), pickupSection(c)]
       break
+    case 'production_started': {
+      const prod = c.product?.name ?? 'Seu produto'
+      const min = c.product?.min_units
+      const lead = c.product?.lead_time_days
+      subject = `${prod}: chegamos ao mínimo, a produção começou!`
+      body = [
+        hello,
+        p(`Boa notícia! ${prod} chegou a ${min ? `${min} unidades pagas` : 'o mínimo de unidades pagas'} e a produção já começou. O seu pedido ${code} está incluído.`),
+        p(lead ? `O prazo de produção (${lead}) conta a partir de agora. Avisaremos quando estiver pronto para retirada.` : 'Avisaremos quando estiver pronto para retirada.'),
+        itemsSection(c), pickupSection(c),
+      ]
+      break
+    }
     case 'fulfillment_picked_up':
       subject = `Pedido ${code}: retirada dos itens ${kindName} registrada`
       body = [hello, p(`Registramos a retirada dos itens ${kindName} do pedido ${code}. Obrigado e até a próxima!`)]
