@@ -23,7 +23,7 @@ export function FitText({ children, className, min = 9 }: { children: ReactNode;
     ro.observe(el)
     return () => ro.disconnect()
   }, [children, min])
-  return <span ref={ref} className={cn('block min-w-0 overflow-hidden', className)}>{children}</span>
+  return <span ref={ref} className={cn('block min-w-0 overflow-hidden px-1', className)}>{children}</span>
 }
 
 /** Rótulo de aba/botão: palavra única diminui a fonte até caber (nunca quebra no meio); mais de uma palavra pode quebrar de linha normalmente. */
