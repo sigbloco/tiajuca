@@ -2,9 +2,9 @@ import { requireFields } from '@/core/required'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ActionRow } from '@/components/shared/ActionRow'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { ArrowDown, ArrowUp, GitBranch, Layers, Plus, Power, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, GitBranch, Layers, Plus, Trash2 } from 'lucide-react'
+import { useHoldReorder } from '@/core/holdReorder'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -221,6 +221,34 @@ export function FieldsTab({ formId }: { formId: string }) {
       : `Apagar o campo “${x.label}”? As versões já publicadas e as respostas não mudam.`
     if (await confirmBox(msg)) remove.mutate(x)
   }
+  const drag = useHoldReorder()
+  const applyOrder = useMutation({
+    mutationFn: async (order: FormFieldRow[]) => {
+      const r = await Promise.all(order.map((x, i) => (x.sort_order === i + 1 ? null : supabase.from('form_fields').update({ sort_order: i + 1 }).eq('id', x.id))))
+      const bad = r.find((y) => y?.error); if (bad?.error) throw bad.error
+    },
+    onSuccess: refresh, onError: (e) => toast.error(friendlyError(e)),
+  })
+  // Seções são grupos: mover uma seção leva os campos dela junto. O grupo sem seção (campos antes da primeira) fica sempre no começo.
+  const groups: { head: FormFieldRow | null; items: FormFieldRow[] }[] = []
+  for (const x of fields) {
+    if (isSection(x)) groups.push({ head: x, items: [] })
+    else { if (groups.length === 0) groups.push({ head: null, items: [] }); groups[groups.length - 1].items.push(x) }
+  }
+  const heads = groups.filter((g) => g.head)
+  const moveSection = (fromId: string, toId: string) => {
+    const from = groups.findIndex((g) => g.head?.id === fromId), to = groups.findIndex((g) => g.head?.id === toId)
+    if (from < 0 || to < 0 || from === to) return
+    const arr = [...groups]; const [g] = arr.splice(from, 1); arr.splice(to, 0, g)
+    applyOrder.mutate(arr.flatMap((x) => [...(x.head ? [x.head] : []), ...x.items]))
+  }
+  const moveFieldTo = (fromId: string, toId: string) => {
+    const arr = [...fields]
+    const from = arr.findIndex((x) => x.id === fromId), to = arr.findIndex((x) => x.id === toId)
+    if (from < 0 || to < 0 || from === to) return
+    const [x] = arr.splice(from, 1); arr.splice(to, 0, x)
+    applyOrder.mutate(arr)
+  }
   const move = useMutation({
     mutationFn: async ({ from, to }: { from: number; to: number }) => {
       const arr = [...fields]; ;[arr[from], arr[to]] = [arr[to], arr[from]]
@@ -231,37 +259,37 @@ export function FieldsTab({ formId }: { formId: string }) {
   })
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between"><h2>Campos</h2>
-        <div className="flex gap-2">
-          <Button variant="add" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
-          <Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Novo campo</Button>
-        </div></div>
+      <Button variant="add" className="w-full" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
         {fields.map((x, i) => {
+          const sec = isSection(x)
           const nextIsHead = i === fields.length - 1 || isSection(fields[i + 1])
           const section = sectionIds(fields).get(x.id) ?? ''
+          const hi = heads.findIndex((g) => g.head?.id === x.id)
           return (
             <div key={x.id} className="grid gap-2">
-              <Card className={cn('space-y-2 p-2.5', !x.is_active && 'opacity-60', isSection(x) ? 'border-l-4 border-l-primary bg-muted/60' : 'ml-3')}>
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col">
-                    <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={i === 0} onClick={() => move.mutate({ from: i, to: i - 1 })}><ArrowUp className="h-3.5 w-3.5" /></Button>
-                    <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === fields.length - 1} onClick={() => move.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-3.5 w-3.5" /></Button>
-                  </div>
-                  <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ field: x, section: isSection(x) })}>
-                    <p className={cn('break-words font-semibold', isSection(x) && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
-                    <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                      <Badge>{isSection(x) ? 'Seção' : isConsentBlock(x) ? 'Consentimento' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
-                      {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
-                      {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
-                    </p>
-                  </button>
+              <Card {...drag.row(x.id, sec ? moveSection : moveFieldTo, sec ? 'sections' : 'fields')}
+                className={cn('flex flex-wrap items-center gap-2 p-2.5', !x.is_active && 'opacity-60', sec ? 'border-l-4 border-l-primary bg-muted/60' : 'ml-3', drag.cls(x.id))}>
+                <div className="flex flex-col items-center">
+                  <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={sec ? hi <= 0 : i === 0}
+                    onClick={() => (sec ? moveSection(x.id, heads[hi - 1].head!.id) : move.mutate({ from: i, to: i - 1 }))}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                  {drag.handle(x.id, sec ? moveSection : moveFieldTo, sec ? 'sections' : 'fields')}
+                  <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={sec ? hi === heads.length - 1 : i === fields.length - 1}
+                    onClick={() => (sec ? moveSection(x.id, heads[hi + 1].head!.id) : move.mutate({ from: i, to: i + 1 }))}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
-                <ActionRow>
-                  <Button size="sm" variant="outline" disabled={toggle.isPending} aria-label={x.is_active ? 'Desativar' : 'Ativar'} title={isSection(x) ? 'Vale para a seção e seus campos' : undefined} onClick={() => toggle.mutate(x)}><Power className="h-4 w-4 shrink-0" /><span className="act-label">{x.is_active ? 'Desativar' : 'Ativar'}</span></Button>
-                  <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={isSection(x) ? 'Apaga a seção e seus campos' : undefined} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="act-label">Apagar</span></Button>
-                </ActionRow>
+                <button className="min-w-0 flex-1 basis-40 text-left" onClick={() => setSheet({ field: x, section: sec })}>
+                  <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
+                  <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    <Badge>{sec ? 'Seção' : isConsentBlock(x) ? 'Consentimento' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
+                    {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
+                    {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
+                  </p>
+                </button>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button size="sm" variant="outline" disabled={toggle.isPending} aria-label={x.is_active ? 'Ocultar' : 'Mostrar'} title={sec ? (x.is_active ? 'Oculta a seção e seus campos' : 'Mostra a seção e seus campos') : x.is_active ? 'Ocultar' : 'Mostrar'} onClick={() => toggle.mutate(x)}><Ban className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">{x.is_active ? 'Ocultar' : 'Mostrar'}</span></Button>
+                  <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={sec ? 'Apaga a seção e seus campos' : 'Apagar'} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Apagar</span></Button>
+                </div>
               </Card>
               {nextIsHead && section !== '' && (
                 <Button variant="add" className="ml-3" onClick={() => setSheet({ field: null, defaultSection: section })}><Plus className="h-4 w-4" /> Adicionar campo</Button>
@@ -269,6 +297,7 @@ export function FieldsTab({ formId }: { formId: string }) {
             </div>
           )
         })}
+        {heads.length === 0 && <Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Adicionar campo</Button>}
       </div>
       <p className="text-xs text-muted-foreground">Mudanças nos campos só aparecem no link público depois de <strong>publicar de novo</strong>. Respostas antigas continuam legíveis.</p>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
