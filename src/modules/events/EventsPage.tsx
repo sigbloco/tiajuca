@@ -135,6 +135,10 @@ export function EventsPage() {
   )
   return (
     <div className="space-y-4">
+      <div>
+        <h1>Calendário</h1>
+        <p className="text-muted-foreground">Ensaios, aulas, apresentações e aniversários do ciclo.</p>
+      </div>
       {header}
 
       <Card className="p-3">
