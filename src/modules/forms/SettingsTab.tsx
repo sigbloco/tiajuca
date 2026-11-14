@@ -2,7 +2,7 @@ import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy, Rocket, Save } from 'lucide-react'
+import { Copy, Eye, Rocket, Save } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
@@ -11,8 +11,6 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useCycles } from '@/modules/cycles/service'
-import { usePermission } from '@/core/permissions'
-import { CatalogEditor } from '@/modules/structure/CatalogEditor'
 import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow, type FormStatus } from './service'
 
 // Horário de Brasília (sem horário de verão em vigor): abre às 00:00 e encerra às 23:59 do dia escolhido.
@@ -24,10 +22,9 @@ export function SettingsTab({ form }: { form: FormRow }) {
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const cycles = useCycles()
-  const canStructure = usePermission('structure.manage')
   const [f, setF] = useState({
     title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
-    opens: toDate(form.opens_at), closes: toDate(form.closes_at), confirmation: form.confirmation_message, max: form.max_responses?.toString() ?? '',
+    opens: toDate(form.opens_at), closes: toDate(form.closes_at), confirmation: form.confirmation_message,
     privacy: form.privacy_text ?? '', consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
   const refresh = () => { qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }); qc.invalidateQueries({ queryKey: ['forms', orgId] }) }
@@ -36,7 +33,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
       const { error } = await supabase.from('forms').update({
         title: f.title.trim(), description: f.description.trim() || null, slug: f.slug, cycle_id: f.cycle_id || null,
         opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), confirmation_message: f.confirmation.trim() || 'Inscrição recebida!',
-        max_responses: f.max ? Number(f.max) : null, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe,
+        max_responses: null, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe,
       }).eq('id', form.id)
       if (error) throw error
     },
@@ -53,6 +50,8 @@ export function SettingsTab({ form }: { form: FormRow }) {
     onSuccess: refresh, onError: (e) => toast.error(friendlyError(e)),
   })
   const url = membership ? publicUrl(membership.slug, form.slug) : ''
+  const previewUrl = membership ? `${window.location.origin}/${membership.slug}/previa/${form.id}` : ''
+  const copyPreview = async () => { try { await navigator.clipboard.writeText(previewUrl); toast.success('Link de pré-visualização copiado.') } catch { toast.error('Não foi possível copiar.') } }
   const copy = async () => { try { await navigator.clipboard.writeText(url); toast.success('Link copiado.') } catch { toast.error('Não foi possível copiar.') } }
 
   return (
@@ -60,6 +59,15 @@ export function SettingsTab({ form }: { form: FormRow }) {
       <Card className="space-y-2 p-4">
         <div className="flex items-center justify-between"><h3>Situação</h3><Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge></div>
         {form.status !== 'draft' && <div className="flex items-center gap-2"><Input readOnly value={url} onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" size="icon" aria-label="Copiar link" onClick={copy}><Copy className="h-4 w-4" /></Button></div>}
+        <div className="space-y-1.5">
+          <Label htmlFor="fs-preview">Link de pré-visualização</Label>
+          <div className="flex items-center gap-2">
+            <Input id="fs-preview" readOnly value={previewUrl} onFocus={(e) => e.currentTarget.select()} />
+            <Button variant="outline" size="icon" aria-label="Copiar link de pré-visualização" title="Copiar" onClick={copyPreview}><Copy className="h-4 w-4" /></Button>
+            <Button asChild variant="outline" size="icon" aria-label="Abrir a pré-visualização" title="Abrir"><a href={previewUrl} target="_blank" rel="noreferrer"><Eye className="h-4 w-4" /></a></Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Mostra o formulário como está agora (mesmo rascunho), sem enviar nada. Só abre para quem tem acesso ao sistema.</p>
+        </div>
         <ButtonRow>
           <Button disabled={publish.isPending || form.status === 'archived'} onClick={() => publish.mutate()}><Rocket className="h-4 w-4" /> {form.published_version_id ? 'Publicar nova versão' : 'Publicar'}</Button>
           {form.status === 'published' && <Button variant="outline" onClick={() => setStatus.mutate('closed')}>Encerrar inscrições</Button>}
@@ -82,10 +90,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <div className="space-y-1.5"><Label htmlFor="fs-open">Abre em</Label><DateInput id="fs-open" value={f.opens} onChange={(v) => setF({ ...f, opens: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="fs-close">Encerra em</Label><DateInput id="fs-close" min={f.opens || undefined} value={f.closes} onChange={(v) => setF({ ...f, closes: v })} /></div>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="fs-max">Limite de respostas</Label><Input id="fs-max" inputMode="numeric" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value.replace(/\D/g, '') })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
-        </div>
+        <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
           <textarea id="fs-priv" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.privacy} onChange={(e) => setF({ ...f, privacy: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
@@ -93,10 +98,6 @@ export function SettingsTab({ form }: { form: FormRow }) {
         <Button type="submit" disabled={save.isPending} aria-label="Salvar configurações" title="Salvar configurações"><Save className="h-4 w-4" /></Button>
       </form>
 
-      <Card className="space-y-2 p-4">
-        <CatalogEditor table="skill_levels" title="Níveis de habilidade" singular="Nível" canEdit={canStructure}
-          hint="As opções de nível usadas nas perguntas dos formulários e nos vínculos dos integrantes (ex.: Iniciante, Intermediário, Avançado). Valem para todos os formulários." />
-      </Card>
     </div>
   )
 }
