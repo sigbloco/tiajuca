@@ -267,7 +267,10 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
               </div>
             )}
             {b.items.map((f) => f.type === 'info' ? (
-              <Card key={f.key} className="space-y-3 p-4"><p className="font-display text-lg font-bold">{f.label}</p>{f.description && <RichText text={f.description} />}</Card>
+              <div key={f.key} className="space-y-2">
+                <p className="font-display text-lg font-bold">{f.label}</p>
+                {f.description && <Card className="p-4"><RichText text={f.description} /></Card>}
+              </div>
             ) : (
               <Card key={f.key} className="space-y-2 p-4">
                 {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`} className="font-display text-lg font-bold">{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
