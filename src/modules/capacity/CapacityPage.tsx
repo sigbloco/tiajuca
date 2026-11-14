@@ -71,6 +71,9 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
 }
 
 
+/** Quadro "ocupadas/vagas": largura fixa e nunca quebra, igual nos cartões e nos títulos dos naipes (ficam alinhados). */
+const TOTAL_BOX = 'flex w-[4.75rem] shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-muted/60 px-1 font-display text-xl font-bold'
+
 /** Cartões de um naipe: mostra 2 linhas por vez (o número por linha depende da largura da tela) e "Ver mais" libera mais 2 linhas. */
 function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: string; canManage: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -86,7 +89,7 @@ function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: strin
   }, [])
   const { visible, button } = useProgressive(rows, cols * 2)
   return (
-    <div ref={ref} className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
+    <div ref={ref} className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
       {visible.map((r) => (
         <Card key={r.instrument_id} className={cn('flex items-stretch gap-2 p-2.5', r.is_full && 'border-destructive/50')}>
           {/* Esquerda: nome (quebra de linha se faltar espaço) e, embaixo, o número de vagas. Direita: ocupadas/vagas, que nunca quebra. */}
@@ -94,7 +97,7 @@ function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: strin
             <p className="font-semibold">{r.instrument_name}</p>
             {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
           </div>
-          <div className="flex shrink-0 grow items-center justify-center self-stretch whitespace-nowrap rounded-lg bg-muted/60 px-2 font-display text-xl font-bold"
+          <div className={cn(TOTAL_BOX, 'self-stretch')}
             title={r.capacity === null ? 'Sem limite de vagas' : `${r.occupied} ocupadas de ${r.capacity} vagas`}>
             {r.occupied}/{r.capacity ?? '∞'}
           </div>
@@ -141,7 +144,11 @@ export function CapacityPage() {
       {!cycleId && <EmptyState>Crie um ciclo em “Ciclos” para definir vagas.</EmptyState>}
       {Object.entries(bySection).map(([section, rows]) => (
         <section key={section} className="space-y-2">
-          <h3>{section}</h3>
+          {/* Título: total do naipe (ocupadas/vagas; ∞ se algum instrumento não tem limite) antes do nome. */}
+          <div className="flex items-center gap-2">
+            <span className={cn(TOTAL_BOX, 'py-0.5 text-base')}>{rows.reduce((s, r) => s + r.occupied, 0)}/{rows.some((r) => r.capacity === null) ? '∞' : rows.reduce((s, r) => s + (r.capacity ?? 0), 0)}</span>
+            <h3>{section}</h3>
+          </div>
           <SectionGrid rows={rows} cycleId={cycleId} canManage={canManage} />
         </section>
       ))}
