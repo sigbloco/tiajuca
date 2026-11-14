@@ -6,7 +6,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
-import { TrashSection } from '@/components/shared/TrashSection'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -25,7 +25,7 @@ import { MemberDetailSheet } from './MemberDetailSheet'
 import { ReactivationRequests } from './Reactivation'
 import { createMember, type MemberRow } from './service'
 
-/** Lixeira de integrantes: quem foi excluído fica aqui e pode ser restaurado. */
+/** Lixeira de integrantes (ícone ao lado do "+"): quem foi excluído fica aqui e pode ser restaurado. */
 function MembersTrash() {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -48,7 +48,7 @@ function MembersTrash() {
     onError: (e) => toast.error(friendlyError(e)),
   })
   if (!can) return null
-  return <TrashSection entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
+  return <TrashDrawer iconOnly title="Lixeira de integrantes" entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
 }
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
@@ -348,6 +348,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
             <NewMemberSheet onClose={() => setSheetOpen(false)} />
           </Sheet>
         </Can>
+        <MembersTrash />
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)_9.5rem] gap-2 sm:max-w-lg">
@@ -386,8 +387,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
 
       {renderSections(tree.data)}
       {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
-
-      <MembersTrash />
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && closeSheet()}>
         {selected && <MemberDetailSheet onArchived={() => { qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }); closeSheet() }} onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
