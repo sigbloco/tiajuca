@@ -160,9 +160,12 @@ function InstrumentWorkshop({ inst }: { inst: CatalogItem }) {
     },
   })
   const saveCap = useMutation({
+    // Vazio ou 0 = sem limite (infinito): a linha do limite é apagada.
     mutationFn: async (capacity: number) => {
-      const { error } = await supabase.from('instrument_cycle_capacity')
-        .upsert({ organization_id: orgId, instrument_id: inst.id, cycle_id: cid!, capacity }, { onConflict: 'instrument_id,cycle_id' })
+      const { error } = capacity === 0
+        ? await supabase.from('instrument_cycle_capacity').delete().eq('instrument_id', inst.id).eq('cycle_id', cid!)
+        : await supabase.from('instrument_cycle_capacity')
+          .upsert({ organization_id: orgId, instrument_id: inst.id, cycle_id: cid!, capacity }, { onConflict: 'instrument_id,cycle_id' })
       if (error) throw error
     },
     onSuccess: () => { notifySaved('Vagas atualizadas.'); qc.invalidateQueries({ queryKey: ['capacity-edit', orgId] }); qc.invalidateQueries({ queryKey: ['capacity', orgId] }) },
@@ -186,7 +189,7 @@ function InstrumentWorkshop({ inst }: { inst: CatalogItem }) {
       </label>
       <div className="flex items-center gap-2">
         <span className="shrink-0 font-semibold">Vagas</span>
-        <SaveInput className="w-32 flex-none" aria-label={`Vagas de ${inst.name}`} placeholder="Sem limite" value={cap.data === null || cap.data === undefined ? '' : String(cap.data)}
+        <SaveInput className="w-32 flex-none" allowEmpty aria-label={`Vagas de ${inst.name}`} placeholder="Sem limite" value={cap.data === null || cap.data === undefined ? '' : String(cap.data)}
           onSave={(v) => {
             const n = Number(v)
             if (!Number.isInteger(n) || n < 0) { toast.error('Informe um número inteiro maior ou igual a zero.'); return }
