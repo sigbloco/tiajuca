@@ -1,7 +1,6 @@
-import { FitText } from '@/components/shared/FitText'
 import { KitChip } from '@/modules/shop/KitChip'
 import { ButtonRow } from '@/components/shared/ButtonRow'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, EmptyState, cn } from '@/components/ui/primitives'
 import { balancedCols } from '@/components/shared/BalancedGrid'
@@ -39,7 +38,7 @@ export function ShopHomePage() {
       )}
       <ButtonRow role="group" aria-label="Filtrar produtos">
         {FILTERS.map((f) => (
-          <Button key={f.key} size="sm" variant={kinds.includes(f.key) ? 'default' : 'outline'} aria-pressed={kinds.includes(f.key)} onClick={() => toggleKind(f.key)}><FitText className="w-full text-center">{f.label}</FitText></Button>
+          <Button key={f.key} size="sm" variant={kinds.includes(f.key) ? 'default' : 'outline'} aria-label={f.label} aria-pressed={kinds.includes(f.key)} onClick={() => toggleKind(f.key)} className="h-auto min-h-11 whitespace-normal break-keep px-1.5 py-1.5 text-center text-[13px] leading-tight"><span>{f.label.split(' ').map((w, i) => <Fragment key={i}>{i > 0 && <br />}{w}</Fragment>)}</span></Button>
         ))}
       </ButtonRow>
       {store.products.length > 0 && kinds.length === 0 && <p className="-mt-2 text-sm text-muted-foreground">Selecione um filtro.</p>}
