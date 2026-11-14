@@ -9,7 +9,7 @@ import { friendlyError } from '@/core/errors'
 import { formatDate } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { applyTheme } from '@/core/theme'
-import { isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
+import { isConsentBlock, isSection, isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
 
 interface UploadedFile { field_key: string; path: string; name: string; mime: string; size: number }
 const MAX_BYTES = 5 * 1024 * 1024
@@ -137,6 +137,17 @@ export function PublicFormPage() {
   const fields = form.data?.form?.fields ?? []
   const visible = useMemo(() => fields.filter((f) => isVisible(f, answers)), [fields, answers])
 
+  // Seções: cada cabeçalho abre um bloco com as perguntas que vêm depois dele (perguntas antes da primeira seção ficam num bloco sem título).
+  const blocks = useMemo(() => {
+    const out: { head: PublicField | null; items: PublicField[] }[] = []
+    for (const f of visible) {
+      if (isSection(f)) out.push({ head: f, items: [] })
+      else { if (out.length === 0) out.push({ head: null, items: [] }); out[out.length - 1].items.push(f) }
+    }
+    return out
+  }, [visible])
+  const hasConsentBlock = visible.some(isConsentBlock)
+
   const set = (key: string, v: Answers[string]) => { setAnswers((a) => ({ ...a, [key]: v })); setError('') }
   const handleFiles = async (key: string, fn: (p: UploadedFile[]) => UploadedFile[], pick: File | null) => {
     if (!pick) return setFiles(fn)
@@ -208,18 +219,38 @@ export function PublicFormPage() {
         </Card>
         {error && <Card role="alert" className="border-destructive p-3 text-destructive">{error}</Card>}
 
-        {visible.map((f) => f.type === 'info' ? (
-          <Card key={f.key} className="p-4"><p className="font-semibold">{f.label}</p>{f.description && <p className="whitespace-pre-wrap text-muted-foreground">{f.description}</p>}</Card>
-        ) : (
-          <Card key={f.key} className="space-y-2 p-4">
-            {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`}>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
-            {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
-            <FieldInput f={f} value={answers[f.key]} onChange={(v) => set(f.key, v)} files={files}
-              onFiles={(fn, pick) => handleFiles(f.key, fn, pick)} />
-          </Card>
+        {blocks.map((b, bi) => (
+          <section key={b.head?.key ?? `b${bi}`} className="space-y-3" aria-label={b.head?.label}>
+            {b.head && (
+              <div className="border-l-4 border-primary pl-3 pt-2">
+                <h2 className="font-display text-2xl font-extrabold">{b.head.label}</h2>
+                {b.head.description && <p className="whitespace-pre-wrap text-muted-foreground">{b.head.description}</p>}
+              </div>
+            )}
+            {b.items.map((f) => isConsentBlock(f) ? (
+              <Card key={f.key} className="space-y-2 p-4">
+                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><p className="whitespace-pre-wrap text-xs text-muted-foreground">{f0.privacy_text}</p></>}
+                {f0?.requires_consent && (
+                  <label className="flex items-start gap-3 pt-1">
+                    <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                    <span>{f.label} <span className="text-destructive">*</span></span>
+                  </label>
+                )}
+              </Card>
+            ) : f.type === 'info' ? (
+              <Card key={f.key} className="p-4"><p className="font-semibold">{f.label}</p>{f.description && <p className="whitespace-pre-wrap text-muted-foreground">{f.description}</p>}</Card>
+            ) : (
+              <Card key={f.key} className="space-y-2 p-4">
+                {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`}>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
+                {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
+                <FieldInput f={f} value={answers[f.key]} onChange={(v) => set(f.key, v)} files={files}
+                  onFiles={(fn, pick) => handleFiles(f.key, fn, pick)} />
+              </Card>
+            ))}
+          </section>
         ))}
 
-        {f0?.privacy_text && (
+        {f0?.privacy_text && !hasConsentBlock && (
           <Card className="space-y-2 p-4">
             <h3>Privacidade e proteção de dados</h3>
             <p className="whitespace-pre-wrap text-xs text-muted-foreground">{f0.privacy_text}</p>

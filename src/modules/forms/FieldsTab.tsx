@@ -1,6 +1,6 @@
 import { requireFields } from '@/core/required'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, GitBranch, Plus, Save } from 'lucide-react'
+import { ArrowDown, ArrowUp, GitBranch, Layers, Plus, Save } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -8,16 +8,16 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { keyify, useFormFields, type FormFieldRow } from './service'
-import { FIELD_TYPE_LABEL, MAPPING_LABEL, type FieldOption, type FieldType } from './types'
+import { FIELD_TYPE_LABEL, MAPPING_LABEL, isConsentBlock, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
 const CATALOG_MAPPINGS = ['link.instrument', 'link.function', 'link.skill_level']
 
-function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
+function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { asSection?: boolean; formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
-    label: field?.label ?? '', description: field?.description ?? '', type: (field?.field_type ?? 'short_text') as FieldType, required: field?.required ?? false,
+    label: field?.label ?? '', description: field?.description ?? '', type: (asSection ? 'info' : field?.field_type ?? 'short_text') as FieldType, consent: !!field?.validation.consent, required: field?.required ?? false,
     options: (field?.options ?? []).map((o) => o.label).join('\n'),
     min: field?.validation.min?.toString() ?? '', max: field?.validation.max?.toString() ?? '', maxLength: field?.validation.maxLength?.toString() ?? '',
     condField: field?.condition?.field ?? '', condOp: field?.condition?.op ?? 'eq', condValue: field?.condition?.value ?? '',
@@ -45,8 +45,10 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
       const num = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(',', '.')))
       const validation = Object.fromEntries(Object.entries({ min: num(f.min), max: num(f.max), maxLength: num(f.maxLength) }).filter(([, v]) => v !== undefined && !Number.isNaN(v)))
       const opts = OPTION_TYPES.includes(f.type) && !CATALOG_MAPPINGS.includes(f.mapping) ? toOptions() : []
+      // Seção e consentimento são campos "info" com uma marca em validation.
+      const marks = asSection ? { section: true } : f.type === 'info' && f.consent ? { consent: true } : {}
       const row = {
-        label: f.label.trim(), description: f.description.trim() || null, field_type: f.type, required: f.type === 'info' ? false : f.required, options: opts, validation,
+        label: f.label.trim(), description: f.description.trim() || null, field_type: f.type, required: f.type === 'info' ? false : f.required, options: opts, validation: f.type === 'info' ? marks : validation,
         condition: f.condField && f.condValue !== '' ? { field: f.condField, op: f.condOp, value: f.condValue } : null,
         member_mapping: f.mapping || null,
       }
@@ -62,11 +64,13 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
 
   const needsOptions = OPTION_TYPES.includes(f.type) && !CATALOG_MAPPINGS.includes(f.mapping)
   return (
-    <SheetContent title={field ? 'Editar campo' : 'Novo campo'} description={field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Nome do campo', f.label.trim()], ['Opções', !needsOptions || f.options.trim()]])) save.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="fl-label" required>{f.type === 'info' ? 'Texto' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
-        <div className="grid grid-cols-2 gap-2">
+    <SheetContent title={asSection ? (field ? 'Editar seção' : 'Nova seção') : field ? 'Editar campo' : 'Novo campo'} description={asSection ? 'Agrupa as perguntas que vêm depois, até a próxima seção.' : field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || f.options.trim()]])) save.mutate() }} className="space-y-3">
+        <div className="space-y-1.5"><Label htmlFor="fl-label" required>{asSection ? 'Nome da seção' : f.type === 'info' ? 'Título' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
+        {f.type === 'info'
+          ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><textarea id="fl-desc" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+          : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
+        {!asSection && <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="fl-type">Tipo</Label>
             <Select id="fl-type" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as FieldType })}>
               {(Object.keys(FIELD_TYPE_LABEL) as FieldType[]).map((t) => <option key={t} value={t}>{FIELD_TYPE_LABEL[t]}</option>)}
@@ -74,7 +78,10 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
           {f.type !== 'info' && (
             <label className="mt-6 flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.required} onChange={(e) => setF({ ...f, required: e.target.checked })} /> Obrigatório</label>
           )}
-        </div>
+        </div>}
+        {f.type === 'info' && !asSection && (
+          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Bloco de consentimento: mostra o texto de privacidade do formulário e a caixa de marcar com o título acima. Sem este bloco, o consentimento fica no fim do formulário.</span></label>
+        )}
         {needsOptions && (
           <div className="space-y-1.5"><Label htmlFor="fl-opts">Opções (uma por linha)</Label>
             <textarea id="fl-opts" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.options} onChange={(e) => setF({ ...f, options: e.target.value })} /></div>
@@ -90,7 +97,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
           <div className="space-y-1.5"><Label htmlFor="fl-ml">Tamanho máximo (caracteres)</Label><Input id="fl-ml" inputMode="numeric" value={f.maxLength} onChange={(e) => setF({ ...f, maxLength: e.target.value.replace(/\D/g, '') })} /></div>
         )}
 
-        <Card className="space-y-2 p-3">
+        {!asSection && <Card className="space-y-2 p-3">
           <p className="flex items-center gap-1.5 font-semibold"><GitBranch className="h-4 w-4" /> Mostrar somente se</p>
           <Select aria-label="Campo da condição" value={f.condField} onChange={(e) => setF({ ...f, condField: e.target.value, condValue: '' })}>
             <option value="">Sempre mostrar</option>
@@ -104,7 +111,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose }: { formId: str
               </Select>
             </div>
           )}
-        </Card>
+        </Card>}
 
         {f.type !== 'info' && f.type !== 'file' && (
           <div className="space-y-1.5"><Label htmlFor="fl-map">Ligar ao cadastro do integrante</Label>
@@ -125,7 +132,7 @@ export function FieldsTab({ formId }: { formId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data } = useFormFields(formId)
-  const [sheet, setSheet] = useState<{ field: FormFieldRow | null } | null>(null)
+  const [sheet, setSheet] = useState<{ field: FormFieldRow | null; section?: boolean } | null>(null)
   const fields = data ?? []
   const refresh = () => qc.invalidateQueries({ queryKey: ['form-fields', orgId, formId] })
   const patch = useMutation({
@@ -142,19 +149,23 @@ export function FieldsTab({ formId }: { formId: string }) {
   })
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between"><h2>Campos</h2><Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Novo campo</Button></div>
+      <div className="flex items-center justify-between"><h2>Campos</h2>
+        <div className="flex gap-2">
+          <Button variant="add" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
+          <Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Novo campo</Button>
+        </div></div>
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
         {fields.map((x, i) => (
-          <Card key={x.id} className={cn('flex items-center gap-2 p-2.5', !x.is_active && 'opacity-60')}>
+          <Card key={x.id} className={cn('flex items-center gap-2 p-2.5', !x.is_active && 'opacity-60', isSection(x) ? 'border-l-4 border-l-primary bg-muted/60' : 'ml-3')}>
             <div className="flex flex-col">
               <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={i === 0} onClick={() => move.mutate({ from: i, to: i - 1 })}><ArrowUp className="h-3.5 w-3.5" /></Button>
               <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === fields.length - 1} onClick={() => move.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-3.5 w-3.5" /></Button>
             </div>
-            <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ field: x })}>
-              <p className="break-words font-semibold">{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
+            <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ field: x, section: isSection(x) })}>
+              <p className={cn('break-words font-semibold', isSection(x) && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
               <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                <Badge>{FIELD_TYPE_LABEL[x.field_type]}</Badge>
+                <Badge>{isSection(x) ? 'Seção' : isConsentBlock(x) ? 'Consentimento' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
                 {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
                 {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
               </p>
@@ -165,7 +176,7 @@ export function FieldsTab({ formId }: { formId: string }) {
       </div>
       <p className="text-xs text-muted-foreground">Mudanças nos campos só aparecem no link público depois de <strong>publicar de novo</strong>. Respostas antigas continuam legíveis.</p>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet && <FieldSheet key={sheet.field?.id ?? 'new'} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
+        {sheet && <FieldSheet key={sheet.field?.id ?? (sheet.section ? 'new-section' : 'new')} asSection={sheet.section} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )
