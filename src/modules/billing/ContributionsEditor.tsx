@@ -24,7 +24,7 @@ function useSetPrice(from: string) {
   }
 }
 
-/** Categoria que reflete uma função: o nome não se edita; só o valor mensal (versionado: vale daqui para frente). */
+/** Categoria que acompanha uma categoria de Organização: o nome não se edita; só o valor mensal (versionado: vale daqui para frente). */
 function CategoryRow({ item, current, canEdit, from }: { item: CatalogItem; current: number | null; canEdit: boolean; from: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -89,14 +89,14 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
     <div className="space-y-3">
       <h2>Valores{cycle ? ` · ${cycle.name}` : ''}</h2>
       <ReadMore>
-        As categorias refletem as funções (<PageLink to="funcoes">Organização → Categorias</PageLink>) e não se editam aqui; só o valor mensal. {cycle && cycle.ends_on < today ? 'Ciclo encerrado: só consulta.' : 'O valor muda daqui para frente (num ciclo futuro, vale desde o início dele); cobranças já geradas não mudam.'}
+        Estas categorias acompanham as de <PageLink to="funcoes">Organização → Categorias</PageLink> e não se editam aqui; só o valor mensal. {cycle && cycle.ends_on < today ? 'Ciclo encerrado: só consulta.' : 'O valor muda daqui para frente (num ciclo futuro, vale desde o início dele); cobranças já geradas não mudam.'}
         Defina a categoria de cada pessoa na ficha do integrante.
       </ReadMore>
       {(cats.isLoading || funcs.isLoading) && <Skeleton className="h-24" />}
       <div className="grid gap-2">
         <Card className="space-y-1 border-primary/30 bg-primary/5 p-3">
           <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-muted-foreground" aria-hidden /> Isento <span className="font-normal text-muted-foreground">· R$ 0,00 /mês</span></p>
-          <p className="text-sm text-muted-foreground">Quem tem uma função isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. Não é editável.</p>
+          <p className="text-sm text-muted-foreground">Quem tem uma categoria isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. Não é editável.</p>
         </Card>
         <ProgressiveList items={payers} render={(f) => {
           const c = byName.get(f.name.toLowerCase())
