@@ -169,6 +169,7 @@ export function AppShell() {
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
+          <CycleBar base={base} />
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
               onClick={() => {
@@ -185,7 +186,6 @@ export function AppShell() {
           )}
           <Breadcrumbs crumbs={crumbs} />
           <div id="edit-actions-slot" />
-          <CycleBar base={base} />
           </div>
         <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">

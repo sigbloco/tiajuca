@@ -24,7 +24,7 @@ export function useSelectedCycle(): Ctx {
 /** Áreas que ficam sob um ciclo (o Calendário tem o seu próprio menu). */
 const CYCLE_AREAS = new Set([
   '', 'oficina', 'alunos', 'presenca', 'vagas', 'lista-de-espera', 'inscricoes', 'relatorios',
-  'repertorio', 'naipes', 'eventos',
+  'repertorio', 'naipes', 'eventos', 'membros',
   'financeiro', 'equipe', 'valores', 'cobrancas', 'mensalidades', 'bolsas',
 ])
 
@@ -35,7 +35,7 @@ export function CycleBar({ base }: { base: string }) {
   const first = pathname.slice(base.length).split('/').filter(Boolean)[0] ?? ''
   if (!CYCLE_AREAS.has(first)) return null
   return (
-    <div className="flex items-center gap-2">
+    <div className="mb-1.5 flex items-center gap-2">
       <span className="shrink-0 whitespace-nowrap font-semibold text-muted-foreground">Ciclo</span>
       <CycleSelect className="w-auto min-w-0 sm:w-auto" value={cycleId} onChange={setCycleId} />
     </div>
