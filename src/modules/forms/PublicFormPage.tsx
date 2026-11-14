@@ -3,7 +3,7 @@ import { RichText } from '@/components/shared/RichText'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Input, Label, Select, Skeleton, cn } from '@/components/ui/primitives'
@@ -154,6 +154,17 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   // Uma seção por vez: só avança quando a seção atual está completa.
   const [step, setStep] = useState(0)
   const stepIdx = Math.min(step, Math.max(0, blocks.length - 1))
+  // Título e subtítulo: quando o usuário rola além do cartão do título (ou está numa etapa sem ele), passam para o cabeçalho fixo, abaixo do progresso.
+  const [titleEl, setTitleEl] = useState<HTMLElement | null>(null)
+  const [titlePast, setTitlePast] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!titleEl) { setTitlePast(false); return }
+    const h = headerRef.current?.offsetHeight ?? 0
+    const io = new IntersectionObserver(([e]) => setTitlePast(!e.isIntersecting && e.boundingClientRect.top < h), { rootMargin: `-${h}px 0px 0px 0px` })
+    io.observe(titleEl)
+    return () => io.disconnect()
+  }, [titleEl])
   const isLast = stepIdx >= blocks.length - 1
 
   const set = (key: string, v: Answers[string]) => { setAnswers((a) => ({ ...a, [key]: v })); setError('') }
@@ -230,8 +241,8 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
-      <header className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 backdrop-blur">
-        <div className="relative flex items-center gap-3 overflow-hidden rounded-2xl px-3 py-3">
+      <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 backdrop-blur">
+        <div className="relative flex justify-center overflow-hidden rounded-2xl py-3">
           {f0?.header_image_url && (
             <>
               {/* Foto de fundo: desfoque de 1 px, escurecida, com degradê de transparente (em cima) para o vermelho da marca (embaixo) */}
@@ -239,15 +250,15 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
               <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80" />
             </>
           )}
-          {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="relative h-16 w-16 shrink-0 shadow-lg shadow-black/40" />}
-          {f0 && (
-            <div className={`relative min-w-0 text-left ${f0.header_image_url ? 'text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]' : ''}`}>
-              <h1 className="font-display text-lg font-extrabold leading-tight sm:text-xl">{f0.title}</h1>
-              <p className={`text-xs ${f0.header_image_url ? '' : 'text-muted-foreground'}`}>Campos com * são obrigatórios.{f0.closes_at ? ` Inscrições até ${formatDate(f0.closes_at.slice(0, 10))}.` : ''}</p>
-            </div>
-          )}
+          {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="relative h-20 w-20 shadow-lg shadow-black/40" />}
         </div>
         {progress}
+        {f0 && (stepIdx > 0 || titlePast) && (
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-left">
+            <span className="font-display text-sm font-bold">{f0.title}</span>
+            <span className="text-xs text-muted-foreground">Campos com * são obrigatórios.</span>
+          </p>
+        )}
       </header>
       {children}
     </main>
@@ -264,7 +275,14 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   return (
     <Shell>
       <form onSubmit={(e) => { e.preventDefault(); if (isLast) finish(); else next() }} className="space-y-4" noValidate>
-        {stepIdx === 0 && f0?.description && <Card className="p-5"><RichText text={f0.description} /></Card>}
+        {stepIdx === 0 && (
+          <div ref={setTitleEl}><Card className="space-y-1 p-5 text-center">
+            <h1>{f0?.title}</h1>
+            {f0?.description && <RichText text={f0.description} className="text-muted-foreground" />}
+            {f0?.closes_at && <p className="text-xs text-muted-foreground">Inscrições até {formatDate(f0.closes_at.slice(0, 10))}.</p>}
+            <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
+          </Card></div>
+        )}
         {error && <Card role="alert" className="border-destructive p-3 text-destructive">{error}</Card>}
 
         {blocks.filter((_, bi) => bi === stepIdx).map((b, bi) => (
