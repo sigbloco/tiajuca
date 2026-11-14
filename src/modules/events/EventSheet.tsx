@@ -1,3 +1,4 @@
+import { ActionRow } from '@/components/shared/ActionRow'
 import { requireFields } from '@/core/required'
 import { confirmBox, promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -154,18 +155,18 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         )}
         <ChecklistSection activityId={activity.id} />
         <div className="mt-auto flex flex-col gap-2">
-          <div className="flex gap-2">
+          <ActionRow>
             {canRecord && activity.has_attendance && activity.status !== 'cancelled' && (
-              <Button asChild variant="outline" className="flex-1"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Presença</span></Link></Button>
+              <Button asChild variant="outline"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>
             )}
-            {canManage && <Button variant="outline" className="flex-1" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Editar</span></Button>}
+            {canManage && <Button variant="outline" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /><span className="act-label ml-1.5">Editar</span></Button>}
             {canManage && activity.status !== 'cancelled' && (
-              <Button variant="outline" className="flex-1 text-destructive" disabled={changeStatus.isPending}
+              <Button variant="outline" className="text-destructive" disabled={changeStatus.isPending}
                 onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${theThing}? Ele continua no histórico como cancelado.\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) changeStatus.mutate({ s: 'cancelled', reason }) }}>
-                <Ban className="h-4 w-4" /><span className="ml-1.5 max-[380px]:hidden">Cancelar</span>
+                <Ban className="h-4 w-4" /><span className="act-label ml-1.5">Cancelar</span>
               </Button>
             )}
-          </div>
+          </ActionRow>
           {canManage && activity.status === 'cancelled' && (
             <Button variant="outline" onClick={() => changeStatus.mutate({ s: 'scheduled' })}>Reativar {cancelWord(activity.activity_types?.name)}</Button>
           )}
