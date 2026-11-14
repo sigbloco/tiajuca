@@ -1,6 +1,8 @@
 import { requireFields } from '@/core/required'
+import { SaveButton } from '@/components/shared/SaveButton'
+import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, GitBranch, Layers, Plus, Save } from 'lucide-react'
+import { ArrowDown, ArrowUp, GitBranch, Layers, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -68,7 +70,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { 
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || f.options.trim()]])) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="fl-label" required>{asSection ? 'Nome da seção' : f.type === 'info' ? 'Título' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
         {f.type === 'info'
-          ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><textarea id="fl-desc" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+          ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
         {!asSection && <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="fl-type">Tipo</Label>
@@ -121,7 +123,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { 
             </Select>
             <p className="text-xs text-muted-foreground">Ao aprovar, o valor vai direto para o cadastro, sem digitar de novo.</p></div>
         )}
-        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar campo" title="Salvar campo"><Save className="h-4 w-4" /></Button>
+        <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar campo" />
       </form>
     </SheetContent>
   )

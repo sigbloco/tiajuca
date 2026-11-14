@@ -1,6 +1,7 @@
 import { confirmBox } from '@/components/shared/DialogHost'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, Save, X } from 'lucide-react'
+import { Heart, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Select } from '@/components/ui/primitives'
@@ -116,7 +117,7 @@ export function StaffSection({ memberId }: { memberId: string }) {
             </Select>
             <CompensationPick value={comp} onChange={setComp} />
             <div className="flex gap-2">
-              <Button size="icon" aria-label="Salvar atribuição" title="Salvar" disabled={!target || !comp || add.isPending} onClick={() => add.mutate()}><Save className="h-4 w-4" /></Button>
+              <SaveButton disabled={!target || !comp || add.isPending} onClick={() => add.mutate()} hint="Salvar atribuição" />
               <Button size="icon" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={() => { setAdding(false); setTarget(''); setComp(null) }}><X className="h-4 w-4" /></Button>
             </div>
           </div>

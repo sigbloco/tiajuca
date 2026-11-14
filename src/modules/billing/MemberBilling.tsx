@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Button, Input, Label, Select, cn } from '@/components/ui/primitives'
+import { Input, Label, Select, cn } from '@/components/ui/primitives'
 import { useCycles } from '@/modules/cycles/service'
 import { MemberSection } from '@/modules/members/MemberSection'
 import { OkSelect } from '@/components/shared/ConfirmField'
@@ -12,7 +13,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { Plus, Save } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['Aluno', 'Músico', 'Senior', 'Professor', 'Isento']
@@ -141,7 +142,7 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
         <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
       </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
-      {!auto && <Button size="sm" disabled={!valid || save.isPending} onClick={() => save.mutate()} aria-label="Salvar bolsa" title="Salvar bolsa"><Save className="h-4 w-4" /></Button>}
+      {!auto && <SaveButton disabled={!valid || save.isPending} onClick={() => save.mutate()} className="h-9 px-3" hint="Salvar bolsa" />}
     </div>
   )
 }

@@ -1,8 +1,10 @@
 import { requireFields } from '@/core/required'
+import { SaveButton } from '@/components/shared/SaveButton'
+import { RichTextarea } from '@/components/shared/RichText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy, Eye, Rocket, Save } from 'lucide-react'
+import { Copy, Eye, Rocket } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
@@ -81,7 +83,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Endereço do formulário', f.slug]])) save.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="fs-title" required>Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-desc">Descrição</Label>
-          <textarea id="fs-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+          <RichTextarea id="fs-desc" rows={3} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-slug">Endereço (final do link)</Label><Input id="fs-slug" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
           <p className="text-xs text-muted-foreground">Mudar o endereço quebra links já divulgados.</p></div>
         <div className="grid gap-2 sm:grid-cols-3">
@@ -92,10 +94,10 @@ export function SettingsTab({ form }: { form: FormRow }) {
         </div>
         <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
-          <textarea id="fs-priv" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.privacy} onChange={(e) => setF({ ...f, privacy: e.target.value })} /></div>
+          <RichTextarea id="fs-priv" rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
-        <Button type="submit" disabled={save.isPending} aria-label="Salvar configurações" title="Salvar configurações"><Save className="h-4 w-4" /></Button>
+        <SaveButton type="submit" disabled={save.isPending} hint="Salvar configurações" />
       </form>
 
     </div>
