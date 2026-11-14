@@ -1,7 +1,7 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Badge, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
+import { Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
 import { SaveInput } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
@@ -47,9 +47,11 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
   })
   return (
     <SaveInput
-      className="w-44 flex-none"
+      className="flex-none"
+      inputClassName="w-[3.25rem] flex-none px-1 text-center"
+      numeric
       aria-label={`Limite de vagas de ${row.instrument_name}`}
-      placeholder="Sem limite"
+      placeholder="∞"
       value={row.capacity === null ? '' : String(row.capacity)}
       onSave={(v) => {
         const n = Number(v)
@@ -98,14 +100,12 @@ export function CapacityPage() {
       {Object.entries(bySection).map(([section, rows]) => (
         <section key={section} className="space-y-2">
           <h3>{section}</h3>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             <ProgressiveList items={rows} render={(r) => (
               <Card key={r.instrument_id} className={cn('flex items-center justify-between gap-3 p-3', r.is_full && 'border-destructive/50')}>
                 <div>
-                  <p className="font-semibold">{r.instrument_name} {r.is_full && <Badge className="bg-destructive/15 text-destructive">Lotado</Badge>}</p>
-                  <p className="text-muted-foreground">
-                    {r.occupied} ocupadas{r.capacity !== null ? ` · ${r.available} livres` : ' · sem limite'}
-                  </p>
+                  <p className="font-semibold">{r.instrument_name}</p>
+                  <p className="text-muted-foreground" title={r.capacity === null ? 'Sem limite de vagas' : `${r.occupied} ocupadas de ${r.capacity} vagas`}>{r.occupied}/{r.capacity ?? '∞'}</p>
                 </div>
                 {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
               </Card>

@@ -14,7 +14,11 @@ function Confirm({ label, busy, onConfirm, onCancel }: { label: string; busy: bo
 }
 
 /** Texto editável: nada é gravado até clicar em "Salvar" (ou Enter). Esc volta ao valor anterior. */
-export function SaveInput({ value, onSave, disabled, className, 'aria-label': ariaLabel, placeholder }: {
+export function SaveInput({ value, onSave, disabled, className, inputClassName, numeric, 'aria-label': ariaLabel, placeholder }: {
+  /** Só aceita dígitos (teclado numérico no celular). */
+  numeric?: boolean
+  /** Classes do campo em si (ex.: largura fixa). */
+  inputClassName?: string
   value: string
   onSave: (v: string) => Promise<unknown> | unknown
   disabled?: boolean
@@ -34,8 +38,8 @@ export function SaveInput({ value, onSave, disabled, className, 'aria-label': ar
   useUnsaved(dirty, commit)
   return (
     <span className={cn('flex min-w-0 flex-1 items-center gap-1.5', className)}>
-      <Input className="min-w-0 flex-1 font-semibold" value={text} disabled={disabled || busy} aria-label={ariaLabel} placeholder={placeholder}
-        onChange={(e) => setText(e.target.value)}
+      <Input className={cn('min-w-0 flex-1 font-semibold', inputClassName)} inputMode={numeric ? 'numeric' : undefined} value={text} disabled={disabled || busy} aria-label={ariaLabel} placeholder={placeholder}
+        onChange={(e) => setText(numeric ? e.target.value.replace(/\D/g, '') : e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commit() } if (e.key === 'Escape') setText(value) }} />
       {dirty && <Confirm label="Salvar" busy={busy} onConfirm={() => void commit()} onCancel={() => setText(value)} />}
     </span>

@@ -12,7 +12,7 @@ export function useProgressive<T>(items: T[], step = 5, resetKey?: unknown) {
     showAll: () => setShown(Number.MAX_SAFE_INTEGER),
     left,
     button: left > 0
-      ? <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setShown((s) => s + step)}>Ver mais {Math.min(step, left)}</Button>
+      ? <Button type="button" variant="outline" size="sm" className="col-span-full w-full basis-full" onClick={() => setShown((s) => s + step)}>Ver mais {Math.min(step, left)}</Button>
       : null,
   }
 }
