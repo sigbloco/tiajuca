@@ -60,13 +60,13 @@ function EventTypesSettings() {
       const { error } = await supabase.from('activity_types').insert({ organization_id: orgId, name: name.trim(), color, sort_order: (types.data?.length ?? 0) + 1 })
       if (error) throw error
     },
-    onSuccess: () => { setName(''); toast.success('Rótulo criado.'); refresh() }, onError: (e) => toast.error(friendlyError(e)),
+    onSuccess: () => { setName(''); toast.success('Tipo criado.'); refresh() }, onError: (e) => toast.error(friendlyError(e)),
   })
   const active = (types.data ?? []).filter((t) => t.is_active)
   const off = (types.data ?? []).filter((t) => !t.is_active)
   const row = (t: ActivityTypeRow) => (
     <Card key={t.id} className="space-y-2 p-3">
-      <SaveInput value={t.name} autoSave aria-label="Nome do rótulo" onSave={(v) => { if (v.trim()) patch.mutate({ id: t.id, p: { name: v.trim() } }) }} />
+      <SaveInput value={t.name} autoSave aria-label="Nome do tipo" onSave={(v) => { if (v.trim()) patch.mutate({ id: t.id, p: { name: v.trim() } }) }} />
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor">
         {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => (
           <button key={c} type="button" role="radio" aria-checked={t.color === c} aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} onClick={() => patch.mutate({ id: t.id, p: { color: c } })}
@@ -81,16 +81,16 @@ function EventTypesSettings() {
   )
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground">Rótulos que aparecem nos eventos (Ensaio, Oficina, Apresentação…). Um evento pode ter vários; o primeiro dá a cor no calendário. “Presença por padrão” só pré-marca a opção ao criar o evento.</p>
+      <p className="text-muted-foreground">Tipos dos eventos (Ensaio, Oficina, Apresentação…). Cada evento tem um tipo principal, que dá a cor no calendário, e pode acumular outros em “Também é”. “Presença por padrão” só pré-marca a opção ao criar o evento.</p>
       <Card className="space-y-2 p-3">
-        <Input aria-label="Novo rótulo" placeholder="Novo rótulo" value={name} onChange={(e) => setName(e.target.value)} />
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor do novo rótulo">
+        <Input aria-label="Novo tipo" placeholder="Novo tipo" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor do novo tipo">
           {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => (
             <button key={c} type="button" role="radio" aria-checked={color === c} aria-label={COLOR_LABEL[c]} title={COLOR_LABEL[c]} onClick={() => setColor(c)}
               className={cn('flex items-center rounded-full border p-1.5', color === c ? 'border-primary bg-muted ring-2 ring-primary' : 'border-border')}><span className={cn('h-4 w-4 rounded-full', COLOR_DOT[c])} /></button>
           ))}
         </div>
-        <Button variant="add" className="w-full" disabled={add.isPending} onClick={() => { if (requireFields([['Nome', name.trim()]])) add.mutate() }}><Plus className="h-4 w-4" /> Novo rótulo</Button>
+        <Button variant="add" className="w-full" disabled={add.isPending} onClick={() => { if (requireFields([['Nome', name.trim()]])) add.mutate() }}><Plus className="h-4 w-4" /> Novo tipo</Button>
       </Card>
       <div className="grid gap-2 sm:grid-cols-2"><ProgressiveList items={active} render={row} /></div>
       {off.length > 0 && (
