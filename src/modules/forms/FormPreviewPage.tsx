@@ -36,7 +36,7 @@ export function FormPreviewPage() {
   const payload: PublicFormPayload = {
     state: 'open',
     organization: { name: membership.name, short_name: membership.name, logo_path: membership.logo_path ?? null, theme: {} },
-    form: { title: f.title, description: f.description, privacy_text: f.privacy_text, requires_consent: f.requires_consent, closes_at: f.closes_at, header_image_url: f.header_image_url, fields: list },
+    form: { title: f.title, description: f.description, privacy_text: f.privacy_text, requires_consent: f.requires_consent, closes_at: f.closes_at, header: { image_url: f.header_image_url, x: Number(f.header_pos_x), y: Number(f.header_pos_y), zoom: Number(f.header_zoom), height: f.header_height }, fields: list },
   }
   return <PublicFormPage preview={payload} />
 }

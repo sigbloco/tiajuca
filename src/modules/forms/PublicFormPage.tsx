@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/shared/BackButton'
+import { DEFAULT_FRAME, HeaderBand } from './HeaderBand'
 import { RichText } from '@/components/shared/RichText'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -243,16 +244,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
       <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 backdrop-blur">
-        <div className="relative flex justify-center overflow-hidden rounded-2xl py-3">
-          {f0?.header_image_url && (
-            <>
-              {/* Foto de fundo: desfoque de 1 px, escurecida, com degradê de transparente (em cima) para o vermelho da marca (embaixo) */}
-              <div aria-hidden className="absolute inset-0 scale-105 bg-cover bg-center blur-[1px] brightness-75" style={{ backgroundImage: `url(${f0.header_image_url})` }} />
-              <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/80" />
-            </>
-          )}
-          {org && <OrgLogo name={org.name} logoPath={org.logo_path} className="relative h-20 w-20 shadow-lg shadow-black/40" />}
-        </div>
+        <HeaderBand frame={f0?.header ?? DEFAULT_FRAME} logo={org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="h-20 w-20 shadow-lg shadow-black/40" /> : null} />
         {progress}
         {f0 && (stepIdx > 0 || titlePast) && (
           <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-left">

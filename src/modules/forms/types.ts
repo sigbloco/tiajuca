@@ -1,3 +1,4 @@
+import type { HeaderFrame } from './HeaderBand'
 export type FieldType =
   | 'short_text' | 'long_text' | 'email' | 'phone' | 'number' | 'date'
   | 'single_select' | 'multi_select' | 'checkbox' | 'yes_no' | 'scale' | 'file' | 'info'
@@ -32,7 +33,7 @@ export interface PublicField {
 export interface PublicFormPayload {
   state: 'open' | 'not_open' | 'closed' | 'full' | 'not_found'
   organization?: { name: string; short_name: string; logo_path: string | null; theme: Record<string, string> }
-  form?: { title: string; description: string | null; privacy_text: string | null; requires_consent: boolean; closes_at: string | null; header_image_url?: string | null; fields: PublicField[] }
+  form?: { title: string; description: string | null; privacy_text: string | null; requires_consent: boolean; closes_at: string | null; header?: HeaderFrame; fields: PublicField[] }
 }
 
 export type AnswerValue = string | number | boolean | string[]

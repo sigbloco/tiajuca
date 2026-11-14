@@ -1,7 +1,7 @@
 import { FitWord } from '@/components/shared/FitText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
-import { useRegisterCrumb } from '@/core/breadcrumb'
+import { useRegisterCrumb, useSetCrumbOverride } from '@/core/breadcrumb'
 import { ArrowLeft, Eye } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { Button, Skeleton, cn } from '@/components/ui/primitives'
@@ -12,7 +12,7 @@ import { useForm } from './service'
 import { SettingsTab } from './SettingsTab'
 import { SubmissionsTab } from './SubmissionsTab'
 
-const TABS = [{ key: 'fields', label: 'Campos' }, { key: 'settings', label: 'Configurações' }, { key: 'submissions', label: 'Respostas' }] as const
+const TABS = [{ key: 'settings', label: 'Configurações' }, { key: 'fields', label: 'Campos' }, { key: 'submissions', label: 'Respostas' }] as const
 
 export function FormEditorPage() {
   const { formId = '' } = useParams()
@@ -20,6 +20,8 @@ export function FormEditorPage() {
   const { data: form, isLoading } = useForm(formId)
   const [tab, setTab] = useRememberedState<(typeof TABS)[number]['key']>('formulario-aba', 'fields', TABS.map((t) => t.key))
   useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('fields'), true, 0)
+  // Caminho: Inscrições • nome do formulário • aba aberta.
+  useSetCrumbOverride(form ? [{ label: 'Inscrições', to: `/${membership?.slug}/inscricoes` }, { label: form.title }] : null)
   if (isLoading || !form) return <Skeleton className="h-40" />
   return (
     <div className="space-y-4">
