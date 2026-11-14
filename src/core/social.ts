@@ -39,3 +39,16 @@ export function splitNetwork(url: string): { network: string; user: string } {
   const n = SOCIAL_NETWORKS.find((x) => url.toLowerCase().startsWith(x.base.toLowerCase()))
   return n ? { network: n.key, user: url.slice(n.base.length) } : { network: 'instagram', user: url }
 }
+
+/** Lê o que foi digitado ("Instagram, TikTok, x") e devolve as chaves das redes conhecidas, mais o que não foi reconhecido. */
+export function parseNetworks(text: string): { keys: string[]; unknown: string[] } {
+  const keys: string[] = []
+  const unknown: string[] = []
+  for (const raw of text.split(/[,;\n]/)) {
+    const t = raw.trim().toLowerCase()
+    if (!t) continue
+    const n = SOCIAL_NETWORKS.find((x) => x.key === t || x.label.toLowerCase() === t || (t === 'twitter' && x.key === 'x'))
+    if (n) { if (!keys.includes(n.key)) keys.push(n.key) } else unknown.push(raw.trim())
+  }
+  return { keys, unknown }
+}

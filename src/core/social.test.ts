@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { networkUrl, splitNetwork } from './social'
+import { networkUrl, parseNetworks, splitNetwork } from './social'
 
 describe('redes sociais do formulário', () => {
   it('monta o link da rede a partir do usuário', () => {
@@ -11,5 +11,9 @@ describe('redes sociais do formulário', () => {
   it('separa o link guardado em rede e usuário', () => {
     expect(splitNetwork('https://www.tiktok.com/@cordao')).toEqual({ network: 'tiktok', user: 'cordao' })
     expect(splitNetwork('qualquer coisa')).toEqual({ network: 'instagram', user: 'qualquer coisa' })
+  })
+  it('lê as redes escolhidas pelo texto', () => {
+    expect(parseNetworks('Instagram, tiktok; Twitter')).toEqual({ keys: ['instagram', 'tiktok', 'x'], unknown: [] })
+    expect(parseNetworks('Instagram, Orkut')).toEqual({ keys: ['instagram'], unknown: ['Orkut'] })
   })
 })
