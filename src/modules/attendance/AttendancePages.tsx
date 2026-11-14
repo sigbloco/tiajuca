@@ -459,7 +459,7 @@ export function AttendanceRosterPage() {
   // Instrumentos do naipe escolhido que alguém toca nesta chamada.
   const hasStaff = rowsAll.some(isStaff)
   // Todos os botões de filtro têm a mesma altura (a do mais alto: duas linhas), respiro padrão e texto que nunca vaza.
-  const chipCls = (on: boolean) => cn('relative flex min-h-8 items-center justify-center break-words rounded-full border px-2 py-0 text-center text-sm font-medium leading-tight', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
+  const chipCls = (on: boolean) => cn('relative flex min-h-8 items-center justify-center break-words rounded-full border px-2 py-0 text-center text-sm font-medium leading-[1.05]', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
   const cancelled = activity.data?.status === 'cancelled'
   // Evento que não é aula/oficina (ex.: Cortejo): o caminho vem do Calendário, não da Oficina.
   useSetCrumbOverride(activity.data && !isClass && membership ? [{ label: 'Calendário', to: `/${membership.slug}/eventos` }, { label: activity.data.title }, { label: 'Presença' }] : null)
