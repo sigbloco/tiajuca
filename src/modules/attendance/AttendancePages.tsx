@@ -14,7 +14,6 @@ import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
 import { getAudiences, getAudiencesFor, listActivities, type Activity, type AudienceInput } from '@/modules/events/service'
 import { GroupLink } from '@/modules/members/GroupLink'
-import { MemberPicker } from '@/modules/members/MemberPicker'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
 interface RosterRow {
@@ -210,7 +209,6 @@ export function AttendanceRosterPage() {
   const [openNote, setOpenNote] = useState<string | null>(null)
   // Painel clicável: filtra a lista por situação (padrão: Total = todos).
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [extra, setExtra] = useState('')
   const rosterKey = ['roster', orgId, activityId]
 
   const activity = useQuery({
@@ -259,16 +257,6 @@ export function AttendanceRosterPage() {
       toast.error(friendlyError(e))
     },
     onSettled: () => qc.invalidateQueries({ queryKey: rosterKey }),
-  })
-  const addExtra = useMutation({
-    mutationFn: async () => {
-      const present = statuses.data?.find((s) => s.counts_as_present)
-      if (!present) throw new Error('Nenhum status de presença configurado.')
-      const { error } = await supabase.rpc('set_attendance', { p_activity: activityId, p_member: extra, p_status_key: present.key, p_notes: null })
-      if (error) throw error
-    },
-    onSuccess: () => { setExtra(''); toast.success('Adicionado fora da lista.'); qc.invalidateQueries({ queryKey: rosterKey }) },
-    onError: (e) => toast.error(friendlyError(e)),
   })
 
   // Professores e monitores do ciclo não fazem parte da chamada de aulas sem público definido. Quando o evento tem PÚBLICO (ex.: Pernalta),
@@ -439,14 +427,6 @@ export function AttendanceRosterPage() {
           </Card>
         ))}
       </div>
-
-      {!cancelled && (
-        <Card className="space-y-2 p-3">
-          <h3>Adicionar fora da lista</h3>
-          <MemberPicker value={extra} onChange={setExtra} />
-          <Button disabled={!extra || addExtra.isPending} onClick={() => addExtra.mutate()}>Adicionar como presente</Button>
-        </Card>
-      )}
     </div>
   )
 }
