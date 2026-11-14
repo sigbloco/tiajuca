@@ -237,7 +237,7 @@ export function SiteSettings() {
                       <p className="text-xs text-muted-foreground">Mostra a miniatura e o título do produto acima do botão da loja; ao clicar, abre a página dele.</p>
                     </div>
                   )}
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={(f.menu_construction ?? []).includes(key)} onChange={(e) => setF({ ...f, menu_construction: e.target.checked ? [...(f.menu_construction ?? []), key] : (f.menu_construction ?? []).filter((k) => k !== key) })} /> Em construção</label>
+                  {key !== 'login' && <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={(f.menu_construction ?? []).includes(key)} onChange={(e) => setF({ ...f, menu_construction: e.target.checked ? [...(f.menu_construction ?? []), key] : (f.menu_construction ?? []).filter((k) => k !== key) })} /> Em construção</label>}
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={f.shake_button === key} onChange={(e) => setF({ ...f, shake_button: e.target.checked ? key : null })} /> Destacar</label>
                 </div>
               </div>
