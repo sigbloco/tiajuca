@@ -172,6 +172,8 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
       const line = (headerRef.current?.offsetHeight ?? 0) + 24
       let cur: string | null = null
       for (const k of keys) { const el = document.getElementById(`bloco-${k}`); if (el && el.getBoundingClientRect().top <= line) cur = k }
+      // No fim da página o último bloco nunca chega até a linha: ali ele vale como o atual.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4 && window.scrollY > 0) cur = keys[keys.length - 1]
       setActiveAnchor(cur)
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
