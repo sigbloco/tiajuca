@@ -5,7 +5,8 @@ import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Trash2, UserPlus, X } from 'lucide-react'
+import { SettingsButton } from '@/components/shared/SettingsButton'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -352,7 +353,7 @@ export function NaipesPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="icon" aria-label="Organograma" title="Organograma"><Link to="organograma"><Network className="h-4 w-4" /></Link></Button>
-          {canEdit && <Button asChild variant="outline" size="icon" aria-label="Configurações" title="Configurações"><Link to="configuracoes"><Settings className="h-4 w-4" /></Link></Button>}
+          {canEdit && <SettingsButton to="configuracoes" />}
           {canEdit && (
             <TrashDrawer iconOnly groups={[
               { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },

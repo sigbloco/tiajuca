@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { DateInput, TimeInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Input, Label, Select, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { supabase } from '@/core/supabase'
+import { notifyChange } from '@/core/undo'
 import { formatDayLong, formatTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -19,7 +19,7 @@ import { useCycles } from '@/modules/cycles/service'
 import { TypePicker } from './TypePicker'
 import { AudiencePicker, type AudRow } from './AudiencePicker'
 import {
-  COLOR_BADGE, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord,
+  COLOR_BADGE, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord, trashActivity, restoreActivity,
   type Activity, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -114,8 +114,11 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     onError: (e) => toast.error(/ends_at|check/i.test(String(e)) ? 'O horário final deve ser depois do inicial.' : friendlyError(e)),
   })
   const remove = useMutation({
-    mutationFn: async () => { const { error } = await supabase.rpc('delete_activity', { p_activity: activity!.id }); if (error) throw error },
-    onSuccess: () => { toast.success('Evento apagado.'); qc.invalidateQueries({ queryKey: ['audience'] }); refresh(); onClose() },
+    mutationFn: () => trashActivity(activity!.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['audience'] }); refresh(); onClose()
+      notifyChange('Evento enviado para a lixeira.', async () => { await restoreActivity(activity!.id); refresh() })
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1)
@@ -218,9 +221,9 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           <Button type="submit" className="flex-1" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
-        {!isNew && !fromRule && (
+        {!isNew && (
           <Button type="button" variant="outline" className="w-full text-destructive" disabled={remove.isPending}
-            onClick={async () => { if (await confirmBox('Apagar este evento de vez? Isso não pode ser desfeito. Se ele já tiver presença registrada, use Cancelar.')) remove.mutate() }}>
+            onClick={async () => { if (await confirmBox('Apagar este evento? Ele vai para a lixeira, de onde dá para restaurar. Se já tiver presença registrada, use Cancelar.')) remove.mutate() }}>
             <Trash2 className="h-4 w-4" /> Apagar evento
           </Button>
         )}

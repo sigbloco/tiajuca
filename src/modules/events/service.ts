@@ -52,7 +52,8 @@ export const VISIBILITY_LABEL: Record<Activity['visibility'], string> = { member
 
 const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, cancel_reason, has_attendance, activity_types(id, name, color), activity_type_links(activity_types(id, name, color))'
 
-export async function listActivities(p: { orgId: string; from: string; to: string; cycleId?: string; typeId?: string }) {
+/** `trashed`: só os da lixeira (padrão: só os que não foram apagados). */
+export async function listActivities(p: { orgId: string; from: string; to: string; cycleId?: string; typeId?: string; trashed?: boolean }) {
   let q = supabase
     .from('activities')
     .select(SELECT)
@@ -61,6 +62,7 @@ export async function listActivities(p: { orgId: string; from: string; to: strin
     .lte('activity_date', p.to)
     .order('activity_date')
     .order('start_time', { nullsFirst: true })
+  q = p.trashed ? q.not('deleted_at', 'is', null) : q.is('deleted_at', null)
   if (p.cycleId) q = q.eq('cycle_id', p.cycleId)
   if (p.typeId) q = q.eq('activity_type_id', p.typeId)
   const { data, error } = await q
@@ -159,6 +161,16 @@ export async function setActivityStatus(orgId: string, id: string, status: Activ
   const { error } = await supabase.from('activities').update({ status, cancel_reason: status === 'cancelled' ? (reason?.trim() || null) : null }).eq('id', id).eq('organization_id', orgId)
   if (error) throw error
 }
+
+async function activityRpc(fn: 'trash_activity' | 'restore_activity' | 'delete_activity', id: string) {
+  const { error } = await supabase.rpc(fn, { p_activity: id })
+  if (error) throw error
+}
+/** Apagar = mandar para a lixeira (dá para restaurar). */
+export const trashActivity = (id: string) => activityRpc('trash_activity', id)
+export const restoreActivity = (id: string) => activityRpc('restore_activity', id)
+/** Excluir de vez (só da lixeira). */
+export const purgeActivity = (id: string) => activityRpc('delete_activity', id)
 
 export async function materialize(orgId: string, until: string): Promise<number> {
   const { data, error } = await supabase.rpc('materialize_recurrences', { p_org: orgId, p_until: until })
