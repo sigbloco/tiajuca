@@ -6,19 +6,20 @@ import { Button, cn } from '@/components/ui/primitives'
  * Texto com formatação simples, guardado como texto comum (sem HTML, então não há risco de código embutido):
  *   **negrito** · *itálico* · [texto do link](https://endereço) · linhas começando com "- " viram lista.
  */
-export type Inline = { t: 'text'; s: string } | { t: 'b' | 'i'; s: string } | { t: 'a'; s: string; href: string }
+export type Inline = { t: 'text'; s: string } | { t: 'b' | 'i'; c: Inline[] } | { t: 'a'; c: Inline[]; href: string }
 
 const INLINE = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g
 
+/** Aceita formatação dentro de formatação (ex.: link dentro de negrito: **[texto](https://…)**). */
 export function parseInline(text: string): Inline[] {
   const out: Inline[] = []
   let last = 0
   for (const m of text.matchAll(INLINE)) {
     const at = m.index ?? 0
     if (at > last) out.push({ t: 'text', s: text.slice(last, at) })
-    if (m[1] !== undefined) out.push({ t: 'b', s: m[1] })
-    else if (m[2] !== undefined) out.push({ t: 'i', s: m[2] })
-    else out.push({ t: 'a', s: m[3], href: m[4] })
+    if (m[1] !== undefined) out.push({ t: 'b', c: parseInline(m[1]) })
+    else if (m[2] !== undefined) out.push({ t: 'i', c: parseInline(m[2]) })
+    else out.push({ t: 'a', c: parseInline(m[3]), href: m[4] })
     last = at + m[0].length
   }
   if (last < text.length) out.push({ t: 'text', s: text.slice(last) })
@@ -40,14 +41,16 @@ export function parseBlocks(text: string): Block[] {
   return out
 }
 
-function renderInline(text: string): ReactNode {
-  return parseInline(text).map((n, i) => {
-    if (n.t === 'b') return <strong key={i}>{n.s}</strong>
-    if (n.t === 'i') return <em key={i}>{n.s}</em>
-    if (n.t === 'a') return <a key={i} href={n.href} target="_blank" rel="noreferrer noopener" className="font-semibold text-primary underline">{n.s}</a>
-    return <Fragment key={i}>{n.s}</Fragment>
+function renderNodes(nodes: Inline[]): ReactNode {
+  return nodes.map((n, i) => {
+    if (n.t === 'text') return <Fragment key={i}>{n.s}</Fragment>
+    if (n.t === 'b') return <strong key={i}>{renderNodes(n.c)}</strong>
+    if (n.t === 'i') return <em key={i}>{renderNodes(n.c)}</em>
+    if (n.t === 'a') return <a key={i} href={n.href} target="_blank" rel="noreferrer noopener" className="font-semibold text-primary underline">{renderNodes(n.c)}</a>
+    return null
   })
 }
+const renderInline = (text: string): ReactNode => renderNodes(parseInline(text))
 
 /** Mostra o texto formatado (parágrafos e listas). */
 export function RichText({ text, className }: { text: string; className?: string }) {
