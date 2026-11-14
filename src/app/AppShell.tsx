@@ -107,11 +107,11 @@ export function AppShell() {
   const hubEntry = (hub: HubKey): MenuEntry[] => {
     const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
     const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
-    return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to), ...(hub === 'oficina' ? ['lista-de-espera'] : [])] }]
+    return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to)] }]
   }
   const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
-    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('inscricoes'), ...direct('repertorio'), ...direct('naipes'),
+    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('inscricoes'), ...direct('repertorio'), ...direct('naipes').map((e) => ({ ...e, also: ['vagas', 'lista-de-espera'] })),
     ...withSep([...hubEntry('organizacao'), ...hubEntry('financeiro')]),
     ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
   ]
