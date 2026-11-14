@@ -1,12 +1,10 @@
-import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
-import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Trash2, UserPlus, X } from 'lucide-react'
-import { SettingsButton } from '@/components/shared/SettingsButton'
+import { ArrowDown, ArrowUp, CopyPlus, Network, Pencil, Plus, Save, Settings, Trash2, UserPlus, X } from 'lucide-react'
+import { LabelFitRow } from '@/components/shared/LabelFitRow'
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -351,26 +349,22 @@ export function NaipesPage() {
           <h1>Naipes e instrumentos</h1>
           {canEdit && <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Novo naipe" title="Novo naipe" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /></Button>}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="icon" aria-label="Organograma" title="Organograma"><Link to="organograma"><Network className="h-4 w-4" /></Link></Button>
-          {canEdit && <SettingsButton to="configuracoes" />}
+      </div>
+      <LabelFitRow role="group" aria-label="Ações">
+          <Button asChild variant="outline" aria-label="Organograma" title="Organograma"><Link to="organograma"><Network className="h-4 w-4 shrink-0" /><span className="fit-label">Organograma</span></Link></Button>
+          {canEdit && <Button asChild variant="outline" aria-label="Configurações" title="Configurações"><Link to="configuracoes"><Settings className="h-4 w-4 shrink-0" /><span className="fit-label">Configurações</span></Link></Button>}
           {canEdit && (
-            <TrashDrawer iconOnly groups={[
+            <TrashDrawer fitLabel groups={[
               { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
               { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => loaded && !instOn(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
             ]} />
           )}
           {canEdit && prev && cur && (
-            <Button variant="outline" size="icon" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
-              onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
+            <Button variant="outline" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
+              onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4 shrink-0" /><span className="fit-label">Copiar do anterior</span></Button>
           )}
-        </div>
-      </div>
+      </LabelFitRow>
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
-      <ReadMore>
-        Os nomes de naipe disponíveis ficam em <PageLink to="naipes/configuracoes">Organização → Nomes de naipes</PageLink>. Cada naipe tem seus instrumentos. Professores e monitores designados acompanham o que está dentro. Segure a alça (as seis bolinhas) para arrastar:
-        mude a ordem. Lembre de conceder também o papel de acesso (Professor/Monitor) em <PageLink to="acesso">Acesso e papéis</PageLink>.
-      </ReadMore>
       {sections.isLoading && <Skeleton className="h-24" />}
       {sections.data && view.length === 0 && <EmptyState>Nenhum naipe encontrado.</EmptyState>}
       <div className="space-y-2">
