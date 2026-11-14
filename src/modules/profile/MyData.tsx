@@ -1,4 +1,5 @@
 import { requireFields } from '@/core/required'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
@@ -92,7 +93,7 @@ export function MyData({ memberId }: { memberId: string }) {
           <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.played_other_blocks} onChange={(e) => setF({ ...f, played_other_blocks: e.target.checked })} /> Toco ou já toquei com outros blocos</label>
         {f.played_other_blocks && <div className="space-y-1.5"><Label htmlFor="my-other">Quais blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>}
-        <Button type="submit" disabled={save.isPending} aria-label="Salvar meus dados" title="Salvar meus dados"><Save className="h-4 w-4" /></Button>
+        <SaveButton type="submit" disabled={save.isPending} hint="Salvar meus dados" />
       </form>
     </Card>
   )

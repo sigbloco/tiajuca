@@ -1,12 +1,13 @@
 import { PageLink } from '@/components/shared/PageLink'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
-import { Lock, Save } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
-import { Button, Card, Skeleton } from '@/components/ui/primitives'
+import { Card, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -41,7 +42,7 @@ function CategoryRow({ item, current, canEdit, from }: { item: CatalogItem; curr
     <Card className="flex flex-nowrap items-center gap-2 p-2 pl-3">
       <span className="min-w-0 flex-1"><span className="font-semibold">{item.name}</span><span className="text-muted-foreground">/mês</span></span>
       <div className="w-28 shrink-0 sm:w-32"><MoneyInput value={value} onChange={setValue} /></div>
-      {canEdit && <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>}
+      {canEdit && <SaveButton disabled={!dirty || save.isPending} onClick={() => save.mutate()} className="h-9 px-3" />}
     </Card>
   )
 }

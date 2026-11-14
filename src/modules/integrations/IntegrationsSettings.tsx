@@ -1,4 +1,5 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useEffect, useState } from 'react'
@@ -8,7 +9,6 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { driveInvoke, getDriveConfig, type DriveStatus } from '@/modules/repertoire/drive'
-import { Save } from 'lucide-react'
 
 /** Integrações opcionais. Hoje: pasta institucional do Google Drive para buscar partituras. */
 export function IntegrationsSettings() {
@@ -53,7 +53,7 @@ export function IntegrationsSettings() {
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={active} onChange={(e) => setActive(e.target.checked)} /> Ativar busca no Drive</label>
         <ButtonRow>
-          <Button disabled={!folder.trim() || save.isPending} onClick={() => save.mutate()} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+          <SaveButton disabled={!folder.trim() || save.isPending} onClick={() => save.mutate()} />
           <Button variant="outline" disabled={!cfg.data?.configured || test.isPending} onClick={() => test.mutate()}>{test.isPending ? 'Testando' : 'Testar conexão'}</Button>
         </ButtonRow>
         {status && (

@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/primitives'
  */
 const LEVELS = ['full', 'short', 'none'] as const
 
-export function FitButton({ icon: Icon, label, shortLabel, to, href, newTab, active, className, ...rest }: {
-  icon: LucideIcon; label: string; shortLabel?: string; to?: string; href?: string; newTab?: boolean; active?: boolean
+export function FitButton({ icon: Icon, label, shortLabel, hint, to, href, newTab, active, className, ...rest }: {
+  icon: LucideIcon; label: string; shortLabel?: string; /** Nome completo para leitores de tela e dica (padrão: o texto do botão). */ hint?: string; to?: string; href?: string; newTab?: boolean; active?: boolean
 } & Omit<ComponentProps<typeof Button>, 'asChild' | 'variant' | 'size'>) {
   const ref = useRef<HTMLElement | null>(null)
   const full = useRef<HTMLSpanElement>(null)
@@ -52,7 +52,7 @@ export function FitButton({ icon: Icon, label, shortLabel, to, href, newTab, act
       <span ref={short} style={{ display: 'none' }}>{shortLabel}</span>
     </>
   )
-  const common = { variant: active ? ('default' as const) : ('outline' as const), className, 'aria-label': label, title: label }
+  const common = { variant: active ? ('default' as const) : ('outline' as const), className, 'aria-label': hint ?? label, title: hint ?? label }
   const setRef = (el: HTMLElement | null) => { ref.current = el }
   if (to) return <Button asChild {...common}><Link ref={setRef} to={to}>{content}</Link></Button>
   if (href) return <Button asChild {...common}><a ref={setRef} href={href} target={newTab ? '_blank' : undefined} rel={newTab ? 'noreferrer' : undefined}>{content}</a></Button>

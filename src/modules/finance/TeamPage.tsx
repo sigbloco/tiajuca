@@ -1,7 +1,8 @@
 import { audienceSectionIds, getAudiencesFor } from '@/modules/events/service'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronRight, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
@@ -120,7 +121,7 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
       )}
       {canEdit && (
         <div className="flex gap-1">
-          <Button size="icon" aria-label="Salvar regra" title="Salvar" disabled={!valid || save.isPending} onClick={() => save.mutate()}><Save className="h-4 w-4" /></Button>
+          <SaveButton disabled={!valid || save.isPending} onClick={() => save.mutate()} hint="Salvar regra" />
           <Button size="icon" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onDone}><X className="h-4 w-4" /></Button>
         </div>
       )}

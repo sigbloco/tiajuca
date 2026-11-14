@@ -1,9 +1,10 @@
 import { confirmBox } from '@/components/shared/DialogHost'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { StaffChipLabel } from './StaffChipLabel'
 import { CompMark, CompensationPick, type Compensation } from '@/modules/members/StaffSection'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, CopyPlus, Pencil, Plus, Save, Trash2, UserPlus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CopyPlus, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react'
 import { NaipesTabs } from './NaipesTabs'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -208,7 +209,7 @@ function RenameForm({ name, label, onSave, onCancel }: { name: string; label: st
       onCancel()
     }}>
       <Input name="name" aria-label={`Novo nome do ${label}`} defaultValue={name} autoFocus />
-      <Button type="submit" size="sm" aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /></Button>
+      <SaveButton type="submit" className="h-9 px-3" />
       <Button type="button" size="sm" variant="outline" onClick={onCancel} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
     </form>
   )

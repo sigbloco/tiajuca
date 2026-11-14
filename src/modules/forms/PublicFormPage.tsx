@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/shared/BackButton'
+import { RichText } from '@/components/shared/RichText'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useRef, useState } from 'react'
@@ -216,7 +217,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
       <form onSubmit={(e) => { e.preventDefault(); if (!missing && !uploading) submit.mutate() }} className="space-y-4" noValidate>
         <Card className="space-y-1 p-5">
           <h1>{f0?.title}</h1>
-          {f0?.description && <p className="whitespace-pre-wrap text-muted-foreground">{f0.description}</p>}
+          {f0?.description && <RichText text={f0.description} className="text-muted-foreground" />}
           {f0?.closes_at && <p className="text-xs text-muted-foreground">Inscrições até {formatDate(f0.closes_at.slice(0, 10))}.</p>}
           <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
         </Card>
@@ -227,12 +228,12 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             {b.head && (
               <div className="border-l-4 border-primary pl-3 pt-2">
                 <h2 className="font-display text-2xl font-extrabold">{b.head.label}</h2>
-                {b.head.description && <p className="whitespace-pre-wrap text-muted-foreground">{b.head.description}</p>}
+                {b.head.description && <RichText text={b.head.description} className="text-muted-foreground" />}
               </div>
             )}
             {b.items.map((f) => isConsentBlock(f) ? (
               <Card key={f.key} className="space-y-2 p-4">
-                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><p className="whitespace-pre-wrap text-xs text-muted-foreground">{f0.privacy_text}</p></>}
+                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={f0.privacy_text} className="text-xs text-muted-foreground" /></>}
                 {f0?.requires_consent && (
                   <label className="flex items-start gap-3 pt-1">
                     <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
@@ -241,7 +242,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
                 )}
               </Card>
             ) : f.type === 'info' ? (
-              <Card key={f.key} className="p-4"><p className="font-semibold">{f.label}</p>{f.description && <p className="whitespace-pre-wrap text-muted-foreground">{f.description}</p>}</Card>
+              <Card key={f.key} className="p-4"><p className="font-semibold">{f.label}</p>{f.description && <RichText text={f.description} className="text-muted-foreground" />}</Card>
             ) : (
               <Card key={f.key} className="space-y-2 p-4">
                 {f.type !== 'checkbox' && <Label htmlFor={`f-${f.key}`} id={`f-${f.key}-l`}>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>}
@@ -256,7 +257,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
         {f0?.privacy_text && !hasConsentBlock && (
           <Card className="space-y-2 p-4">
             <h3>Privacidade e proteção de dados</h3>
-            <p className="whitespace-pre-wrap text-xs text-muted-foreground">{f0.privacy_text}</p>
+            <RichText text={f0.privacy_text} className="text-xs text-muted-foreground" />
             {f0.requires_consent && (
               <label className="flex items-start gap-3 pt-1">
                 <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />

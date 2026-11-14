@@ -1,7 +1,8 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Save } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
@@ -54,7 +55,7 @@ function RuleSheet({ onClose }: { onClose: () => void }) {
         ) : (
           <MoneyInput value={f.fixed} onChange={(v) => setF({ ...f, fixed: v })} />
         )}
-        <Button className="w-full" disabled={!valid || save.isPending} onClick={() => save.mutate()} aria-label="Salvar regra" title="Salvar regra"><Save className="h-4 w-4" /></Button>
+        <SaveButton className="w-full" disabled={!valid || save.isPending} onClick={() => save.mutate()} hint="Salvar regra" />
       </div>
     </SheetContent>
   )

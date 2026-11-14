@@ -1,8 +1,9 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
+import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Button, Card, EmptyState, Input, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Card, EmptyState, Input, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -10,7 +11,6 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { MyData, MySensitiveData } from './MyData'
 import { PAY_STATUS_CLASS, PAY_STATUS_LABEL, type StaffPayment } from '@/modules/finance/service'
-import { Save } from 'lucide-react'
 
 const PIX_TYPES = [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email', 'E-mail'], ['telefone', 'Telefone'], ['aleatoria', 'Chave aleatória']] as const
 
@@ -50,7 +50,7 @@ function PixSection({ memberId }: { memberId: string }) {
         </Select>
         <Input className="sm:col-span-2" aria-label="Chave" placeholder="Digite a nova chave" value={value} onChange={(e) => setValue(e.target.value)} />
       </div>
-      <Button size="sm" disabled={!value.trim() || save.isPending} onClick={() => save.mutate()} aria-label="Salvar chave" title="Salvar chave"><Save className="h-4 w-4" /></Button>
+      <SaveButton disabled={!value.trim() || save.isPending} onClick={() => save.mutate()} className="h-9 px-3" hint="Salvar chave" />
       <p className="text-xs text-muted-foreground">Só você e a Direção veem a chave. Ao trocar, a anterior é arquivada e os pagamentos passados mantêm a chave usada na época.</p>
     </Card>
   )
