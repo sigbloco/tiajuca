@@ -116,6 +116,11 @@ function ActivityCard({ a, instruments, studentIds, slug, audience, staff, stude
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities', orgId] }); notifyChange('Cancelado.', async () => { await setActivityStatus(orgId, a.id, 'scheduled'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const reopen = useMutation({
+    mutationFn: () => setActivityStatus(orgId, a.id, 'scheduled'),
+    onSuccess: () => { toast.success('Reativado.'); qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   // Cancelar só um instrumento neste dia (o evento segue para os demais).
   const cancelledQ = useQuery({
     queryKey: ['item-cancel', a.id],
@@ -144,6 +149,7 @@ function ActivityCard({ a, instruments, studentIds, slug, audience, staff, stude
   // Presentes / total por instrumento (ex.: "Agogô 0/2"), a partir da lista de quem é esperado na chamada.
   const roster = useQuery({
     queryKey: ['roster-counts', a.id],
+    enabled: a.status !== 'cancelled',
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_attendance_roster', { p_activity: a.id })
       if (error) throw error
@@ -163,6 +169,20 @@ function ActivityCard({ a, instruments, studentIds, slug, audience, staff, stude
     ? instruments.filter((i) => places.some((x) => (x.kind === 'section' ? x.ref_id === i.section_id : x.ref_id === i.id)))
     : instruments.filter((i) => studentIds.has(i.id)))
     .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'))
+  if (a.status === 'cancelled') {
+    return (
+      <Card className="flex gap-3 p-3 opacity-60">
+        <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="min-w-0 break-words font-semibold line-through">{a.title}</p>
+            <Badge className="shrink-0">Cancelado{a.cancel_reason ? ` · ${a.cancel_reason}` : ''}</Badge>
+          </div>
+          {canManage && <Button size="sm" variant="outline" aria-label="Desfazer cancelamento" title="Desfazer cancelamento" disabled={reopen.isPending} onClick={() => reopen.mutate()}><Undo2 className="h-4 w-4" /> Desfazer</Button>}
+        </div>
+      </Card>
+    )
+  }
   return (
     <Card className="flex gap-3 p-3">
       <p className="w-12 shrink-0 font-display font-bold">{formatTime(a.start_time) || '—'}</p>
@@ -217,7 +237,7 @@ export function AttendanceListPage() {
   const cycles = useCycles()
   const catalog = useInstrumentCatalog()
   const students = useStudentInstruments(cycleId)
-  const items = (data ?? []).filter((a) => a.status !== 'cancelled' && cycleOf(a, cycles.data ?? []) === cycleId)
+  const items = (data ?? []).filter((a) => cycleOf(a, cycles.data ?? []) === cycleId)
   const days = [...new Set(items.map((a) => a.activity_date))].sort()
   const [picked, setPicked] = useState<string | null>(null)
   const current = (picked && days.includes(picked) ? picked : null) ?? days.find((d) => d >= today) ?? days[days.length - 1] ?? null
