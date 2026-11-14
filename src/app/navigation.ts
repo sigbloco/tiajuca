@@ -1,13 +1,13 @@
 import {
   Award, Banknote, BarChart3, CircleDollarSign, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
-  Globe, Home, ListChecks, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Globe, Home, Hourglass, ListChecks, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
 /** Áreas do menu: cada uma é UM item à esquerda; as subpáginas ficam dentro dela (página inicial com cartões). */
 export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
 export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
-  oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença e relatórios.' },
+  oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, lista de espera e relatórios.' },
   financeiro: { label: 'Financeiro', icon: Banknote, description: 'Equipe, valores, cobranças e bolsas, por ciclo.', homePermission: 'finance.read' },
   organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, checklists, funções e Google Drive.' },
 }
@@ -44,6 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'alunos', label: 'Alunos', icon: GraduationCap, group: 'oficina', permission: 'members.read', minScope: 'group', description: 'Quem está na oficina como aluno.' },
   // Vagas fica dentro de Naipes e instrumentos (botão na página), não no menu nem na Oficina.
   { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, permission: 'capacity.read' },
+  { to: 'lista-de-espera', label: 'Lista de espera', icon: Hourglass, group: 'oficina', permission: 'member_cycles.read', minScope: 'group', description: 'Quem espera uma vaga e pode ser promovido.' },
   { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
   { to: 'equipe', label: 'Equipe', icon: Users, group: 'financeiro', permission: 'finance.read', description: 'Quem recebe no ciclo e como: fixo e/ou porcentagem.' },
@@ -79,13 +80,13 @@ export function pageLabel(pathname: string, base: string): string {
 /** Caminho de navegação (breadcrumb) a partir das partes da URL depois do slug. O último item é a página atual (sem link). */
 export function crumbsFor(segs: string[], base: string): { label: string; to?: string; solo?: boolean }[] {
   if (segs.length === 0) return []
-  const first = segs[0] === 'lista-de-espera' ? 'vagas' : segs[0]
+  const first = segs[0]
   const hubKey = (HUB_ORDER as string[]).includes(first) ? (first as HubKey) : undefined
   const item = NAV_ITEMS.find((i) => i.to === first)
   const out: { label: string; to?: string; solo?: boolean }[] = []
   if (first === 'vagas') {
-    // Vagas e Lista de espera ficam dentro de Naipes e instrumentos.
-    out.push({ label: 'Naipes e instrumentos', to: `${base}/naipes` }, { label: segs[0] === 'lista-de-espera' ? 'Lista de espera' : 'Vagas' })
+    // Vagas fica dentro de Naipes e instrumentos.
+    out.push({ label: 'Naipes e instrumentos', to: `${base}/naipes` }, { label: 'Vagas' })
     return out
   }
   if (hubKey) {

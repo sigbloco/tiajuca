@@ -11,7 +11,6 @@ import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { VagasTabs } from '@/modules/capacity/VagasTabs'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { useSelectedCycle } from './SelectedCycle'
@@ -82,7 +81,6 @@ export function WaitlistPage() {
 
   return (
     <div className="space-y-4">
-      <VagasTabs />
 
       {canManage && cycleId && (
         <Card className="space-y-3 p-4">
