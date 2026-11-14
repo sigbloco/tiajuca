@@ -23,6 +23,9 @@ interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos 
 // Itens que ficam na barra inferior do celular; o resto vai em "Mais".
 const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
 
+/** Quantas páginas o Voltar lembra. */
+const BACK_LIMIT = 20
+
 export function AppShell() {
   const topRef = useRef<HTMLDivElement>(null)
   // Altura do topo fixo, para outros elementos fixos da página (ex.: contadores da chamada) ficarem logo abaixo.
@@ -47,12 +50,23 @@ export function AppShell() {
   const trailRender = useRef<string | null>(null)
   const trailCommitted = useRef<string | null>(null)
   const lastUrl = useRef(pathname + search)
-  const [previous, setPrevious] = useState<{ path: string; url: string; trail: string | null } | null>(null)
+  // Histórico do "Voltar": as últimas 20 páginas visitadas (cada Voltar tira uma da pilha, então dá para voltar vários passos).
+  type Visit = { path: string; url: string; trail: string | null }
+  const [stack, setStack] = useState<Visit[]>([])
+  const popping = useRef(false)
   useEffect(() => {
-    if (pathname !== lastPath.current) { setPrevious({ path: lastPath.current, url: lastUrl.current, trail: trailCommitted.current }); lastPath.current = pathname }
+    if (pathname !== lastPath.current) {
+      if (popping.current) popping.current = false // foi um Voltar: a página que se deixou não volta para a pilha
+      else {
+        const left: Visit = { path: lastPath.current, url: lastUrl.current, trail: trailCommitted.current }
+        setStack((st) => [...(st[st.length - 1]?.path === left.path ? st.slice(0, -1) : st), left].slice(-BACK_LIMIT))
+      }
+      lastPath.current = pathname
+    }
     lastUrl.current = pathname + search
     trailCommitted.current = trailRender.current
   })
+  const previous = [...stack].reverse().find((v) => v.path !== pathname && v.path.startsWith(`/${membership?.slug}`)) ?? null
   const cameFrom = (state as { from?: CameFrom } | null)?.from
   const [moreOpen, setMoreOpen] = useState(false)
   const brandName = membership?.name
@@ -162,7 +176,7 @@ export function AppShell() {
                 const close = document.querySelector<HTMLElement>('#edit-slot [data-sheet-close]')
                 if (close) { close.click(); return }
                 if (cameFrom) navigate(cameFrom.path)
-                else if (previous && previous.path !== pathname && previous.path.startsWith(base)) navigate(previous.url) // exatamente a página que o botão nomeia
+                else if (previous) { setStack(stack.slice(0, stack.lastIndexOf(previous))); popping.current = true; navigate(previous.url) } // exatamente a página que o botão nomeia
                 else navigate(base)
               }}>
               <ArrowLeft className="mt-0.5 h-4 w-4 shrink-0" />
