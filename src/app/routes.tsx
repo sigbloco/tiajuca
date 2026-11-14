@@ -156,7 +156,7 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="oficina" />,
                   children: [
-                    { path: 'alunos', element: <MembersPage lockedCategory="Aluno" title="Alunos" /> },
+                    { path: 'alunos', element: <Navigate to="../membros?tipo=aluno" replace relative="path" /> },
                     { path: 'inscricoes', element: <FormsPage /> },
                     { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                     { path: 'relatorios', element: <ReportsPage /> },
