@@ -2,7 +2,9 @@ import { requireFields } from '@/core/required'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, GitBranch, Layers, Plus } from 'lucide-react'
+import { ActionRow } from '@/components/shared/ActionRow'
+import { confirmBox } from '@/components/shared/DialogHost'
+import { ArrowDown, ArrowUp, GitBranch, Layers, Plus, Power, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
@@ -15,7 +17,28 @@ import { FIELD_TYPE_LABEL, MAPPING_LABEL, isConsentBlock, isSection, type FieldO
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
 const CATALOG_MAPPINGS = ['link.instrument', 'link.function']
 
-function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { asSection?: boolean; formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
+/** Seção (id do cabeçalho) em que cada campo está; "" = antes da primeira seção. */
+function sectionIds(fields: FormFieldRow[]): Map<string, string> {
+  const out = new Map<string, string>()
+  let cur = ''
+  for (const x of fields) { if (isSection(x)) cur = x.id; out.set(x.id, cur) }
+  return out
+}
+
+/** Nova ordem dos campos depois de pôr `item` no fim da seção `sectionId` ("" = antes da primeira seção). */
+function placeInSection(fields: FormFieldRow[], item: FormFieldRow, sectionId: string): FormFieldRow[] {
+  const rest = fields.filter((x) => x.id !== item.id)
+  const where = sectionIds(rest)
+  let at = rest.length
+  if (sectionId === '') { const first = rest.findIndex((x) => isSection(x)); at = first < 0 ? rest.length : first }
+  else {
+    const head = rest.findIndex((x) => x.id === sectionId)
+    if (head >= 0) { at = head + 1; while (at < rest.length && where.get(rest[at].id) === sectionId) at++ }
+  }
+  return [...rest.slice(0, at), item, ...rest.slice(at)]
+}
+
+function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defaultSection }: { asSection?: boolean; defaultSection?: string; formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
@@ -25,6 +48,9 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { 
     condField: field?.condition?.field ?? '', condOp: field?.condition?.op ?? 'eq', condValue: field?.condition?.value ?? '',
     mapping: field?.member_mapping ?? '',
   })
+  const sections = fields.filter(isSection)
+  const currentSection = field ? sectionIds(fields).get(field.id) ?? '' : defaultSection ?? sections[sections.length - 1]?.id ?? ''
+  const [sectionId, setSectionId] = useState(currentSection)
   const earlier = fields.filter((x) => x.is_active && x.field_type !== 'info' && x.id !== field?.id && (field ? x.sort_order < field.sort_order : true))
   const parent = earlier.find((x) => x.field_key === f.condField)
   const parentOptions: FieldOption[] = !parent ? [] : parent.field_type === 'yes_no' ? [{ value: 'yes', label: 'Sim' }, { value: 'no', label: 'Não' }]
@@ -54,10 +80,22 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { 
         condition: f.condField && f.condValue !== '' ? { field: f.condField, op: f.condOp, value: f.condValue } : null,
         member_mapping: f.mapping || null,
       }
-      const q = field ? supabase.from('form_fields').update(row).eq('id', field.id)
-        : supabase.from('form_fields').insert({ ...row, organization_id: orgId, form_id: formId, field_key: uniqueKey(), sort_order: nextOrder })
-      const { error } = await q
-      if (error) throw error
+      let id = field?.id ?? ''
+      if (field) {
+        const { error } = await supabase.from('form_fields').update(row).eq('id', field.id)
+        if (error) throw error
+      } else {
+        const { data, error } = await supabase.from('form_fields').insert({ ...row, organization_id: orgId, form_id: formId, field_key: uniqueKey(), sort_order: nextOrder }).select('id').single()
+        if (error) throw error
+        id = data.id as string
+      }
+      // Campo novo ou que mudou de seção: vai para o fim da seção escolhida e a ordem é renumerada.
+      if (!asSection && sections.length > 0 && (!field || sectionId !== currentSection)) {
+        const me = (field ?? { id, sort_order: nextOrder }) as FormFieldRow
+        const order = placeInSection(field ? fields : [...fields, me], me, sectionId)
+        const r = await Promise.all(order.map((x, i) => (x.sort_order === i + 1 ? null : supabase.from('form_fields').update({ sort_order: i + 1 }).eq('id', x.id))))
+        const bad = r.find((x) => x?.error); if (bad?.error) throw bad.error
+      }
     },
     onSuccess: () => { toast.success('Campo salvo. Republique para valer no formulário público.'); qc.invalidateQueries({ queryKey: ['form-fields', orgId, formId] }); onClose() },
     onError: (e) => toast.error(/member_mapping|check/i.test(JSON.stringify(e)) ? 'Ligação com o cadastro inválida.' : friendlyError(e)),
@@ -72,6 +110,14 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection }: { 
         {f.type === 'info'
           ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
+        {!asSection && sections.length > 0 && (
+          <div className="space-y-1.5"><Label htmlFor="fl-section">Seção</Label>
+            <Select id="fl-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
+              {currentSection === '' && <option value="">Sem seção</option>}
+              {sections.map((x) => <option key={x.id} value={x.id}>{x.label}{x.is_active ? '' : ' (desativada)'}</option>)}
+            </Select>
+            <p className="text-xs text-muted-foreground">Ao trocar, o campo vai para o fim da seção escolhida.</p></div>
+        )}
         {!asSection && <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="fl-type">Tipo</Label>
             <Select id="fl-type" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as FieldType })}>
@@ -134,13 +180,47 @@ export function FieldsTab({ formId }: { formId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data } = useFormFields(formId)
-  const [sheet, setSheet] = useState<{ field: FormFieldRow | null; section?: boolean } | null>(null)
+  const [sheet, setSheet] = useState<{ field: FormFieldRow | null; section?: boolean; defaultSection?: string } | null>(null)
   const fields = data ?? []
   const refresh = () => qc.invalidateQueries({ queryKey: ['form-fields', orgId, formId] })
-  const patch = useMutation({
-    mutationFn: async ({ id, p }: { id: string; p: Partial<FormFieldRow> }) => { const { error } = await supabase.from('form_fields').update(p).eq('id', id); if (error) throw error },
+  // Desativar/ativar e apagar valem para o campo; numa seção, valem para ela e todos os campos dela.
+  const groupOf = (x: FormFieldRow): FormFieldRow[] => {
+    if (!isSection(x)) return [x]
+    const where = sectionIds(fields)
+    return fields.filter((y) => y.id === x.id || where.get(y.id) === x.id)
+  }
+  const toggle = useMutation({
+    mutationFn: async (x: FormFieldRow) => {
+      const on = !x.is_active
+      const { error } = await supabase.from('form_fields').update({ is_active: on }).in('id', groupOf(x).map((y) => y.id))
+      if (error) throw error
+    },
     onSuccess: refresh, onError: (e) => toast.error(friendlyError(e)),
   })
+  const remove = useMutation({
+    mutationFn: async (x: FormFieldRow) => {
+      const gone = groupOf(x)
+      const ids = gone.map((y) => y.id)
+      // Perguntas que dependiam dos campos apagados deixam de ter condição (senão ficariam escondidas para sempre).
+      const keys = new Set(gone.map((y) => y.field_key))
+      const dependents = fields.filter((y) => !ids.includes(y.id) && y.condition && keys.has(y.condition.field))
+      for (const d of dependents) { const r = await supabase.from('form_fields').update({ condition: null }).eq('id', d.id); if (r.error) throw r.error }
+      const { error } = await supabase.from('form_fields').delete().in('id', ids)
+      if (error) throw error
+      // Fecha o buraco na ordem.
+      const left = fields.filter((y) => !ids.includes(y.id))
+      const r = await Promise.all(left.map((y, i) => (y.sort_order === i + 1 ? null : supabase.from('form_fields').update({ sort_order: i + 1 }).eq('id', y.id))))
+      const bad = r.find((y) => y?.error); if (bad?.error) throw bad.error
+    },
+    onSuccess: () => { toast.success('Apagado.'); refresh() }, onError: (e) => toast.error(friendlyError(e)),
+  })
+  const askRemove = async (x: FormFieldRow) => {
+    const n = groupOf(x).length - 1
+    const msg = isSection(x)
+      ? `Apagar a seção “${x.label}”${n > 0 ? ` e os ${n} campo(s) dela` : ''}? As versões já publicadas e as respostas não mudam.`
+      : `Apagar o campo “${x.label}”? As versões já publicadas e as respostas não mudam.`
+    if (await confirmBox(msg)) remove.mutate(x)
+  }
   const move = useMutation({
     mutationFn: async ({ from, to }: { from: number; to: number }) => {
       const arr = [...fields]; ;[arr[from], arr[to]] = [arr[to], arr[from]]
@@ -158,27 +238,41 @@ export function FieldsTab({ formId }: { formId: string }) {
         </div></div>
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
-        {fields.map((x, i) => (
-          <Card key={x.id} className={cn('flex items-center gap-2 p-2.5', !x.is_active && 'opacity-60', isSection(x) ? 'border-l-4 border-l-primary bg-muted/60' : 'ml-3')}>
-            <div className="flex flex-col">
-              <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={i === 0} onClick={() => move.mutate({ from: i, to: i - 1 })}><ArrowUp className="h-3.5 w-3.5" /></Button>
-              <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === fields.length - 1} onClick={() => move.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-3.5 w-3.5" /></Button>
+        {fields.map((x, i) => {
+          const nextIsHead = i === fields.length - 1 || isSection(fields[i + 1])
+          const section = sectionIds(fields).get(x.id) ?? ''
+          return (
+            <div key={x.id} className="grid gap-2">
+              <Card className={cn('space-y-2 p-2.5', !x.is_active && 'opacity-60', isSection(x) ? 'border-l-4 border-l-primary bg-muted/60' : 'ml-3')}>
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col">
+                    <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={i === 0} onClick={() => move.mutate({ from: i, to: i - 1 })}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === fields.length - 1} onClick={() => move.mutate({ from: i, to: i + 1 })}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                  </div>
+                  <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ field: x, section: isSection(x) })}>
+                    <p className={cn('break-words font-semibold', isSection(x) && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
+                    <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <Badge>{isSection(x) ? 'Seção' : isConsentBlock(x) ? 'Consentimento' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
+                      {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
+                      {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
+                    </p>
+                  </button>
+                </div>
+                <ActionRow>
+                  <Button size="sm" variant="outline" disabled={toggle.isPending} aria-label={x.is_active ? 'Desativar' : 'Ativar'} title={isSection(x) ? 'Vale para a seção e seus campos' : undefined} onClick={() => toggle.mutate(x)}><Power className="h-4 w-4 shrink-0" /><span className="act-label">{x.is_active ? 'Desativar' : 'Ativar'}</span></Button>
+                  <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={isSection(x) ? 'Apaga a seção e seus campos' : undefined} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="act-label">Apagar</span></Button>
+                </ActionRow>
+              </Card>
+              {nextIsHead && section !== '' && (
+                <Button variant="add" className="ml-3" onClick={() => setSheet({ field: null, defaultSection: section })}><Plus className="h-4 w-4" /> Adicionar campo</Button>
+              )}
             </div>
-            <button className="min-w-0 flex-1 text-left" onClick={() => setSheet({ field: x, section: isSection(x) })}>
-              <p className={cn('break-words font-semibold', isSection(x) && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
-              <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                <Badge>{isSection(x) ? 'Seção' : isConsentBlock(x) ? 'Consentimento' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
-                {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
-                {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
-              </p>
-            </button>
-            <Button size="sm" variant="outline" onClick={() => patch.mutate({ id: x.id, p: { is_active: !x.is_active } })}>{x.is_active ? 'Desativar' : 'Ativar'}</Button>
-          </Card>
-        ))}
+          )
+        })}
       </div>
       <p className="text-xs text-muted-foreground">Mudanças nos campos só aparecem no link público depois de <strong>publicar de novo</strong>. Respostas antigas continuam legíveis.</p>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet && <FieldSheet key={sheet.field?.id ?? (sheet.section ? 'new-section' : 'new')} asSection={sheet.section} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
+        {sheet && <FieldSheet key={sheet.field?.id ?? (sheet.section ? 'new-section' : `new-${sheet.defaultSection ?? ''}`)} asSection={sheet.section} defaultSection={sheet.defaultSection} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )
