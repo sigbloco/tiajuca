@@ -48,6 +48,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
     onSuccess: () => { toast.success('Você deixou de colaborar.'); refresh() }, onError,
   })
   const d = data.data
+  const descOf = (name: string) => functions.data?.find((x) => x.name === name)?.description?.trim() || ''
   if (!d) return null
   const pending = (kind: string, action: string, label: string) => d.requests.some((r) => r.status === 'pending' && r.kind === kind && r.action === action && r.label === label)
   const final = d.price != null ? Math.round(d.price * (100 - d.percent)) / 100 : null
@@ -61,6 +62,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
       </Select>
       <Button disabled={!pick || request.isPending} onClick={() => request.mutate({ kind, action: 'add', ...(kind === 'artistic' ? { instrument: pick } : { fn: pick }) })}>Pedir</Button>
       <Button variant="ghost" aria-label="Cancelar" onClick={() => { setAdding(null); setPick('') }}><X className="h-4 w-4" /></Button>
+      {kind === 'collab' && pick && functions.data?.find((x) => x.id === pick)?.description?.trim() && <p className="basis-full text-sm text-muted-foreground">{functions.data?.find((x) => x.id === pick)?.description}</p>}
     </div>
   )
   const head = (title: string, kind?: 'artistic' | 'collab') => (
@@ -92,7 +94,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {d.collab.length === 0 && <p className="text-muted-foreground">Você não colabora em nenhuma frente.</p>}
         {d.collab.map((c) => (
           <div key={c.id} className="flex items-center justify-between gap-2">
-            <p className="min-w-0 break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>
+            <div className="min-w-0"><p className="break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>{descOf(c.name) && <p className="text-sm text-muted-foreground">{descOf(c.name)}</p>}</div>
             <Button size="sm" variant="outline" className="text-destructive" disabled={giveUp.isPending}
               onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-4 w-4" /> Abrir mão</Button>
           </div>

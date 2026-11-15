@@ -88,8 +88,9 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
         <div className="grid gap-2" role="radiogroup" aria-labelledby={`${id}-l`}>
           {f.options.map((o) => (
             <button key={o.value} type="button" role="radio" aria-checked={str === o.value} onClick={() => onChange(o.value)}
-              className={cn('min-h-11 rounded-lg border px-3 text-left font-semibold', str === o.value ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>
+              className={cn('min-h-11 rounded-lg border px-3 py-2 text-left font-semibold', str === o.value ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>
               {o.label}
+              {o.description && <span className="mt-0.5 block text-sm font-normal text-muted-foreground">{o.description}</span>}
             </button>
           ))}
           {other && (
@@ -105,6 +106,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
             {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             {other && <option value="__outro__">Outro</option>}
           </Select>
+          {!isOther && f.options.find((o) => o.value === str)?.description && <p className="text-sm text-muted-foreground">{f.options.find((o) => o.value === str)?.description}</p>}
           {otherInput}
         </div>
       )
@@ -118,7 +120,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
           {f.options.map((o) => (
             <label key={o.value} className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3">
               <input type="checkbox" className="h-5 w-5" checked={plain.includes(o.value)} onChange={(e) => onChange([...(e.target.checked ? [...plain, o.value] : plain.filter((x) => x !== o.value)), ...(otherVal !== undefined ? [otherVal] : [])])} />
-              {o.label}
+              <span>{o.label}{o.description && <span className="block text-sm text-muted-foreground">{o.description}</span>}</span>
             </label>
           ))}
           {f.validation.other && (

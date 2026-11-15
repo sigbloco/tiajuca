@@ -25,7 +25,7 @@ const SYSTEM: Record<string, { title: string; singular: string; hint: string }> 
 }
 
 interface ListRow { id: string; name: string; kind: 'system' | 'custom'; source: string | null; sort_order: number; is_active: boolean }
-interface ItemRow { id: string; list_id: string; name: string; sort_order: number; is_active: boolean }
+interface ItemRow { id: string; list_id: string; name: string; sort_order: number; is_active: boolean; description?: string | null }
 interface TrashRow { key: string; id: string; name: string; label: string; table?: CatalogTable; list?: boolean }
 
 function useFormLists() {
@@ -44,7 +44,7 @@ function useFormListItems() {
   return useQuery({
     queryKey: ['form-list-items', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('form_list_items').select('id, list_id, name, sort_order, is_active').eq('organization_id', orgId).order('sort_order').limit(5000)
+      const { data, error } = await supabase.from('form_list_items').select('id, list_id, name, sort_order, is_active, description').eq('organization_id', orgId).order('sort_order').limit(5000)
       if (error) throw error
       return (data ?? []) as ItemRow[]
     },
@@ -102,7 +102,7 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
       {active.length === 0 && <EmptyState>Nenhum item ainda.</EmptyState>}
       <div className="grid gap-2">
         <ProgressiveList items={active} render={(item, i) => (
-          <Card key={item.id} {...(canEdit ? drag.row(item.id, moveTo, `list-${list.id}`) : {})} className={cn('flex items-center gap-2 p-2', drag.cls(item.id))}>
+          <Card key={item.id} {...(canEdit ? drag.row(item.id, moveTo, `list-${list.id}`) : {})} className={cn('flex flex-wrap items-center gap-2 p-2', drag.cls(item.id))}>
             <div className="flex flex-col items-center">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-4 w-4" /></Button>
               {canEdit && drag.handle(item.id, moveTo, `list-${list.id}`)}
@@ -110,6 +110,7 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
             </div>
             <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`} onSave={(v) => patch.mutateAsync({ id: item.id, patch: { name: v } })} />
             {canEdit && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover ${item.name} para a lixeira`} title="Mover para a lixeira" onClick={() => patch.mutate({ id: item.id, patch: { is_active: false } })}><Trash2 className="h-4 w-4" /></Button>}
+            <div className="basis-full"><SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${item.name}`} onSave={(v) => patch.mutateAsync({ id: item.id, patch: { description: v.trim() || null } })} /></div>
           </Card>
         )} />
       </div>
@@ -209,7 +210,7 @@ export function FormListsPage() {
               )}
               right={canEdit && l.kind === 'custom' && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover a lista ${l.name} para a lixeira`} title="Mover para a lixeira" onClick={() => setListActive.mutate({ id: l.id, on: false })}><Trash2 className="h-4 w-4" /></Button>}>
               {sd && l.source
-                ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash />
+                ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription />
                 : <CustomListBody list={l} items={(customItems.data ?? []).filter((x) => x.list_id === l.id)} canEdit={canEdit} />}
             </Collapsible>
           )

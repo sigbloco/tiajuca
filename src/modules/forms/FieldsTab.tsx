@@ -71,6 +71,9 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const [naipe, setNaipe] = useState('')
   // Listas fixas do cadastro (instrumento, categoria, nível): o que estiver marcado aparece no formulário.
   const [picked, setPicked] = useState<Set<string>>(() => new Set((field?.options ?? []).map((o) => o.value)))
+  // Descrição de cada item: a pergunta pode mostrá-la; o texto vem do cadastro e pode ser editado aqui sem mudar o cadastro (vazio = usa o do cadastro).
+  const [showDesc, setShowDesc] = useState(!!field?.validation.descriptions)
+  const [descs, setDescs] = useState<Record<string, string>>({})
   const overview = useQuery({
     queryKey: ['form-instrument-vagas', orgId, cycleId],
     enabled: Boolean(cycleId) && f.mapping === 'link.instrument',
@@ -95,6 +98,9 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     const labels = new Set(field.options.map((o) => o.label.trim().toLowerCase()))
     const values = new Set(field.options.map((o) => o.value))
     setPicked(new Set(catalogItems.filter((i) => values.has(i.id) || labels.has(i.name.trim().toLowerCase())).map((i) => i.id)))
+    const own: Record<string, string> = {}
+    for (const i of catalogItems) { const o = field.options.find((x) => x.value === i.id || x.value === i.name || x.label.trim().toLowerCase() === i.name.trim().toLowerCase()); if (o?.description !== undefined) own[i.id] = o.description }
+    setDescs(own)
   }, [catalogSig]) // eslint-disable-line react-hooks/exhaustive-deps
   const togglePicked = (id: string) => setPicked((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const setShownPicked = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const i of shown) { if (on) n.add(i.id); else n.delete(i.id) } return n })
@@ -109,7 +115,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const toOptions = (): FieldOption[] => {
     // Listas do cadastro: só os marcados, na ordem do cadastro (o valor é o código do item, que liga ao integrante).
     // Instrumento, categoria e nível guardam o código do item (liga ao integrante); gênero e cor/raça guardam o próprio nome.
-    if (listMapped) return catalogItems.filter((i) => picked.has(i.id)).map((i) => ({ value: linkMapped ? i.id : i.name, label: i.name }))
+    if (listMapped) return catalogItems.filter((i) => picked.has(i.id)).map((i) => { const d = (descs[i.id] ?? i.description ?? '').trim(); return { value: linkMapped ? i.id : i.name, label: i.name, ...(showDesc && d ? { description: d } : {}) } })
     const existing = new Map((field?.options ?? []).map((o) => [o.label, o.value]))
     const seen = new Set<string>()
     return f.options.split('\n').map((l) => l.trim()).filter(Boolean).map((label) => {
@@ -132,6 +138,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         if (keys.length < SOCIAL_NETWORKS.length) validation.networks = keys
       }
       if (f.other && OPTION_TYPES.includes(f.type as FieldType) && !f.mapping.startsWith('link.')) validation.other = true
+      if (listMapped && showDesc) validation.descriptions = true
       const opts = OPTION_TYPES.includes(f.type as FieldType) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
       const marks = asSection ? { section: true, ...(f.consent && !field?.validation.login ? { consent: true } : {}), ...(field?.validation.login ? { login: true } : {}) } : {}
@@ -235,6 +242,16 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
               <Button type="button" size="sm" variant="outline" onClick={() => setShownPicked(false)}>Desmarcar todos</Button>
               <span className="text-xs text-muted-foreground">{catalogItems.filter((i) => picked.has(i.id)).length} marcado(s): só eles aparecem para a pessoa escolher.</span>
             </div>
+            <label className="flex items-center gap-2 font-semibold"><input type="checkbox" className="h-5 w-5" checked={showDesc} onChange={(e) => setShowDesc(e.target.checked)} /> Mostrar a descrição de cada item</label>
+            {showDesc && (
+              <div className="space-y-2 rounded-lg border border-border bg-card p-2">
+                <p className="text-xs text-muted-foreground">Vem do cadastro; editar aqui muda só esta pergunta. Em branco, o item aparece sem descrição.</p>
+                {catalogItems.filter((i) => picked.has(i.id)).map((i) => (
+                  <div key={i.id} className="space-y-1"><Label htmlFor={`fd-${i.id}`} className="text-xs">{i.name}</Label>
+                    <Input id={`fd-${i.id}`} value={descs[i.id] ?? i.description ?? ''} onChange={(e) => setDescs({ ...descs, [i.id]: e.target.value })} /></div>
+                ))}
+              </div>
+            )}
           </fieldset>
         )}
         {needsOptions && !listMapped && (

@@ -126,6 +126,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const form = (
     <div className="space-y-2 rounded-md bg-muted/40 p-2">
       {collab ? (
+        <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <Select className="min-w-0 flex-1" value={f.function_id} aria-label="Categoria" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
             <option value="">Escolha a categoria</option>
@@ -133,6 +134,8 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
           </Select>
           <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>OK</Button>
           <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+        </div>
+        {functions.data?.find((x) => x.id === f.function_id)?.description?.trim() && <p className="text-sm text-muted-foreground">{functions.data?.find((x) => x.id === f.function_id)?.description}</p>}
         </div>
       ) : (
         <>
