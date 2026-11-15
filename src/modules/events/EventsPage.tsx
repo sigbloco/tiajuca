@@ -71,13 +71,13 @@ export function EventsPage() {
   const birthdays = useQuery({
     queryKey: ['birthdays', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('id, full_name, display_name, birth_date').eq('organization_id', orgId).is('archived_at', null).not('birth_date', 'is', null).limit(2000)
+      const { data, error } = await supabase.rpc('birthday_list', { p_org: orgId })
       if (error) throw error
-      const map: Record<string, { id: string; name: string; year: number }[]> = {}
-      for (const m of data ?? []) {
-        const b = m.birth_date as string
-        const name = (m.display_name as string | null)?.trim() || (m.full_name as string).trim().split(/\s+/)[0]
-        ;(map[b.slice(5)] ??= []).push({ id: m.id as string, name, year: Number(b.slice(0, 4)) })
+      // Dia e mês para todos; o ano (idade) só chega para Titular, Direção e professores/monitores (o banco decide).
+      const map: Record<string, { id: string; name: string; year: number | null }[]> = {}
+      for (const m of (data ?? []) as { member_id: string; full_name: string; display_name: string | null; month_day: string; birth_year: number | null }[]) {
+        const name = m.display_name?.trim() || m.full_name.trim().split(/\s+/)[0]
+        ;(map[m.month_day] ??= []).push({ id: m.member_id, name, year: m.birth_year })
       }
       return map
     },
@@ -89,7 +89,7 @@ export function EventsPage() {
     const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
     const out = [...(map[iso.slice(5)] ?? [])]
     if (!leap && iso.slice(5) === '02-28') out.push(...(map['02-29'] ?? [])) // 29/02 comemora em 28/02 nos anos comuns
-    return out.map((p) => ({ ...p, age: y - p.year })).filter((p) => p.age >= 0 && !(memberStatus.ready && memberStatus.isInactive(p.id)))
+    return out.map((p) => ({ ...p, age: p.year === null ? null : y - p.year })).filter((p) => (p.age === null || p.age >= 0) && !(memberStatus.ready && memberStatus.isInactive(p.id)))
   }
 
   const byDay = useMemo(() => {
@@ -186,7 +186,7 @@ export function EventsPage() {
       {selectedDay && birthdaysOn(selectedDay).length > 0 && (
         <Card className="space-y-1 p-3">
           <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> Aniversariantes</p>
-          {birthdaysOn(selectedDay).map((p) => <p key={p.id} className="text-muted-foreground"><MemberLink id={p.id} className="font-semibold text-foreground">{p.name}</MemberLink> · {p.age} anos</p>)}
+          {birthdaysOn(selectedDay).map((p) => <p key={p.id} className="text-muted-foreground"><MemberLink id={p.id} className="font-semibold text-foreground">{p.name}</MemberLink>{p.age !== null && <> · {p.age} anos</>}</p>)}
         </Card>
       )}
       {selectedDay && data && listDays.length === 0 && birthdaysOn(selectedDay).length === 0 && <EmptyState>Nenhum evento neste dia.</EmptyState>}
