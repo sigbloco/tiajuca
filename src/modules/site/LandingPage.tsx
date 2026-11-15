@@ -19,7 +19,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_enrollment?: boolean; show_login?: boolean; menu_construction?: string[]; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_rays?: boolean; show_enrollment?: boolean; show_login?: boolean; menu_construction?: string[]; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   shop_product?: { slug: string; name: string; image_path: string | null } | null
   open_forms: { slug: string; title: string }[]
@@ -79,11 +79,15 @@ export function LandingPage() {
 
   return (
     <main className="min-h-screen bg-background pb-16 text-foreground">
-      <header className={`px-4 pb-20 pt-10 text-center ${heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: heroColor, color: areaOverrides(org.theme, 'site').headerText ?? textOn(heroColor) } : undefined}>
-        {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
-        {session ? <button type="button" onClick={() => void signOut()} className="mb-4 ml-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><LogOut className="h-5 w-5" aria-hidden /> Sair</button> : null}
-        <OrgLogo name={org.name} logoPath={photo} className="mx-auto h-36 w-36 object-cover ring-4 ring-secondary" />
-        <h1 className={site.hide_headline ? 'sr-only' : 'mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
+      <header className={`relative overflow-hidden px-4 pb-20 pt-10 text-center ${heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: heroColor, color: areaOverrides(org.theme, 'site').headerText ?? textOn(heroColor) } : undefined}>
+        {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="relative z-10 mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
+        {session ? <button type="button" onClick={() => void signOut()} className="relative z-10 mb-4 ml-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><LogOut className="h-5 w-5" aria-hidden /> Sair</button> : null}
+        {/* Raios: um gradiente cônico centrado na logo, bem maior que a tela; o cabeçalho corta o excesso, então ocupa 100% em qualquer largura. */}
+        <div className="relative mx-auto h-36 w-36">
+          {site.show_rays && <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[260vmax] w-[260vmax] -translate-x-1/2 -translate-y-1/2" style={{ background: 'repeating-conic-gradient(from 11.25deg at 50% 50%, rgb(var(--secondary)) 0deg 11.25deg, transparent 11.25deg 22.5deg)' }} />}
+          <OrgLogo name={org.name} logoPath={photo} className="relative mx-auto h-36 w-36 object-cover ring-4 ring-secondary" />
+        </div>
+        <h1 className={site.hide_headline ? 'sr-only' : 'relative mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
       </header>
 
       <div className="-mt-12 mx-auto max-w-md space-y-5 px-4">

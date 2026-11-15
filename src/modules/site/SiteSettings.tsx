@@ -26,6 +26,7 @@ const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): 
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
+  show_rays?: boolean
   enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; menu_construction: string[]; shop_product_id: string | null; show_albums: boolean; albums_label: string; show_release: boolean; release_label: string; release_url: string | null; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
 const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, menu_construction: [], shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
@@ -60,7 +61,7 @@ export function SiteSettings() {
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
     show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
-    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline,
+    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, show_rays: !!row.show_rays,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
   const write = async (row: SiteRow) => {
@@ -161,6 +162,7 @@ export function SiteSettings() {
           <Input id="st-head" placeholder={membership?.name ?? 'Nome do bloco'} value={f.headline ?? ''} onChange={(e) => setF({ ...f, headline: e.target.value })} />
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.hide_headline} onChange={(e) => setF({ ...f, hide_headline: e.target.checked })} /> Esconder o título na página</label>
           <p className="text-xs text-muted-foreground">Só a logo aparece. O título continua no código da página, para buscadores (SEO) e leitores de tela.</p></div>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={!!f.show_rays} onChange={(e) => setF({ ...f, show_rays: e.target.checked })} /> Raios atrás da logo (como na camiseta)</label>
         <div className="space-y-1.5"><Label htmlFor="st-desc">Descrição curta</Label>
           <textarea id="st-desc" rows={4} maxLength={600} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <p className="text-xs text-muted-foreground">{(f.description ?? '').length}/600</p></div>
