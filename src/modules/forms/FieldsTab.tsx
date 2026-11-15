@@ -5,7 +5,7 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { ArrowDown, ArrowUp, Ban, BookmarkPlus, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, BookmarkPlus, CopyPlus, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { promptBox } from '@/components/shared/DialogHost'
 import { SendSection } from './SendSection'
 import { useSectionTemplates } from './SectionTemplatesPage'
@@ -404,6 +404,28 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
       : `Apagar o campo “${x.label}”? As versões já publicadas e as respostas não mudam.`
     if (await confirmBox(msg)) remove.mutate(x)
   }
+  // Duplicar campo (logo abaixo dele) ou seção (com os campos dela, logo depois dela). A cópia não leva a ligação com o cadastro (cada ligação só pode existir uma vez no formulário).
+  const duplicate = useMutation({
+    mutationFn: async (x: FormFieldRow) => {
+      const group = groupOf(x)
+      const keyMap = new Map(group.map((y) => [y.field_key, `${y.field_key.replace(/_c[a-z0-9]{4}$/, '')}_c${Math.random().toString(36).slice(2, 6)}`]))
+      const last = group[group.length - 1]
+      const at = fields.findIndex((y) => y.id === last.id)
+      const copies = group.map((y) => ({
+        organization_id: orgId, form_id: formId, field_key: keyMap.get(y.field_key)!, label: y.id === x.id ? `${y.label} (cópia)` : y.label, description: y.description,
+        field_type: y.field_type, required: y.required, options: y.options, default_value: y.default_value, validation: y.validation,
+        condition: y.condition ? { ...y.condition, field: keyMap.get(y.condition.field) ?? y.condition.field } : null, member_mapping: null, is_active: y.is_active,
+      }))
+      const order = [...fields.slice(0, at + 1).map((y) => ({ id: y.id as string | null, sort_order: y.sort_order })), ...copies.map(() => ({ id: null as string | null, sort_order: 0 })), ...fields.slice(at + 1).map((y) => ({ id: y.id as string | null, sort_order: y.sort_order }))]
+      // Abre espaço na ordem (de trás para a frente) e só então insere as cópias nos lugares livres.
+      const shift = order.map((o, i) => ({ ...o, to: i + 1 })).filter((o) => o.id && o.to !== o.sort_order).reverse()
+      for (const o of shift) { const r = await supabase.from('form_fields').update({ sort_order: o.to }).eq('id', o.id!); if (r.error) throw r.error }
+      const { error } = await supabase.from('form_fields').insert(copies.map((c, i) => ({ ...c, sort_order: at + 2 + i })))
+      if (error) throw error
+    },
+    onSuccess: (_, x) => { toast.success(isSection(x) ? 'Seção duplicada.' : 'Campo duplicado.'); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const drag = useHoldReorder()
   const hasLogin = fields.some(isLoginSection)
   const addLogin = useMutation({
@@ -509,8 +531,16 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                     {isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                 )}
-                <button className="min-w-0 flex-1 basis-40 text-left" onClick={() => setSheet({ field: x, section: sec })}>
-                  <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
+                <div className="min-w-0 flex-1 basis-40">
+                <div className="flex items-start gap-2">
+                  <button className="min-w-0 text-left" onClick={() => setSheet({ field: x, section: sec })}>
+                    <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
+                  </button>
+                  {!isLoginSection(x) && !(templateMode && sec) && (
+                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0" aria-label={`Duplicar ${x.label}`} title={sec ? 'Duplicar a seção com os campos dela' : 'Duplicar o campo'} disabled={duplicate.isPending} onClick={() => duplicate.mutate(x)}><CopyPlus className="h-4 w-4" /></Button>
+                  )}
+                </div>
+                <button className="w-full text-left" onClick={() => setSheet({ field: x, section: sec })}>
                   <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                     <Badge>{sec ? 'Seção' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
                       {sec && !isLoginSection(x) && <Badge className="bg-muted text-muted-foreground">{count} {count === 1 ? 'campo' : 'campos'}</Badge>}
@@ -519,6 +549,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                     {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
                   </p>
                 </button>
+                </div>
                 <div className="flex shrink-0 gap-1.5">
                   {sec && !templateMode && !isLoginSection(x) && (
                     <Button size="sm" variant="outline" disabled={saveAsTemplate.isPending} aria-label={`Salvar ${x.label} como modelo`} title="Salvar esta seção como modelo (com o mesmo nome, atualiza o modelo)"
