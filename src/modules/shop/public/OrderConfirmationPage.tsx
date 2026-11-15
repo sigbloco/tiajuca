@@ -77,7 +77,7 @@ export function OrderConfirmationPage() {
       )}
       {status === 'cancelled' && (
         <Card className="space-y-1 p-5"><h2 className="text-lg font-bold">Pedido cancelado</h2>
-          <p>Este pedido foi cancelado. Se você já pagou, fale com a Direção abaixo.</p></Card>
+          <p>Este pedido foi cancelado. Se você já pagou, fale com a direção abaixo.</p></Card>
       )}
       {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
         <Card className="space-y-3 p-5">
@@ -86,7 +86,7 @@ export function OrderConfirmationPage() {
           <p className="rounded-lg bg-muted p-3 text-sm">Na página de pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>
           {snap.paymentUrl
             ? <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={snap.paymentUrl}>Ir para o pagamento · {money(order.total_cents)}</a>
-            : <p className="text-sm text-muted-foreground">Se a página de pagamento não abriu, fale com a Direção abaixo.</p>}
+            : <p className="text-sm text-muted-foreground">Se a página de pagamento não abriu, fale com a direção abaixo.</p>}
           {order.expires_at && <p className="text-sm text-muted-foreground">Seus itens ficam reservados até {formatDateTime(order.expires_at)}.</p>}
         </Card>
       )}
@@ -136,7 +136,7 @@ export function OrderConfirmationPage() {
       {directors.length > 0 && (
         <Card className="space-y-2 p-5">
           <h2 className="text-lg font-bold">Precisa de ajuda?</h2>
-          <p className="text-sm text-muted-foreground">Fale direto com alguém da Direção pelo WhatsApp:</p>
+          <p className="text-sm text-muted-foreground">Fale direto com alguém da direção pelo WhatsApp:</p>
           <div className="flex flex-wrap gap-2">
             {directors.map((d) => <a key={d.name} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={d.url} target="_blank" rel="noreferrer noopener">{d.name}</a>)}
           </div>

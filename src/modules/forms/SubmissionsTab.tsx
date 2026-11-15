@@ -70,7 +70,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
   const plain = fields.filter((f) => !SENSITIVE(f.mapping))
   const sensitive = fields.filter((f) => SENSITIVE(f.mapping))
   const purged = Boolean(sub.purged_at)
-  // Vaga do instrumento escolhido: a vaga só é preenchida na aprovação; se já está cheia, a Direção decide quem entra e quem vai para a lista de espera.
+  // Vaga do instrumento escolhido: a vaga só é preenchida na aprovação; se já está cheia, a direção decide quem entra e quem vai para a lista de espera.
   const instField = fields.find((f) => f.mapping === 'link.instrument')
   const instId = instField ? String(sub.answers[instField.key] ?? '') : ''
   const cap = useQuery({

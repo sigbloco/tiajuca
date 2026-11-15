@@ -31,7 +31,7 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
       return (data ?? []) as { id: string; email: string }[]
     },
   })
-  // Quem não é da Direção só pede: o e-mail liga uma conta Google ao cadastro, então a Direção confere antes.
+  // Quem não é da direção só pede: o e-mail liga uma conta Google ao cadastro, então a direção confere antes.
   const pending = useQuery({
     queryKey: ['email-requests', memberId],
     enabled: can && !manage,
@@ -46,7 +46,7 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
       if (manage) { const { error } = await supabase.from('member_emails').insert({ organization_id: orgId, member_id: memberId, email }); if (error) throw error }
       else { const { error } = await supabase.rpc('request_extra_email', { p_member: memberId, p_email: email }); if (error) throw error }
     },
-    onSuccess: () => { setValue(''); setAdding(false); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['email-requests', memberId] }); if (!manage) toast.success('Pedido enviado. A Direção vai conferir o e-mail.') },
+    onSuccess: () => { setValue(''); setAdding(false); qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['email-requests', memberId] }); if (!manage) toast.success('Pedido enviado. A direção vai conferir o e-mail.') },
     onError: (e) => toast.error(/duplicate|unique|23505/i.test(JSON.stringify(e)) ? 'Esse e-mail já está em um cadastro.' : friendlyError(e)),
   })
   const remove = useMutation({
@@ -66,17 +66,17 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
   return (
     <div className="space-y-1.5 sm:col-span-2">
       <div className="flex items-center gap-1.5">
-        <Label>E-mails adicionais</Label>
+        <Label>{self && !manage ? 'Adicionais' : 'E-mails adicionais'}</Label>
         <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar e-mail" title="Adicionar e-mail"
           onClick={() => setAdding((a) => !a)}><Plus className="h-3.5 w-3.5" /></button>
+        {!manage && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Sujeito à aprovação da direção.</span>}
       </div>
-      {!manage && <p className="text-xs text-muted-foreground">A Direção confere cada e-mail novo: ele dá acesso ao seu cadastro.</p>}
       {(pending.data ?? []).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          {(pending.data ?? []).map((e) => <span key={e.id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-warning px-2.5 py-1 text-sm text-warning"><span className="break-all">{e.email}</span> · aguardando a Direção</span>)}
+          {(pending.data ?? []).map((e) => <span key={e.id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-warning px-2.5 py-1 text-sm text-warning"><span className="break-all">{e.email}</span> · aguardando a direção</span>)}
         </div>
       )}
-      {(list.data ?? []).length === 0 && (pending.data ?? []).length === 0 && !adding && <p className="text-xs text-muted-foreground">Nenhum.</p>}
+      {(list.data ?? []).length === 0 && (pending.data ?? []).length === 0 && !adding && <p className="text-sm text-muted-foreground">nenhum</p>}
       {(list.data ?? []).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {(list.data ?? []).map((e) => (
@@ -91,7 +91,7 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
         <div className="flex items-center gap-2">
           <Input type="email" autoFocus className="min-w-0 flex-1" aria-label="Novo e-mail" placeholder="outro@email.com" value={value} onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }} />
-          <Button type="button" size="icon" disabled={add.isPending} aria-label={manage ? 'Salvar e-mail' : 'Pedir à Direção'} title={manage ? 'Salvar e-mail' : 'Pedir à Direção'} onClick={submit}><Check className="h-4 w-4" /></Button>
+          <Button type="button" size="icon" disabled={add.isPending} aria-label={manage ? 'Salvar e-mail' : 'Pedir à direção'} title={manage ? 'Salvar e-mail' : 'Pedir à direção'} onClick={submit}><Check className="h-4 w-4" /></Button>
         </div>
       )}
     </div>

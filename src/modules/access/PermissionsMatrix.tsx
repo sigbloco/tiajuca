@@ -54,7 +54,7 @@ function valueOf(keys: string[], scopes: Record<string, string>): string {
 
 /**
  * Permissões por página: cada papel tem, por página, "Ver" (aparece no menu) e "Editar", com alcance (só o próprio, meu grupo ou tudo).
- * Direção e Titular têm tudo (fixo); o que é exclusivo da Direção aparece com cadeado.
+ * Direção e Titular têm tudo (fixo); o que é exclusivo da direção aparece com cadeado.
  */
 export function PermissionsMatrix() {
   const orgId = useOrgId()
@@ -111,7 +111,7 @@ export function PermissionsMatrix() {
     if (!role || !keys) return <span className="text-muted-foreground" aria-hidden>—</span>
     const lockedKeys = keys.some((k) => data?.locked.has(k))
     if (fixed) return <span className="text-sm text-muted-foreground">Tudo</span>
-    if (lockedKeys) return <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><Lock className="h-3 w-3" aria-hidden /> Só a Direção</span>
+    if (lockedKeys) return <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><Lock className="h-3 w-3" aria-hidden /> Só a direção</span>
     const v = valueOf(keys, role.scopes)
     return (
       <Select className="h-8" aria-label={`${kind === 'see' ? 'Ver' : 'Editar'} ${area.label} — ${role.name}`} disabled={set.isPending} value={v} onChange={(e) => change(area, kind, e.target.value)}>
@@ -125,7 +125,7 @@ export function PermissionsMatrix() {
     <div className="space-y-3">
       <ReadMore>
         Escolha o papel e defina, página por página, o que ele pode <strong>ver</strong> (a página aparece no menu) e o que pode <strong>editar</strong>, com o alcance: só o próprio, o meu grupo ou tudo.
-        A <strong>Direção</strong> sempre tem tudo. O que tem cadeado é exclusivo da Direção e não muda. Editar liga o ver automaticamente.
+        A <strong>Direção</strong> sempre tem tudo. O que tem cadeado é exclusivo da direção e não muda. Editar liga o ver automaticamente.
       </ReadMore>
       {isLoading && <Skeleton className="h-24" />}
       {role && (

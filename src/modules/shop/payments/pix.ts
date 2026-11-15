@@ -67,7 +67,7 @@ export function checkoutBlockers(method: PaymentMethodKey, store: { pix: PixInfo
 
 export interface DirectorLink { name: string; url: string }
 
-/** Links de WhatsApp para falar direto com alguém da Direção sobre o pedido. */
+/** Links de WhatsApp para falar direto com alguém da direção sobre o pedido. */
 export function directorLinks(contact: ContactInfo, orderCode?: string): DirectorLink[] {
   const text = orderCode ? `Olá! Preciso de ajuda com o pedido ${orderCode} da loja.` : 'Olá! Tenho uma dúvida sobre a loja.'
   return contact.directors.map((d) => ({ name: d.name, url: `https://wa.me/${d.whatsapp}?text=${encodeURIComponent(text)}` }))

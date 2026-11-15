@@ -16,7 +16,7 @@ const TABS = [
   { key: 'distribution', label: 'Distribuição' },
 ] as const
 
-/** Financeiro (somente Direção — o banco recusa para os demais). */
+/** Financeiro (somente direção — o banco recusa para os demais). */
 export function FinancePage() {
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)

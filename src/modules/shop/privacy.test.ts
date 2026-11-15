@@ -20,7 +20,7 @@ describe('aviso de privacidade', () => {
   })
   it('sem canais configurados manda falar com a Direção', () => {
     const none = text(buildPrivacyNotice('Bloco', { whatsapp: null, email: null }))
-    expect(none).toContain('fale com a Direção do bloco')
+    expect(none).toContain('fale com a direção do bloco')
     expect(buildPrivacyNotice('Bloco', { whatsapp: null, email: 'a@b.co' }).at(-1)?.paragraphs.at(-1)).toBe('Para isso, fale com a gente pelo e-mail a@b.co.')
   })
 })

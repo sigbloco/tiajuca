@@ -113,7 +113,7 @@ export function validateSettings(f: SettingsForm): string[] {
   if (f.whatsapp.trim() && !toWaDigits(f.whatsapp)) errors.push('WhatsApp da loja inválido. Use DDD + número.')
   if (f.email.trim() && !EMAIL.test(f.email.trim())) errors.push('E-mail de contato inválido.')
   for (const d of f.directors) {
-    if (!d.name.trim()) errors.push('Toda pessoa da Direção precisa de um nome.')
+    if (!d.name.trim()) errors.push('Toda pessoa da direção precisa de um nome.')
     else if (!toWaDigits(d.phone)) errors.push(`WhatsApp inválido para ${d.name.trim()}. Use DDD + número.`)
   }
   if (f.mailFromEmail.trim() && !EMAIL.test(f.mailFromEmail.trim())) errors.push('E-mail do remetente inválido.')

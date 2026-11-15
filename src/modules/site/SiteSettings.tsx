@@ -29,7 +29,7 @@ interface SiteRow {
 }
 const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, menu_construction: [], shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
 
-/** Editor da página inicial pública (a que as pessoas veem em "/"). Só Direção/Titular. */
+/** Editor da página inicial pública (a que as pessoas veem em "/"). Só direção/Titular. */
 export function SiteSettings() {
   const orgId = useOrgId()
   const { membership } = useOrganization()

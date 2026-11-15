@@ -63,7 +63,7 @@ export function ClaimInvitePage() {
  */
 export function NoOrganizationPage() {
   const { signOut, session } = useAuth()
-  // Quem se inscreveu por um formulário com login vê só o andamento da inscrição (nenhum acesso antes de a Direção avaliar).
+  // Quem se inscreveu por um formulário com login vê só o andamento da inscrição (nenhum acesso antes de a direção avaliar).
   const status = useQuery({
     queryKey: ['my-submission-info', session?.user.id],
     enabled: Boolean(session),
@@ -71,7 +71,7 @@ export function NoOrganizationPage() {
   })
   if (status.data?.status === 'pending') {
     return (
-      <AuthLayout title="Inscrição em avaliação" subtitle={<RichText text={status.data.message ?? 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.'} />}>
+      <AuthLayout title="Inscrição em avaliação" subtitle={<RichText text={status.data.message ?? 'Recebemos a sua inscrição e a direção está avaliando. Você receberá a confirmação por e-mail.'} />}>
         <Button variant="ghost" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
       </AuthLayout>
     )

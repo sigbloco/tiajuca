@@ -112,7 +112,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const { data: statuses } = useCycleStatuses()
   const canManage = usePermission('member_cycles.manage')
   const canForce = usePermission('capacity.manage')
-  const staffCycles = usePermission('members.read', 'group') // só Direção, Titular, professores e monitores trocam o ciclo exibido
+  const staffCycles = usePermission('members.read', 'group') // só direção, Titular, professores e monitores trocam o ciclo exibido
   const [adding, setAdding] = useState(false)
   const [pick, setPick] = useState('')
   const { cycleId: globalCycle } = useSelectedCycle()
@@ -198,7 +198,7 @@ async function copyEmail(email: string) {
 
 function ContactLinks({ member }: { member: MemberRow }) {
   const canManage = usePermission('members.manage')
-  // E-mail, idade e ano de nascimento: só Titular, Direção e professores/monitores. Para o resto, aniversário só com dia e mês.
+  // E-mail, idade e ano de nascimento: só Titular, direção e professores/monitores. Para o resto, aniversário só com dia e mês.
   const staff = usePermission('members.read', 'group')
   const extraEmails = useQuery({
     queryKey: ['member-emails', member.id],
@@ -232,7 +232,7 @@ function ContactLinks({ member }: { member: MemberRow }) {
 interface Registration { played_instrument: string | null; birth_date: string | null; joined_at: string | null; affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null; extra_info: Record<string, string> | null }
 const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); return l.length ? l : [''] }
 
-/** Dados cadastrais: só quem pode gerenciar integrantes (Titular e Direção) edita — todos os campos. */
+/** Dados cadastrais: só quem pode gerenciar integrantes (Titular e direção) edita — todos os campos. */
 function RegistrationEditor({ member, onChanged, open, setOpen }: { member: MemberRow; onChanged: (p: Partial<MemberRow>) => void; open: boolean; setOpen: (v: boolean) => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()

@@ -98,6 +98,7 @@ export function FunctionsPage() {
           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Mover ${f.name} para a lixeira`} title="Mover para a lixeira"
             onClick={async () => { if (await confirmBox(`Mover a categoria “${f.name}” para a lixeira? Você pode restaurar depois.`)) patch.mutate({ f, fields: { is_active: false } }) }}><Trash2 className="h-4 w-4" /></Button>
         )}
+        <div className="basis-full"><SaveInput value={f.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${f.name}`} onSave={(v) => patch.mutateAsync({ f, fields: { description: v.trim() || null } })} /></div>
       </Card>
     )
   }
@@ -113,7 +114,7 @@ export function FunctionsPage() {
         )}
       </div>
       <ReadMore>
-        Integrantes podem acumular categorias (por exemplo, Direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
+        Integrantes podem acumular categorias (por exemplo, direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
         As categorias de <PageLink to="valores">Financeiro → Contribuições</PageLink> refletem estas.
       </ReadMore>
       {SECTIONS.map((s) => {

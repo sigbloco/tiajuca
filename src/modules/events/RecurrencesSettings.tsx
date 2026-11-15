@@ -117,7 +117,7 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
   )
 }
 
-/** Recorrências semanais (ex.: "Ensaio – toda segunda-feira"). A Direção edita ou encerra sem mexer em código. */
+/** Recorrências semanais (ex.: "Ensaio – toda segunda-feira"). A direção edita ou encerra sem mexer em código. */
 export function RecurrencesSettings() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
@@ -185,7 +185,7 @@ export function RecurrencesSettings() {
           <Button variant="add" onClick={() => setSheet({ rule: null })}><Plus className="h-4 w-4" /> Nova</Button>
         </div>
       </div>
-      <p className="text-muted-foreground">As próximas 12 semanas são geradas automaticamente quando a Direção abre a agenda.</p>
+      <p className="text-muted-foreground">As próximas 12 semanas são geradas automaticamente quando a direção abre a agenda.</p>
       {data?.filter((r) => r.is_active).length === 0 && <EmptyState>Nenhuma recorrência.</EmptyState>}
       <div className="grid gap-2">
         {data?.filter((r) => r.is_active).map((r) => (

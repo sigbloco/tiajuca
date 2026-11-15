@@ -49,7 +49,7 @@ function Diff({ log }: { log: Log }) {
   )
 }
 
-/** Auditoria (somente Direção): quem fez o quê e quando, com filtros e paginação no banco. */
+/** Auditoria (somente direção): quem fez o quê e quando, com filtros e paginação no banco. */
 export function AuditLogTab() {
   const orgId = useOrgId()
   const { membership } = useOrganization()

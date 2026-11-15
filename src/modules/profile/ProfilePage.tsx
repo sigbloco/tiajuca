@@ -53,7 +53,7 @@ function PixSection({ memberId }: { memberId: string }) {
         <Input className="sm:col-span-2" aria-label="Chave" placeholder="Digite a nova chave" value={value} onChange={(e) => setValue(e.target.value)} />
       </div>
       <SaveButton disabled={!value.trim() || save.isPending} onClick={() => save.mutate()} className="h-9 px-3" hint="Salvar chave" />
-      <p className="text-xs text-muted-foreground">Só você e a Direção veem a chave. Ao trocar, a anterior é arquivada e os pagamentos passados mantêm a chave usada na época.</p>
+      <p className="text-xs text-muted-foreground">Só você e a direção veem a chave. Ao trocar, a anterior é arquivada e os pagamentos passados mantêm a chave usada na época.</p>
     </Card>
   )
 }

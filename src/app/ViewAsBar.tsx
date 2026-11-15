@@ -156,7 +156,7 @@ export function ViewAsBar() {
       {viewAs && (
         <p className="mt-1 text-xs">
           {viewAsLoading ? 'Carregando o acesso deste perfil' : 'Menus e telas seguem o acesso de um perfil'}{catLabel ? <>: <strong>{catLabel}</strong>{viewAs.virtual ? '' : <> · {viewAs.display_name}</>}</> : null}.
-          {' '}Os dados e as ações continuam sendo os <strong>seus</strong> (você ainda é Direção): confira o que o perfil vê, mas edite com cuidado.
+          {' '}Os dados e as ações continuam sendo os <strong>seus</strong> (você ainda é direção): confira o que o perfil vê, mas edite com cuidado.
         </p>
       )}
     </div>

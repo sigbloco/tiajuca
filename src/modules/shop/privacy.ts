@@ -1,6 +1,6 @@
 /**
  * Aviso de privacidade da loja (LGPD). Texto em blocos para a página e para os testes.
- * Modelo de partida: a Direção deve revisar o texto antes de divulgar a loja. O prazo de guarda é editável no painel.
+ * Modelo de partida: a direção deve revisar o texto antes de divulgar a loja. O prazo de guarda é editável no painel.
  */
 export interface PrivacyContact { whatsapp: string | null; email: string | null }
 export interface PrivacySection { title: string; paragraphs: string[] }
@@ -31,7 +31,7 @@ export function buildPrivacyNotice(orgName: string, contact: PrivacyContact, ret
       title: 'Com quem compartilhamos',
       paragraphs: [
         'Apenas com quem precisa para a loja funcionar: o serviço de hospedagem e banco de dados (Supabase), o serviço de envio de e-mails e, se você escolher pagar pela InfinitePay, a própria InfinitePay.',
-        'Integrantes da Direção e quem administra a loja veem seus dados de contato para atender o pedido.',
+        'Integrantes da direção e quem administra a loja veem seus dados de contato para atender o pedido.',
       ],
     },
     {
@@ -42,7 +42,7 @@ export function buildPrivacyNotice(orgName: string, contact: PrivacyContact, ret
       title: 'Seus direitos',
       paragraphs: [
         'Você pode pedir a confirmação de que tratamos seus dados, uma cópia deles, a correção de dados errados e a eliminação dos que não precisamos mais guardar.',
-        channels ? `Para isso, fale com a gente pelo ${channels}.` : 'Para isso, fale com a Direção do bloco.',
+        channels ? `Para isso, fale com a gente pelo ${channels}.` : 'Para isso, fale com a direção do bloco.',
       ],
     },
   ]

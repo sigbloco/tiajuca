@@ -34,6 +34,8 @@ interface Props {
   trashMode?: boolean
   /** Com trashMode: a lixeira fica em outro lugar da página (não mostra a própria). */
   externalTrash?: boolean
+  /** Campo de descrição (opcional) em cada item: aparece onde o item é escolhido (ex.: formulários). */
+  withDescription?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -42,7 +44,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash, withDescription }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -131,7 +133,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
       {items && visible.length === 0 && <EmptyState>{items.length === 0 ? 'Nada cadastrado ainda.' : 'Nenhum item encontrado.'}</EmptyState>}
       <div className="grid gap-2">
         {prog.visible.map((item, idx) => (
-          <Card key={item.id} {...(canEdit && !alphabetical ? drag.row(item.id, onDragMove) : {})} className={cn('flex items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
+          <Card key={item.id} {...(canEdit && !alphabetical ? drag.row(item.id, onDragMove) : {})} className={cn('flex flex-wrap items-center gap-2 p-2', !item.is_active && 'opacity-60', drag.cls(item.id))}>
             {!alphabetical && <div className="flex flex-col items-center">
               <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || idx === 0}
                 onClick={() => move.mutate({ a: item, b: visible[idx - 1], list: visible })}><ArrowUp className="h-4 w-4" /></Button>
@@ -155,6 +157,12 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
                   {item.is_active ? 'Desativar' : 'Ativar'}
                 </Button>
               ))}
+            {withDescription && (
+              <div className="basis-full">
+                <SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${item.name}`}
+                  onSave={(v) => save.mutateAsync({ id: item.id, name: item.name, description: v.trim() || null })} />
+              </div>
+            )}
           </Card>
         ))}
       </div>

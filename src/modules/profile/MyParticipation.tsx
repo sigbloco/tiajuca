@@ -17,11 +17,11 @@ interface Participation {
   category: string | null; price: number | null; percent: number; exempt_by: string | null
   requests: { id: string; kind: 'artistic' | 'collab'; action: 'add' | 'remove'; status: 'pending' | 'approved' | 'rejected'; created_at: string; label: string | null }[]
 }
-const REQ_LABEL = { pending: 'Aguardando a Direção', approved: 'Aprovado', rejected: 'Recusado' } as const
+const REQ_LABEL = { pending: 'Aguardando a direção', approved: 'Aprovado', rejected: 'Recusado' } as const
 const REQ_CLASS = { pending: 'bg-warning/15 text-warning', approved: 'bg-success/15 text-success', rejected: 'bg-destructive/15 text-destructive' } as const
 
 /** Perfil → Minha participação: o que a pessoa faz no bloco (artística, colaborativa e remunerada), categoria, bolsa e mensalidade.
- *  Mudanças na artística e na colaborativa viram pedido e dependem da Direção; abrir mão de uma colaboração vale na hora. */
+ *  Mudanças na artística e na colaborativa viram pedido e dependem da direção; abrir mão de uma colaboração vale na hora. */
 export function MyParticipation({ memberId }: { memberId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -41,13 +41,14 @@ export function MyParticipation({ memberId }: { memberId: string }) {
       const { error } = await supabase.rpc('request_participation_change', { p_member: memberId, p_kind: v.kind, p_action: v.action, p_instrument: v.instrument ?? null, p_function: v.fn ?? null, p_link: v.link ?? null, p_note: null })
       if (error) throw error
     },
-    onSuccess: () => { toast.success('Pedido enviado. A Direção vai avaliar.'); setAdding(null); setPick(''); refresh() }, onError,
+    onSuccess: () => { toast.success('Pedido enviado. A direção vai avaliar.'); setAdding(null); setPick(''); refresh() }, onError,
   })
   const giveUp = useMutation({
     mutationFn: async (link: string) => { const { error } = await supabase.rpc('give_up_collaboration', { p_link: link }); if (error) throw error },
     onSuccess: () => { toast.success('Você deixou de colaborar.'); refresh() }, onError,
   })
   const d = data.data
+  const descOf = (name: string) => functions.data?.find((x) => x.name === name)?.description?.trim() || ''
   if (!d) return null
   const pending = (kind: string, action: string, label: string) => d.requests.some((r) => r.status === 'pending' && r.kind === kind && r.action === action && r.label === label)
   const final = d.price != null ? Math.round(d.price * (100 - d.percent)) / 100 : null
@@ -61,6 +62,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
       </Select>
       <Button disabled={!pick || request.isPending} onClick={() => request.mutate({ kind, action: 'add', ...(kind === 'artistic' ? { instrument: pick } : { fn: pick }) })}>Pedir</Button>
       <Button variant="ghost" aria-label="Cancelar" onClick={() => { setAdding(null); setPick('') }}><X className="h-4 w-4" /></Button>
+      {kind === 'collab' && pick && functions.data?.find((x) => x.id === pick)?.description?.trim() && <p className="basis-full text-sm text-muted-foreground">{functions.data?.find((x) => x.id === pick)?.description}</p>}
     </div>
   )
   const head = (title: string, kind?: 'artistic' | 'collab') => (
@@ -81,7 +83,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
             <p className="min-w-0 break-words">{a.name}{a.section ? <span className="text-muted-foreground"> · {a.section}</span> : null}{a.level ? <span className="text-muted-foreground"> · {a.level}</span> : null}</p>
             {pending('artistic', 'remove', a.name)
               ? <Badge className={REQ_CLASS.pending}>Saída pedida</Badge>
-              : <Button size="sm" variant="ghost" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à Direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-4 w-4" /></Button>}
+              : <Button size="sm" variant="ghost" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-4 w-4" /></Button>}
           </div>
         ))}
         {addForm('artistic')}
@@ -92,9 +94,9 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {d.collab.length === 0 && <p className="text-muted-foreground">Você não colabora em nenhuma frente.</p>}
         {d.collab.map((c) => (
           <div key={c.id} className="flex items-center justify-between gap-2">
-            <p className="min-w-0 break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>
+            <div className="min-w-0"><p className="break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>{descOf(c.name) && <p className="text-sm text-muted-foreground">{descOf(c.name)}</p>}</div>
             <Button size="sm" variant="outline" className="text-destructive" disabled={giveUp.isPending}
-              onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à Direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-4 w-4" /> Abrir mão</Button>
+              onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-4 w-4" /> Abrir mão</Button>
           </div>
         ))}
         {addForm('collab')}
@@ -103,12 +105,12 @@ export function MyParticipation({ memberId }: { memberId: string }) {
       <section className="space-y-1 border-t border-border pt-3">
         {head('Remunerada')}
         {d.paid.length === 0 ? <p className="text-muted-foreground">Nenhuma atividade remunerada.</p> : <p>{d.paid.map((p) => p.name).join(', ')}</p>}
-        <p className="text-xs text-muted-foreground">Mudanças nesta só pela Direção.</p>
+        <p className="text-xs text-muted-foreground">Mudanças nesta só pela direção.</p>
       </section>
 
       <section className="space-y-1 border-t border-border pt-3">
         {head('Categoria e mensalidade')}
-        {d.category ? <p>Categoria: <strong>{d.category}</strong></p> : <p className="text-muted-foreground">Você ainda não tem categoria de contribuição. A Direção define.</p>}
+        {d.category ? <p>Categoria: <strong>{d.category}</strong></p> : <p className="text-muted-foreground">Você ainda não tem categoria de contribuição. A direção define.</p>}
         {d.percent > 0 && <p>Bolsa: <strong>{d.percent}%</strong></p>}
         {d.exempt_by ? <p>Mensalidade: <strong>isento</strong> <span className="text-muted-foreground">(pela função {d.exempt_by})</span></p>
           : d.paid.length > 0 ? <p>Mensalidade: <strong>não contribui</strong> <span className="text-muted-foreground">(atividade remunerada)</span></p>

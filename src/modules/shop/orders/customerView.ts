@@ -40,6 +40,6 @@ export function nextStepText(status: OrderStatus, paymentMethod: 'pix' | 'infini
       : 'Conclua o pagamento no link da InfinitePay. A confirmação é automática.'
     case 'payment_review': return 'Estamos conferindo o seu pagamento. Você será avisado por e-mail quando for confirmado.'
     case 'paid': return 'Pagamento confirmado. Avisaremos por e-mail quando seus itens estiverem prontos para retirada.'
-    case 'cancelled': return 'Este pedido foi cancelado. Se já pagou ou acha que foi engano, fale com a Direção.'
+    case 'cancelled': return 'Este pedido foi cancelado. Se já pagou ou acha que foi engano, fale com a direção.'
   }
 }

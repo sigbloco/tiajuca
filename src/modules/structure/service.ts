@@ -8,6 +8,8 @@ export interface CatalogItem {
   name: string
   sort_order: number
   is_active: boolean
+  /** Descrição opcional (listas do cadastro e categorias): explica o item onde ele é escolhido. */
+  description?: string | null
   section_id?: string | null
   color?: string
   tuning?: string | null

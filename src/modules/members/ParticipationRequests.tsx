@@ -14,7 +14,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 
 interface Req { id: string; kind: 'artistic' | 'collab'; action: 'add' | 'remove'; created_at: string; who: string; instrument_id: string | null; function_id: string | null }
 
-/** Integrantes: pedidos de mudança de participação feitos pelas próprias pessoas, esperando a Direção. Aprovar aplica a mudança. */
+/** Integrantes: pedidos de mudança de participação feitos pelas próprias pessoas, esperando a direção. Aprovar aplica a mudança. */
 export function ParticipationRequests() {
   const orgId = useOrgId()
   const qc = useQueryClient()
