@@ -67,7 +67,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
         ...(withSection ? { section_id: sectionId } : {}),
       }),
     onSuccess: (id) => {
-      if (mirrorFees) void mirrorFunctionToFees(orgId, { created: name.trim() }).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
+      if (mirrorFees) void mirrorFunctionToFees(orgId, { fnId: id, created: name.trim() }).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
       setName('')
       refresh()
       notifySaved(`${singular} criado.`, id ? async () => { await saveCatalogItem(table, orgId, { id, name: name.trim(), is_active: false }); refresh() } : undefined)
@@ -78,8 +78,8 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
     mutationFn: async (item: Partial<CatalogItem> & { name: string }) => ({ prev: previousOf(items, item), id: await saveCatalogItem(table, orgId, item) }),
     onSuccess: ({ prev }, item) => {
       if (mirrorFees && prev) {
-        if (item.name !== prev.name) void mirrorFunctionToFees(orgId, { renamed: { from: prev.name, to: item.name } })
-        if (item.is_active !== undefined && item.is_active !== prev.is_active) void mirrorFunctionToFees(orgId, { active: { name: item.name, value: item.is_active } })
+        if (item.name !== prev.name) void mirrorFunctionToFees(orgId, { fnId: item.id, renamed: { from: prev.name, to: item.name } })
+        if (item.is_active !== undefined && item.is_active !== prev.is_active) void mirrorFunctionToFees(orgId, { fnId: item.id, active: { name: item.name, value: item.is_active } })
       }
       refresh()
       notifySaved(item.name !== prev?.name && prev ? 'Nome atualizado.' : describeChange(item, singular),

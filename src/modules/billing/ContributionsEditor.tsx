@@ -79,10 +79,11 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   const byName = new Map((cats.data ?? []).map((c) => [c.name.toLowerCase(), c]))
 
   // Função que paga e ainda não tem categoria: cria (só quem pode mexer em contribuições consegue).
-  const missingKey = payers.filter((f) => !byName.has(f.name.toLowerCase())).map((f) => f.name).join('|')
+  const linkedFns = new Set((cats.data ?? []).map((c) => c.function_id).filter(Boolean))
+  const missingKey = payers.filter((f) => !linkedFns.has(f.id) && !byName.has(f.name.toLowerCase())).map((f) => `${f.id}~${f.name}`).join('|')
   useEffect(() => {
     if (!canEdit || !missingKey || !cats.data) return
-    void Promise.all(missingKey.split('|').map((n) => mirrorFunctionToFees(orgId, { created: n }))).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
+    void Promise.all(missingKey.split('|').map((k) => { const i = k.indexOf('~'); return mirrorFunctionToFees(orgId, { fnId: k.slice(0, i), created: k.slice(i + 1) }) })).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
   }, [missingKey, canEdit, cats.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

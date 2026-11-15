@@ -8,6 +8,8 @@ export interface CatalogItem {
   name: string
   sort_order: number
   is_active: boolean
+  /** Categorias de Financeiro: a categoria de Organização a que estão ligadas (pelo id). */
+  function_id?: string | null
   /** Chave fixa de categorias que o sistema usa por significado (aluno, musico, senior...): renomear não quebra nada. */
   system_key?: string | null
   /** Descrição opcional (listas do cadastro e categorias): explica o item onde ele é escolhido. */
@@ -102,14 +104,25 @@ export function describeChange(patch: Partial<CatalogItem>, singular: string): s
 }
 
 /** Funções refletem em Contribuições (categorias de mensalidade): cria, renomeia e ativa/desativa a categoria de mesmo nome. Melhor esforço: quem não pode mexer em contribuições não vê erro. */
-export async function mirrorFunctionToFees(orgId: string, change: { created?: string; renamed?: { from: string; to: string }; active?: { name: string; value: boolean } }) {
+export async function mirrorFunctionToFees(orgId: string, change: { fnId?: string; created?: string; renamed?: { from: string; to: string }; active?: { name: string; value: boolean } }) {
+  // A categoria de Organização e a de Financeiro se ligam pelo id (fee_categories.function_id); o nome só serve de plano B para as antigas sem ligação.
   try {
+    const { data } = await supabase.from('fee_categories').select('id, name, sort_order, function_id').eq('organization_id', orgId)
+    const rows = (data ?? []) as { id: string; name: string; sort_order: number; function_id: string | null }[]
+    const linked = change.fnId ? rows.find((r) => r.function_id === change.fnId) : undefined
     if (change.created) {
-      const { data } = await supabase.from('fee_categories').select('id, sort_order').eq('organization_id', orgId)
-      await supabase.from('fee_categories').upsert({ organization_id: orgId, name: change.created, sort_order: ((data ?? []).reduce((m, r) => Math.max(m, r.sort_order as number), 0)) + 1 }, { onConflict: 'organization_id,name', ignoreDuplicates: true })
+      const same = linked ?? rows.find((r) => r.name === change.created)
+      if (same) { if (change.fnId && !same.function_id) await supabase.from('fee_categories').update({ function_id: change.fnId }).eq('id', same.id) }
+      else await supabase.from('fee_categories').insert({ organization_id: orgId, name: change.created, sort_order: rows.reduce((m, r) => Math.max(m, r.sort_order), 0) + 1, function_id: change.fnId ?? null })
     }
-    if (change.renamed) await supabase.from('fee_categories').update({ name: change.renamed.to }).eq('organization_id', orgId).eq('name', change.renamed.from)
-    if (change.active) await supabase.from('fee_categories').update({ is_active: change.active.value }).eq('organization_id', orgId).eq('name', change.active.name)
+    if (change.renamed) {
+      const target = linked ?? rows.find((r) => r.name === change.renamed!.from)
+      if (target) await supabase.from('fee_categories').update({ name: change.renamed.to, ...(change.fnId && !target.function_id ? { function_id: change.fnId } : {}) }).eq('id', target.id)
+    }
+    if (change.active) {
+      const target = linked ?? rows.find((r) => r.name === change.active!.name)
+      if (target) await supabase.from('fee_categories').update({ is_active: change.active.value }).eq('id', target.id)
+    }
   } catch { /* contribuições podem exigir outra permissão */ }
 }
 
