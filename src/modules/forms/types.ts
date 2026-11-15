@@ -36,6 +36,7 @@ export interface PublicField {
 export interface PublicFormPayload {
   state: 'open' | 'not_open' | 'closed' | 'full' | 'not_found' | 'login_required' | 'not_member' | 'already'
   access?: 'public' | 'internal'
+  /** Formulário interno: a resposta que o integrante já enviou (pendente: dá para editar; aprovada: trava). */ mine?: { status: 'pending' | 'approved'; answers: Answers; submitted_at: string; edited_at: string | null } | null
   /** Formulário interno: o integrante que entrou e o naipe dele (as seções por naipe usam isto). */ viewer?: { member_id: string; name: string; section_id: string | null } | null
   organization?: { name: string; short_name: string; logo_path: string | null; theme: Record<string, string> }
   form?: { title: string; description: string | null; privacy_text: string | null; requires_consent: boolean; closes_at: string | null; send_text?: string | null; show_confirmation?: boolean; /** Valores atuais do bloco para as variáveis dos textos. */ vars?: import('@/core/textVars').TextVars | null; /** Instrumentos com a vaga preenchida: aparecem como "Esgotado - Lista de espera". */ full_options?: string[]; header?: HeaderFrame; fields: PublicField[] }
