@@ -70,7 +70,8 @@ export function restorePart(f: SendTexts, part: SendPart, src: SendTexts): SendT
 }
 
 /** Subpáginas dos textos de envio: o que faz parte do formulário e o que é e-mail. */
-export function SendPartTabs({ part, setPart }: { part: SendPart; setPart: (p: SendPart) => void }) {
+export function SendPartTabs({ part, setPart, general }: { part: SendPart; setPart: (p: SendPart) => void; /** Formulário Geral: só a parte do formulário (sem e-mails de resultado). */ general?: boolean }) {
+  if (general) return null
   return (
     <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Textos do envio">
       {([['form', 'Formulário', ClipboardList], ['email', 'E-mail', Mail]] as const).map(([k, label, Icon]) => (
@@ -81,10 +82,10 @@ export function SendPartTabs({ part, setPart }: { part: SendPart; setPart: (p: S
 }
 
 /** Editor dos textos de uma subpágina: cada mensagem com seu checkbox; desligada, o campo some e fica só o aviso do que acontece. */
-export function SendFields({ f, setF, prefix, part, disabled }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean }) {
+export function SendFields({ f, setF, prefix, part, disabled, general }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean; general?: boolean }) {
   return (
     <>
-      {PARTS[part].map((k) => {
+      {PARTS[part].filter((k) => !(general && k === 'review')).map((k) => {
         const m = META[k]
         return (
           <div key={k} className="space-y-1.5">
@@ -133,6 +134,7 @@ export function SendSection({ onOpen }: { onOpen: () => void }) {
 export function SendTab({ form }: { form: FormRow }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
+  const general = form.kind === 'general'
   const [part, setPart] = useState<SendPart>('form')
   const [f, setF] = useState<SendTexts>(() => rowToSend(form as unknown as Record<string, unknown>))
   const save = useMutation({
@@ -142,9 +144,9 @@ export function SendTab({ form }: { form: FormRow }) {
   })
   return (
     <form id="send-form" className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
-      <SendPartTabs part={part} setPart={setPart} />
-      <SendFields f={f} setF={setF} prefix="sd" part={part} />
-      <RestorePartButton f={f} setF={setF} part={part} source={async () => rowToSend((await loadSendDefaults(orgId)) as unknown as Record<string, unknown> | null)} />
+      <SendPartTabs part={part} setPart={setPart} general={general} />
+      <SendFields f={f} setF={setF} prefix="sd" part={general ? 'form' : part} general={general} />
+      <RestorePartButton f={f} setF={setF} part={general ? 'form' : part} source={async () => rowToSend((await loadSendDefaults(orgId)) as unknown as Record<string, unknown> | null)} />
       <StickySave><SaveButton type="submit" form="send-form" className="w-full" disabled={save.isPending} hint="Salvar textos do envio" /></StickySave>
     </form>
   )

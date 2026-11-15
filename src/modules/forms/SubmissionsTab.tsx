@@ -111,7 +111,12 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
         <SaveButton disabled={saveNotes.isPending} onClick={() => saveNotes.mutate()} className="h-9 px-3" hint="Salvar observação" />
       </div>
 
-      {sub.status === 'pending' && !purged && (
+      {sub.status === 'pending' && !purged && form.kind === 'general' && (
+        <div className="mt-auto space-y-2">
+          <Button className="w-full" variant="outline" disabled={review.isPending} onClick={() => review.mutate('archived')}>Arquivar resposta</Button>
+        </div>
+      )}
+      {sub.status === 'pending' && !purged && form.kind !== 'general' && (
         <div className="mt-auto space-y-2">
           {isFull && <p className="rounded-md bg-warning/15 p-2 text-sm text-warning">Vagas esgotadas neste instrumento ({cap.data!.occupied} de {cap.data!.capacity}). Aprove na lista de espera (a pessoa recebe um e-mail avisando) ou escolha quem entra liberando outra vaga antes.</p>}
           {form.cycle_id && (

@@ -16,7 +16,7 @@ import { supabase } from '@/core/supabase'
 import { useCycles } from '@/modules/cycles/service'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { HeaderBand } from './HeaderBand'
-import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow, type FormStatus } from './service'
+import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, kindFlags, publicUrl, slugify, type FormKind, type FormRow, type FormStatus } from './service'
 
 // Horário de Brasília (sem horário de verão em vigor): abre às 00:00 e encerra às 23:59 do dia escolhido.
 const toTs = (date: string, end: boolean) => (date ? `${date}T${end ? '23:59:00' : '00:00:00'}-03:00` : null)
@@ -29,7 +29,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
   const qc = useQueryClient()
   const cycles = useCycles()
   const [f, setF] = useState({
-    title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
+    kind: form.kind, title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
     opens: toDate(form.opens_at), closes: toDate(form.closes_at),
     privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
@@ -37,7 +37,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
   const save = useMutation({
     mutationFn: async () => {
       const patch = part === 'main'
-        ? { title: f.title.trim(), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
+        ? { title: f.title.trim(), kind: f.kind, ...(f.kind !== form.kind ? kindFlags(f.kind) : {}), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
         : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, requires_consent: f.consent, prevent_duplicates: f.dedupe }
       const { error } = await supabase.from('forms').update(patch
       ).eq('id', form.id)
@@ -79,6 +79,9 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
       {part === 'main' ? (
         <>
           <form id="fs-main" onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Endereço do formulário', f.slug]])) save.mutate() }} className="space-y-4">
+        <div className="space-y-1.5"><Label htmlFor="fs-kind">Tipo</Label>
+          <Select id="fs-kind" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as FormKind })}><option value="enrollment">Inscrição (com avaliação e aprovação)</option><option value="general">Geral (enquete, pedido…)</option></Select>
+          {f.kind === 'general' && <p className="text-xs text-muted-foreground">Sem avaliação nem aprovação: as respostas só chegam e podem ser arquivadas. Os e-mails de resultado ficam desligados.</p>}</div>
         <div className="space-y-1.5"><Label htmlFor="fs-title" required>Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="grid gap-2 sm:grid-cols-3">
           <div className="space-y-1.5"><Label htmlFor="fs-cycle">Ciclo relacionado</Label>
