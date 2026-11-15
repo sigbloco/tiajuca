@@ -224,7 +224,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const needsOptions = OPTION_TYPES.includes(f.type as FieldType)
   const optionsOk = listMapped ? catalogItems.some((i) => picked.has(i.id)) : Boolean(f.options.trim())
   return (
-    <SheetContent title={asSection ? (field ? 'Editar seção' : 'Nova seção') : field ? 'Editar campo' : 'Novo campo'} description={asSection ? 'Agrupa as perguntas que vêm depois, até a próxima seção.' : field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
+    <SheetContent crumbExtra={field?.label} title={asSection ? (field ? 'Editar seção' : 'Nova seção') : field ? 'Editar campo' : 'Novo campo'} description={asSection ? 'Agrupa as perguntas que vêm depois, até a próxima seção.' : field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || optionsOk]])) save.mutate() }} className="space-y-3">
         {!asSection && sections.length > 0 && (
           <div className="space-y-1.5"><Label htmlFor="fl-section">Seção</Label>

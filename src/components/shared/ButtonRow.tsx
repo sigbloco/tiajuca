@@ -23,22 +23,20 @@ export function ButtonRow({ children, className = '', split, ...aria }: { childr
     const kids = Array.from(el.children) as HTMLElement[]
     const spansSaved = kids.map((k) => k.style.gridColumn)
     kids.forEach((k) => { k.style.gridColumn = 'auto' })
+    // Colunas iguais: cada coluna precisa caber o botão MAIS LARGO com o padding lateral dele (nunca espremer o texto nem cortar). Sem caber, desce para menos colunas (até um por linha).
+    el.style.gridTemplateColumns = `repeat(${n}, max-content)`
+    const maxW = Math.max(...kids.map((k) => k.getBoundingClientRect().width))
+    const gap = 8
     let chosen = 1
     for (let c = n; c >= 2; c--) {
-      // Colunas que deixariam um botão sozinho na última linha são descartadas (ex.: 3 botões em 2 colunas).
-      if (c < n && n % c === 1) continue
-      el.style.gridTemplateColumns = `repeat(${c}, max-content)`
-      if (el.scrollWidth <= avail + 0.5) { chosen = c; break }
+      // Colunas que deixariam um botão sozinho na última linha são descartadas (5 → 3+2), menos com 3 botões (2 + 1 esticado).
+      if (c < n && n % c === 1 && n !== 3) continue
+      if (c * maxW + (c - 1) * gap <= avail + 0.5) { chosen = c; break }
     }
     el.style.gridTemplateColumns = prev
     kids.forEach((k, i) => { k.style.gridColumn = spansSaved[i] })
-    // Nada coube numa linha sem quebrar o texto: com 3 ou mais botões, divide em colunas iguais (texto quebra dentro do botão),
-    // sempre sem deixar um botão sozinho embaixo (5 → 3+2, 4 → 2+2).
-    if (chosen === 1 && n >= 3) {
-      const gap = 8, minW = 104
-      const maxCols = Math.min(n, Math.floor((avail + gap) / (minW + gap)))
-      for (let c = maxCols; c >= 2; c--) { if (c < n && n % c === 1) continue; chosen = c; break }
-    }
+    // Com linhas combinadas (split) e sem caber numa linha só, vale a combinação pedida (ex.: 2 + 3).
+    if (split && chosen < n && split.reduce((x, y) => x + y, 0) === n) chosen = Math.max(...split)
     // Trava de segurança: se a escolha insistir em mudar (oscilação), para de mudar em vez de travar a página.
     if (changes.current.n !== n) changes.current = { n, count: 0 }
     if (chosen !== cols) { if (changes.current.count > 6) return; changes.current.count++ }

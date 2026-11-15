@@ -83,12 +83,15 @@ export const SheetTrigger = DialogPrimitive.Trigger
 export const SheetClose = DialogPrimitive.Close
 
 /** Registra o título do painel no breadcrumb enquanto ele está aberto (este componente só existe dentro do conteúdo aberto). */
-function CrumbRegistrar({ title, close }: { title: string; close: () => void }) {
+function CrumbRegistrar({ title, extra, close }: { title: string; extra?: string; close: () => void }) {
   useRegisterCrumb(title, close)
+  useRegisterCrumb(extra ?? '', close, Boolean(extra), 2)
   return null
 }
 
-export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer, onCrumbClick }: {
+export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer, onCrumbClick, crumbExtra }: {
+  /** Segundo item do caminho de navegação (ex.: "Editar seção • Introdução"). */
+  crumbExtra?: string
   /** Ao clicar no item da página no caminho de navegação (breadcrumb): troca o "fechar" padrão (ex.: ficar na lista em vez de voltar de onde veio). */
   onCrumbClick?: () => void
   title: string
@@ -143,7 +146,7 @@ export function SheetContent({ title, titleExtra, titleAction, description, chil
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         </div>
-        {inline && <CrumbRegistrar title={title} close={() => (onCrumbClick ? onCrumbClick() : closeRef.current?.click())} />}
+        {inline && <CrumbRegistrar title={title} extra={crumbExtra} close={() => (onCrumbClick ? onCrumbClick() : closeRef.current?.click())} />}
         {children}
         {asking && (
           <div role="alertdialog" aria-label="Salvar as alterações?" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
