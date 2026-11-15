@@ -65,7 +65,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'auditoria', label: 'Auditoria e backups', icon: History, admin: true, permission: 'audit.read' },
 ]
 
-const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Categorias' }
+const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Categorias', listas: 'Listas do cadastro' }
 
 /** De onde o usuário saiu: guardado no estado da navegação para o "Voltar". */
 export interface CameFrom { path: string; label: string }

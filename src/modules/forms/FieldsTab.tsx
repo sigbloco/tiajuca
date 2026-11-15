@@ -3,11 +3,14 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { ArrowDown, ArrowUp, Ban, ChevronDown, ChevronRight, GitBranch, Layers, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, BookmarkPlus, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import { ButtonRow } from '@/components/shared/ButtonRow'
+import { promptBox } from '@/components/shared/DialogHost'
+import { useSectionTemplates } from './SectionTemplatesPage'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
@@ -317,6 +320,25 @@ export function FieldsTab({ formId }: { formId: string }) {
     if (await confirmBox(msg)) remove.mutate(x)
   }
   const drag = useHoldReorder()
+  const [pickOpen, setPickOpen] = useState(false)
+  const templates = useSectionTemplates()
+  const insertTemplate = useMutation({
+    mutationFn: async (templateId: string) => {
+      const { data, error } = await supabase.rpc('insert_section_template', { p_form: formId, p_template: templateId })
+      if (error) throw error
+      return data as { fields: number; unlinked: number }
+    },
+    onSuccess: (r) => {
+      refresh(); setPickOpen(false)
+      toast.success(r.unlinked > 0 ? `Seção inserida com ${r.fields} pergunta(s). ${r.unlinked} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.` : `Seção inserida com ${r.fields} pergunta(s).`)
+    },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const saveAsTemplate = useMutation({
+    mutationFn: async (v: { id: string; name: string }) => { const { error } = await supabase.rpc('save_section_as_template', { p_section: v.id, p_name: v.name }); if (error) throw error },
+    onSuccess: () => { toast.success('Modelo salvo em Formulários → Configurações → Seções modelo.'); qc.invalidateQueries({ queryKey: ['form-templates', orgId] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   // Seções recolhíveis na edição: por padrão todas recolhidas (só o cabeçalho, com a contagem de campos); a pessoa abre as que quer.
   const [opened, setOpened] = useState<Set<string>>(new Set())
   const collapsed = { has: (id: string) => !opened.has(id) }
@@ -358,7 +380,10 @@ export function FieldsTab({ formId }: { formId: string }) {
   })
   return (
     <div className="space-y-3">
-      <Button variant="add" className="w-full" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
+      <ButtonRow>
+        <Button variant="add" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
+        <Button variant="add" onClick={() => setPickOpen(true)}><LayoutTemplate className="h-4 w-4" /> Seção modelo</Button>
+      </ButtonRow>
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
         {fields.map((x, i) => {
@@ -396,6 +421,10 @@ export function FieldsTab({ formId }: { formId: string }) {
                   </p>
                 </button>
                 <div className="flex shrink-0 gap-1.5">
+                  {sec && (
+                    <Button size="sm" variant="outline" disabled={saveAsTemplate.isPending} aria-label={`Salvar ${x.label} como modelo`} title="Salvar esta seção como modelo (com o mesmo nome, atualiza o modelo)"
+                      onClick={async () => { const n = await promptBox({ title: 'Salvar como modelo', message: 'Nome do modelo:', initial: x.label, confirmLabel: 'Salvar' }); if (n && n.trim()) saveAsTemplate.mutate({ id: x.id, name: n.trim() }) }}><BookmarkPlus className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Modelo</span></Button>
+                  )}
                   <Button size="sm" variant="outline" disabled={toggle.isPending} aria-label={x.is_active ? 'Ocultar' : 'Mostrar'} title={sec ? (x.is_active ? 'Oculta a seção e seus campos' : 'Mostra a seção e seus campos') : x.is_active ? 'Ocultar' : 'Mostrar'} onClick={() => toggle.mutate(x)}><Ban className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">{x.is_active ? 'Ocultar' : 'Mostrar'}</span></Button>
                   <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={sec ? 'Apaga a seção e seus campos' : 'Apagar'} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Apagar</span></Button>
                 </div>
@@ -409,6 +438,25 @@ export function FieldsTab({ formId }: { formId: string }) {
         {heads.length === 0 && <Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Adicionar campo</Button>}
       </div>
       <p className="text-xs text-muted-foreground">Mudanças nos campos só aparecem no link público depois de <strong>publicar de novo</strong>. Respostas antigas continuam legíveis.</p>
+      <Sheet open={pickOpen} onOpenChange={setPickOpen}>
+        {pickOpen && (
+          <SheetContent title="Seção modelo" description="Insere uma cópia no fim do formulário. Depois você pode mudar o que quiser.">
+            <div className="space-y-2">
+              {templates.isLoading && <Skeleton className="h-16" />}
+              {templates.data?.length === 0 && <EmptyState>Nenhum modelo ainda. Use “Modelo” numa seção para criar o primeiro.</EmptyState>}
+              {templates.data?.map((t) => (
+                <Card key={t.id} className="flex items-center justify-between gap-3 p-3">
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold">{t.name}</p>
+                    <p className="text-sm text-muted-foreground">{t.fields.length} {t.fields.length === 1 ? 'pergunta' : 'perguntas'}</p>
+                  </div>
+                  <Button size="sm" disabled={insertTemplate.isPending} onClick={() => insertTemplate.mutate(t.id)}><Plus className="h-4 w-4" /> Adicionar</Button>
+                </Card>
+              ))}
+            </div>
+          </SheetContent>
+        )}
+      </Sheet>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <FieldSheet key={sheet.field?.id ?? (sheet.section ? 'new-section' : `new-${sheet.defaultSection ?? ''}`)} asSection={sheet.section} defaultSection={sheet.defaultSection} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
       </Sheet>
