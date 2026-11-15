@@ -1,3 +1,4 @@
+import { BlocoLogo } from './BlocoLogo'
 import { Check } from 'lucide-react'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { SaveButton } from '@/components/shared/SaveButton'
@@ -69,6 +70,7 @@ function BlocoProfile({ memberId }: { memberId: string }) {
   return (
     <div className="space-y-4">
       <h1>Perfil do bloco</h1>
+      <BlocoLogo />
       <MyData memberId={memberId} bind={bind} part="bloco" />
       <StickySave><SaveButton type="button" className="w-full" disabled={saving} hint="Salvar perfil do bloco" onClick={async () => { setSaving(true); try { await saver.current?.() } catch { /* o bloco já avisa o erro */ } finally { setSaving(false) } }} /></StickySave>
     </div>
