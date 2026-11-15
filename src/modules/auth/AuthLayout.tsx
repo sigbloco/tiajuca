@@ -53,7 +53,7 @@ export function usePublicOrg() {
 }
 
 /** Telas de entrada: faixa na cor do bloco com a logo e o nome; o cartão do formulário sobe sobre ela. */
-export function AuthLayout({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function AuthLayout({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) {
   const { data: org } = usePublicOrg()
   useEffect(() => { if (org) applyBrandToDocument(org) }, [org])
   return (
@@ -65,7 +65,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
       <div className="-mt-10 flex flex-col items-center px-4 pb-10">
         <Card className="w-full max-w-sm p-6">
           <h1 className="mb-1">{title}</h1>
-          {subtitle && <p className="mb-4 text-muted-foreground">{subtitle}</p>}
+          {subtitle && <div className="mb-4 text-muted-foreground">{subtitle}</div>}
           {children}
         </Card>
         <Link to="/site" className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar para a página inicial</Link>

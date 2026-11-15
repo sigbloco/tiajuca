@@ -388,7 +388,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
 
   if (form.isLoading) return shell(<Skeleton className="h-64" />)
   if (form.isError || form.data?.state === 'not_found') return shell(<Card className="p-6 text-center"><h1>Formulário não encontrado</h1><p className="text-muted-foreground">Confira o link com a organização.</p></Card>)
-  if (done) return shell(<Card className="space-y-2 p-6 text-center"><h1>Tudo certo!</h1><p className="whitespace-pre-wrap">{done}</p></Card>)
+  if (done) return shell(<Card className="space-y-2 p-6 text-center"><h1>Tudo certo!</h1><RichText text={done} /></Card>)
   if (form.data!.state !== 'open') {
     const msg = { not_open: 'As inscrições ainda não abriram.', closed: 'As inscrições estão encerradas.', full: 'As vagas desta inscrição foram preenchidas.' }[form.data!.state as 'not_open' | 'closed' | 'full']
     return shell(<Card className="space-y-2 p-6 text-center"><h1>{f0?.title}</h1><p className="text-muted-foreground">{msg}</p></Card>)

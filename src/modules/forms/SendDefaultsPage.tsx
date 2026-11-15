@@ -9,7 +9,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { FormSettingsTabs } from './FormSettingsTabs'
-import { SEND_FALLBACK, SendFields, sendColumns, type SendTexts } from './SendSection'
+import { SEND_FALLBACK, SendFields, SendPartTabs, sendColumns, type SendPart, type SendTexts } from './SendSection'
 
 /** Lê os textos padrão de Envio da organização (ou null se ainda não houver). Usado ao criar um formulário novo. */
 export async function loadSendDefaults(orgId: string) {
@@ -23,6 +23,7 @@ export function SendDefaultsPage() {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const canEdit = usePermission('forms.manage')
+  const [part, setPart] = useState<SendPart>('form')
   const row = useQuery({ queryKey: ['form-send-defaults', orgId], queryFn: () => loadSendDefaults(orgId) })
   const [f, setF] = useState<SendTexts>({ privacy: SEND_FALLBACK.privacy, send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
   useEffect(() => {
@@ -44,8 +45,9 @@ export function SendDefaultsPage() {
       </p>
       {row.isLoading ? <Skeleton className="h-40" /> : (
         <form onSubmit={(e) => { e.preventDefault(); if (canEdit) save.mutate() }} className="space-y-4">
+          <SendPartTabs part={part} setPart={setPart} />
           <fieldset disabled={!canEdit} className="min-w-0 space-y-4 border-0 p-0">
-            <SendFields f={f} setF={setF} prefix="dd" />
+            <SendFields f={f} setF={setF} prefix="dd" part={part} />
           </fieldset>
           {canEdit && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar textos padrão" /></StickySave>}
         </form>

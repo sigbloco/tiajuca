@@ -122,6 +122,18 @@ describe('inscrição aprovada', () => {
     expect(r.subject).toBe('Sobre a sua inscrição — Cordão')
     for (const part of ['Linha um.', 'Linha dois.']) expect(r.text).toContain(part)
   })
+  it('formatação do texto vira HTML seguro e texto limpo', () => {
+    const r = buildFormEmail({ outbox_id: 'f4', template: 'submission_approved', to_email: 'a@b.com', name: 'Ana', org: { name: 'Cordão' }, settings: null,
+      message: 'Olhe **isto** e *aquilo* e [o site](https://ex.com/a).\n- item um\n- item <b>dois</b>\n<script>x</script>' })
+    expect(r.html).toContain('<strong>isto</strong>')
+    expect(r.html).toContain('<em>aquilo</em>')
+    expect(r.html).toContain('<a href="https://ex.com/a"')
+    expect(r.html).toContain('<li>item um</li>')
+    expect(r.html).not.toContain('<script>')
+    expect(r.html).toContain('&lt;b&gt;dois&lt;/b&gt;')
+    expect(r.text).toContain('o site (https://ex.com/a)')
+    expect(r.text).not.toContain('**')
+  })
   it('lista de espera: assunto próprio, sem posição na fila', () => {
     const r = buildFormEmail({ outbox_id: 'f3', template: 'submission_waitlist', to_email: 'a@b.com', name: 'Ana', org: { name: 'Cordão' }, settings: null })
     expect(r.subject).toBe('Sua inscrição está na lista de espera — Cordão')
