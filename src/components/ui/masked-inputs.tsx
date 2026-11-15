@@ -97,9 +97,9 @@ export function maskPhone(raw: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-export function PhoneInput({ value, onChange, id }: { value: string; onChange: (masked: string) => void; id?: string }) {
+export function PhoneInput({ value, onChange, id, disabled }: { value: string; onChange: (masked: string) => void; id?: string; disabled?: boolean }) {
   return (
-    <Input id={id} type="tel" inputMode="numeric" autoComplete="tel" placeholder="(21) 99999-9999" maxLength={15}
+    <Input id={id} type="tel" inputMode="numeric" autoComplete="tel" placeholder="(21) 99999-9999" maxLength={15} disabled={disabled}
       value={value} onChange={(e) => { const m = maskPhone(e.target.value); keepCaret(e.target, m); onChange(m) }} />
   )
 }

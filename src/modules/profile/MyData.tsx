@@ -34,8 +34,10 @@ function useBindSave(bind: SaveBinder | undefined, fn: () => Promise<boolean | v
   useEffect(() => { bind?.(() => ref.current()); return () => bind?.(null) }, [bind])
 }
 
+const NL = String.fromCharCode(10)
+
 /** Dados cadastrais do próprio integrante: tudo editável, exceto a data de inscrição. Redes sociais: várias, uma por linha. */
-export function MyData({ memberId, bind, part = 'contact' }: { memberId: string; bind?: SaveBinder; /** `contact`: dados e contato. `other`: "Outras informações" (vai por último no perfil). */ part?: 'contact' | 'other' }) {
+export function MyData({ memberId, bind, part = 'contact' }: { memberId: string; bind?: SaveBinder; /** `contact`: dados e contato. `other`: "Outras informações" (vai por último no perfil). */ part?: 'contact' | 'other' | 'bloco' }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const me = useQuery({
@@ -52,13 +54,15 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   useEffect(() => { if (me.data) setF(toF(me.data)) }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
   // Cada bloco só olha e grava os seus campos.
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
-  const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : [x.full_name, x.email, x.birth_date, x.display_name, x.phone, x.socials])
+  const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone, x.socials])
 
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('update_my_profile', {
         p_member: memberId,
-        p_patch: part === 'other'
+        p_patch: part === 'bloco'
+          ? { email: f.email, phone: f.phone.replace(/[^0-9]/g, ''), social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join(NL) }
+          : part === 'other'
           ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '', played_instrument: f.played_instrument }
           : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n') },
       })
@@ -74,11 +78,30 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
   useBindSave(bind, async () => {
     if (!me.data || mine(f) === baseline) return
-    if (part === 'contact' && !requireFields([['Telefone válido (DDD + número)', phoneOk]])) return false
+    if (part !== 'other' && !requireFields([['Telefone válido (DDD + número)', phoneOk]])) return false
     await save.mutateAsync()
   })
   if (me.isLoading || !me.data) return <Skeleton className="h-40" />
   const d = me.data
+  if (part === 'bloco') {
+    return (
+      <Card className="space-y-3 p-4">
+        <h3>Contatos do bloco</h3>
+        <p className="text-sm text-muted-foreground">A Loja, o Site e os e-mails usam estes contatos.</p>
+        <div className="space-y-1.5"><Label htmlFor="bl-email">E-mail de contato</Label><Input id="bl-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="bl-phone">WhatsApp</Label><PhoneInput id="bl-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
+          {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
+        <div className="space-y-1.5"><Label htmlFor="bl-social-0">Redes sociais</Label>
+          {f.socials.map((v, i) => (
+            <div key={i} className="flex gap-2">
+              <Input id={`bl-social-${i}`} placeholder="@usuario ou endereço" value={v} onChange={(e) => setF({ ...f, socials: f.socials.map((x, j) => (j === i ? e.target.value : x)) })} />
+              {f.socials.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setF({ ...f, socials: f.socials.filter((_, j) => j !== i) })}><X className="h-4 w-4" /></Button>}
+            </div>
+          ))}
+          <Button type="button" size="sm" variant="outline" onClick={() => setF({ ...f, socials: [...f.socials, ''] })}><Plus className="h-4 w-4" /> Adicionar rede social</Button></div>
+      </Card>
+    )
+  }
   if (part === 'other') {
     return (
       <Card className="space-y-3 p-4">

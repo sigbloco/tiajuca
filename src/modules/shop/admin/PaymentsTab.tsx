@@ -1,3 +1,4 @@
+import { PageLink } from '@/components/shared/PageLink'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { StickySave } from '@/components/shared/StickySave'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -125,10 +126,11 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
       <Card className="space-y-3 p-4">
         <h3 className="font-bold">Contatos da loja</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="ct-wa">WhatsApp da loja</Label><PhoneInput id="ct-wa" value={f.whatsapp} onChange={(v) => set({ whatsapp: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="ct-wa">WhatsApp da loja</Label><PhoneInput id="ct-wa" value={f.whatsapp} disabled onChange={(v) => set({ whatsapp: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ct-mail">E-mail de contato</Label>
-            <Input id="ct-mail" type="email" value={f.email} onChange={(e) => set({ email: e.target.value })} /></div>
+            <Input id="ct-mail" type="email" value={f.email} disabled onChange={(e) => set({ email: e.target.value })} /></div>
         </div>
+        <p className="text-sm text-muted-foreground">Vêm do <PageLink to="perfil">Perfil do bloco</PageLink> (titular): mude lá e vale para a Loja, o Site e os e-mails.</p>
         <fieldset className="space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 font-semibold">Direção (falar direto pelo WhatsApp)</legend>
           {f.directors.map((d, i) => (

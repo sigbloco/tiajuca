@@ -111,11 +111,11 @@ export function AppShell() {
     )
   }
   const base = `/${membership.slug}`
-  const isTitular = membership.roles.includes('titular') // usuário institucional do bloco: não é uma pessoa, então não tem perfil
-  const visible = (i: NavItem) => !(i.to === 'perfil' && isTitular) && (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
+  const isTitular = membership.roles.includes('titular') // o titular é o usuário do bloco: o perfil dele é o perfil do bloco (contatos usados pela Loja e pelo Site)
+  const visible = (i: NavItem) => (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
-  const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))
+  const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.to === 'perfil' && isTitular ? 'Perfil do bloco' : i.label, icon: i.icon }))
   // Organização só para Titular e direção. O Financeiro fica embaixo de Calendário para todos, menos para eles (onde sempre esteve, junto da Organização).
   const bossView = membership.roles.includes('direcao') || membership.roles.includes('titular')
   const hubEntry = (hub: HubKey): MenuEntry[] => {

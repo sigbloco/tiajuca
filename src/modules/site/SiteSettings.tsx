@@ -1,3 +1,4 @@
+import { PageLink } from '@/components/shared/PageLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Eye, EyeOff, ExternalLink, Palette, Plus, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -14,7 +15,7 @@ import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/pr
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { LINK_KINDS, hrefOf, youtubeId, type LinkKind, type SiteLink, type SiteVideo } from './links'
+import { LINK_KINDS, youtubeId, type SiteLink, type SiteVideo } from './links'
 
 const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'albums', label: 'Fotos' }, { key: 'videos', label: 'Vídeos' }] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -51,11 +52,11 @@ export function SiteSettings() {
   const loaded = useRef(false)
   useEffect(() => { if (!isLoading && !loaded.current) { loaded.current = true; setF({ ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }) } }, [data, isLoading])
   const saved = { ...EMPTY, ...(data ?? {}), links: data?.links ?? [], videos: data?.videos ?? [] }
-  const invalid = (!!f.release_url?.trim() && !/^https:\/\//i.test(f.release_url.trim())) || f.links.some((l) => l.value.trim() && !hrefOf(l)) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))
+  const invalid = (!!f.release_url?.trim() && !/^https:\/\//i.test(f.release_url.trim())) || f.videos.some((v) => v.url.trim() && !youtubeId(v.url))
 
   const payload = (row: SiteRow) => ({
     headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url ?? null,
-    links: row.links.filter((l) => l.value.trim()), videos: row.videos.filter((v) => v.url.trim()),
+    videos: row.videos.filter((v) => v.url.trim()),
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
     show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
@@ -98,13 +99,10 @@ export function SiteSettings() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const setLink = (i: number, p: Partial<SiteLink>) => setF((x) => ({ ...x, links: x.links.map((l, k) => (k === i ? { ...l, ...p } : l)) }))
-  const moveLink = (i: number, d: number) => setF((x) => { const a = [...x.links]; const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, links: a } })
   const setVideo = (i: number, p: Partial<SiteVideo>) => setF((x) => ({ ...x, videos: x.videos.map((v, k) => (k === i ? { ...v, ...p } : v)) }))
   const moveVideo = (i: number, d: number) => setF((x) => { const a = [...x.videos]; const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, videos: a } })
   // Arrastar pela alça: o id da linha é o índice (escopo "links" ou "videos").
   const dnd = useHoldReorder()
-  const dragLink = (from: string, to: string) => moveLink(Number(from), Number(to) - Number(from))
   const moveMenu = (i: number, d: number) => setF((x) => { const a = menuOrder(x.menu_order); const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, menu_order: a } })
   const dragMenu = (from: string, to: string) => moveMenu(Number(from), Number(to) - Number(from))
   const vids = useProgressive(f.videos, 3)
@@ -170,27 +168,11 @@ export function SiteSettings() {
       {tab === 'header' && (
       <Card className="space-y-3 p-4">
         <h3>Redes sociais e contatos</h3>
-        <p className="text-xs text-muted-foreground">Aparecem como botões redondos, lado a lado. Digite só o número, o @ ou o endereço: o link é montado sozinho.</p>
-        {f.links.map((l, i) => {
-          const ok = !l.value.trim() || !!hrefOf(l)
-          const id = String(i)
-          return (
-            <div key={i} className="space-y-1">
-              <div {...dnd.row(id, dragLink, 'links')} className={`flex items-center gap-2 rounded-lg p-2 ${i % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(id)}`}>
-                {reorderCol(id, i, f.links.length, moveLink, dragLink, 'links', 'item')}
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Select aria-label="Tipo" value={l.kind} onChange={(e) => setLink(i, { kind: e.target.value as LinkKind })}>
-                    {Object.entries(LINK_KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </Select>
-                  <Input aria-label="Número, @ ou endereço" placeholder={LINK_KINDS[l.kind].placeholder} value={l.value} onChange={(e) => setLink(i, { value: e.target.value })} />
-                </div>
-                <Button type="button" size="icon" variant="ghost" aria-label="Remover" title="Remover" onClick={() => setF({ ...f, links: f.links.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
-              </div>
-              {!ok && <p className="text-xs text-destructive">Esse valor não forma um link válido para {LINK_KINDS[l.kind].label}.</p>}
-            </div>
-          )
-        })}
-        <Button type="button" variant="outline" disabled={f.links.length >= 20} onClick={() => setF({ ...f, links: [...f.links, { kind: 'whatsapp', label: '', value: '' }] })}><Plus className="h-4 w-4" /> Adicionar rede ou contato</Button>
+        <p className="text-sm text-muted-foreground">Vêm do <PageLink to="perfil">Perfil do bloco</PageLink> (titular). Para mudar, edite lá.</p>
+        {f.links.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contato no perfil do bloco ainda.</p>}
+        {f.links.map((l, i) => (
+          <div key={i} className="flex items-center gap-2 rounded-lg bg-muted/40 p-2"><span className="w-24 shrink-0 font-semibold">{LINK_KINDS[l.kind]?.label ?? l.kind}</span><span className="min-w-0 break-all text-muted-foreground">{l.value}</span></div>
+        ))}
       </Card>
       )}
 
