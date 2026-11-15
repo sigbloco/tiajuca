@@ -12,12 +12,17 @@ export function ButtonRow({ children, className = '', split, ...aria }: { childr
   const n = items.length
   const ref = useRef<HTMLDivElement>(null)
   const [cols, setCols] = useState(Math.max(1, n))
+  const changes = useRef({ n, count: 0 })
 
   const fit = () => {
     const el = ref.current
     if (!el || n === 0) return
     const avail = el.clientWidth
     const prev = el.style.gridTemplateColumns
+    // Medir sem os "span" da última linha esticada: senão a medida depende do layout atual e a escolha de colunas fica oscilando (erro #185).
+    const kids = Array.from(el.children) as HTMLElement[]
+    const spansSaved = kids.map((k) => k.style.gridColumn)
+    kids.forEach((k) => { k.style.gridColumn = 'auto' })
     let chosen = 1
     for (let c = n; c >= 2; c--) {
       // Colunas que deixariam um botão sozinho na última linha são descartadas (ex.: 3 botões em 2 colunas).
@@ -26,6 +31,7 @@ export function ButtonRow({ children, className = '', split, ...aria }: { childr
       if (el.scrollWidth <= avail + 0.5) { chosen = c; break }
     }
     el.style.gridTemplateColumns = prev
+    kids.forEach((k, i) => { k.style.gridColumn = spansSaved[i] })
     // Nada coube numa linha sem quebrar o texto: com 3 ou mais botões, divide em colunas iguais (texto quebra dentro do botão),
     // sempre sem deixar um botão sozinho embaixo (5 → 3+2, 4 → 2+2).
     if (chosen === 1 && n >= 3) {
@@ -33,6 +39,9 @@ export function ButtonRow({ children, className = '', split, ...aria }: { childr
       const maxCols = Math.min(n, Math.floor((avail + gap) / (minW + gap)))
       for (let c = maxCols; c >= 2; c--) { if (c < n && n % c === 1) continue; chosen = c; break }
     }
+    // Trava de segurança: se a escolha insistir em mudar (oscilação), para de mudar em vez de travar a página.
+    if (changes.current.n !== n) changes.current = { n, count: 0 }
+    if (chosen !== cols) { if (changes.current.count > 6) return; changes.current.count++ }
     setCols(chosen)
   }
   useLayoutEffect(fit)
