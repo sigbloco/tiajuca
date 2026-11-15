@@ -14,8 +14,8 @@ export function VarsHint({ onInsert }: { /** Clicar numa variável coloca ela on
   const names = (cats.data ?? []).filter((c) => c.is_active && !c.is_exempt && c.name !== 'Isento').map((c) => c.name)
   return (
     <div className="space-y-0.5 text-xs text-muted-foreground">
-      <p>Clique para inserir onde está o cursor (valem na hora de mostrar): {TEXT_VARS.map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
-      {names.length > 0 && <p>Valor de uma categoria: {names.map((n, i) => <span key={n}>{i > 0 && ' '}<Chip text={`{valor:${n}}`} help={`valor atual de ${n}`} onInsert={onInsert} /></span>)}.</p>}
+      <p>Inserir variável {TEXT_VARS.map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
+      {names.length > 0 && <p>{names.map((n, i) => <span key={n}>{i > 0 && ' '}<Chip text={`{valor:${n}}`} help={`valor atual de ${n}`} onInsert={onInsert} /></span>)}.</p>}
     </div>
   )
 }
