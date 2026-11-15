@@ -3,7 +3,7 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { ArrowDown, ArrowUp, Ban, BookmarkPlus, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, BookmarkPlus, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useSectionTemplates } from './SectionTemplatesPage'
@@ -18,7 +18,7 @@ import { keyify, useFormFields, type FormFieldRow } from './service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { SOCIAL_NETWORKS, parseNetworks } from '@/core/social'
-import { FIELD_TYPE_LABEL, MAPPING_LABEL, hasConsent, isSection, type FieldOption, type FieldType } from './types'
+import { FIELD_TYPE_LABEL, MAPPING_LABEL, hasConsent, isLoginSection, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
 /** Tipo escolhido no editor: os de sempre mais "Redes sociais" (texto longo com rede + usuário). */
@@ -59,7 +59,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     condField: field?.condition?.field ?? '', condOp: field?.condition?.op ?? 'eq', condValue: field?.condition?.value ?? '',
     mapping: field?.member_mapping ?? '',
   })
-  const sections = fields.filter(isSection)
+  const sections = fields.filter((x) => isSection(x) && !isLoginSection(x))
   const instruments = useCatalog('instruments')
   const levels = useCatalog('skill_levels')
   const functions = useCatalog('artistic_functions')
@@ -133,7 +133,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       if (f.other && OPTION_TYPES.includes(f.type as FieldType) && !f.mapping.startsWith('link.')) validation.other = true
       const opts = OPTION_TYPES.includes(f.type as FieldType) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
-      const marks = asSection ? { section: true, ...(f.consent ? { consent: true } : {}) } : {}
+      const marks = asSection ? { section: true, ...(f.consent && !field?.validation.login ? { consent: true } : {}), ...(field?.validation.login ? { login: true } : {}) } : {}
       const row = {
         label: f.label.trim(), description: f.description.trim() || null, field_type: f.type === 'social' ? 'long_text' : f.type, required: f.type === 'info' ? false : f.required, options: opts, validation: f.type === 'info' ? marks : validation,
         condition: f.condField && f.condValue !== '' ? { field: f.condField, op: f.condOp, value: f.condValue } : null,
@@ -200,7 +200,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {f.type === 'info'
           ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
-        {asSection && (
+        {asSection && !field?.validation.login && (
           <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
         {needsOptions && listMapped && (
@@ -320,6 +320,18 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
     if (await confirmBox(msg)) remove.mutate(x)
   }
   const drag = useHoldReorder()
+  const hasLogin = fields.some(isLoginSection)
+  const addLogin = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('form_fields').insert({
+        organization_id: orgId, form_id: formId, field_key: `login_${Math.random().toString(36).slice(2, 8)}`, label: 'Login', description: 'Entre com sua conta Google para continuar. O e-mail da conta será usado na inscrição.',
+        field_type: 'info', required: false, sort_order: fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1, validation: { section: true, login: true },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => { refresh(); toast.success('Seção de login adicionada no fim. Mova-a para onde quiser.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const [pickOpen, setPickOpen] = useState(false)
   const templates = useSectionTemplates()
   const insertTemplate = useMutation({
@@ -383,6 +395,7 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
       {!templateMode && <ButtonRow>
         <Button variant="add" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
         <Button variant="add" onClick={() => setPickOpen(true)}><LayoutTemplate className="h-4 w-4" /> Seção modelo</Button>
+        <Button variant="add" disabled={hasLogin || addLogin.isPending} title={hasLogin ? 'Este formulário já tem uma seção de login' : 'Exige entrar com a conta Google; usa o e-mail da conta'} onClick={() => addLogin.mutate()}><LogIn className="h-4 w-4" /> Seção de login</Button>
       </ButtonRow>}
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
@@ -414,14 +427,15 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
                   <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
                   <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                     <Badge>{sec ? 'Seção' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
-                      {sec && <Badge className="bg-muted text-muted-foreground">{count} {count === 1 ? 'campo' : 'campos'}</Badge>}
+                      {sec && !isLoginSection(x) && <Badge className="bg-muted text-muted-foreground">{count} {count === 1 ? 'campo' : 'campos'}</Badge>}
+                      {isLoginSection(x) && <Badge className="bg-info/15 text-info">login com Google</Badge>}
                     {hasConsent(x) && <Badge className="bg-success/15 text-success">consentimento</Badge>}
                     {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
                     {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
                   </p>
                 </button>
                 <div className="flex shrink-0 gap-1.5">
-                  {sec && !templateMode && (
+                  {sec && !templateMode && !isLoginSection(x) && (
                     <Button size="sm" variant="outline" disabled={saveAsTemplate.isPending} aria-label={`Salvar ${x.label} como modelo`} title="Salvar esta seção como modelo (com o mesmo nome, atualiza o modelo)"
                       onClick={async () => { const n = await promptBox({ title: 'Salvar como modelo', message: 'Nome do modelo:', initial: x.label, confirmLabel: 'Salvar' }); if (n && n.trim()) saveAsTemplate.mutate({ id: x.id, name: n.trim() }) }}><BookmarkPlus className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Modelo</span></Button>
                   )}
@@ -429,7 +443,7 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
                   {!(templateMode && sec) && <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={sec ? 'Apaga a seção e seus campos' : 'Apagar'} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Apagar</span></Button>}
                 </div>
               </Card>
-              {nextIsHead && section !== '' && (
+              {nextIsHead && section !== '' && !isLoginSection(fields.find((y) => y.id === section) ?? x) && (
                 <Button variant="add" className="ml-3" onClick={() => setSheet({ field: null, defaultSection: section })}><Plus className="h-4 w-4" /> Adicionar campo</Button>
               )}
             </div>

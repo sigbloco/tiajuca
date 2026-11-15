@@ -5,6 +5,7 @@ import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react'
 import { SOCIAL_NETWORKS, networkUrl, splitNetwork } from '@/core/social'
+import { useAuth } from '@/core/auth'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
@@ -13,7 +14,7 @@ import { friendlyError } from '@/core/errors'
 import { formatDate } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { applyTheme } from '@/core/theme'
-import { hasConsent, isSection, isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
+import { hasConsent, isLoginSection, isSection, isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
 
 interface UploadedFile { field_key: string; path: string; name: string; mime: string; size: number }
 const MAX_BYTES = 5 * 1024 * 1024
@@ -187,6 +188,8 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   const [honeypot, setHoneypot] = useState('')
   const [error, setError] = useState('')
   const [showErrors, setShowErrors] = useState(false)
+  const { session, signInWithGoogle, signOut } = useAuth()
+  const draftKey = `form-draft:${window.location.pathname}`
   const [done, setDone] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const token = useRef<string | null>(null)
@@ -218,8 +221,23 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     return out
   }, [visible])
   const hasConsentBlock = visible.some(hasConsent)
+  const signedIn = Boolean(session)
   // Uma seção por vez: só avança quando a seção atual está completa.
   const [step, setStep] = useState(0)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(draftKey)
+      if (!raw) return
+      const d = JSON.parse(raw) as { answers?: Answers; step?: number; consent?: boolean }
+      if (d.answers) setAnswers(d.answers)
+      if (typeof d.step === 'number') setStep(d.step)
+      if (d.consent) setConsent(true)
+    } catch { /* sem rascunho */ }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const goLogin = () => {
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ answers, step, consent })) } catch { /* sem armazenamento */ }
+    void signInWithGoogle(window.location.pathname + window.location.search).catch((e) => setError(friendlyError(e)))
+  }
   const stepIdx = Math.min(step, Math.max(0, blocks.length - 1))
   // Título e subtítulo: quando o usuário rola além do cartão do título (ou está numa etapa sem ele), passam para o cabeçalho fixo, abaixo do progresso.
   const [titleEl, setTitleEl] = useState<HTMLElement | null>(null)
@@ -294,7 +312,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
       if (error) throw error
       return (data as { message: string }).message
     },
-    onSuccess: (m) => { setDone(m); window.scrollTo({ top: 0 }) },
+    onSuccess: (m) => { try { sessionStorage.removeItem(draftKey) } catch { /* ok */ } setDone(m); window.scrollTo({ top: 0 }) },
     onError: (e) => { setError(friendlyError(e, 'Não foi possível enviar. Tente novamente.')); window.scrollTo({ top: 0, behavior: 'smooth' }) },
   })
 
@@ -310,6 +328,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     const blk = blocks[bi]
     if (!blk) return []
     const out = blk.items.filter(isEmpty).map((x) => lower(x.label))
+    if (blk.head && isLoginSection(blk.head) && !signedIn) out.push('entrar com a conta Google')
     const hasConsentHere = (blk.head ? hasConsent(blk.head) : false) || (bi === blocks.length - 1 && !hasConsentBlock && Boolean(f0?.privacy_text))
     if (hasConsentHere && f0?.requires_consent && !consent) out.push('concordar com o tratamento dos dados')
     return out
@@ -392,6 +411,22 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
                 <h2 className="font-display text-2xl font-extrabold">{b.head.label}</h2>
                 {b.head.description && <RichText text={b.head.description} />}
               </div>
+            )}
+            {b.head && isLoginSection(b.head) && (
+              <Card className={cn('space-y-3 p-4', showErrors && !signedIn && 'border-destructive ring-1 ring-destructive')}>
+                {signedIn ? (
+                  <>
+                    <p>Você entrou como <strong>{session?.user.user_metadata?.full_name ?? session?.user.email}</strong>{session?.user.user_metadata?.full_name ? <> ({session.user.email})</> : null}.</p>
+                    <p className="text-xs text-muted-foreground">O e-mail desta conta será usado na inscrição.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void signOut()}>Trocar de conta</Button>
+                  </>
+                ) : (
+                  <>
+                    <p>É preciso entrar com uma conta Google para continuar. O que você já preencheu fica guardado.</p>
+                    <Button type="button" className="w-full" onClick={goLogin}>Continuar com Google</Button>
+                  </>
+                )}
+              </Card>
             )}
             {b.items.map((f) => f.type === 'info' ? (
               <div key={f.key} id={`bloco-${f.key}`} className="space-y-2">

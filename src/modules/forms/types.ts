@@ -13,8 +13,10 @@ export interface FieldOption { value: string; label: string }
 export interface FieldCondition { field: string; op: 'eq' | 'neq'; value: string }
 
 /** `section`: o campo é o cabeçalho de uma seção. `consent` (numa seção): a seção termina com o consentimento (texto de privacidade + "estou ciente e concordo"). */
-export interface FieldValidation { min?: number; max?: number; maxLength?: number; section?: boolean; consent?: boolean; /** Seleção com a opção "Outro" (texto livre). */ other?: boolean; /** Campo de redes sociais (rede + usuário). */ social?: boolean; /** Redes que aparecem no menu do campo de redes sociais (vazio = todas). */ networks?: string[] }
+export interface FieldValidation { min?: number; max?: number; maxLength?: number; section?: boolean; consent?: boolean; /** Seção de login: só mostra o botão "Continuar com Google" (sem perguntas); o envio exige a conta e usa o e-mail dela. */ login?: boolean; /** Seleção com a opção "Outro" (texto livre). */ other?: boolean; /** Campo de redes sociais (rede + usuário). */ social?: boolean; /** Redes que aparecem no menu do campo de redes sociais (vazio = todas). */ networks?: string[] }
 export const isSection = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => (f.type ?? f.field_type) === 'info' && !!f.validation.section
+/** Seção de login (sem perguntas). */
+export const isLoginSection = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => isSection(f) && !!f.validation.login
 /** Seção que termina com o consentimento. */
 export const hasConsent = (f: { type?: FieldType; field_type?: FieldType; validation: FieldValidation }) => isSection(f) && !!f.validation.consent
 
