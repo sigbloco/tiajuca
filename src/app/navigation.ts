@@ -45,7 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Vagas fica dentro de Naipes e instrumentos (botão na página), não no menu nem na Oficina.
   { to: 'vagas', label: 'Vagas', icon: UserRoundCheck, permission: 'capacity.read' },
   { to: 'lista-de-espera', label: 'Lista de espera', icon: Hourglass, group: 'oficina', permission: 'member_cycles.read', minScope: 'group', description: 'Quem espera uma vaga e pode ser promovido.' },
-  { to: 'relatorios', label: 'Relatórios', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
+  { to: 'relatorios', label: 'Relatórios de presença', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
   { to: 'equipe', label: 'Equipe', icon: Users, group: 'financeiro', permission: 'finance.read', description: 'Quem recebe no ciclo e como: fixo e/ou porcentagem.' },
   { to: 'valores', label: 'Valores', icon: CircleDollarSign, group: 'financeiro', permission: 'finance.read', description: 'Valor mensal de cada categoria, por ciclo.' },
