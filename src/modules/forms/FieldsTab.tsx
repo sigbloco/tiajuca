@@ -63,6 +63,8 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const naipes = useCatalog('sections')
   const { cycleId, cycle } = useSelectedCycle()
   const [naipe, setNaipe] = useState('')
+  // Listas fixas do cadastro (instrumento, categoria, nível): o que estiver marcado aparece no formulário.
+  const [picked, setPicked] = useState<Set<string>>(() => new Set((field?.options ?? []).map((o) => o.value)))
   const overview = useQuery({
     queryKey: ['form-instrument-vagas', orgId, cycleId],
     enabled: Boolean(cycleId) && f.mapping === 'link.instrument',
@@ -72,10 +74,15 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       return (data ?? []) as { instrument_id: string; instrument_name: string; section_id: string; is_full: boolean }[]
     },
   })
-  // Ligações com o cadastro (instrumento, categoria, nível): a opção só liga se tiver o mesmo nome de um item do cadastro.
-  const catalog = f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : undefined
-  const byName = new Map((catalog ?? []).filter((i) => i.is_active).map((i) => [i.name.trim().toLowerCase(), i.id]))
-  const unmatched = catalog ? f.options.split('\n').map((l) => l.trim()).filter((l) => l && !byName.has(l.toLowerCase())) : []
+  const linkMapped = f.mapping.startsWith('link.')
+  const catalogItems = (f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : [])
+    ?.filter((i) => i.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0) || x.name.localeCompare(y.name, 'pt-BR')) ?? []
+  const naipeList = (naipes.data ?? []).filter((n) => n.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0))
+  const activeNaipe = naipe || naipeList[0]?.id || ''
+  const shown = f.mapping === 'link.instrument' ? catalogItems.filter((i) => i.section_id === activeNaipe) : catalogItems
+  const fullIds = new Set((overview.data ?? []).filter((r) => r.is_full).map((r) => r.instrument_id))
+  const togglePicked = (id: string) => setPicked((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const setShownPicked = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const i of shown) { if (on) n.add(i.id); else n.delete(i.id) } return n })
   const currentSection = field ? sectionIds(fields).get(field.id) ?? '' : defaultSection ?? sections[sections.length - 1]?.id ?? ''
   const [sectionId, setSectionId] = useState(currentSection)
   const earlier = fields.filter((x) => x.is_active && x.field_type !== 'info' && x.id !== field?.id && (field ? x.sort_order < field.sort_order : true))
@@ -85,10 +92,12 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
 
   // Mantém o valor interno de opções com o mesmo rótulo (respostas antigas seguem consistentes).
   const toOptions = (): FieldOption[] => {
+    // Listas do cadastro: só os marcados, na ordem do cadastro (o valor é o código do item, que liga ao integrante).
+    if (linkMapped) return catalogItems.filter((i) => picked.has(i.id)).map((i) => ({ value: i.id, label: i.name }))
     const existing = new Map((field?.options ?? []).map((o) => [o.label, o.value]))
     const seen = new Set<string>()
     return f.options.split('\n').map((l) => l.trim()).filter(Boolean).map((label) => {
-      let v = byName.get(label.toLowerCase()) ?? existing.get(label) ?? keyify(label); let i = 2
+      let v = existing.get(label) ?? keyify(label); let i = 2
       const base = v
       while (seen.has(v)) v = `${base}_${i++}`
       seen.add(v)
@@ -138,17 +147,10 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const uniqueKey = () => { const base = keyify(f.label); let k = base, i = 2; const keys = new Set(fields.map((x) => x.field_key)); while (keys.has(k)) k = `${base.slice(0, 36)}_${i++}`; return k }
 
   const needsOptions = OPTION_TYPES.includes(f.type as FieldType)
-  const linkMapped = f.mapping.startsWith('link.')
-  const generate = () => {
-    const lines = (overview.data ?? []).filter((r) => r.section_id === naipe && !r.is_full).map((r) => r.instrument_name)
-    const have = new Set(f.options.split('\n').map((l) => l.trim().toLowerCase()).filter(Boolean))
-    const add = lines.filter((l) => !have.has(l.toLowerCase()))
-    setF({ ...f, options: [...f.options.split('\n').filter((l) => l.trim()), ...add].join('\n') })
-    toast.success(lines.length === 0 ? 'Esse naipe não tem instrumentos com vaga.' : `${add.length} instrumento(s) com vaga adicionado(s). Você pode editar a lista.`)
-  }
+  const optionsOk = linkMapped ? catalogItems.some((i) => picked.has(i.id)) : Boolean(f.options.trim())
   return (
     <SheetContent title={asSection ? (field ? 'Editar seção' : 'Nova seção') : field ? 'Editar campo' : 'Novo campo'} description={asSection ? 'Agrupa as perguntas que vêm depois, até a próxima seção.' : field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || f.options.trim()]])) save.mutate() }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || optionsOk]])) save.mutate() }} className="space-y-3">
         {!asSection && sections.length > 0 && (
           <div className="space-y-1.5"><Label htmlFor="fl-section">Seção</Label>
             <Select id="fl-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
@@ -159,7 +161,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         )}
         {f.type !== 'info' && f.type !== 'file' && (
           <div className="space-y-1.5"><Label htmlFor="fl-map">Ligar ao cadastro do integrante</Label>
-            <Select id="fl-map" value={f.mapping} onChange={(e) => setF({ ...f, mapping: e.target.value })}>
+            <Select id="fl-map" value={f.mapping} onChange={(e) => { const m = e.target.value; setF({ ...f, mapping: m, type: m.startsWith('link.') && !OPTION_TYPES.includes(f.type as FieldType) ? 'single_select' : f.type }) }}>
               <option value="">Não ligar (fica só no histórico da inscrição)</option>
               {Object.entries(MAPPING_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </Select>
@@ -186,22 +188,42 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {asSection && (
           <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
-        {needsOptions && (
-          <div className="space-y-1.5"><Label htmlFor="fl-opts">Opções (uma por linha)</Label>
+        {needsOptions && linkMapped && (
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-semibold">{f.mapping === 'link.instrument' ? 'Instrumentos que aparecem' : f.mapping === 'link.function' ? 'Categorias que aparecem' : 'Níveis que aparecem'}</legend>
             {f.mapping === 'link.instrument' && (
-              <div className="space-y-1.5 rounded-lg bg-muted/50 p-2">
-                <p className="text-xs text-muted-foreground">Ajuda: gera a lista com os instrumentos do naipe que ainda têm vaga{cycle ? ` em ${cycle.name}` : ''}. É só um ponto de partida: você pode editar o texto.</p>
-                <div className="flex gap-2">
-                  <Select aria-label="Naipe" value={naipe} onChange={(e) => setNaipe(e.target.value)}>
-                    <option value="">Escolha o naipe</option>
-                    {(naipes.data ?? []).filter((n) => n.is_active).map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
-                  </Select>
-                  <Button type="button" variant="outline" disabled={!naipe || overview.isLoading || !cycleId} onClick={generate}>Gerar</Button>
-                </div>
+              <div role="radiogroup" aria-label="Naipe" className="flex flex-wrap gap-2">
+                {naipeList.map((n) => {
+                  const marked = catalogItems.filter((i) => i.section_id === n.id && picked.has(i.id)).length
+                  return (
+                    <label key={n.id} className={cn('flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 font-semibold', activeNaipe === n.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>
+                      <input type="radio" name="fl-naipe" className="h-4 w-4" checked={activeNaipe === n.id} onChange={() => setNaipe(n.id)} />
+                      {n.name}{marked > 0 && <span className="text-xs font-normal">({marked})</span>}
+                    </label>
+                  )
+                })}
               </div>
             )}
+            <div className="space-y-1.5 rounded-lg border border-border bg-card p-2">
+              {shown.length === 0 && <p className="text-sm text-muted-foreground">Nada cadastrado aqui.</p>}
+              {shown.map((i) => (
+                <label key={i.id} className="flex min-h-9 items-center gap-2">
+                  <input type="checkbox" className="h-5 w-5" checked={picked.has(i.id)} onChange={() => togglePicked(i.id)} />
+                  <span>{i.name}</span>
+                  {f.mapping === 'link.instrument' && fullIds.has(i.id) && <span className="rounded-full bg-destructive/10 px-2 text-xs font-semibold text-destructive">sem vagas{cycle ? ` em ${cycle.name}` : ''}</span>}
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setShownPicked(true)}>Marcar todos</Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setShownPicked(false)}>Desmarcar todos</Button>
+              <span className="text-xs text-muted-foreground">{catalogItems.filter((i) => picked.has(i.id)).length} marcado(s): só eles aparecem para a pessoa escolher.</span>
+            </div>
+          </fieldset>
+        )}
+        {needsOptions && !linkMapped && (
+          <div className="space-y-1.5"><Label htmlFor="fl-opts">Opções (uma por linha)</Label>
             <textarea id="fl-opts" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.options} onChange={(e) => setF({ ...f, options: e.target.value })} />
-            {linkMapped && unmatched.length > 0 && <p role="alert" className="text-xs text-destructive">Sem correspondência no cadastro (não serão ligadas ao integrante): {unmatched.join(', ')}.</p>}
           </div>
         )}
         {needsOptions && !linkMapped && (
