@@ -1,3 +1,4 @@
+import { loadSendDefaults } from './SendDefaultsPage'
 import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
@@ -25,7 +26,8 @@ function NewFormSheet() {
   const [slug, setSlug] = useState('')
   const create = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from('forms').insert({ organization_id: orgId, title: title.trim(), slug: slug || slugify(title) }).select('id').single()
+      const defaults = await loadSendDefaults(orgId) // textos padrão de Envio (Configurações)
+      const { data, error } = await supabase.from('forms').insert({ organization_id: orgId, title: title.trim(), slug: slug || slugify(title), ...(defaults ?? {}) }).select('id').single()
       if (error) throw error
       return data.id as string
     },

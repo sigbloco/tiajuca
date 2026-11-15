@@ -25,6 +25,7 @@ import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
 import { AlunosRedirect } from '@/modules/members/AlunosRedirect'
 import { FormListsPage } from '@/modules/forms/FormListsPage'
+import { SendDefaultsPage } from '@/modules/forms/SendDefaultsPage'
 import { TemplateEditorPage } from '@/modules/forms/TemplateEditorPage'
 import { SectionTemplatesPage } from '@/modules/forms/SectionTemplatesPage'
 import { FormPreviewPage } from '@/modules/forms/FormPreviewPage'
@@ -158,6 +159,7 @@ export const router = createBrowserRouter(
                 { path: 'formularios', element: <FormsPage /> },
                 { path: 'formularios/configuracoes', element: <SectionTemplatesPage /> },
                 { path: 'formularios/configuracoes/listas', element: <FormListsPage /> },
+                { path: 'formularios/configuracoes/envio', element: <SendDefaultsPage /> },
                 { path: 'formularios/configuracoes/modelos/:templateId', element: <TemplateEditorPage /> },
                 { path: 'formularios/:formId', element: <FormEditorPage /> },
                 // Endereços antigos (quando a área se chamava Inscrições) seguem funcionando.
