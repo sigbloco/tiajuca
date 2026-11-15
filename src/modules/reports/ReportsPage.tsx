@@ -1,14 +1,14 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useQuery } from '@tanstack/react-query'
-import { Download } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DateInput } from '@/components/ui/masked-inputs'
-import { Button, Card, EmptyState, Label, Select, Skeleton, cn } from '@/components/ui/primitives'
+import { Card, EmptyState, Label, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { addDaysIso, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 
 type Group = 'member' | 'instrument' | 'section' | 'cycle' | 'month' | 'activity'
 const GROUPS: { key: Group; label: string }[] = [
@@ -18,15 +18,16 @@ const GROUPS: { key: Group; label: string }[] = [
 interface Row { group_id: string | null; label: string; sort_key: string; records: number; present: number; pct: number }
 interface Streak { member_id: string; display_name: string; streak: number }
 
-const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
-
 /** Relatórios de presença no escopo de quem consulta (direção = todos; Professor/Monitor = seu grupo). */
 export function ReportsPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)
-  const [from, setFrom] = useState(addDaysIso(today, -90))
-  const [to, setTo] = useState(today)
+  const { cycle } = useSelectedCycle()
+  const [from, setFrom] = useState(cycle?.starts_on ?? addDaysIso(today, -90))
+  const [to, setTo] = useState(cycle?.ends_on ?? today)
+  // Trocar o ciclo preenche De/Até com o início e o fim dele; dá para ajustar depois.
+  useEffect(() => { if (cycle) { setFrom(cycle.starts_on); setTo(cycle.ends_on) } }, [cycle?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [group, setGroup] = useState<Group>('member')
   const [order, setOrder] = useState<'pct-asc' | 'pct-desc' | 'name'>('pct-asc')
   const [minStreak, setMinStreak] = useState('3')
@@ -55,17 +56,6 @@ export function ReportsPage() {
       : order === 'pct-asc' ? Number(a.pct) - Number(b.pct) : Number(b.pct) - Number(a.pct))
   const totals = rows.reduce((t, r) => ({ rec: t.rec + Number(r.records), pres: t.pres + Number(r.present) }), { rec: 0, pres: 0 })
 
-  const download = () => {
-    const header = ['Grupo', 'Registros', 'Presentes', '% presença']
-    const lines = [header, ...rows.map((r) => [r.label, r.records, r.present, String(r.pct).replace('.', ',')])]
-    const blob = new Blob(['﻿' + lines.map((l) => l.map(csvCell).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `presenca-${group}-${from}-a-${to}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
   return (
     <div className="space-y-4">
       <h1>Relatórios de presença</h1>
@@ -82,7 +72,6 @@ export function ReportsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground">{totals.rec ? `${totals.pres} presenças em ${totals.rec} registros (${Math.round((100 * totals.pres) / totals.rec)}%)` : ' '}</p>
-        <Button variant="outline" size="sm" disabled={rows.length === 0} onClick={download}><Download className="h-4 w-4" /> Baixar CSV</Button>
       </div>
 
       {!valid && <EmptyState>Informe um período válido.</EmptyState>}
