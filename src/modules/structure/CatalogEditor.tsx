@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
@@ -93,6 +94,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
     onError,
   })
   const drag = useHoldReorder()
+  const purge = usePurge(table)
   const onDragMove = (from: string, to: string) => reorder.mutate({ from, to })
   const move = useMutation({
     mutationFn: ({ a, b, list }: { a: CatalogItem; b: CatalogItem; list: CatalogItem[] }) => swapOrder(table, orgId, a, b, list),
@@ -110,7 +112,8 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
           {title ? <h2>{title}</h2> : <span />}
           {trashMode && !externalTrash && canEdit && (
             <TrashDrawer iconOnly entries={(items ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))}
-              onRestore={(id) => { const it = items?.find((x) => x.id === id); if (it) save.mutate({ id, name: it.name, is_active: true }) }} />
+              onRestore={(id) => { const it = items?.find((x) => x.id === id); if (it) save.mutate({ id, name: it.name, is_active: true }) }}
+              onPurge={['skill_levels', 'gender_options', 'race_options'].includes(table) ? (id) => purge.mutate(id) : undefined} />
           )}
         </div>
       )}

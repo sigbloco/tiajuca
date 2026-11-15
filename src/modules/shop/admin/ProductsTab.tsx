@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { KitChip } from '@/modules/shop/KitChip'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -42,6 +43,7 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
     return [...ordered, ...list.filter((p) => !local.includes(p.id))]
   })()
   const paged = usePaged(items)
+  const purge = usePurge('shop_products')
   const restore = useMutation({
     mutationFn: (id: string) => setProductActive(id, true),
     onSuccess: () => { toast.success('Produto restaurado na loja.'); qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] }) },
@@ -126,7 +128,7 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
         </Card>
       ))}
       <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
-      <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active && !!p.is_kit === kits).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} />
+      <TrashSection entries={(q.data ?? []).filter((p) => !p.is_active && !!p.is_kit === kits).map((p) => ({ id: p.id, name: p.name, detail: formatCurrency(fromCents(p.price_cents)) }))} onRestore={(id) => restore.mutate(id)} onPurge={(id) => purge.mutate(id)} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
         {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}

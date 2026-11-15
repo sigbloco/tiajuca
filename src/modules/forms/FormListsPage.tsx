@@ -1,3 +1,4 @@
+import { purgeErrorMessage, purgeTrashed } from '@/core/purge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -207,6 +208,11 @@ export function FormListsPage() {
     onSuccess: () => { invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['form-list-items', orgId] }); qc.invalidateQueries({ queryKey: ['form-level-items', orgId] }) }, onError,
   })
 
+  const purgeAny = useMutation({
+    mutationFn: (e: TrashRow) => purgeTrashed(e.list ? 'form_lists' : e.table ?? (e.level ? 'skill_levels' : 'form_list_items'), e.id),
+    onSuccess: () => { toast.success('Excluído de vez.'); void qc.invalidateQueries() },
+    onError: (e) => toast.error(purgeErrorMessage(e)),
+  })
   // Lixeira única: listas apagadas + itens apagados de todas as listas que continuam ativas.
   const trash: TrashRow[] = [
     ...all.filter((l) => !l.is_active && l.kind === 'custom').map((l): TrashRow => ({ key: `l-${l.id}`, id: l.id, name: l.name, label: 'Lista', list: true })),
@@ -253,7 +259,12 @@ export function FormListsPage() {
           <ProgressiveList items={trash} render={(e) => (
             <Card key={e.key} className="flex items-center justify-between gap-3 p-2.5">
               <div className="min-w-0"><p className="break-words font-semibold">{e.name}</p><p className="text-xs text-muted-foreground">{e.list ? 'Lista inteira' : `Da lista ${e.label}`}</p></div>
-              {canEdit && <Button size="sm" variant="outline" onClick={() => (e.list ? setListActive.mutate({ id: e.id, on: true }) : restoreItem.mutate(e))}><RotateCcw className="h-4 w-4" /> Restaurar</Button>}
+              {canEdit && (
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button size="sm" variant="outline" onClick={() => (e.list ? setListActive.mutate({ id: e.id, on: true }) : restoreItem.mutate(e))}><RotateCcw className="h-4 w-4" /> Restaurar</Button>
+                  <Button size="icon" variant="ghost" className="text-destructive" aria-label={`Excluir ${e.name} de vez`} title="Excluir de vez" onClick={async () => { if (await confirmBox(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) purgeAny.mutate(e) }}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              )}
             </Card>
           )} />
         </Collapsible>

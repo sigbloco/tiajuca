@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { nameWithSurname } from './personLabel'
 import { ParticipationRequests } from './ParticipationRequests'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -51,8 +52,9 @@ function MembersTrash() {
     onSuccess: () => { toast.success('Integrante restaurado.'); qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const purge = usePurge('members')
   if (!can) return null
-  return <TrashDrawer iconOnly compact title="Lixeira de integrantes" entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
+  return <TrashDrawer iconOnly compact title="Lixeira de integrantes" onPurge={(id) => purge.mutate(id)} entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
 }
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
