@@ -58,6 +58,20 @@ function PixSection({ memberId }: { memberId: string }) {
   )
 }
 
+/** Perfil do bloco (titular): e-mail, WhatsApp e redes sociais, a fonte dos contatos da Loja e do Site. */
+function BlocoProfile({ memberId }: { memberId: string }) {
+  const saver = useRef<(() => Promise<boolean | void>) | null>(null)
+  const [saving, setSaving] = useState(false)
+  const bind = useCallback<SaveBinder>((fn) => { saver.current = fn }, [])
+  return (
+    <div className="space-y-4">
+      <h1>Perfil do bloco</h1>
+      <MyData memberId={memberId} bind={bind} part="bloco" />
+      <StickySave><SaveButton type="button" className="w-full" disabled={saving} hint="Salvar perfil do bloco" onClick={async () => { setSaving(true); try { await saver.current?.() } catch { /* o bloco já avisa o erro */ } finally { setSaving(false) } }} /></StickySave>
+    </div>
+  )
+}
+
 export function ProfilePage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
@@ -89,6 +103,8 @@ export function ProfilePage() {
     try { for (const fn of savers.current.values()) { if ((await fn()) === false) break } } catch { /* cada bloco já avisa o erro */ } finally { setSaving(false) }
   }
   if (!membership) return null
+  // Titular: o perfil é o do bloco (só os contatos que a Loja, o Site e os e-mails usam).
+  if (membership.roles.includes('titular')) return <BlocoProfile memberId={memberId} />
   return (
     <div className="space-y-4">
       <div>
