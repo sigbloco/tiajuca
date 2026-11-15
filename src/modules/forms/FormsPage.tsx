@@ -3,7 +3,7 @@ import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, CopyPlus, Plus, Settings, Trash2 } from 'lucide-react'
+import { Copy, CopyPlus, Eye, Plus, Settings, Trash2 } from 'lucide-react'
 import { LabelFitRow } from '@/components/shared/LabelFitRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
@@ -116,6 +116,7 @@ export function FormsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Link to={`/${membership?.slug}/formularios/${f.id}`} className="min-w-0 break-words font-display text-lg font-bold leading-tight">{f.title}</Link>
+                    <Button asChild size="icon" variant="outline" className="h-8 w-8 shrink-0" title="Pré-visualizar"><a href={`/${membership?.slug}/previa/${f.id}`} target="_blank" rel="noreferrer noopener" aria-label={`Pré-visualizar ${f.title}`}><Eye className="h-4 w-4" /></a></Button>
                     <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`Duplicar ${f.title}`} title="Duplicar" disabled={duplicate.isPending} onClick={() => duplicate.mutate(f.id)}><CopyPlus className="h-4 w-4" /></Button>
                   </div>
                   <div className="mt-1 flex items-center gap-2">
