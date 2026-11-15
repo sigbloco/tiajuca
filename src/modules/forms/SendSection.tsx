@@ -1,3 +1,4 @@
+import { VarsHint } from '@/components/shared/VarsHint'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ClipboardList, Mail, Pencil, RotateCcw, Send } from 'lucide-react'
 import { useState } from 'react'
@@ -94,7 +95,7 @@ export function SendFields({ f, setF, prefix, part, disabled, general, toggles =
               {part === 'email' && <Mail className="h-4 w-4 shrink-0" aria-hidden />}{m.label}
             </label>
             {f.on[k] || !toggles
-              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} />{m.hint && <p className="text-xs text-muted-foreground">{m.hint}</p>}</>
+              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} />{(k === 'send' || k === 'privacy') && <VarsHint />}{m.hint && <p className="text-xs text-muted-foreground">{m.hint}</p>}</>
               : <p className="rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">Desligado. {m.off}</p>}
           </div>
         )

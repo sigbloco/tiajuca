@@ -1,3 +1,4 @@
+import { fillVars } from '@/core/textVars'
 import { BackButton } from '@/components/shared/BackButton'
 import { DEFAULT_FRAME, HeaderBand } from './HeaderBand'
 import { RichText } from '@/components/shared/RichText'
@@ -214,6 +215,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
 
   const form = preview ? { data: preview, isLoading: false, isError: false } : live
   const fields = form.data?.form?.fields ?? []
+  const fill = (t: string) => fillVars(t, form.data?.form?.vars)
   const visible = useMemo(() => fields.filter((f) => isVisible(f, answers)), [fields, answers])
 
   // Seções: cada cabeçalho abre um bloco com as perguntas que vêm depois dele (perguntas antes da primeira seção ficam num bloco sem título).
@@ -402,7 +404,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
         {stepIdx === 0 && (
           <div ref={setTitleEl}><Card className="space-y-1 p-5 text-center">
             <h1>{f0?.title}</h1>
-            {f0?.description && <RichText text={f0.description} className="text-muted-foreground" />}
+            {f0?.description && <RichText text={fill(f0.description)} className="text-muted-foreground" />}
             {f0?.closes_at && <p className="text-xs text-muted-foreground">Inscrições até {formatDate(f0.closes_at.slice(0, 10))}.</p>}
             <p className="text-xs text-muted-foreground">Campos com * são obrigatórios.</p>
           </Card></div>
@@ -414,7 +416,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             {b.head && (
               <div className="space-y-3 border-l-4 border-primary pl-3 pt-2">
                 <h2 className="font-display text-2xl font-extrabold">{b.head.label}</h2>
-                {b.head.description && <RichText text={b.head.description} />}
+                {b.head.description && <RichText text={fill(b.head.description)} />}
               </div>
             )}
             {b.head && isLoginSection(b.head) && (
@@ -436,7 +438,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             {b.items.map((f) => f.type === 'info' ? (
               <div key={f.key} id={`bloco-${f.key}`} className="space-y-2">
                 <p className="font-display text-lg font-bold">{f.label}</p>
-                {f.description && <Card className="p-4"><RichText text={f.description} /></Card>}
+                {f.description && <Card className="p-4"><RichText text={fill(f.description)} /></Card>}
               </div>
             ) : (
               <Card key={f.key} className={cn('space-y-2 p-4', showErrors && isEmpty(f) && 'border-destructive ring-1 ring-destructive')}>
@@ -448,7 +450,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             ))}
             {b.head && hasConsent(b.head) && (
               <Card className={cn('space-y-2 p-4', showErrors && f0?.requires_consent && !consent && 'border-destructive ring-1 ring-destructive')}>
-                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={f0.privacy_text} className="text-xs text-muted-foreground" /></>}
+                {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={fill(f0.privacy_text)} className="text-xs text-muted-foreground" /></>}
                 {f0?.requires_consent && (
                   <label className="flex items-start gap-3 pt-1">
                     <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
@@ -460,12 +462,12 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
           </section>
         ))}
 
-        {isLast && f0?.send_text && <Card className="p-4"><RichText text={f0.send_text} /></Card>}
+        {isLast && f0?.send_text && <Card className="p-4"><RichText text={fill(f0.send_text)} /></Card>}
 
         {isLast && f0?.privacy_text && !hasConsentBlock && (
           <Card className="space-y-2 p-4">
             <h3>Privacidade e proteção de dados</h3>
-            <RichText text={f0.privacy_text} className="text-xs text-muted-foreground" />
+            <RichText text={fill(f0.privacy_text)} className="text-xs text-muted-foreground" />
             {f0.requires_consent && (
               <label className="flex items-start gap-3 pt-1">
                 <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
