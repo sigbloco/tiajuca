@@ -8,7 +8,7 @@ import { OrgLogo } from '@/components/shared/OrgLogo'
 import { Skeleton } from '@/components/ui/primitives'
 import { DEFAULT_ORG_SLUG, supabase } from '@/core/supabase'
 import type { OrgTheme } from '@/core/theme'
-import { areaOverrides } from '@/core/themeModel'
+import { areaOverrides, mix, resolveColors } from '@/core/themeModel'
 import { useAreaTheme } from '@/core/useAreaTheme'
 import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
 import { useAuth } from '@/core/auth'
@@ -72,6 +72,9 @@ export function LandingPage() {
   const chip = <span className="ml-2 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold">em construção</span>
   const photo = site.photo_url || org.logo_path
   // Fundo do topo: só a cor escolhida para o Site (sem ela, usa a cor principal).
+  // Fundo da foto do produto: o mesmo cinza ("muted") da página do produto na loja, calculado com as cores da loja.
+  const shopColors = resolveColors(org.theme, 'shop')
+  const shopMuted = shopColors.background ? mix(shopColors.background, shopColors.text ?? textOn(shopColors.background), 0.07) : undefined
   const heroColor = areaOverrides(org.theme, 'site').header ?? null
 
   return (
@@ -120,7 +123,7 @@ export function LandingPage() {
                 <Link to={`/${slug}/loja/produto/${data.shop_product.slug}`}
                   className={`flex w-full items-center gap-3 overflow-hidden rounded-3xl bg-card p-2 pr-5 text-left font-display text-lg font-bold text-foreground shadow-card transition hover:-translate-y-0.5 hover:shadow-lg`}>
                   {data.shop_product.image_path
-                    ? <img src={imageUrl(data.shop_product.image_path)} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-contain" style={{ backgroundColor: areaOverrides(org.theme, 'shop').background ?? '#FFF5D7' }} />
+                    ? <img src={imageUrl(data.shop_product.image_path)} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-contain" style={{ backgroundColor: shopMuted }} />
                     : <ShoppingBag className="mx-4 h-8 w-8 shrink-0" aria-hidden />}
                   <span className="min-w-0 flex-1 leading-tight">{data.shop_product.name}</span>
                 </Link>

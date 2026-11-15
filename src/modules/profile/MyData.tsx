@@ -6,7 +6,7 @@ import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useUnsaved } from '@/core/unsaved'
 import { ReadMore } from '@/components/shared/ReadMore'
-import { SOCIAL_NETWORKS, networkUrl, socialUrl, splitNetwork } from '@/core/social'
+import { SOCIAL_NETWORKS, networkUrl, splitNetwork } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Lock, Plus, Save, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -68,7 +68,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   useEffect(() => { if (founded.data !== undefined) setFoundedOn(founded.data) }, [founded.data])
   useEffect(() => { if (me.data) setRows(rowsOf(me.data.social_handle)) }, [me.data])
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
-  const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone, x.socials])
+  const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone])
 
   const save = useMutation({
     mutationFn: async () => {
@@ -78,7 +78,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
           ? { email: f.email, phone: f.phone.replace(/[^0-9]/g, ''), social_handle: urlsOf(rows).join(NL) }
           : part === 'other'
           ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '', played_instrument: f.played_instrument }
-          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n') },
+          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: urlsOf(rows).join(NL) },
       })
       if (error) throw error
       if (part === 'bloco' && foundedOn !== (founded.data ?? '')) { const r = await supabase.rpc('set_org_founded', { p_org: orgId, p_date: foundedOn || null }); if (r.error) throw r.error }
@@ -87,8 +87,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle)), founded.data ?? '']) : mine(toF(me.data))) : ''
-  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows), foundedOn]) : mine(f)
+  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle)), founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(urlsOf(rowsOf(me.data.social_handle))))) : ''
+  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows), foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(urlsOf(rows)))
   useUnsaved(!!me.data && curKey !== baseline, () => save.mutateAsync())
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
@@ -155,14 +155,17 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
-          <div className="space-y-1.5"><Label htmlFor="my-social-0">Redes sociais</Label>
-            {f.socials.map((v, i) => (
+          <div className="space-y-1.5"><Label htmlFor="my-user-0">Redes sociais</Label>
+            {rows.map((r, i) => (
               <div key={i} className="flex gap-2">
-                <Input id={`my-social-${i}`} placeholder="@usuario" value={v} onChange={(e) => setF({ ...f, socials: f.socials.map((x, j) => (j === i ? e.target.value : x)) })} />
-                {f.socials.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setF({ ...f, socials: f.socials.filter((_, j) => j !== i) })}><X className="h-4 w-4" /></Button>}
+                <Select aria-label="Rede" className="w-36 shrink-0" value={r.network} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
+                  {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
+                </Select>
+                <Input id={`my-user-${i}`} aria-label="Usuário" placeholder="usuário" value={r.user} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
+                {rows.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setRows(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
               </div>
             ))}
-            <Button type="button" size="sm" variant="outline" onClick={() => setF({ ...f, socials: [...f.socials, ''] })}><Plus className="h-4 w-4" /> Adicionar rede social</Button></div>
+            <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button></div>
         </div>
         {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
       </form>
