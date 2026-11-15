@@ -6,7 +6,6 @@ import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { ArrowDown, ArrowUp, Ban, BookmarkPlus, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
-import { ButtonRow } from '@/components/shared/ButtonRow'
 import { promptBox } from '@/components/shared/DialogHost'
 import { SendSection } from './SendSection'
 import { useSectionTemplates } from './SectionTemplatesPage'
@@ -479,11 +478,11 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
   })
   return (
     <div className="space-y-3">
-      {!templateMode && <ButtonRow>
+      {!templateMode && <div className="grid gap-2 sm:grid-cols-3 [&>*]:w-full">
         <Button variant="add" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
         <Button variant="add" onClick={() => setPickOpen(true)}><LayoutTemplate className="h-4 w-4" /> Seção modelo</Button>
         <Button variant="add" disabled={hasLogin || addLogin.isPending} title={hasLogin ? 'Este formulário já tem uma seção de login' : 'Exige entrar com a conta Google; usa o e-mail da conta'} onClick={() => addLogin.mutate()}><LogIn className="h-4 w-4" /> Seção de login</Button>
-      </ButtonRow>}
+      </div>}
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
         {fields.map((x, i) => {
