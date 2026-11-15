@@ -18,6 +18,7 @@ import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow 
 
 function NewFormSheet() {
   const orgId = useOrgId()
+  const qc = useQueryClient()
   const navigate = useNavigate()
   const { membership } = useOrganization()
   const [title, setTitle] = useState('')
@@ -28,7 +29,7 @@ function NewFormSheet() {
       if (error) throw error
       return data.id as string
     },
-    onSuccess: (id) => { toast.success('Formulário criado como rascunho.'); navigate(`/${membership?.slug}/inscricoes/${id}`) },
+    onSuccess: (id) => { toast.success('Formulário criado como rascunho.'); void qc.invalidateQueries({ queryKey: ['forms', orgId] }); navigate(`/${membership?.slug}/formularios/${id}`) },
     onError: (e) => toast.error(/23505|duplicate/i.test(JSON.stringify(e)) ? 'Já existe um formulário com este endereço (slug).' : friendlyError(e)),
   })
   return (
@@ -90,7 +91,7 @@ export function FormsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h1>Inscrições</h1>
+          <h1>Formulários</h1>
           <TrashDrawer iconOnly entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: `${f.form_submissions?.[0]?.count ?? 0} resposta(s)` }))}
             onRestore={(id) => setStatus.mutate({ id, status: 'draft', prev: 'draft' })} onPurge={(id) => purge.mutate(id)} />
         </div>
@@ -109,7 +110,7 @@ export function FormsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Link to={`/${membership?.slug}/inscricoes/${f.id}`} className="min-w-0 break-words font-display text-lg font-bold">{f.title}</Link>
+                    <Link to={`/${membership?.slug}/formularios/${f.id}`} className="min-w-0 break-words font-display text-lg font-bold">{f.title}</Link>
                     <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`Duplicar ${f.title}`} title="Duplicar" disabled={duplicate.isPending} onClick={() => duplicate.mutate(f.id)}><CopyPlus className="h-4 w-4" /></Button>
                   </div>
                   <div className="mt-1 flex items-center gap-2">
@@ -123,7 +124,7 @@ export function FormsPage() {
                 </div>
               </div>
               <ButtonRow>
-                <Button size="sm" variant="outline" asChild><Link to={`/${membership?.slug}/inscricoes/${f.id}`}>Abrir</Link></Button>
+                <Button size="sm" variant="outline" asChild><Link to={`/${membership?.slug}/formularios/${f.id}`}>Abrir</Link></Button>
                 <Button size="sm" variant="outline" className="text-destructive" disabled={setStatus.isPending}
                   onClick={async () => { if (await confirmBox(`Apagar “${f.title}”? Ele vai para a lixeira, o link deixa de funcionar e as respostas são mantidas.`)) setStatus.mutate({ id: f.id, status: 'archived', prev: f.status }) }}><Trash2 className="h-4 w-4" /> Apagar</Button>
               </ButtonRow>

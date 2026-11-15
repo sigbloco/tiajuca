@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
   { to: 'naipes', label: 'Naipes', crumb: 'Naipes e instrumentos', icon: Drum, permission: 'structure.manage' },
   { to: 'membros', label: 'Integrantes', icon: Users, permission: 'members.read' },
-  { to: 'inscricoes', label: 'Inscrições', icon: ClipboardList, permission: 'forms.manage' },
+  { to: 'formularios', label: 'Formulários', icon: ClipboardList, permission: 'forms.manage' },
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },
   { to: 'eventos', label: 'Calendário', icon: CalendarDays, permission: 'events.read' },
 

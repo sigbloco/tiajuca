@@ -20,7 +20,7 @@ function ListGroup({ table, title, singular, hint, open, onToggle, canEdit }: (t
   )
 }
 
-/** Inscrições → Configurações: as listas universais do cadastro, usadas por todos os formulários (cada formulário marca quais itens mostrar). */
+/** Formulários → Configurações: as listas universais do cadastro, usadas por todos os formulários (cada formulário marca quais itens mostrar). */
 export function FormListsPage() {
   const canEdit = usePermission('forms.manage')
   const [opened, setOpened] = useState<Set<string>>(new Set()) // começam todas recolhidas

@@ -24,7 +24,7 @@ const GROUPS: { title: string; areas: Area[] }[] = [
     { label: 'Dados sensíveis (LGPD)', see: ['members.sensitive.read'], edit: ['members.sensitive.manage'] },
     { label: 'Alunos e participação no ciclo', see: ['member_cycles.read'], edit: ['member_cycles.manage'] },
     { label: 'Vagas e lista de espera', see: ['capacity.read'], edit: ['capacity.manage'] },
-    { label: 'Inscrições (formulários)', edit: ['forms.manage'] },
+    { label: 'Formulários (inscrições e respostas)', edit: ['forms.manage'] },
   ] },
   { title: 'Dinheiro', areas: [
     { label: 'Mensalidades', see: ['billing.read'], edit: ['billing.manage'] },

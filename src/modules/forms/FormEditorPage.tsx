@@ -21,13 +21,13 @@ export function FormEditorPage() {
   // Cada formulário abre na primeira aba (Configurações).
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('settings')
   useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('settings'), true, 0)
-  // Caminho: Inscrições • nome do formulário • aba aberta.
-  useSetCrumbOverride(form ? [{ label: 'Inscrições', to: `/${membership?.slug}/inscricoes` }, { label: form.title }] : null)
+  // Caminho: Formulários • nome do formulário • aba aberta.
+  useSetCrumbOverride(form ? [{ label: 'Formulários', to: `/${membership?.slug}/formularios` }, { label: form.title }] : null)
   if (isLoading || !form) return <Skeleton className="h-40" />
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/inscricoes`}><ArrowLeft className="h-5 w-5" /></Link></Button>
+        <Button asChild size="icon" variant="ghost" aria-label="Voltar"><Link to={`/${membership?.slug}/formularios`}><ArrowLeft className="h-5 w-5" /></Link></Button>
         <h1 className="min-w-0 flex-1 break-words">{form.title}</h1>
         <FitButton icon={Eye} label="Visualizar" href={`/${membership?.slug}/previa/${form.id}`} newTab />
       </div>
