@@ -30,10 +30,13 @@ export interface PublicField {
   default: string | null
   validation: FieldValidation
   condition: FieldCondition | null
+  /** Só nos formulários internos: ligação do campo com o cadastro (para vir preenchido). */ mapping?: string | null
 }
 
 export interface PublicFormPayload {
-  state: 'open' | 'not_open' | 'closed' | 'full' | 'not_found'
+  state: 'open' | 'not_open' | 'closed' | 'full' | 'not_found' | 'login_required' | 'not_member'
+  access?: 'public' | 'internal'
+  /** Formulário interno: o integrante que entrou e o naipe dele (as seções por naipe usam isto). */ viewer?: { member_id: string; name: string; section_id: string | null } | null
   organization?: { name: string; short_name: string; logo_path: string | null; theme: Record<string, string> }
   form?: { title: string; description: string | null; privacy_text: string | null; requires_consent: boolean; closes_at: string | null; send_text?: string | null; show_confirmation?: boolean; /** Valores atuais do bloco para as variáveis dos textos. */ vars?: import('@/core/textVars').TextVars | null; /** Instrumentos com a vaga preenchida: aparecem como "Esgotado - Lista de espera". */ full_options?: string[]; header?: HeaderFrame; fields: PublicField[] }
 }
