@@ -81,6 +81,12 @@ function OrgRoute() {
   )
 }
 
+/** /inscricoes… → /formularios… */
+function OldFormsRedirect() {
+  const { pathname, search } = useLocation()
+  return <Navigate to={pathname.replace('/inscricoes', '/formularios') + search} replace />
+}
+
 function OrgPreview() {
   const { orgSlug = '' } = useParams()
   return <OrganizationProvider slug={orgSlug}><PreviewGate /></OrganizationProvider>
@@ -146,9 +152,12 @@ export const router = createBrowserRouter(
                 { path: 'oficina', element: <HubLayout hub="oficina" />, children: [{ index: true, element: <HubHome hub="oficina" /> }] },
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
-                { path: 'inscricoes', element: <FormsPage /> },
-                { path: 'inscricoes/configuracoes', element: <FormListsPage /> },
-                { path: 'inscricoes/:formId', element: <FormEditorPage /> },
+                { path: 'formularios', element: <FormsPage /> },
+                { path: 'formularios/configuracoes', element: <FormListsPage /> },
+                { path: 'formularios/:formId', element: <FormEditorPage /> },
+                // Endereços antigos (quando a área se chamava Inscrições) seguem funcionando.
+                { path: 'inscricoes', element: <OldFormsRedirect /> },
+                { path: 'inscricoes/*', element: <OldFormsRedirect /> },
                 { path: 'naipes', element: <NaipesPage /> },
                 { path: 'naipes/organograma', element: <Organogram /> },
                 { path: 'naipes/configuracoes', element: <SectionNamesPage /> },

@@ -122,7 +122,7 @@ export function AppShell() {
   }
   const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
-    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('inscricoes'), ...direct('repertorio'), ...direct('naipes').map((e) => ({ ...e, also: ['vagas'] })),
+    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('formularios'), ...direct('repertorio'), ...direct('naipes').map((e) => ({ ...e, also: ['vagas'] })),
     ...withSep([...hubEntry('organizacao'), ...hubEntry('financeiro')]),
     ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
   ]
