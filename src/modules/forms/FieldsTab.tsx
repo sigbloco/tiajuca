@@ -274,7 +274,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
 }
 
 /** Construtor de campos: adicionar, ordenar, condições simples e ligação com o cadastro. */
-export function FieldsTab({ formId }: { formId: string }) {
+export function FieldsTab({ formId, templateMode }: { formId: string; /** Editando uma seção modelo: só a seção do modelo (sem criar outras, sem apagar a seção). */ templateMode?: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data } = useFormFields(formId)
@@ -380,10 +380,10 @@ export function FieldsTab({ formId }: { formId: string }) {
   })
   return (
     <div className="space-y-3">
-      <ButtonRow>
+      {!templateMode && <ButtonRow>
         <Button variant="add" onClick={() => setSheet({ field: null, section: true })}><Layers className="h-4 w-4" /> Nova seção</Button>
         <Button variant="add" onClick={() => setPickOpen(true)}><LayoutTemplate className="h-4 w-4" /> Seção modelo</Button>
-      </ButtonRow>
+      </ButtonRow>}
       {fields.length === 0 && <EmptyState>Nenhum campo ainda.</EmptyState>}
       <div className="grid gap-2">
         {fields.map((x, i) => {
@@ -421,12 +421,12 @@ export function FieldsTab({ formId }: { formId: string }) {
                   </p>
                 </button>
                 <div className="flex shrink-0 gap-1.5">
-                  {sec && (
+                  {sec && !templateMode && (
                     <Button size="sm" variant="outline" disabled={saveAsTemplate.isPending} aria-label={`Salvar ${x.label} como modelo`} title="Salvar esta seção como modelo (com o mesmo nome, atualiza o modelo)"
                       onClick={async () => { const n = await promptBox({ title: 'Salvar como modelo', message: 'Nome do modelo:', initial: x.label, confirmLabel: 'Salvar' }); if (n && n.trim()) saveAsTemplate.mutate({ id: x.id, name: n.trim() }) }}><BookmarkPlus className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Modelo</span></Button>
                   )}
                   <Button size="sm" variant="outline" disabled={toggle.isPending} aria-label={x.is_active ? 'Ocultar' : 'Mostrar'} title={sec ? (x.is_active ? 'Oculta a seção e seus campos' : 'Mostra a seção e seus campos') : x.is_active ? 'Ocultar' : 'Mostrar'} onClick={() => toggle.mutate(x)}><Ban className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">{x.is_active ? 'Ocultar' : 'Mostrar'}</span></Button>
-                  <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={sec ? 'Apaga a seção e seus campos' : 'Apagar'} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Apagar</span></Button>
+                  {!(templateMode && sec) && <Button size="sm" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar" title={sec ? 'Apaga a seção e seus campos' : 'Apagar'} onClick={() => askRemove(x)}><Trash2 className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Apagar</span></Button>}
                 </div>
               </Card>
               {nextIsHead && section !== '' && (
@@ -448,7 +448,7 @@ export function FieldsTab({ formId }: { formId: string }) {
                 <Card key={t.id} className="flex items-center justify-between gap-3 p-3">
                   <div className="min-w-0">
                     <p className="break-words font-semibold">{t.name}</p>
-                    <p className="text-sm text-muted-foreground">{t.fields.length} {t.fields.length === 1 ? 'pergunta' : 'perguntas'}</p>
+                    <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'pergunta' : 'perguntas'}</p>
                   </div>
                   <Button size="sm" disabled={insertTemplate.isPending} onClick={() => insertTemplate.mutate(t.id)}><Plus className="h-4 w-4" /> Adicionar</Button>
                 </Card>

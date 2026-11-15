@@ -53,7 +53,7 @@ export function FormsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['forms', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('forms').select('*, form_submissions(count)').eq('organization_id', orgId).order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('forms').select('*, form_submissions(count)').eq('organization_id', orgId).eq('is_template', false).order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as FormRow[]
     },
