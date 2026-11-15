@@ -33,12 +33,10 @@ export type PitchMode = keyof typeof PITCH_LABEL
 export const itemPlural = (label: string) => (label === 'Voz' ? 'Vozes' : `${label}s`)
 
 export async function listCatalog(table: CatalogTable, orgId: string): Promise<CatalogItem[]> {
-  const { data, error } = await supabase
-    .from(table)
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('sort_order')
-    .order('name')
+  let q = supabase.from(table).select('*').eq('organization_id', orgId)
+  // Os níveis de listas ligadas (ex.: níveis de pernalta) ficam fora da lista padrão de Níveis.
+  if (table === 'skill_levels') q = q.is('list_id', null)
+  const { data, error } = await q.order('sort_order').order('name')
   if (error) throw error
   return (data ?? []) as CatalogItem[]
 }

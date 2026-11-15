@@ -7,7 +7,8 @@ import { SaveInput } from '@/components/shared/ConfirmField'
 import { promptBox } from '@/components/shared/DialogHost'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { PageLink } from '@/components/shared/PageLink'
-import { Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
+import { confirmBox } from '@/components/shared/DialogHost'
+import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useOrgId } from '@/core/organization'
@@ -24,18 +25,30 @@ const SYSTEM: Record<string, { title: string; singular: string; hint: string }> 
   race_options: { title: 'Cor/raça', singular: 'Opção', hint: 'Dado sensível: fica restrito à direção.' },
 }
 
-interface ListRow { id: string; name: string; kind: 'system' | 'custom'; source: string | null; sort_order: number; is_active: boolean }
+interface ListRow { id: string; name: string; kind: 'system' | 'custom'; source: string | null; sort_order: number; is_active: boolean; link: 'skill_level' | null }
 interface ItemRow { id: string; list_id: string; name: string; sort_order: number; is_active: boolean; description?: string | null }
-interface TrashRow { key: string; id: string; name: string; label: string; table?: CatalogTable; list?: boolean }
+interface TrashRow { key: string; id: string; name: string; label: string; table?: CatalogTable; list?: boolean; level?: boolean }
 
 function useFormLists() {
   const orgId = useOrgId()
   return useQuery({
     queryKey: ['form-lists', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('form_lists').select('id, name, kind, source, sort_order, is_active').eq('organization_id', orgId).order('sort_order').limit(500)
+      const { data, error } = await supabase.from('form_lists').select('id, name, kind, source, sort_order, is_active, link').eq('organization_id', orgId).order('sort_order').limit(500)
       if (error) throw error
       return (data ?? []) as ListRow[]
+    },
+  })
+}
+/** Níveis das listas ligadas ao integrante (linhas de skill_levels com list_id). */
+function useLevelItems() {
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['form-level-items', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('skill_levels').select('id, list_id, name, sort_order, is_active, description').eq('organization_id', orgId).not('list_id', 'is', null).order('sort_order').limit(5000)
+      if (error) throw error
+      return (data ?? []) as ItemRow[]
     },
   })
 }
@@ -57,15 +70,17 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
   const qc = useQueryClient()
   const [name, setName] = useState('')
   const drag = useHoldReorder()
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['form-list-items', orgId] }); qc.invalidateQueries({ queryKey: ['form-lists', orgId] }) }
+  // Lista ligada ao integrante como lista de níveis: os itens são os próprios níveis (skill_levels).
+  const table = list.link === 'skill_level' ? 'skill_levels' : 'form_list_items'
+  const refresh = () => { for (const k of ['form-list-items', 'form-level-items', 'form-lists', 'catalog']) qc.invalidateQueries({ queryKey: [k, orgId] }) }
   const onError = (e: unknown) => toast.error(friendlyError(e))
   const active = items.filter((i) => i.is_active)
   const add = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from('form_list_items').insert({ organization_id: orgId, list_id: list.id, name: name.trim(), sort_order: items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1 }); if (error) throw error },
+    mutationFn: async () => { const { error } = await supabase.from(table).insert({ organization_id: orgId, list_id: list.id, name: name.trim(), sort_order: items.reduce((m, i) => Math.max(m, i.sort_order), 0) + 1 }); if (error) throw error },
     onSuccess: () => { setName(''); refresh() }, onError,
   })
   const patch = useMutation({
-    mutationFn: async (v: { id: string; patch: Partial<ItemRow> }) => { const { error } = await supabase.from('form_list_items').update(v.patch).eq('id', v.id); if (error) throw error },
+    mutationFn: async (v: { id: string; patch: Partial<ItemRow> }) => { const { error } = await supabase.from(table).update(v.patch).eq('id', v.id); if (error) throw error },
     onSuccess: refresh, onError,
   })
   const rename = useMutation({
@@ -74,7 +89,7 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
   })
   const reorder = useMutation({
     mutationFn: async (order: ItemRow[]) => {
-      const r = await Promise.all(order.map((t, i) => (t.sort_order === i + 1 ? null : supabase.from('form_list_items').update({ sort_order: i + 1 }).eq('id', t.id))))
+      const r = await Promise.all(order.map((t, i) => (t.sort_order === i + 1 ? null : supabase.from(table).update({ sort_order: i + 1 }).eq('id', t.id))))
       const bad = r.find((x) => x?.error); if (bad?.error) throw bad.error
     },
     onSuccess: refresh, onError,
@@ -87,6 +102,21 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
   const swap = (i: number, j: number) => { const arr = [...active]; ;[arr[i], arr[j]] = [arr[j], arr[i]]; reorder.mutate(arr) }
   return (
     <div className="space-y-3">
+      {list.link === 'skill_level' && <p className="text-sm"><Badge>Ligada ao integrante</Badge> <span className="text-muted-foreground">Estes itens são níveis: o que a pessoa escolher vai para o cadastro dela, como nos níveis padrão.</span></p>}
+      {canEdit && !list.link && (
+        <div className="space-y-1.5">
+          <p className="text-sm font-semibold">Ligação com o integrante</p>
+          <Select aria-label="Ligação com o integrante" value="" onChange={async (e) => {
+            if (e.target.value !== 'skill_level') return
+            if (!(await confirmBox('Ligar esta lista como lista de níveis? Os itens passam a ser níveis que ficam no cadastro de quem escolher. Depois de ligada, não dá para desligar.'))) return
+            const { error } = await supabase.rpc('link_list_to_levels', { p_list: list.id })
+            if (error) toast.error(friendlyError(error)); else { toast.success('Lista ligada ao nível do integrante.'); refresh() }
+          }}>
+            <option value="">Nenhuma (só histórico das respostas)</option>
+            <option value="skill_level">Nível do integrante</option>
+          </Select>
+        </div>
+      )}
       {canEdit && (
         <div className="space-y-1.5">
           <p className="text-sm font-semibold">Nome da lista</p>
@@ -125,6 +155,8 @@ export function FormListsPage() {
   const canEdit = usePermission('forms.manage')
   const lists = useFormLists()
   const customItems = useFormListItems()
+  const levelItems = useLevelItems()
+  const itemsOf = (l: ListRow) => ((l.link ? levelItems.data : customItems.data) ?? []).filter((x) => x.list_id === l.id)
   const levels = useCatalog('skill_levels'), genders = useCatalog('gender_options'), races = useCatalog('race_options')
   const sys: Record<string, ReturnType<typeof useCatalog>> = { skill_levels: levels, gender_options: genders, race_options: races }
   const [opened, setOpened] = useState<Set<string>>(new Set()) // começam todas recolhidas
@@ -170,9 +202,9 @@ export function FormListsPage() {
   const restoreItem = useMutation({
     mutationFn: async (e: TrashRow) => {
       if (e.table) await saveCatalogItem(e.table, orgId, { id: e.id, name: e.name, is_active: true })
-      else { const { error } = await supabase.from('form_list_items').update({ is_active: true }).eq('id', e.id); if (error) throw error }
+      else { const { error } = await supabase.from(e.level ? 'skill_levels' : 'form_list_items').update({ is_active: true }).eq('id', e.id); if (error) throw error }
     },
-    onSuccess: () => { invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['form-list-items', orgId] }) }, onError,
+    onSuccess: () => { invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['form-list-items', orgId] }); qc.invalidateQueries({ queryKey: ['form-level-items', orgId] }) }, onError,
   })
 
   // Lixeira única: listas apagadas + itens apagados de todas as listas que continuam ativas.
@@ -180,7 +212,7 @@ export function FormListsPage() {
     ...all.filter((l) => !l.is_active && l.kind === 'custom').map((l): TrashRow => ({ key: `l-${l.id}`, id: l.id, name: l.name, label: 'Lista', list: true })),
     ...active.flatMap((l): TrashRow[] => l.kind === 'system' && l.source
       ? (sys[l.source]?.data ?? []).filter((i) => !i.is_active).map((i) => ({ key: `s-${i.id}`, id: i.id, name: i.name, label: SYSTEM[l.source!].title, table: l.source as CatalogTable }))
-      : (customItems.data ?? []).filter((i) => i.list_id === l.id && !i.is_active).map((i) => ({ key: `c-${i.id}`, id: i.id, name: i.name, label: l.name }))),
+      : itemsOf(l).filter((i) => !i.is_active).map((i) => ({ key: `c-${i.id}`, id: i.id, name: i.name, label: l.name, level: !!l.link }))),
   ]
 
   return (
@@ -198,7 +230,7 @@ export function FormListsPage() {
         {active.map((l, i) => {
           const sd = l.source ? SYSTEM[l.source] : undefined
           const cat = l.source ? sys[l.source]?.data : undefined
-          const count = sd ? cat?.filter((x) => x.is_active).length : customItems.data?.filter((x) => x.list_id === l.id && x.is_active).length
+          const count = sd ? cat?.filter((x) => x.is_active).length : itemsOf(l).filter((x) => x.is_active).length
           return (
             <Collapsible key={l.id} open={opened.has(l.id)} onToggle={() => toggle(l.id)} title={sd?.title ?? l.name} count={count}
               left={canEdit && (
@@ -211,7 +243,7 @@ export function FormListsPage() {
               right={canEdit && l.kind === 'custom' && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover a lista ${l.name} para a lixeira`} title="Mover para a lixeira" onClick={() => setListActive.mutate({ id: l.id, on: false })}><Trash2 className="h-4 w-4" /></Button>}>
               {sd && l.source
                 ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription />
-                : <CustomListBody list={l} items={(customItems.data ?? []).filter((x) => x.list_id === l.id)} canEdit={canEdit} />}
+                : <CustomListBody list={l} items={itemsOf(l)} canEdit={canEdit} />}
             </Collapsible>
           )
         })}
