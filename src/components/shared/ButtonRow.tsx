@@ -7,7 +7,7 @@ import { Children, useEffect, useLayoutEffect, useRef, useState, type ReactNode 
  */
 const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
 
-export function ButtonRow({ children, className = '', split, ...aria }: { children: ReactNode; className?: string; role?: string; 'aria-label'?: string; /** Quando quebra de linha: quantos botões em cada linha (ex.: [2, 3] com 5 botões). Sem isto, linhas cheias e a última completa a largura. */ split?: number[] }) {
+export function ButtonRow({ children, className = '', split, ...aria }: { children: ReactNode; className?: string; role?: string; 'aria-label'?: string; 'aria-labelledby'?: string; /** Quando quebra de linha: quantos botões em cada linha (ex.: [2, 3] com 5 botões). Sem isto, linhas cheias e a última completa a largura. */ split?: number[] }) {
   const items = Children.toArray(children)
   const n = items.length
   const ref = useRef<HTMLDivElement>(null)

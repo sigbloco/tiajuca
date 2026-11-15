@@ -74,10 +74,11 @@ export function EventsPage() {
       const { data, error } = await supabase.rpc('birthday_list', { p_org: orgId })
       if (error) throw error
       // Dia e mês para todos; o ano (idade) só chega para Titular, direção e professores/monitores (o banco decide).
-      const map: Record<string, { id: string; name: string; year: number | null }[]> = {}
-      for (const m of (data ?? []) as { member_id: string; full_name: string; display_name: string | null; month_day: string; birth_year: number | null }[]) {
+      const map: Record<string, { id: string; name: string; year: number | null; org?: boolean }[]> = {}
+      for (const m of (data ?? []) as { member_id: string | null; full_name: string; display_name: string | null; month_day: string; birth_year: number | null; is_org: boolean }[]) {
+        if (m.is_org) { (map[m.month_day] ??= []).push({ id: 'org', name: m.full_name, year: m.birth_year, org: true }); continue }
         const name = m.display_name?.trim() || m.full_name.trim().split(/\s+/)[0]
-        ;(map[m.month_day] ??= []).push({ id: m.member_id, name, year: m.birth_year })
+        ;(map[m.month_day] ??= []).push({ id: m.member_id as string, name, year: m.birth_year })
       }
       return map
     },
@@ -186,7 +187,9 @@ export function EventsPage() {
       {selectedDay && birthdaysOn(selectedDay).length > 0 && (
         <Card className="space-y-1 p-3">
           <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> Aniversariantes</p>
-          {birthdaysOn(selectedDay).map((p) => <p key={p.id} className="text-muted-foreground"><MemberLink id={p.id} className="font-semibold text-foreground">{p.name}</MemberLink>{p.age !== null && <> · {p.age} anos</>}</p>)}
+          {birthdaysOn(selectedDay).map((p) => p.org
+            ? <p key="org" className="text-muted-foreground"><span className="font-semibold text-foreground">{p.name}</span> · {p.age === 0 ? 'fundação do bloco (primeiro cortejo)' : `${p.age} ${p.age === 1 ? 'ano' : 'anos'} de fundação`}</p>
+            : <p key={p.id} className="text-muted-foreground"><MemberLink id={p.id} className="font-semibold text-foreground">{p.name}</MemberLink>{p.age !== null && <> · {p.age} anos</>}</p>)}
         </Card>
       )}
       {selectedDay && data && listDays.length === 0 && birthdaysOn(selectedDay).length === 0 && <EmptyState>Nenhum evento neste dia.</EmptyState>}
