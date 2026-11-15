@@ -1,3 +1,4 @@
+import { OrgName } from '@/components/shared/OrgName'
 import { ArrowLeft, Construction, Globe, LogOut, Menu, Store, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useCrumbOverride, useExtraCrumbs } from '@/core/breadcrumb'
@@ -165,7 +166,7 @@ export function AppShell() {
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-header p-4 text-header-foreground md:sticky md:top-0 md:flex md:max-h-screen">
         <div className="mb-6 flex items-center gap-3">
           <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-11 w-11 shrink-0" />
-          <p className="font-display text-xl font-extrabold leading-tight text-primary">{membership.name}</p>
+          <p className="font-display text-xl font-extrabold leading-[1.05] text-primary"><OrgName name={membership.name} /></p>
         </div>
         <nav className="flex-1 space-y-1">{renderEntries(entries)}</nav>
         <div className="border-t border-border pt-3">
