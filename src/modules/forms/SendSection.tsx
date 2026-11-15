@@ -82,7 +82,7 @@ export function SendPartTabs({ part, setPart, general }: { part: SendPart; setPa
 }
 
 /** Editor dos textos de uma subpágina: cada mensagem com seu checkbox; desligada, o campo some e fica só o aviso do que acontece. */
-export function SendFields({ f, setF, prefix, part, disabled, general }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean; general?: boolean }) {
+export function SendFields({ f, setF, prefix, part, disabled, general, toggles = true }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean; general?: boolean; /** Checkbox para ligar/desligar cada mensagem: só no formulário (os textos padrão sempre valem para todos). */ toggles?: boolean }) {
   return (
     <>
       {PARTS[part].filter((k) => !(general && k === 'review')).map((k) => {
@@ -90,10 +90,10 @@ export function SendFields({ f, setF, prefix, part, disabled, general }: { f: Se
         return (
           <div key={k} className="space-y-1.5">
             <label className="flex items-center gap-2 font-semibold" htmlFor={`${prefix}-${k}-on`}>
-              <input id={`${prefix}-${k}-on`} type="checkbox" className="h-5 w-5 shrink-0" disabled={disabled} checked={f.on[k]} onChange={(e) => setF({ ...f, on: { ...f.on, [k]: e.target.checked } })} />
+              {toggles && <input id={`${prefix}-${k}-on`} type="checkbox" className="h-5 w-5 shrink-0" disabled={disabled} checked={f.on[k]} onChange={(e) => setF({ ...f, on: { ...f.on, [k]: e.target.checked } })} />}
               {part === 'email' && <Mail className="h-4 w-4 shrink-0" aria-hidden />}{m.label}
             </label>
-            {f.on[k]
+            {f.on[k] || !toggles
               ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} />{m.hint && <p className="text-xs text-muted-foreground">{m.hint}</p>}</>
               : <p className="rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">Desligado. {m.off}</p>}
           </div>

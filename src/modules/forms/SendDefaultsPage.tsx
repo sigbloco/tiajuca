@@ -28,9 +28,9 @@ export function SendDefaultsPage() {
   const [part, setPart] = useState<SendPart>('form')
   const row = useQuery({ queryKey: ['form-send-defaults', orgId], queryFn: () => loadSendDefaults(orgId) })
   const [f, setF] = useState<SendTexts>(SEND_FACTORY)
-  useEffect(() => { if (row.isSuccess) setF(rowToSend(row.data)) }, [row.isSuccess, row.data])
+  useEffect(() => { if (row.isSuccess) setF({ ...rowToSend(row.data), on: SEND_FACTORY.on }) }, [row.isSuccess, row.data])
   const save = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from('form_send_defaults').upsert({ organization_id: orgId, ...sendColumns(f), updated_at: new Date().toISOString() }, { onConflict: 'organization_id' }); if (error) throw error },
+    mutationFn: async () => { const { error } = await supabase.from('form_send_defaults').upsert({ organization_id: orgId, ...sendColumns({ ...f, on: SEND_FACTORY.on }), updated_at: new Date().toISOString() }, { onConflict: 'organization_id' }); if (error) throw error },
     onSuccess: () => { toast.success('Textos padrão salvos. Valem para os próximos formulários.'); qc.invalidateQueries({ queryKey: ['form-send-defaults', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -44,7 +44,7 @@ export function SendDefaultsPage() {
         <form id="defaults-form" onSubmit={(e) => { e.preventDefault(); if (canEdit) save.mutate() }} className="space-y-4">
           <SendPartTabs part={part} setPart={setPart} />
           <fieldset disabled={!canEdit} className="min-w-0 space-y-4 border-0 p-0">
-            <SendFields f={f} setF={setF} prefix="dd" part={part} disabled={!canEdit} />
+            <SendFields f={f} setF={setF} prefix="dd" part={part} disabled={!canEdit} toggles={false} />
           </fieldset>
           {canEdit && <RestorePartButton f={f} setF={setF} part={part} source={async () => SEND_FACTORY} />}
           {canEdit && <StickySave><SaveButton type="submit" form="defaults-form" className="w-full" disabled={save.isPending} hint="Salvar textos padrão" /></StickySave>}
