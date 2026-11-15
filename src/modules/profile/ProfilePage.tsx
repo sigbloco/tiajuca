@@ -1,7 +1,7 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Card, EmptyState, Input, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -9,7 +9,9 @@ import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
-import { MyData, MySensitiveData } from './MyData'
+import { MyParticipation } from './MyParticipation'
+import { StickySave } from '@/components/shared/StickySave'
+import { MyData, MySensitiveData, type SaveBinder } from './MyData'
 import { PAY_STATUS_CLASS, PAY_STATUS_LABEL, type StaffPayment } from '@/modules/finance/service'
 
 const PIX_TYPES = [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email', 'E-mail'], ['telefone', 'Telefone'], ['aleatoria', 'Chave aleatória']] as const
@@ -71,6 +73,15 @@ export function ProfilePage() {
       return (data ?? []) as unknown as StaffPayment[]
     },
   })
+  // Um único Salvar, fixo na base: salva os dados e os dados sensíveis juntos.
+  const savers = useRef(new Map<string, () => Promise<boolean | void>>())
+  const [saving, setSaving] = useState(false)
+  const bindData = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('data', fn); else savers.current.delete('data') }, [])
+  const bindSens = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('sens', fn); else savers.current.delete('sens') }, [])
+  const saveAll = async () => {
+    setSaving(true)
+    try { for (const fn of savers.current.values()) { if ((await fn()) === false) break } } catch { /* cada bloco já avisa o erro */ } finally { setSaving(false) }
+  }
   if (!membership) return null
   return (
     <div className="space-y-4">
@@ -79,8 +90,9 @@ export function ProfilePage() {
         <p className="font-display text-lg font-bold">{membership.display_name}</p>
         <p className="text-muted-foreground">{membership.name}</p>
       </Card>
-      <MyData memberId={memberId} />
-      <MySensitiveData memberId={memberId} />
+      <MyData memberId={memberId} bind={bindData} />
+      <MyParticipation memberId={memberId} />
+      <MySensitiveData memberId={memberId} bind={bindSens} />
       <PixSection memberId={memberId} />
       {(payments.isLoading || (payments.data?.length ?? 0) > 0) && (
         <section className="space-y-2">
@@ -97,6 +109,7 @@ export function ProfilePage() {
         </section>
       )}
       {payments.data?.length === 0 && <EmptyState>Você não tem pagamentos registrados.</EmptyState>}
+      <StickySave><SaveButton type="button" className="w-full" disabled={saving} onClick={saveAll} hint="Salvar meu perfil" /></StickySave>
     </div>
   )
 }

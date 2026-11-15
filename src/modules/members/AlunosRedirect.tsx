@@ -17,7 +17,7 @@ export function AlunosRedirect() {
     queryKey: ['staff-redirect', orgId, membership?.member_id],
     enabled: Boolean(membership?.member_id),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('section_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).eq('cycles.is_current', true)
+      const { data, error } = await supabase.from('staff_assignments').select('section_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).eq('cycles.is_current', true)
       if (error) throw error
       return (data ?? []) as unknown as { section_id: string | null; instrument_id: string | null }[]
     },

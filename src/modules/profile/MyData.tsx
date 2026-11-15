@@ -9,7 +9,7 @@ import { ReadMore } from '@/components/shared/ReadMore'
 import { socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock, Plus, Save, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
@@ -25,8 +25,16 @@ interface Me {
 
 const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); return l.length ? l : [''] }
 
+/** A página do perfil tem um único botão Salvar: cada bloco registra aqui a sua função de salvar (devolve false se algo impede). */
+export type SaveBinder = (fn: (() => Promise<boolean | void>) | null) => void
+function useBindSave(bind: SaveBinder | undefined, fn: () => Promise<boolean | void>) {
+  const ref = useRef(fn)
+  ref.current = fn
+  useEffect(() => { bind?.(() => ref.current()); return () => bind?.(null) }, [bind])
+}
+
 /** Dados cadastrais do próprio integrante: tudo editável, exceto a data de inscrição. Redes sociais: várias, uma por linha. */
-export function MyData({ memberId }: { memberId: string }) {
+export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const me = useQuery({
@@ -63,10 +71,15 @@ export function MyData({ memberId }: { memberId: string }) {
 
   const baseline = me.data ? JSON.stringify({ full_name: me.data.full_name, email: me.data.email ?? '', birth_date: me.data.birth_date ?? '', display_name: me.data.display_name ?? '', phone: me.data.phone ? maskPhone(me.data.phone) : '', socials: toList(me.data.social_handle), affective_relation: me.data.affective_relation ?? '', played_other_blocks: me.data.played_other_blocks, other_blocks: me.data.other_blocks ?? '' }) : ''
   useUnsaved(!!me.data && JSON.stringify(f) !== baseline, () => save.mutateAsync())
-  if (me.isLoading || !me.data) return <Skeleton className="h-40" />
-  const d = me.data
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
+  useBindSave(bind, async () => {
+    if (!me.data || JSON.stringify(f) === baseline) return
+    if (!requireFields([['Telefone válido (DDD + número)', phoneOk]])) return false
+    await save.mutateAsync()
+  })
+  if (me.isLoading || !me.data) return <Skeleton className="h-40" />
+  const d = me.data
   return (
     <Card className="space-y-3 p-4">
       <h3>Meus dados</h3>
@@ -94,7 +107,7 @@ export function MyData({ memberId }: { memberId: string }) {
           <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.played_other_blocks} onChange={(e) => setF({ ...f, played_other_blocks: e.target.checked })} /> Toco ou já toquei com outros blocos</label>
         {f.played_other_blocks && <div className="space-y-1.5"><Label htmlFor="my-other">Quais blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>}
-        <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>
+        {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
       </form>
     </Card>
   )
@@ -111,7 +124,7 @@ const tri = (v: boolean | null) => (v === null ? '' : v ? 'yes' : 'no')
 const fromTri = (v: string) => (v === '' ? null : v === 'yes')
 
 /** Dados pessoais sensíveis (LGPD): opcionais; só o titular e a Direção veem; nunca em listas, chamadas, financeiro ou painéis. */
-export function MySensitiveData({ memberId, admin = false, readOnly = false }: { memberId: string; /** Só leitura: os campos ficam travados até a pessoa clicar no lápis de editar. */ readOnly?: boolean; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
+export function MySensitiveData({ memberId, admin = false, readOnly = false, bind }: { memberId: string; /** Sem botão próprio de salvar: quem salva é o botão único da página. */ bind?: SaveBinder; /** Só leitura: os campos ficam travados até a pessoa clicar no lápis de editar. */ readOnly?: boolean; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
   const orgId = useOrgId()
   useEffect(() => { if (admin) void supabase.rpc('log_sensitive_access', { p_member: memberId }) }, [admin, memberId])
   const { membership } = useOrganization()
@@ -154,6 +167,11 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false }: {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const sensBaseline = JSON.stringify({ gender: row.data?.gender ?? '', is_trans: tri(row.data?.is_trans ?? null), race_color: row.data?.race_color ?? '', is_pcd: tri(row.data?.is_pcd ?? null), pcd_description: row.data?.pcd_description ?? '' })
+  useBindSave(bind, async () => {
+    if (!row.isSuccess || JSON.stringify(f) === sensBaseline) return
+    await save.mutateAsync(false)
+  })
   const Wrap = admin ? 'div' : Card
   return (
     <Wrap className={admin ? 'space-y-3' : 'space-y-3 p-4'}>
@@ -181,7 +199,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false }: {
               {f.is_pcd === 'yes' && <div className="space-y-1.5"><Label htmlFor="s-pcd-d">Qual?</Label><Input id="s-pcd-d" value={f.pcd_description} onChange={(e) => setF({ ...f, pcd_description: e.target.value })} /></div>}
               </fieldset>
               {!readOnly && <ButtonRow>
-                <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>
+                {!bind && <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>}
                 <Button type="button" variant="ghost" className="text-destructive" disabled={save.isPending}
                   onClick={async () => { if (await confirmBox(admin ? 'Apagar todos os dados sensíveis desta pessoa?' : 'Apagar todos os seus dados sensíveis? Você poderá preenchê-los de novo quando quiser.')) { setF({ gender: '', is_trans: '', race_color: '', is_pcd: '', pcd_description: '' }); save.mutate(true) } }}>
                   {admin ? 'Apagar dados sensíveis' : 'Apagar meus dados sensíveis'}
