@@ -16,6 +16,7 @@ import { usePermission } from '@/core/permissions'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { PAY_STATUS_CLASS, PAY_STATUS_LABEL, type StaffPayment } from '@/modules/finance/service'
 import {
   CHARGE_STATUS_CLASS, CHARGE_STATUS_LABEL, competenceOf, generateCharges, getSummary, listAllCharges, listMyCharges, overdueWhatsapp,
   type Charge, type ChargeStatus,
@@ -314,12 +315,30 @@ export function MyBilling({ embedded = false }: { /** Dentro de outra página (F
   const today = todayIso(membership?.timezone)
   // Só as mensalidades do ciclo escolhido no menu de ciclo (competência dentro das datas do ciclo).
   const { cycle } = useSelectedCycle()
+  // Quem tem atividade remunerada recebe do bloco em vez de pagar mensalidade: a página vira "Meus pagamentos".
+  const orgId = membership?.organization_id
+  const paid = useQuery({
+    queryKey: ['my-payments-page', orgId, memberId], enabled: Boolean(memberId),
+    queryFn: async () => {
+      const [pay, part] = await Promise.all([
+        supabase.from('staff_payments').select('id, competence, amount, status, due_on, paid_on, payment_method, distribution_destinations(name)').eq('member_id', memberId).neq('status', 'cancelled').order('competence', { ascending: false }).limit(60),
+        supabase.rpc('my_participation', { p_member: memberId }),
+      ])
+      if (pay.error) throw pay.error
+      return { payments: (pay.data ?? []) as unknown as StaffPayment[], remunerated: ((part.data as { paid?: unknown[] } | null)?.paid?.length ?? 0) > 0 || (pay.data ?? []).length > 0 }
+    },
+  })
+  const remunerated = !!paid.data?.remunerated
+  const inCycle = (d: string) => !cycle || (d.slice(0, 7) >= cycle.starts_on.slice(0, 7) && d.slice(0, 7) <= cycle.ends_on.slice(0, 7))
+  const myPayments = (paid.data?.payments ?? []).filter((x) => inCycle(x.competence))
   const shown = (data ?? []).filter((c) => !cycle || (c.competence.slice(0, 7) >= cycle.starts_on.slice(0, 7) && c.competence.slice(0, 7) <= cycle.ends_on.slice(0, 7)))
   return (
     <div className="space-y-4">
-      {embedded ? <h2>Minhas mensalidades</h2> : <h1>Minhas mensalidades</h1>}
-      {isLoading && <Skeleton className="h-24" />}
-      {data && shown.length === 0 && <EmptyState>{data.length === 0 ? 'Você não possui mensalidades. Se isso estiver errado, fale com a direção.' : `Sem mensalidades em ${cycle?.name ?? 'este ciclo'}.`}</EmptyState>}
+      {embedded ? <h2>{remunerated ? 'Meus pagamentos' : 'Minhas mensalidades'}</h2> : <h1>{remunerated ? 'Meus pagamentos' : 'Minhas mensalidades'}</h1>}
+      {remunerated && (paid.data?.payments.length === 0 || myPayments.length === 0) && <EmptyState>{paid.data?.payments.length === 0 ? 'Nenhum pagamento registrado ainda.' : `Sem pagamentos em ${cycle?.name ?? 'este ciclo'}.`}</EmptyState>}
+      {remunerated && myPayments.length > 0 && (<div className="grid gap-2"><ProgressiveList items={myPayments} step={5} resetKey={cycle?.id} render={(x) => (<Card key={x.id} className="flex items-center justify-between gap-3 p-3"><div><p className="font-display text-lg font-bold">{formatCompetence(x.competence)}</p><p className="text-muted-foreground">{x.distribution_destinations?.name ? `${x.distribution_destinations.name} · ` : ''}{x.status === 'paid' ? `Pago em ${formatDate(x.paid_on)}` : x.due_on ? `Previsto ${formatDate(x.due_on)}` : 'Sem data prevista'}</p></div><div className="flex flex-col items-end gap-1"><span className="text-lg font-semibold">{formatCurrency(Number(x.amount))}</span><Badge className={PAY_STATUS_CLASS[x.status]}>{PAY_STATUS_LABEL[x.status]}</Badge></div></Card>)} /></div>)}
+      {(isLoading || paid.isLoading) && <Skeleton className="h-24" />}
+      {data && !paid.isLoading && !(remunerated && data.length === 0) && shown.length === 0 && <EmptyState>{data.length === 0 ? 'Você não possui mensalidades. Se isso estiver errado, fale com a direção.' : `Sem mensalidades em ${cycle?.name ?? 'este ciclo'}.`}</EmptyState>}
       <div className="grid gap-2">
         <ProgressiveList items={shown} step={5} resetKey={cycle?.id} render={(c) => {
           const overdue = c.status === 'pending' && c.due_on < today
