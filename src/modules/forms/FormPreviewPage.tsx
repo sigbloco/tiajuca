@@ -27,13 +27,17 @@ function useMemberPrefill(memberId: string | undefined) {
       const [m, s, l] = await Promise.all([
         supabase.from('members').select('full_name, display_name, email, phone, social_handle, birth_date, affective_relation, other_blocks').eq('id', memberId!).maybeSingle(),
         supabase.from('member_sensitive_data').select('gender, is_trans, race_color, is_pcd, pcd_description').eq('member_id', memberId!).maybeSingle(),
-        supabase.from('member_artistic_links').select('instrument_id, function_id, skill_level_id, is_primary').eq('member_id', memberId!).is('ended_at', null).order('is_primary', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('member_artistic_links').select('instrument_id, function_id, skill_level_id, is_primary').eq('member_id', memberId!).is('ended_at', null).order('is_primary', { ascending: false }),
       ])
       for (const r of [m, s, l]) if (r.error) throw r.error
       const by: Record<string, Raw> = {}
       for (const [k, v] of Object.entries(m.data ?? {})) by[`member.${k}`] = v as Raw
       for (const [k, v] of Object.entries(s.data ?? {})) by[`sensitive.${k}`] = v as Raw
-      by['link.instrument'] = l.data?.instrument_id; by['link.function'] = l.data?.function_id; by['link.skill_level'] = l.data?.skill_level_id
+      // Instrumento e categoria são vínculos separados (uma linha cada): pega o primeiro de cada tipo.
+      const rows = l.data ?? []
+      const inst = rows.find((r) => r.instrument_id)
+      by['link.instrument'] = inst?.instrument_id; by['link.function'] = rows.find((r) => r.function_id)?.function_id; by['link.skill_level'] = (inst ?? rows.find((r) => r.skill_level_id))?.skill_level_id
+      if (!by['link.skill_level']) by['link.skill_level'] = rows.find((r) => r.skill_level_id)?.skill_level_id
       return by
     },
   })
