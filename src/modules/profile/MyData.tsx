@@ -34,6 +34,14 @@ function useBindSave(bind: SaveBinder | undefined, fn: () => Promise<boolean | v
   useEffect(() => { bind?.(() => ref.current()); return () => bind?.(null) }, [bind])
 }
 
+const NOT_APPLICABLE = 'Não se aplica'
+const isNA = (v: string) => v.trim().toLowerCase() === 'não se aplica'
+/** Botão que preenche "Não se aplica" (campo opcional respondido, some do aviso de perfil incompleto). */
+function NotApplicable({ value, onSet }: { value: string; onSet: (v: string) => void }) {
+  if (value.trim() !== '') return null
+  return <button type="button" className="text-xs font-semibold text-primary underline" onClick={() => onSet(NOT_APPLICABLE)}>Não se aplica</button>
+}
+
 const NL = String.fromCharCode(10)
 
 /** Perfil do bloco: cada rede social é uma rede (menu) + o usuário; o link é montado sozinho. */
@@ -77,7 +85,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
         p_patch: part === 'bloco'
           ? { email: f.email, phone: f.phone.replace(/[^0-9]/g, ''), social_handle: urlsOf(rows).join(NL) }
           : part === 'other'
-          ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '', played_instrument: f.played_instrument }
+          ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '' && !isNA(f.other_blocks), played_instrument: f.played_instrument }
           : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: urlsOf(rows).join(NL) },
       })
       if (error) throw error
@@ -127,10 +135,10 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     return (
       <Card className="space-y-3 p-4">
         <h3>Outras informações</h3>
-        <div className="space-y-1.5"><Label htmlFor="my-instr">Toca ou já tocou algum instrumento?</Label><Input id="my-instr" value={f.played_instrument} onChange={(e) => setF({ ...f, played_instrument: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="my-other">Toca ou já tocou com outros blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="my-instr">Toca ou já tocou algum instrumento?</Label><Input id="my-instr" value={f.played_instrument} onChange={(e) => setF({ ...f, played_instrument: e.target.value })} /><NotApplicable value={f.played_instrument} onSet={(v) => setF({ ...f, played_instrument: v })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="my-other">Toca ou já tocou com outros blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /><NotApplicable value={f.other_blocks} onSet={(v) => setF({ ...f, other_blocks: v })} /></div>
         <div className="space-y-1.5"><Label htmlFor="my-aff">Qual é a sua relação com a Grande Tijuca?</Label>
-          <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
+          <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /><NotApplicable value={f.affective_relation} onSet={(v) => setF({ ...f, affective_relation: v })} /></div>
       </Card>
     )
   }

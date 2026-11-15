@@ -15,3 +15,7 @@ describe('participationLine', () => {
   it('vazio', () => expect(participationLine(base)).toBe(''))
   it('gênero', () => { expect(genderOf('feminino')).toBe('f'); expect(genderOf('Mulher')).toBe('f'); expect(genderOf('masculino')).toBe('m'); expect(genderOf('nao_binario')).toBeNull(); expect(genderOf(null)).toBeNull() })
 })
+
+describe('participationLine: regência', () => {
+  it('instrumento, regente e diretor', () => expect(participationLine({ blocName: 'Tia Juca', gender: 'm', artistic: [{ name: 'Sax Tenor', section: 'Sopro' }], staff: [{ kind: 'regente', instrument: null, section: 'Sopro' }], functions: ['Direção'] })).toBe('Sax Tenor no sopro da Tia Juca, regente no sopro e diretor'))
+})

@@ -77,9 +77,9 @@ export function participationLine({ blocName, gender, artistic, staff, functions
   }
   if (phrases.length === 0) return ''
 
-  // "da Tia Juca" fecha o último trecho que tem naipe; sem naipe nenhum, fecha o primeiro trecho.
+  // "da Tia Juca" fecha o primeiro trecho que tem naipe; sem naipe nenhum, fecha o primeiro trecho.
   let at = -1
-  phrases.forEach((p, i) => { if (p.hasSection) at = i })
+  phrases.forEach((p, i) => { if (p.hasSection && at < 0) at = i })
   if (at < 0) at = 0
   const done = phrases.map((p, i) => (i === at ? `${p.text} da ${blocName}` : p.text))
   const joined = done.length > 1 ? `${done.slice(0, -1).join(', ')} e ${done[done.length - 1]}` : done[0]
