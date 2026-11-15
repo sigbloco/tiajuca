@@ -2,8 +2,8 @@ import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, CopyPlus, Plus, Trash2 } from 'lucide-react'
-import { SettingsButton } from '@/components/shared/SettingsButton'
+import { Copy, CopyPlus, Plus, Settings, Trash2 } from 'lucide-react'
+import { LabelFitRow } from '@/components/shared/LabelFitRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { notifyChange } from '@/core/undo'
@@ -89,16 +89,16 @@ export function FormsPage() {
   const trashed = (data ?? []).filter((f) => f.status === 'archived')
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <h1>Formulários</h1>
+          <h1 className="whitespace-nowrap">Formulários</h1>
           <TrashDrawer iconOnly entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: `${f.form_submissions?.[0]?.count ?? 0} resposta(s)` }))}
             onRestore={(id) => setStatus.mutate({ id, status: 'draft', prev: 'draft' })} onPurge={(id) => purge.mutate(id)} />
         </div>
-        <div className="flex items-center gap-2">
-          <SettingsButton to="configuracoes" />
-          <Button variant="add" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Novo formulário</Button>
-        </div>
+        <LabelFitRow>
+          <Button asChild variant="outline" aria-label="Configurações" title="Configurações"><Link to="configuracoes"><Settings className="h-4 w-4 shrink-0" /><span className="fit-label">Configurações</span></Link></Button>
+          <Button variant="add" aria-label="Novo formulário" title="Novo formulário" onClick={() => setSheet(true)}><Plus className="h-4 w-4 shrink-0" /><span className="fit-label">Novo formulário</span></Button>
+        </LabelFitRow>
       </div>
       {isLoading && <Skeleton className="h-24" />}
       {data && live.length === 0 && <EmptyState>Nenhum formulário ainda.</EmptyState>}
@@ -110,7 +110,7 @@ export function FormsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Link to={`/${membership?.slug}/formularios/${f.id}`} className="min-w-0 break-words font-display text-lg font-bold">{f.title}</Link>
+                    <Link to={`/${membership?.slug}/formularios/${f.id}`} className="min-w-0 break-words font-display text-lg font-bold leading-tight">{f.title}</Link>
                     <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`Duplicar ${f.title}`} title="Duplicar" disabled={duplicate.isPending} onClick={() => duplicate.mutate(f.id)}><CopyPlus className="h-4 w-4" /></Button>
                   </div>
                   <div className="mt-1 flex items-center gap-2">

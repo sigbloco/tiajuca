@@ -30,6 +30,13 @@ export default {
         display: ['"Baloo 2 Variable"', 'system-ui', 'sans-serif'],
         sans: ['"Plus Jakarta Sans Variable"', 'system-ui', 'sans-serif'],
       },
+      // Entrelinha mais justa nos tamanhos de título (o padrão do Tailwind deixa títulos de duas linhas muito espaçados).
+      fontSize: {
+        lg: ['1.125rem', { lineHeight: '1.3rem' }],
+        xl: ['1.25rem', { lineHeight: '1.4rem' }],
+        '2xl': ['1.5rem', { lineHeight: '1.65rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2rem' }],
+      },
       boxShadow: { card: '0 1px 2px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.04)' },
     },
   },

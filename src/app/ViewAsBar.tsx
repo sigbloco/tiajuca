@@ -92,13 +92,14 @@ export function ViewAsBar() {
     const catOf = new Map<string, string>()
     for (const c of cats.data ?? []) if (!catOf.has(c.member_id)) catOf.set(c.member_id, c.category_name)
     const others = rows.filter((r) => r.id !== realMembership?.member_id && !rolesOf(r).has('titular'))
+    const activeOthers = others.filter((r) => !isInactive(r.id))
     const isStaff = (r: Row) => rolesOf(r).has('professor') || rolesOf(r).has('monitor')
     const person = (r: Row, extra?: string): Person => ({ id: r.id, name: nameOf(r), label: extra ? `${nameOf(r)} · ${extra}` : nameOf(r) })
-    const staffOf = (kind: 'professor' | 'monitor') => others
+    const staffOf = (kind: 'professor' | 'monitor') => activeOthers
       .filter((r) => rolesOf(r).has(kind) || (staff.data ?? []).some((a) => a.member_id === r.id && a.staff_kind === kind))
       .map((r) => person(r, sectionsOf(r.id, kind).join(', ')))
     const out: Record<CatKey, Person[]> = {
-      direcao: others.filter((r) => rolesOf(r).has('direcao')).map((r) => person(r)),
+      direcao: activeOthers.filter((r) => rolesOf(r).has('direcao')).map((r) => person(r)),
       professor: staffOf('professor'),
       monitor: staffOf('monitor'),
       ativo: others.filter((r) => !isInactive(r.id) && !isStaff(r) && !rolesOf(r).has('direcao')).map((r) => person(r, catOf.get(r.id))),

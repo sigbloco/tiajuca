@@ -16,7 +16,7 @@ function ListGroup({ table, title, singular, hint, open, onToggle, canEdit }: (t
   const items = useCatalog(table)
   return (
     <Collapsible open={open} onToggle={onToggle} title={title} count={items.data?.filter((i) => i.is_active).length}>
-      <CatalogEditor table={table} title="" singular={singular} canEdit={canEdit} hint={hint} noFilter />
+      <CatalogEditor table={table} title="" singular={singular} canEdit={canEdit} hint={hint} noFilter trashMode />
     </Collapsible>
   )
 }
