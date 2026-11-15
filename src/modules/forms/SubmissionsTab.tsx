@@ -1,3 +1,4 @@
+import { RichTextarea } from '@/components/shared/RichText'
 import { PageLink } from '@/components/shared/PageLink'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { ProgressiveList } from '@/components/shared/LoadMore'
@@ -122,7 +123,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
           {rejecting && (
             <div className="space-y-2 rounded-lg border border-border p-3">
               <Label htmlFor="rej-msg">{sub.applicant_email ? 'Mensagem enviada por e-mail a quem se inscreveu' : 'Esta inscrição não tem e-mail: nada será enviado'}</Label>
-              <textarea id="rej-msg" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={rejMsg} onChange={(e) => setRejMsg(e.target.value)} />
+              <RichTextarea id="rej-msg" rows={5} value={rejMsg} onChange={setRejMsg} />
               <Button className="w-full" variant="outline" disabled={reject.isPending} onClick={() => reject.mutate()}>{sub.applicant_email ? 'Rejeitar e enviar e-mail' : 'Rejeitar'}</Button>
             </div>
           )}

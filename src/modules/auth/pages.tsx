@@ -1,3 +1,4 @@
+import { RichText } from '@/components/shared/RichText'
 import { useMutation } from '@tanstack/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
@@ -70,7 +71,7 @@ export function NoOrganizationPage() {
   })
   if (status.data?.status === 'pending') {
     return (
-      <AuthLayout title="Inscrição em avaliação" subtitle={status.data.message ?? 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.'}>
+      <AuthLayout title="Inscrição em avaliação" subtitle={<RichText text={status.data.message ?? 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.'} />}>
         <Button variant="ghost" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
       </AuthLayout>
     )

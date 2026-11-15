@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Mail, Pencil, RotateCcw, Send } from 'lucide-react'
+import { ClipboardList, Mail, Pencil, RotateCcw, Send } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { confirmBox } from '@/components/shared/DialogHost'
@@ -12,7 +12,6 @@ import { supabase } from '@/core/supabase'
 import { useForm } from './service'
 import { loadSendDefaults } from './SendDefaultsPage'
 
-const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 
 /** Os cinco textos da seção de Envio (os do formulário e os padrão das Configurações usam os mesmos campos). */
 export interface SendTexts { privacy: string; send: string; confirmation: string; review: string; approved: string; rejected: string; waitlist: string }
@@ -30,28 +29,44 @@ export const sendColumns = (f: SendTexts) => ({
   review_message: f.review.trim() || SEND_FALLBACK.review, approved_email_text: f.approved.trim() || SEND_FALLBACK.approved, rejected_email_text: f.rejected.trim() || SEND_FALLBACK.rejected, waitlist_email_text: f.waitlist.trim() || SEND_FALLBACK.waitlist,
 })
 
-export function SendFields({ f, setF, prefix, onRestorePrivacy }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; /** Só no formulário: recoloca o texto de privacidade padrão das Configurações. */ onRestorePrivacy?: () => void }) {
+export function SendFields({ f, setF, prefix, part, onRestorePrivacy }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; /** Qual metade mostrar: o que faz parte do formulário ou o que vira e-mail. */ part: SendPart; /** Só no formulário: recoloca o texto de privacidade padrão das Configurações. */ onRestorePrivacy?: () => void }) {
   return (
     <>
+      {part === 'form' && <>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-send`}>Antes de enviar (opcional, aparece na última etapa)</Label>
         <RichTextarea id={`${prefix}-send`} rows={3} value={f.send} onChange={(v) => setF({ ...f, send: v })} /></div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-priv`}>Texto de privacidade (LGPD)</Label>
         <RichTextarea id={`${prefix}-priv`} rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} />
         {onRestorePrivacy && <Button type="button" variant="outline" className="w-full" onClick={onRestorePrivacy}><RotateCcw className="h-4 w-4" /> Restaurar texto de privacidade padrão</Button>}</div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-conf`}>Depois de enviar (mensagem na tela)</Label>
-        <Textarea id={`${prefix}-conf`} rows={2} value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
+        <RichTextarea id={`${prefix}-conf`} rows={2} value={f.confirmation} onChange={(v) => setF({ ...f, confirmation: v })} /></div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-rev`}>Enquanto a Direção avalia (tela de quem entrou com o Google)</Label>
-        <Textarea id={`${prefix}-rev`} rows={3} value={f.review} onChange={(e) => setF({ ...f, review: e.target.value })} /></div>
+        <RichTextarea id={`${prefix}-rev`} rows={3} value={f.review} onChange={(v) => setF({ ...f, review: v })} /></div>
+      </>}
+      {part === 'email' && <>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-app`}><Mail className="mr-1 inline h-4 w-4" />E-mail de aprovação</Label>
-        <Textarea id={`${prefix}-app`} rows={4} value={f.approved} onChange={(e) => setF({ ...f, approved: e.target.value })} />
+        <RichTextarea id={`${prefix}-app`} rows={4} value={f.approved} onChange={(v) => setF({ ...f, approved: v })} />
         <p className="text-xs text-muted-foreground">Confirmação de que a inscrição foi aprovada. Não libera acesso por si só: o acesso segue por convite.</p></div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-rej`}><Mail className="mr-1 inline h-4 w-4" />Texto-base da rejeição</Label>
-        <Textarea id={`${prefix}-rej`} rows={4} value={f.rejected} onChange={(e) => setF({ ...f, rejected: e.target.value })} />
+        <RichTextarea id={`${prefix}-rej`} rows={4} value={f.rejected} onChange={(v) => setF({ ...f, rejected: v })} />
         <p className="text-xs text-muted-foreground">Ao rejeitar, a Direção pode editar esta mensagem antes de enviar o e-mail.</p></div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-wait`}><Mail className="mr-1 inline h-4 w-4" />E-mail de lista de espera</Label>
-        <Textarea id={`${prefix}-wait`} rows={4} value={f.waitlist} onChange={(e) => setF({ ...f, waitlist: e.target.value })} />
+        <RichTextarea id={`${prefix}-wait`} rows={4} value={f.waitlist} onChange={(v) => setF({ ...f, waitlist: v })} />
         <p className="text-xs text-muted-foreground">Enviado quando a Direção aprova a inscrição na lista de espera (vaga esgotada). Sem posição na fila: a Direção escolhe quem entra por critérios próprios.</p></div>
+      </>}
     </>
+  )
+}
+
+export type SendPart = 'form' | 'email'
+/** Subpáginas dos textos de envio: o que faz parte do formulário e o que é e-mail. */
+export function SendPartTabs({ part, setPart }: { part: SendPart; setPart: (p: SendPart) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Textos do envio">
+      {([['form', 'Formulário', ClipboardList], ['email', 'E-mail', Mail]] as const).map(([k, label, Icon]) => (
+        <Button key={k} type="button" role="tab" aria-selected={part === k} variant={part === k ? 'default' : 'outline'} onClick={() => setPart(k)}><Icon className="h-4 w-4" /> {label}</Button>
+      ))}
+    </div>
   )
 }
 
@@ -61,6 +76,7 @@ export function SendSection({ formId }: { formId: string }) {
   const qc = useQueryClient()
   const { data: form } = useForm(formId)
   const [open, setOpen] = useState(false)
+  const [part, setPart] = useState<SendPart>('form')
   const [f, setF] = useState<SendTexts>({ privacy: '', send: '', confirmation: '', review: '', approved: '', rejected: '', waitlist: '' })
   const start = () => {
     if (!form) return
@@ -90,7 +106,8 @@ export function SendSection({ formId }: { formId: string }) {
         {open && (
           <SheetContent title="Envio" description="Textos fixos do fim do formulário. Valem na hora, sem republicar.">
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
-              <SendFields f={f} setF={setF} prefix="sd" onRestorePrivacy={async () => {
+              <SendPartTabs part={part} setPart={setPart} />
+              <SendFields f={f} setF={setF} prefix="sd" part={part} onRestorePrivacy={async () => {
                 if (f.privacy.trim() && !(await confirmBox('Substituir o texto de privacidade pelo padrão das Configurações?'))) return
                 try { const d = await loadSendDefaults(orgId); setF((x) => ({ ...x, privacy: d?.privacy_text?.trim() || SEND_FALLBACK.privacy })); toast.success('Texto padrão colocado. Salve para aplicar.') } catch (e) { toast.error(friendlyError(e)) }
               }} />

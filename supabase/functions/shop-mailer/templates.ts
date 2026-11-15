@@ -168,6 +168,46 @@ export interface FormMailContext {
   settings: MailContext['settings']
 }
 
+// Texto com formatação simples (o mesmo do editor): **negrito**, *itálico*, [texto](https://link) e linhas com "- " viram lista.
+// Tudo é escapado: nada do que a Direção escreve vira HTML solto.
+const INLINE = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g
+
+function inlineHtml(text: string): string {
+  let out = ''
+  let last = 0
+  for (const m of text.matchAll(INLINE)) {
+    const at = m.index ?? 0
+    out += escapeHtml(text.slice(last, at))
+    if (m[1] !== undefined) out += `<strong>${inlineHtml(m[1])}</strong>`
+    else if (m[2] !== undefined) out += `<em>${inlineHtml(m[2])}</em>`
+    else out += `<a href="${escapeHtml(m[4])}" style="color:#E93D2B">${inlineHtml(m[3])}</a>`
+    last = at + m[0].length
+  }
+  return out + escapeHtml(text.slice(last))
+}
+
+function inlineText(text: string): string {
+  return text.replace(INLINE, (_m, b, i, label, href) => (b !== undefined ? inlineText(b) : i !== undefined ? inlineText(i) : `${inlineText(label)} (${href})`))
+}
+
+export function richSections(text: string): Section[] {
+  const out: Section[] = []
+  let items: string[] = []
+  const flush = () => {
+    if (!items.length) return
+    out.push({ html: `<ul style="margin:0 0 12px;padding-left:18px">${items.map((x) => `<li>${inlineHtml(x)}</li>`).join('')}</ul>`, text: items.map((x) => `- ${inlineText(x)}`).join('\n') })
+    items = []
+  }
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const li = /^\s*[-•]\s+(.*)$/.exec(line)
+    if (li) { items.push(li[1]); continue }
+    flush()
+    if (line.trim()) out.push({ html: `<p style="margin:0 0 12px">${inlineHtml(line.trim())}</p>`, text: inlineText(line.trim()) })
+  }
+  flush()
+  return out
+}
+
 export function buildFormEmail(c: FormMailContext): BuiltEmail {
   const s = c.settings
   const contacts: string[] = []
@@ -180,10 +220,9 @@ export function buildFormEmail(c: FormMailContext): BuiltEmail {
   const approved = c.template === 'submission_approved'
   const waitlist = c.template === 'submission_waitlist'
   const fallback = waitlist ? `Recebemos a sua inscrição no ${c.org.name} e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a Direção avisa se uma vaga abrir.` : approved ? `Sua inscrição no ${c.org.name} foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.` : 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.'
-  const paragraphs = (c.message?.trim() || fallback).split(/\n+/).map((l) => l.trim()).filter(Boolean)
   const body: Section[] = [
     p(`Olá${c.name ? `, ${c.name}` : ''}!`),
-    ...paragraphs.map((l) => p(l)),
+    ...richSections(c.message?.trim() || fallback),
     ...(contacts.length ? [p('Qualquer dúvida, fale com a gente pelos contatos abaixo.')] : []),
     footer,
   ]
