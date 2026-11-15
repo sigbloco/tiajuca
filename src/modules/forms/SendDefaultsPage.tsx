@@ -12,6 +12,9 @@ import { supabase } from '@/core/supabase'
 import { FormSettingsTabs } from './FormSettingsTabs'
 import { SEND_FALLBACK, SendFields, sendColumns, type SendTexts } from './SendSection'
 
+/** Texto de privacidade de fábrica, usado quando ainda não há um padrão salvo em Configurações. */
+export const PRIVACY_FALLBACK = 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à Direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.'
+
 /** Lê os textos padrão de Envio da organização (ou null se ainda não houver). Usado ao criar um formulário novo. */
 export async function loadSendDefaults(orgId: string) {
   const { data, error } = await supabase.from('form_send_defaults').select('privacy_text, send_text, confirmation_message, review_message, approved_email_text, rejected_email_text, waitlist_email_text').eq('organization_id', orgId).maybeSingle()

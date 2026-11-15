@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Mail, Pencil, Send } from 'lucide-react'
+import { Mail, Pencil, RotateCcw, Send } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { confirmBox } from '@/components/shared/DialogHost'
 import { RichTextarea } from '@/components/shared/RichText'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { Badge, Button, Card, Label, Sheet, SheetContent } from '@/components/ui/primitives'
@@ -9,6 +10,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { useForm } from './service'
+import { loadSendDefaults } from './SendDefaultsPage'
 
 const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 
@@ -85,6 +87,14 @@ export function SendSection({ formId }: { formId: string }) {
           <SheetContent title="Envio" description="Textos fixos do fim do formulário. Valem na hora, sem republicar.">
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
               <SendFields f={f} setF={setF} prefix="sd" />
+              <Button type="button" variant="outline" onClick={async () => {
+                if (!(await confirmBox('Substituir todos os textos do envio pelos padrões das Configurações?'))) return
+                try {
+                  const d = await loadSendDefaults(orgId)
+                  setF({ send: d?.send_text ?? '', confirmation: d?.confirmation_message ?? SEND_FALLBACK.confirmation, review: d?.review_message ?? SEND_FALLBACK.review, approved: d?.approved_email_text ?? SEND_FALLBACK.approved, rejected: d?.rejected_email_text ?? SEND_FALLBACK.rejected, waitlist: d?.waitlist_email_text ?? SEND_FALLBACK.waitlist })
+                  toast.success('Textos padrão colocados. Salve para aplicar.')
+                } catch (e) { toast.error(friendlyError(e)) }
+              }}><RotateCcw className="h-4 w-4" /> Restaurar textos padrão</Button>
               <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar textos do envio" />
             </form>
           </SheetContent>
