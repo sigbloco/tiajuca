@@ -161,6 +161,12 @@ export function SiteSettings() {
             <p className="text-xs text-muted-foreground">SVG, PNG, JPG ou WebP, até 5 MB. Aparece em círculo.</p>
           </div>
         </div>
+        <div className="space-y-1.5"><label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="h-5 w-5" checked={f.rays_outline ?? true} onChange={(e) => setF({ ...f, rays_outline: e.target.checked })} /> Contorno na logo</label>
+          {(f.rays_outline ?? true) && (
+            <div className="flex items-center gap-2">
+              <input aria-label="Cor do contorno" type="color" className="h-10 w-14 cursor-pointer rounded border border-input bg-card" value={f.rays_outline_color || siteColors.secondary || '#ffed00'} onChange={(e) => setF({ ...f, rays_outline_color: e.target.value })} />
+              <Button type="button" variant="outline" size="sm" disabled={!f.rays_outline_color} onClick={() => setF({ ...f, rays_outline_color: null })}>Cor do site</Button>
+            </div>)}</div>
         <div className="space-y-1.5"><Label htmlFor="st-head">Título</Label>
           <Input id="st-head" placeholder={membership?.name ?? 'Nome do bloco'} value={f.headline ?? ''} onChange={(e) => setF({ ...f, headline: e.target.value })} />
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.hide_headline || !!f.show_rays} disabled={!!f.show_rays} onChange={(e) => setF({ ...f, hide_headline: e.target.checked })} /> Esconder o título na página{f.show_rays && <span className="text-muted-foreground"> (com raios, fica sempre escondido)</span>}</label>
@@ -195,12 +201,6 @@ export function SiteSettings() {
                 <input id="ry-c" type="color" className="h-10 w-14 cursor-pointer rounded border border-input bg-card" value={f.rays_color || siteColors.secondary || '#ffed00'} onChange={(e) => setF({ ...f, rays_color: e.target.value })} />
                 <Button type="button" variant="outline" size="sm" disabled={!f.rays_color} onClick={() => setF({ ...f, rays_color: null })}>Cor do site</Button>
               </div></div>
-            <div className="space-y-1"><label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="h-5 w-5" checked={f.rays_outline ?? true} onChange={(e) => setF({ ...f, rays_outline: e.target.checked })} /> Contorno na logo</label>
-              {(f.rays_outline ?? true) && (
-                <div className="flex items-center gap-2">
-                  <input aria-label="Cor do contorno" type="color" className="h-10 w-14 cursor-pointer rounded border border-input bg-card" value={f.rays_outline_color || siteColors.secondary || '#ffed00'} onChange={(e) => setF({ ...f, rays_outline_color: e.target.value })} />
-                  <Button type="button" variant="outline" size="sm" disabled={!f.rays_outline_color} onClick={() => setF({ ...f, rays_outline_color: null })}>Cor do site</Button>
-                </div>)}</div>
           </div>
         )}
       </Card>
