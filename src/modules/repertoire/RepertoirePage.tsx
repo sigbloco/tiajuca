@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
@@ -82,6 +83,7 @@ export function RepertoirePage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const purgeRep = usePurge('repertoires')
   const restoreRep = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('repertoires').update({ is_active: true }).eq('id', id); if (error) throw error },
     onSuccess: () => { toast.success('Repertório restaurado.'); qc.invalidateQueries({ queryKey: ['repertoires', orgId] }) },
@@ -95,7 +97,7 @@ export function RepertoirePage() {
         <ButtonRow>
           {canManage && (
             <TrashDrawer entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
-              onRestore={(id) => restoreRep.mutate(id)} />
+              onRestore={(id) => restoreRep.mutate(id)} onPurge={(id) => purgeRep.mutate(id)} />
           )}
           {canManage && <Button variant="add" onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
         </ButtonRow>

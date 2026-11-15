@@ -12,6 +12,13 @@ describe('variáveis nos textos', () => {
     expect(fillVars('Valor: {valor}', vars, { cat: 'c2' }).replace(/\s/g, ' ')).toContain('150,00')
     expect(fillVars('Valor: {valor}', vars, { cat: 'outra' })).toBe('Valor: sem contribuição')
   })
+  it('{valor:Categoria} usa o preço da categoria pelo nome ou pela chave', () => {
+    const v = { ...vars, categories: [{ name: 'Aluno', key: 'aluno', price: 50 }, { name: 'Músico convidado', key: 'musico', price: 35 }] }
+    expect(fillVars('Aluno: {valor:Aluno}', v).replace(/\s/g, ' ')).toContain('50,00')
+    expect(fillVars('{valor:músico CONVIDADO}', v).replace(/\s/g, ' ')).toContain('35,00')
+    expect(fillVars('{valor:musico}', v).replace(/\s/g, ' ')).toContain('35,00')
+    expect(fillVars('{valor:Inexistente}', v)).toBe('{valor:Inexistente}')
+  })
   it('sem valor, deixa a variável como está', () => {
     expect(fillVars('Pix: {chave_pix}', { whatsapp: null })).toBe('Pix: {chave_pix}')
     expect(fillVars('Valor: {valor}', { whatsapp: null }, {})).toBe('Valor: {valor}')

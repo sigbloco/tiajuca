@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -44,6 +45,7 @@ export function RepertoireDetailPage() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
+  const purgeSong = usePurge('songs')
   const restoreSong = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('songs').update({ is_active: true }).eq('id', id); if (error) throw error },
     onSuccess: () => { toast.success('Música restaurada.'); qc.invalidateQueries({ queryKey: ['songs', orgId, repertoireId] }) },
@@ -69,7 +71,7 @@ export function RepertoireDetailPage() {
       <ButtonRow>
         <Button variant="outline" disabled={!text} onClick={copy}><Share2 className="h-4 w-4" /> Copiar lista</Button>
         <Button variant="outline" disabled={!text} onClick={whatsapp}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
-        {canManage && <TrashDrawer entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} />}
+        {canManage && <TrashDrawer entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} onPurge={(id) => purgeSong.mutate(id)} />}
         {canManage && <Button variant="add" onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
       </ButtonRow>
 

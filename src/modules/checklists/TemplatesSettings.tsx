@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -37,6 +38,8 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
     },
   })
 
+  const purgeTemplate = usePurge('checklist_templates')
+  const purgeTask = usePurge('checklist_template_items')
   const addTemplate = useMutation({
     mutationFn: async () => { const { error } = await supabase.from('checklist_templates').insert({ organization_id: orgId, name: newTemplate.trim() }); if (error) throw error },
     onSuccess: () => { setNewTemplate(''); refresh() }, onError,
@@ -75,8 +78,8 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
         <h2>Modelos de checklist</h2>
         {canEdit && (
           <TrashDrawer groups={[
-            { label: 'Modelos', entries: (templates.data ?? []).filter((t) => !t.is_active).map((t) => ({ id: t.id, name: t.name })), onRestore: (id) => patchTemplate.mutate({ id, patch: { is_active: true } }) },
-            { label: 'Tarefas', entries: (items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.title, detail: templates.data?.find((t) => t.id === i.template_id)?.name })), onRestore: (id) => patchItem.mutate({ id, patch: { is_active: true } }) },
+            { label: 'Modelos', entries: (templates.data ?? []).filter((t) => !t.is_active).map((t) => ({ id: t.id, name: t.name })), onRestore: (id) => patchTemplate.mutate({ id, patch: { is_active: true } }), onPurge: (id) => purgeTemplate.mutate(id) },
+            { label: 'Tarefas', entries: (items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.title, detail: templates.data?.find((t) => t.id === i.template_id)?.name })), onRestore: (id) => patchItem.mutate({ id, patch: { is_active: true } }), onPurge: (id) => purgeTask.mutate(id) },
           ]} />
         )}
       </div>

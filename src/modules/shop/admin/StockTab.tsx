@@ -1,3 +1,4 @@
+import { usePurge } from '@/core/purge'
 import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -68,6 +69,7 @@ export function StockTab() {
     }
   }
 
+  const purge = usePurge('shop_stock_items')
   const setActive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateStockItem(id, { is_active: active }),
     onSuccess: (_, v) => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'stock'] }); toast.success(v.active ? 'Item restaurado.' : 'Item movido para a lixeira.') },
@@ -113,7 +115,7 @@ export function StockTab() {
         )
       })}
       <ShowMore hasMore={paged.hasMore} remaining={paged.remaining} onClick={paged.more} />
-      <TrashSection entries={(items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))} onRestore={(id) => setActive.mutate({ id, active: true })} />
+      <TrashSection entries={(items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))} onRestore={(id) => setActive.mutate({ id, active: true })} onPurge={(id) => purge.mutate(id)} />
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet === 'new' && <ItemSheet key="new" item={null} minStock={0} onClose={() => setSheet(null)} />}
         {current && <ItemSheet key={current.id} item={current} minStock={current.reserved} onClose={() => setSheet(null)} />}
