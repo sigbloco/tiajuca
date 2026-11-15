@@ -34,7 +34,7 @@ export interface PublicField {
 }
 
 export interface PublicFormPayload {
-  state: 'open' | 'not_open' | 'closed' | 'full' | 'not_found' | 'login_required' | 'not_member'
+  state: 'open' | 'not_open' | 'closed' | 'full' | 'not_found' | 'login_required' | 'not_member' | 'already'
   access?: 'public' | 'internal'
   /** Formulário interno: o integrante que entrou e o naipe dele (as seções por naipe usam isto). */ viewer?: { member_id: string; name: string; section_id: string | null } | null
   organization?: { name: string; short_name: string; logo_path: string | null; theme: Record<string, string> }
