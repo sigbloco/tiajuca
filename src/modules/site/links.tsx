@@ -11,8 +11,8 @@ const YoutubeIcon = (p: IconProps) => (<svg {...base(p)}><rect x="2.5" y="5.5" w
 const FacebookIcon = (p: IconProps) => (<svg {...base(p)}><circle cx="12" cy="12" r="9.5" /><path d="M13.5 20v-7h2.3l.4-2.6h-2.7V8.9c0-.8.3-1.3 1.4-1.3h1.4V5.3c-.3 0-1.1-.1-2-.1-2.1 0-3.5 1.3-3.5 3.6v1.6H8.5V13h2.3v7" /></svg>)
 const SpotifyIcon = (p: IconProps) => (<svg {...base(p)}><circle cx="12" cy="12" r="9.5" /><path d="M7 9.5c3.3-1 6.7-.7 10 .8M7.6 12.6c2.8-.8 5.6-.5 8.2.8M8.2 15.6c2.3-.6 4.5-.4 6.6.7" /></svg>)
 
-export type LinkKind = 'whatsapp' | 'email' | 'instagram' | 'youtube' | 'facebook' | 'tiktok' | 'spotify' | 'telefone' | 'site'
-export interface SiteLink { kind: LinkKind; label: string; value: string }
+export type LinkKind = 'whatsapp' | 'email' | 'instagram' | 'youtube' | 'facebook' | 'tiktok' | 'spotify' | 'telefone' | 'site' | 'x' | 'linkedin'
+export interface SiteLink { kind: LinkKind; label: string; value: string; /** Oculto no Site (o olho): continua no perfil do bloco. */ hidden?: boolean }
 export interface SiteVideo { url: string; title: string }
 
 export const LINK_KINDS: Record<LinkKind, { label: string; placeholder: string; icon: (c?: string) => ReactNode }> = {
@@ -24,6 +24,8 @@ export const LINK_KINDS: Record<LinkKind, { label: string; placeholder: string; 
   tiktok: { label: 'TikTok', placeholder: '@usuario', icon: (c) => <Music className={c} aria-hidden /> },
   spotify: { label: 'Spotify', placeholder: 'https://open.spotify.com/', icon: (c) => <SpotifyIcon className={c} /> },
   telefone: { label: 'Telefone', placeholder: '(21) 3333-3333', icon: (c) => <Phone className={c} aria-hidden /> },
+  x: { label: 'X (Twitter)', placeholder: 'https://x.com/usuario', icon: (c) => <Globe className={c} aria-hidden /> },
+  linkedin: { label: 'LinkedIn', placeholder: 'https://linkedin.com/in/usuario', icon: (c) => <Globe className={c} aria-hidden /> },
   site: { label: 'Site', placeholder: 'https://', icon: (c) => <Globe className={c} aria-hidden /> },
 }
 

@@ -36,8 +36,9 @@ export function networkUrl(network: string, user: string): string | null {
 }
 /** Separa um link guardado em rede + usuário (para reabrir o que já foi digitado). */
 export function splitNetwork(url: string): { network: string; user: string } {
-  const n = SOCIAL_NETWORKS.find((x) => url.toLowerCase().startsWith(x.base.toLowerCase()))
-  return n ? { network: n.key, user: url.slice(n.base.length) } : { network: 'instagram', user: url }
+  const clean = url.replace(/^(https?:\/\/)www\./i, '$1') // "https://www.youtube.com/@x" = "https://youtube.com/@x"
+  const n = SOCIAL_NETWORKS.find((x) => clean.toLowerCase().startsWith(x.base.toLowerCase()))
+  return n ? { network: n.key, user: clean.slice(n.base.length) } : { network: 'instagram', user: url }
 }
 
 /** Lê o que foi digitado ("Instagram, TikTok, x") e devolve as chaves das redes conhecidas, mais o que não foi reconhecido. */
