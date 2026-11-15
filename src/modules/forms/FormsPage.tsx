@@ -3,6 +3,7 @@ import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, CopyPlus, Plus, Trash2 } from 'lucide-react'
+import { SettingsButton } from '@/components/shared/SettingsButton'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { notifyChange } from '@/core/undo'
@@ -93,7 +94,10 @@ export function FormsPage() {
           <TrashDrawer iconOnly entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: `${f.form_submissions?.[0]?.count ?? 0} resposta(s)` }))}
             onRestore={(id) => setStatus.mutate({ id, status: 'draft', prev: 'draft' })} onPurge={(id) => purge.mutate(id)} />
         </div>
-        <Button variant="add" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Novo formulário</Button>
+        <div className="flex items-center gap-2">
+          <SettingsButton to="configuracoes" />
+          <Button variant="add" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Novo formulário</Button>
+        </div>
       </div>
       {isLoading && <Skeleton className="h-24" />}
       {data && live.length === 0 && <EmptyState>Nenhum formulário ainda.</EmptyState>}
