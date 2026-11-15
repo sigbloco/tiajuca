@@ -5,7 +5,7 @@ describe('páginas que não dependem do ciclo', () => {
   it('formulários, repertório e configurações valem para todos os ciclos', () => {
     expect(isCycleIndependent(['formularios'])).toBe(true)
     expect(isCycleIndependent(['formularios', 'configuracoes', 'listas'])).toBe(true)
-    expect(isCycleIndependent(['repertorio'])).toBe(true)
+    expect(isCycleIndependent(['repertorio'])).toBe(false)
     expect(isCycleIndependent(['eventos', 'configuracoes'])).toBe(true)
     expect(isCycleIndependent(['naipes', 'configuracoes'])).toBe(true)
   })

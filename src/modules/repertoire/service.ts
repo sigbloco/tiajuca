@@ -7,6 +7,7 @@ export interface Repertoire {
   description: string | null
   color: TypeColor
   sort_order: number
+  cycle_id: string | null
   is_active: boolean
   songs: { count: number }[]
 }
@@ -68,8 +69,10 @@ export function guessTarget(text: string, instruments: { id: string; name: strin
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
 export const ALLOWED_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'video/mp4']
 
-export async function listRepertoires(orgId: string) {
-  const { data, error } = await supabase.from('repertoires').select('*, songs(count)').eq('organization_id', orgId).eq('songs.is_active', true)
+export async function listRepertoires(orgId: string, cycleId?: string) {
+  let q = supabase.from('repertoires').select('*, songs(count)').eq('organization_id', orgId).eq('songs.is_active', true)
+  if (cycleId) q = q.eq('cycle_id', cycleId)
+  const { data, error } = await q
     .order('sort_order').order('name')
   if (error) throw error
   return (data ?? []) as unknown as Repertoire[]

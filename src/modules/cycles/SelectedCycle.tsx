@@ -34,35 +34,58 @@ const CYCLE_AREAS = new Set([
   'financeiro', 'equipe', 'valores', 'cobrancas', 'mensalidades', 'bolsas',
 ])
 
-/** Para quem não é da direção, o ciclo só pode ser trocado no Perfil e no Calendário. */
-const MEMBER_CYCLE_AREAS = new Set(['perfil', 'eventos'])
+/** Para quem não é da direção, o ciclo só pode ser trocado no Perfil, no Calendário e no Repertório. */
+const MEMBER_CYCLE_AREAS = new Set(['perfil', 'eventos', 'repertorio'])
 
-/** Ciclos em que o integrante participou (ativo no ciclo). Só é consultado para quem não é da direção. */
+/**
+ * Ciclos em que o integrante participou: esteve ativo, ou (mesmo inativo) tem alguma presença ou pagamento no ciclo, o que comprova a participação.
+ * Só é consultado para quem não é da direção.
+ */
 function useMyCycleIds(enabled: boolean): string[] | null {
   const { membership } = useOrganization()
   const statuses = useCycleStatuses()
-  const q = useQuery({
-    queryKey: ['my-cycle-ids', membership?.organization_id, membership?.member_id],
-    enabled: enabled && Boolean(membership?.member_id),
+  const cycles = useCycles()
+  const memberId = membership?.member_id
+  const on = enabled && Boolean(memberId)
+  const rows = useQuery({
+    queryKey: ['my-cycle-ids', 'rows', membership?.organization_id, memberId],
+    enabled: on,
     queryFn: async () => {
-      const { data, error } = await supabase.from('member_cycles').select('cycle_id, status_id').eq('member_id', membership!.member_id).limit(500)
+      const { data, error } = await supabase.from('member_cycles').select('cycle_id, status_id').eq('member_id', memberId!).limit(500)
       if (error) throw error
       return (data ?? []) as { cycle_id: string; status_id: string }[]
     },
   })
+  const proof = useQuery({
+    queryKey: ['my-cycle-ids', 'proof', membership?.organization_id, memberId],
+    enabled: on,
+    queryFn: async () => {
+      const [att, pay] = await Promise.all([
+        supabase.from('event_attendance').select('attendance_statuses!inner(counts_as_present), activities!inner(cycle_id)').eq('member_id', memberId!).eq('attendance_statuses.counts_as_present', true).limit(2000),
+        supabase.from('monthly_charges').select('competence').eq('member_id', memberId!).eq('status', 'paid').limit(500),
+      ])
+      if (att.error) throw att.error
+      if (pay.error) throw pay.error
+      const attCycles = (att.data ?? []).map((r) => (r as unknown as { activities: { cycle_id: string | null } }).activities?.cycle_id).filter(Boolean) as string[]
+      return { attCycles, competences: (pay.data ?? []).map((r) => r.competence as string) }
+    },
+  })
   if (!enabled) return null
-  if (!q.data || !statuses.data) return []
+  if (!rows.data || !statuses.data || !proof.data) return []
   const active = new Set(statuses.data.filter((s) => s.counts_as_active).map((s) => s.id))
-  return [...new Set(q.data.filter((r) => active.has(r.status_id)).map((r) => r.cycle_id))]
+  const ids = new Set<string>(rows.data.filter((r) => active.has(r.status_id)).map((r) => r.cycle_id))
+  proof.data.attCycles.forEach((id) => ids.add(id))
+  for (const c of cycles.data ?? []) if (proof.data.competences.some((d) => d >= c.starts_on && d <= c.ends_on)) ids.add(c.id)
+  return [...ids]
 }
 
 /**
  * Páginas dentro das áreas de ciclo que NÃO mudam com o ciclo: no lugar do menu aparece o aviso "Vale para todos os ciclos" (mesmo lugar, nada pula).
- * Formulários (lista, editor, configurações), Repertório, configurações do Calendário e nomes de naipes.
+ * Formulários (lista, editor, configurações), configurações do Calendário e nomes de naipes.
  */
 export function isCycleIndependent(rest: string[]): boolean {
   const [first, second] = rest
-  return first === 'formularios' || first === 'repertorio' || (first === 'eventos' && second === 'configuracoes') || (first === 'naipes' && second === 'configuracoes')
+  return first === 'formularios' || (first === 'eventos' && second === 'configuracoes') || (first === 'naipes' && second === 'configuracoes')
 }
 
 /** Menu de ciclo fixo logo abaixo do caminho de navegação, o mesmo em todas as subpáginas da área. */
