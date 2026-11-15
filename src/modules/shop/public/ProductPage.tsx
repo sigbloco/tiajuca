@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { KitChip } from '@/modules/shop/KitChip'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -74,7 +75,7 @@ export function ProductPage() {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label id="var-l">Tamanho / variação</Label>
-                <div role="radiogroup" aria-labelledby="var-l" className="flex flex-wrap gap-2">
+                <ButtonRow role="radiogroup" aria-labelledby="var-l">
                   {product.variants.map((v) => {
                     const out = v.available === 0
                     return (
@@ -86,10 +87,10 @@ export function ProductPage() {
                       </button>
                     )
                   })}
-                </div>
+                </ButtonRow>
                 {variant && variant.available !== null && variant.available <= 5 && <p className="text-sm text-muted-foreground">Restam {variant.available}.</p>}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Button type="button" variant="outline" size="icon" aria-label="Diminuir" disabled={qty <= 1} onClick={() => setQty(qty - 1)}>−</Button>
                 <span className="w-8 text-center font-bold" aria-live="polite">{qty}</span>
                 <Button type="button" variant="outline" size="icon" aria-label="Aumentar" disabled={!variant || qty >= Math.min(room, MAX_QTY_PER_LINE)} onClick={() => setQty(qty + 1)}>+</Button>

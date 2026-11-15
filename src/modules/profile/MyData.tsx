@@ -11,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Lock, Plus, Save, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
+import { DateInput, maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDateTime } from '@/core/format'
@@ -59,6 +59,13 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   useEffect(() => { if (me.data) setF(toF(me.data)) }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
   // Cada bloco só olha e grava os seus campos.
   const [rows, setRows] = useState<NetRow[]>([{ network: 'instagram', user: '' }])
+  // Data de fundação do bloco (perfil do bloco): aparece nos aniversários do Calendário.
+  const founded = useQuery({
+    queryKey: ['org-founded', orgId], enabled: part === 'bloco',
+    queryFn: async () => { const { data, error } = await supabase.from('organizations').select('founded_on').eq('id', orgId).single(); if (error) throw error; return (data as { founded_on: string | null }).founded_on ?? '' },
+  })
+  const [foundedOn, setFoundedOn] = useState('')
+  useEffect(() => { if (founded.data !== undefined) setFoundedOn(founded.data) }, [founded.data])
   useEffect(() => { if (me.data) setRows(rowsOf(me.data.social_handle)) }, [me.data])
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
   const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone, x.socials])
@@ -74,13 +81,14 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
           : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n') },
       })
       if (error) throw error
+      if (part === 'bloco' && foundedOn !== (founded.data ?? '')) { const r = await supabase.rpc('set_org_founded', { p_org: orgId, p_date: foundedOn || null }); if (r.error) throw r.error }
     },
-    onSuccess: () => { toast.success('Seus dados foram atualizados.'); qc.invalidateQueries({ queryKey: ['me', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['me-head', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['memberships'] }) },
+    onSuccess: () => { toast.success('Seus dados foram atualizados.'); qc.invalidateQueries({ queryKey: ['org-founded', orgId] }); qc.invalidateQueries({ queryKey: ['birthdays', orgId] }); qc.invalidateQueries({ queryKey: ['me', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['me-head', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['memberships'] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle))]) : mine(toF(me.data))) : ''
-  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows)]) : mine(f)
+  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle)), founded.data ?? '']) : mine(toF(me.data))) : ''
+  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows), foundedOn]) : mine(f)
   useUnsaved(!!me.data && curKey !== baseline, () => save.mutateAsync())
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
@@ -99,6 +107,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
         <div className="space-y-1.5"><Label htmlFor="bl-email">E-mail de contato</Label><Input id="bl-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="bl-phone">WhatsApp</Label><PhoneInput id="bl-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
           {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
+        <div className="space-y-1.5"><Label htmlFor="bl-founded">Data de fundação</Label><DateInput id="bl-founded" value={foundedOn} onChange={setFoundedOn} />
+          <p className="text-xs text-muted-foreground">Aparece nos aniversários do Calendário.</p></div>
         <div className="space-y-1.5"><Label htmlFor="bl-user-0">Redes sociais</Label>
           {rows.map((r, i) => (
             <div key={i} className="flex gap-2">
