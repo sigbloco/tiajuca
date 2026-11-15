@@ -1,3 +1,4 @@
+import { Collapsible } from '@/components/shared/Collapsible'
 import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -39,6 +40,8 @@ export function FunctionsPage() {
   const qc = useQueryClient()
   const funcs = useCatalog('artistic_functions')
   const [adding, setAdding] = useState<Kind | null>(null)
+  const [opened, setOpened] = useState<Set<Kind>>(new Set()) // os grupos carregam fechados
+  const toggle = (k: Kind) => setOpened((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })
   const [name, setName] = useState('')
   const [exempt, setExempt] = useState(false)
   const all = (funcs.data ?? []).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
@@ -116,15 +119,12 @@ export function FunctionsPage() {
       {SECTIONS.map((s) => {
         const items = all.filter((f) => f.is_active && kindOf(f) === s.kind)
         return (
-          <section key={s.kind} className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <h3>{s.title}</h3>
-              {canEdit && (
-                <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-card hover:bg-muted" aria-label={`Adicionar em ${s.title}`} title={`Adicionar em ${s.title}`}
-                  onClick={() => { setAdding(adding === s.kind ? null : s.kind); setName(''); setExempt(false) }}><Plus className="h-4 w-4" /></button>
-              )}
-              {s.hint && <span className="text-sm text-muted-foreground">{s.hint}</span>}
-            </div>
+          <Collapsible key={s.kind} open={opened.has(s.kind)} onToggle={() => toggle(s.kind)} title={s.title} count={items.length}
+            right={canEdit && (
+              <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-card hover:bg-muted" aria-label={`Adicionar em ${s.title}`} title={`Adicionar em ${s.title}`}
+                onClick={() => { const on = adding === s.kind; setAdding(on ? null : s.kind); setName(''); setExempt(false); if (!on) setOpened((cur) => new Set(cur).add(s.kind)) }}><Plus className="h-4 w-4" /></button>
+            )}>
+            {s.hint && <p className="text-sm text-muted-foreground">{s.hint}</p>}
             {canEdit && adding === s.kind && (
               <Card className="flex flex-wrap items-center gap-3 p-3">
                 <Input className="min-w-40 flex-1" autoFocus aria-label={`Nova categoria em ${s.title}`} placeholder="Nome da categoria" value={name} onChange={(e) => setName(e.target.value)} />
@@ -133,7 +133,7 @@ export function FunctionsPage() {
               </Card>
             )}
             <div className="grid gap-1.5">{items.map(row)}</div>
-          </section>
+          </Collapsible>
         )
       })}
     </div>
