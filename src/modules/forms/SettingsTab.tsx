@@ -22,7 +22,8 @@ import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow,
 const toTs = (date: string, end: boolean) => (date ? `${date}T${end ? '23:59:00' : '00:00:00'}-03:00` : null)
 const toDate = (ts: string | null) => (ts ? new Date(new Date(ts).getTime() - 3 * 3600_000).toISOString().slice(0, 10) : '')
 
-export function SettingsTab({ form }: { form: FormRow }) {
+/** Duas abas do editor: `main` (título, ciclo, datas, endereço, situação) e `header` (cabeçalho, descrição, privacidade e opções de envio). */
+export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'main' | 'header' }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -35,11 +36,11 @@ export function SettingsTab({ form }: { form: FormRow }) {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }); qc.invalidateQueries({ queryKey: ['forms', orgId] }) }
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('forms').update({
-        title: f.title.trim(), description: f.description.trim() || null, slug: f.slug, cycle_id: f.cycle_id || null,
-        opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true),
-        header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, max_responses: null, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe,
-      }).eq('id', form.id)
+      const patch = part === 'main'
+        ? { title: f.title.trim(), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
+        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe }
+      const { error } = await supabase.from('forms').update(patch
+      ).eq('id', form.id)
       if (error) throw error
     },
     onSuccess: () => { toast.success('Configurações salvas. Republique para aplicar ao link público.'); refresh() },
@@ -75,6 +76,20 @@ export function SettingsTab({ form }: { form: FormRow }) {
 
   return (
     <div className="space-y-4">
+      {part === 'main' ? (
+        <>
+          <form id="fs-main" onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Endereço do formulário', f.slug]])) save.mutate() }} className="space-y-4">
+        <div className="space-y-1.5"><Label htmlFor="fs-title" required>Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="space-y-1.5"><Label htmlFor="fs-cycle">Ciclo relacionado</Label>
+            <Select id="fs-cycle" value={f.cycle_id} onChange={(e) => setF({ ...f, cycle_id: e.target.value })}><option value="">Nenhum</option>{cycles.data?.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></div>
+          <div className="space-y-1.5"><Label htmlFor="fs-open">Abre em</Label><DateInput id="fs-open" value={f.opens} onChange={(v) => setF({ ...f, opens: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="fs-close">Encerra em</Label><DateInput id="fs-close" min={f.opens || undefined} value={f.closes} onChange={(v) => setF({ ...f, closes: v })} /></div>
+        </div>
+
+        <div className="space-y-1.5"><Label htmlFor="fs-slug" required>Endereço (final do link)</Label><Input id="fs-slug" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
+          <p className="text-xs text-muted-foreground">{membership ? publicUrl(membership.slug, f.slug || '—') : ''} · Mudar o endereço quebra links já divulgados.</p></div>
+          </form>
       <Card className="space-y-2 p-4">
         <div className="flex items-center gap-2"><h3>Situação</h3><Badge className={FORM_STATUS_CLASS[form.status]}>{FORM_STATUS_LABEL[form.status]}</Badge></div>
         {form.status !== 'draft' && <div className="flex items-center gap-2"><Input readOnly value={url} onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" size="icon" aria-label="Copiar link" onClick={copy}><Copy className="h-4 w-4" /></Button></div>}
@@ -96,19 +111,11 @@ export function SettingsTab({ form }: { form: FormRow }) {
         </ButtonRow>
         <p className="text-xs text-muted-foreground">Ao publicar, é gravada uma cópia fixa do formulário (versão). Quem respondeu continua com a versão em que respondeu.</p>
       </Card>
-
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Endereço do formulário', f.slug]])) save.mutate() }} className="space-y-4">
-        <div className="space-y-1.5"><Label htmlFor="fs-slug" required>Endereço (final do link)</Label><Input id="fs-slug" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
-          <p className="text-xs text-muted-foreground">{membership ? publicUrl(membership.slug, f.slug || '—') : ''} · Mudar o endereço quebra links já divulgados.</p></div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="space-y-1.5"><Label htmlFor="fs-cycle">Ciclo relacionado</Label>
-            <Select id="fs-cycle" value={f.cycle_id} onChange={(e) => setF({ ...f, cycle_id: e.target.value })}><option value="">Nenhum</option>{cycles.data?.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></div>
-          <div className="space-y-1.5"><Label htmlFor="fs-open">Abre em</Label><DateInput id="fs-open" value={f.opens} onChange={(v) => setF({ ...f, opens: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="fs-close">Encerra em</Label><DateInput id="fs-close" min={f.opens || undefined} value={f.closes} onChange={(v) => setF({ ...f, closes: v })} /></div>
-        </div>
-
+          <StickySave><SaveButton type="submit" form="fs-main" className="w-full" disabled={save.isPending} hint="Salvar configurações" /></StickySave>
+        </>
+      ) : (
+        <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-4">
         <div className="space-y-2">
-          <h3>Cabeçalho</h3>
           <HeaderBand frame={{ image_url: f.headerImage || null, x: f.hx, y: f.hy, zoom: f.hzoom, height: f.hheight }}
             onChange={(p) => setF((x) => ({ ...x, hx: Math.round(p.x * 10) / 10, hy: Math.round(p.y * 10) / 10 }))}
             logo={<OrgLogo name={membership?.name ?? ''} logoPath={membership?.logo_path ?? null} className="h-20 w-20 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" />} />
@@ -130,7 +137,6 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <p className="text-xs text-muted-foreground">Vale na hora, sem republicar. Salve para aplicar.</p>
         </div>
 
-        <div className="space-y-1.5"><Label htmlFor="fs-title" required>Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-desc">Descrição</Label>
           <RichTextarea id="fs-desc" rows={3} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
@@ -138,7 +144,8 @@ export function SettingsTab({ form }: { form: FormRow }) {
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
         <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar configurações" /></StickySave>
-      </form>
+        </form>
+      )}
 
     </div>
   )
