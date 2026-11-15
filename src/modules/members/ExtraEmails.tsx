@@ -14,10 +14,10 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
  * E-mails adicionais do integrante (além do principal). Qualquer um deles liga a conta Google da pessoa ao cadastro.
  * Cada adição ou remoção é gravada na hora. Só quem gerencia integrantes vê e edita.
  */
-export function ExtraEmails({ memberId }: { memberId: string }) {
+export function ExtraEmails({ memberId, self = false }: { memberId: string; /** No perfil da própria pessoa: ela mesma gerencia os seus. */ self?: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const can = usePermission('members.manage')
+  const can = usePermission('members.manage') || self
   const [adding, setAdding] = useState(false)
   const [value, setValue] = useState('')
   const key = ['member-emails', memberId]

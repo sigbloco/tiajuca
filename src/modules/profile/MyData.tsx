@@ -17,6 +17,7 @@ import { friendlyError } from '@/core/errors'
 import { formatDate, formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
+import { ExtraEmails } from '@/modules/members/ExtraEmails'
 
 interface Me {
   full_name: string; display_name: string | null; email: string | null; phone: string | null; social_handle: string | null
@@ -80,6 +81,8 @@ export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder
   })
   if (me.isLoading || !me.data) return <Skeleton className="h-40" />
   const d = me.data
+  // E-mail do Google (gmail) é o que liga o login ao cadastro: trocar por conta própria quebraria o acesso.
+  const googleEmail = /@(gmail|googlemail)[.]com$/i.test(d.email ?? '')
   return (
     <Card className="space-y-3 p-4">
       <h3>Meus dados</h3>
@@ -87,7 +90,9 @@ export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="my-email">E-mail</Label><Input id="my-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="my-email">E-mail principal</Label><Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
+            {googleEmail && <p className="text-xs text-muted-foreground">É o e-mail da sua conta Google, usado para entrar: fica travado. Para trocá-lo, fale com a Direção. Você pode adicionar outros e-mails abaixo.</p>}</div>
+          <ExtraEmails memberId={memberId} self />
           <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="my-display">Como prefere ser chamado(a)</Label><Input id="my-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} /></div>
