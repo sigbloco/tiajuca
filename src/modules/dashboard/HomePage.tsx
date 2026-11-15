@@ -17,7 +17,7 @@ const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direca
 
 function Stat({ label, value, hint, tone }: { label: string; value: string | number; hint?: string; tone?: string }) {
   return (
-    <Card className="p-3">
+    <Card className="h-full p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={cn('font-display text-xl font-bold', tone)}>{value}</p>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -140,7 +140,7 @@ function MyStatus({ orgId, memberId, slug, staff }: { orgId: string; memberId: s
       <Stat label="Ciclo" value={data.cycle?.name ?? '—'} />
       <Stat label="Meu status" value={data.status ?? 'Sem registro'} />
       {!staff && <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
-      {!staff && <Link to={`/${slug}/cobrancas`}>
+      {!staff && <Link to={`/${slug}/cobrancas`} className="block h-full">
         <Stat label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
           hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
       </Link>}
