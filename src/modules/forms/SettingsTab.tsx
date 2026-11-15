@@ -32,7 +32,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
   const qc = useQueryClient()
   const cycles = useCycles()
   const [f, setF] = useState({
-    kind: form.kind, title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
+    kind: form.kind, access: form.access ?? 'public', title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
     opens: toDate(form.opens_at), closes: toDate(form.closes_at),
     privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, hlogo: form.header_logo_size ?? 80, hcolor: form.header_color ?? DEFAULT_HEADER, hmode: (form.header_color && !form.header_image_url ? 'color' : 'photo') as 'photo' | 'color', consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
@@ -40,7 +40,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
   const save = useMutation({
     mutationFn: async () => {
       const patch = part === 'main'
-        ? { title: f.title.trim(), kind: f.kind, ...(f.kind !== form.kind ? kindFlags(f.kind) : {}), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
+        ? { title: f.title.trim(), kind: f.kind, access: f.access, ...(f.kind !== form.kind ? kindFlags(f.kind) : {}), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
         : { description: f.description.trim() || null, header_image_url: f.hmode === 'photo' ? f.headerImage || null : null, header_color: f.hmode === 'color' ? f.hcolor : null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, header_logo_size: f.hlogo, prevent_duplicates: f.dedupe }
       const { error } = await supabase.from('forms').update(patch
       ).eq('id', form.id)
@@ -85,6 +85,9 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
         <div className="space-y-1.5"><Label htmlFor="fs-kind">Tipo</Label>
           <Select id="fs-kind" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as FormKind })}><option value="enrollment">Inscrição (com avaliação e aprovação)</option><option value="general">Geral (enquete, pedido…)</option></Select>
           {f.kind === 'general' && <p className="text-xs text-muted-foreground">Sem avaliação nem aprovação: as respostas só chegam e podem ser arquivadas. Os e-mails de resultado ficam desligados.</p>}</div>
+        <div className="space-y-1.5"><Label htmlFor="fs-access">Quem pode responder</Label>
+          <Select id="fs-access" value={f.access} onChange={(e) => setF({ ...f, access: e.target.value as 'public' | 'internal' })}><option value="public">Público (qualquer pessoa, aceita inscrições novas)</option><option value="internal">Interno (só integrantes, com login Google)</option></Select>
+          {f.access === 'internal' && <p className="text-xs text-muted-foreground">Quem entra sem cadastro vê um aviso e não responde. O formulário já vem preenchido com os dados do integrante, e cada seção pode aparecer só para um naipe (em cada seção, “Mostrar somente se”). A resposta vira pendência: ao aprovar, o cadastro existente é atualizado.</p>}</div>
         <div className="space-y-1.5"><Label htmlFor="fs-title" required>Título</Label><Input id="fs-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <div className="grid gap-2 sm:grid-cols-3">
           <div className="space-y-1.5"><Label htmlFor="fs-cycle">Ciclo relacionado</Label>

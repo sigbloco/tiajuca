@@ -16,6 +16,7 @@ import { friendlyError } from '@/core/errors'
 import { formatDate } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { applyTheme } from '@/core/theme'
+import { buildInitial, useMemberPrefill } from './prefill'
 import { hasConsent, isLoginSection, isSection, isVisible, type Answers, type PublicField, type PublicFormPayload } from './types'
 
 interface UploadedFile { field_key: string; path: string; name: string; mime: string; size: number }
@@ -187,12 +188,12 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
 export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualização: usa estes dados em vez do servidor e não envia nada. */ preview?: PublicFormPayload; /** Respostas já preenchidas (renovação: o formulário vem com os dados do integrante). */ initialAnswers?: Answers } = {}) {
   const { orgSlug = '', formSlug = '' } = useParams()
   const [answers, setAnswers] = useState<Answers>(initialAnswers ?? {})
+  const { session, signInWithGoogle, signOut } = useAuth()
   const [consent, setConsent] = useState(false)
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [honeypot, setHoneypot] = useState('')
   const [error, setError] = useState('')
   const [showErrors, setShowErrors] = useState(false)
-  const { session, signInWithGoogle, signOut } = useAuth()
   const draftKey = `form-draft:${window.location.pathname}`
   const [done, setDone] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -200,7 +201,7 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
   const orgId = useRef<string | null>(null)
 
   const live = useQuery({
-    queryKey: ['public-form', orgSlug, formSlug],
+    queryKey: ['public-form', orgSlug, formSlug, session?.user.id ?? null],
     enabled: !preview,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_public_form', { p_org_slug: orgSlug, p_form_slug: formSlug })
@@ -217,7 +218,28 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
   const form = preview ? { data: preview, isLoading: false, isError: false } : live
   const fields = form.data?.form?.fields ?? []
   const fill = (t: string) => fillVars(t, form.data?.form?.vars, answers)
-  const visible = useMemo(() => fields.filter((f) => isVisible(f, answers)), [fields, answers])
+  const viewer = form.data?.viewer ?? null
+  // Seções por naipe: "_naipe" é uma resposta virtual (o naipe do integrante que entrou). Seção oculta esconde também as perguntas dela.
+  const visAnswers = useMemo<Answers>(() => ({ ...answers, _naipe: viewer?.section_id ?? undefined }), [answers, viewer?.section_id])
+  const visible = useMemo(() => {
+    const out: PublicField[] = []
+    let hide = false
+    for (const f of fields) {
+      const ok = isVisible(f, visAnswers)
+      if (isSection(f)) { hide = !ok; if (ok) out.push(f); continue }
+      if (!hide && ok) out.push(f)
+    }
+    return out
+  }, [fields, visAnswers])
+  // Formulário interno: já vem preenchido com o que consta do cadastro; o integrante só confere e confirma.
+  const prefillQ = useMemberPrefill(!preview && viewer ? viewer.member_id : undefined)
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (prefilled.current || !prefillQ.data || fields.length === 0) return
+    prefilled.current = true
+    const init = buildInitial(fields, prefillQ.data)
+    setAnswers((a) => ({ ...init, ...a }))
+  }, [prefillQ.data, fields])
 
   // Seções: cada cabeçalho abre um bloco com as perguntas que vêm depois dele (perguntas antes da primeira seção ficam num bloco sem título).
   const blocks = useMemo(() => {
@@ -393,6 +415,8 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
 
   if (form.isLoading) return shell(<Skeleton className="h-64" />)
   if (form.isError || form.data?.state === 'not_found') return shell(<Card className="p-6 text-center"><h1>Formulário não encontrado</h1><p className="text-muted-foreground">Confira o link com a organização.</p></Card>)
+  if (form.data!.state === 'login_required') return shell(<Card className="space-y-3 p-6 text-center"><h1>{f0?.title}</h1><p>Este formulário é só para integrantes do bloco. Entre com a conta Google que você usa no sistema.</p><Button type="button" className="w-full" onClick={goLogin}>Continuar com Google</Button></Card>)
+  if (form.data!.state === 'not_member') return shell(<Card className="space-y-3 p-6 text-center"><h1>{f0?.title}</h1><p>Não encontramos você entre os integrantes{session?.user.email ? <> (conta <strong>{session.user.email}</strong>)</> : null}. Este formulário é só para quem já faz parte do bloco: entre com a conta Google cadastrada no sistema ou fale com a direção.</p><Button type="button" variant="outline" className="w-full" onClick={() => void signOut()}>Trocar de conta</Button></Card>)
   if (done !== null) return shell(<Card className="space-y-2 p-6 text-center"><h1>Tudo certo!</h1>{done && <RichText text={done} />}</Card>)
   if (form.data!.state !== 'open') {
     const msg = { not_open: 'As inscrições ainda não abriram.', closed: 'As inscrições estão encerradas.', full: 'As vagas desta inscrição foram preenchidas.' }[form.data!.state as 'not_open' | 'closed' | 'full']

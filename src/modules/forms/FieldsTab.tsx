@@ -145,7 +145,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const [sectionId, setSectionId] = useState(currentSection)
   const earlier = fields.filter((x) => x.is_active && x.field_type !== 'info' && x.id !== field?.id && (field ? x.sort_order < field.sort_order : true))
   const parent = earlier.find((x) => x.field_key === f.condField)
-  const parentOptions: FieldOption[] = !parent ? [] : parent.field_type === 'yes_no' ? [{ value: 'yes', label: 'Sim' }, { value: 'no', label: 'Não' }]
+  const parentOptions: FieldOption[] = f.condField === '_naipe' ? (naipes.data ?? []).filter((n) => n.is_active).map((n) => ({ value: n.id, label: n.name })) : !parent ? [] : parent.field_type === 'yes_no' ? [{ value: 'yes', label: 'Sim' }, { value: 'no', label: 'Não' }]
     : parent.field_type === 'checkbox' ? [{ value: 'true', label: 'Marcado' }, { value: 'false', label: 'Desmarcado' }] : parent.options
 
   // Mantém o valor interno de opções com o mesmo rótulo (respostas antigas seguem consistentes).
@@ -334,11 +334,12 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
           </div>
         )}
 
-        {!asSection && <Card className="space-y-2 p-3">
+        {<Card className="space-y-2 p-3">
           <p className="flex items-center gap-1.5 font-semibold"><GitBranch className="h-4 w-4" /> Mostrar somente se</p>
           <Select aria-label="Campo da condição" value={f.condField} onChange={(e) => setF({ ...f, condField: e.target.value, condValue: '' })}>
             <option value="">Sempre mostrar</option>
-            {earlier.map((x) => <option key={x.id} value={x.field_key}>{x.label}</option>)}
+            <option value="_naipe">Naipe do integrante (formulário interno)</option>
+            {!asSection && earlier.map((x) => <option key={x.id} value={x.field_key}>{x.label}</option>)}
           </Select>
           {f.condField && (
             <div className="grid grid-cols-2 gap-2">
