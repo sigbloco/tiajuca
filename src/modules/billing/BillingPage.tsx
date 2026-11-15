@@ -54,6 +54,20 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
     mutationFn: (s: 'cancelled' | 'pending') => rpc('change_charge_status', { p_charge: charge.id, p_status: s, p_notes: null })(),
     onSuccess: (_d, s) => done(s === 'cancelled' ? 'Cobrança cancelada.' : 'Cobrança reaberta.'), onError: (e) => toast.error(friendlyError(e)),
   })
+  const [link, setLink] = useState((charge as Charge & { pay_link_url?: string | null }).pay_link_url ?? '')
+  const makeLink = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('billing-pay-link', { body: { charge_id: charge.id } })
+      if (error) {
+        const body = await (error as { context?: Response }).context?.json?.().catch(() => null)
+        throw new Error(body?.error ?? 'Não foi possível gerar o link agora.')
+      }
+      return (data as { url: string }).url
+    },
+    onSuccess: (url) => { setLink(url); qc.invalidateQueries({ queryKey: ['billing', orgId] }); toast.success('Link gerado. Quando o pagamento for aprovado, a baixa é automática.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const copyLink = async () => { try { await navigator.clipboard.writeText(link); toast.success('Link copiado.') } catch { toast.error('Não foi possível copiar.') } }
   const name = shortName(charge.members?.full_name, charge.members?.display_name) ?? ''
   const editable = charge.status === 'pending' || charge.status === 'exempt'
 
@@ -70,6 +84,15 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
         {charge.manual_adjustment && <p className="text-xs text-warning">Valor ajustado manualmente.</p>}
         {charge.paid_on && <p className="text-muted-foreground">Pago em {formatDate(charge.paid_on)}{charge.payment_method ? ` via ${charge.payment_method}` : ''}.</p>}
       </Card>
+
+      {charge.status === 'pending' && charge.final_amount > 0 && (
+        <section className="space-y-2">
+          <h3>Link de pagamento</h3>
+          {link && <div className="flex items-center gap-2"><Input readOnly value={link} onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" size="icon" aria-label="Copiar link" onClick={copyLink}><ClipboardCopy className="h-4 w-4" /></Button></div>}
+          <Button variant="outline" className="w-full" disabled={makeLink.isPending} onClick={() => makeLink.mutate()}>{link ? 'Gerar novo link' : 'Gerar link de pagamento'}</Button>
+          <p className="text-xs text-muted-foreground">Pix ou cartão pela InfinitePay. Quando o pagamento é aprovado, a cobrança é baixada sozinha. Se ajustar o valor, gere um novo link.</p>
+        </section>
+      )}
 
       {charge.status === 'pending' && (
         <section className="space-y-2">
