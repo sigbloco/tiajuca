@@ -28,7 +28,7 @@ const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): 
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  show_rays?: boolean; rays_animate?: boolean; rays_count?: number; rays_opacity?: number; rays_rotation?: number; rays_color?: string | null; rays_outline?: boolean; rays_outline_color?: string | null
+  show_rays?: boolean; rays_animate?: boolean; rays_count?: number; rays_opacity?: number; rays_rotation?: number; rays_color?: string | null; rays_speed?: number; rays_outline?: boolean; rays_outline_color?: string | null
   enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; menu_construction: string[]; shop_product_id: string | null; show_albums: boolean; albums_label: string; show_release: boolean; release_label: string; release_url: string | null; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
 const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, menu_construction: [], shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
@@ -64,7 +64,7 @@ export function SiteSettings() {
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
     show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
-    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline || !!row.show_rays, show_rays: !!row.show_rays, rays_animate: !!row.rays_animate, rays_count: row.rays_count ?? 16, rays_opacity: row.rays_opacity ?? 100, rays_rotation: row.rays_rotation ?? 0, rays_color: row.rays_color || null, rays_outline: row.rays_outline ?? true, rays_outline_color: row.rays_outline_color || null,
+    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline || !!row.show_rays, show_rays: !!row.show_rays, rays_animate: !!row.rays_animate, rays_count: row.rays_count ?? 16, rays_opacity: row.rays_opacity ?? 100, rays_rotation: row.rays_rotation ?? 0, rays_color: row.rays_color || null, rays_speed: row.rays_speed ?? 4, rays_outline: row.rays_outline ?? true, rays_outline_color: row.rays_outline_color || null,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
   const write = async (row: SiteRow) => {
@@ -184,7 +184,7 @@ export function SiteSettings() {
         {/* Prévia ao vivo: mostra o cabeçalho do site com o que está nos controles, antes de salvar. */}
         <div className="relative overflow-hidden rounded-xl py-8 text-center" style={{ backgroundColor: siteColors.header ?? 'rgb(var(--primary))', color: siteColors.headerText ?? undefined }} aria-label="Prévia do cabeçalho">
           <LogoWithRays size="h-24 w-24" backing={siteColors.header ?? 'rgb(var(--primary))'} name={membership?.name} logoPath={f.photo_url || membership?.logo_path}
-            rays={{ on: !!f.show_rays, count: f.rays_count ?? 16, opacity: f.rays_opacity ?? 100, rotation: f.rays_rotation ?? 0, color: f.rays_color || siteColors.secondary || null, animate: !!f.rays_animate, outline: f.rays_outline ?? true, outlineColor: f.rays_outline_color || siteColors.secondary || null }} />
+            rays={{ on: !!f.show_rays, count: f.rays_count ?? 16, opacity: f.rays_opacity ?? 100, rotation: f.rays_rotation ?? 0, color: f.rays_color || siteColors.secondary || null, animate: !!f.rays_animate, speed: f.rays_speed ?? 4, outline: f.rays_outline ?? true, outlineColor: f.rays_outline_color || siteColors.secondary || null }} />
           {!f.hide_headline && !f.show_rays && <p className="relative mt-3 font-display text-xl font-extrabold">{f.headline || membership?.name}</p>}
         </div>
         {f.show_rays && (
@@ -195,7 +195,9 @@ export function SiteSettings() {
               <input id="ry-o" type="range" min={10} max={100} step={5} className="w-full accent-primary" value={f.rays_opacity ?? 100} onChange={(e) => setF({ ...f, rays_opacity: Number(e.target.value) })} /></div>
             <div className="space-y-1"><Label htmlFor="ry-r">Giro ({f.rays_rotation ?? 0}°)</Label>
               <input id="ry-r" type="range" min={0} max={360} step={5} className="w-full accent-primary" value={f.rays_rotation ?? 0} onChange={(e) => setF({ ...f, rays_rotation: Number(e.target.value) })} />
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={!!f.rays_animate} onChange={(e) => setF({ ...f, rays_animate: e.target.checked })} /> Animar (gira bem devagar)</label></div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={!!f.rays_animate} onChange={(e) => setF({ ...f, rays_animate: e.target.checked })} /> Animar</label>
+              {f.rays_animate && <><Label htmlFor="ry-v">Velocidade ({f.rays_speed ?? 4})</Label>
+                <input id="ry-v" type="range" min={1} max={20} step={1} className="w-full accent-primary" value={f.rays_speed ?? 4} onChange={(e) => setF({ ...f, rays_speed: Number(e.target.value) })} /></>}</div>
             <div className="space-y-1"><Label htmlFor="ry-c">Cor</Label>
               <div className="flex items-center gap-2">
                 <input id="ry-c" type="color" className="h-10 w-14 cursor-pointer rounded border border-input bg-card" value={f.rays_color || siteColors.secondary || '#ffed00'} onChange={(e) => setF({ ...f, rays_color: e.target.value })} />
