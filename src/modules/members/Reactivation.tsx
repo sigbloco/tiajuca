@@ -69,7 +69,7 @@ export function InactiveNotice() {
   )
 }
 
-/** Pedidos de volta aguardando decisão (só aparecem para quem pode decidir: Direção e professores do grupo). */
+/** Pedidos de volta aguardando decisão (só aparecem para quem pode decidir: direção e professores do grupo). */
 export function ReactivationRequests() {
   const orgId = useOrgId()
   const { realMembership } = useOrganization()

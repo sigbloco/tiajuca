@@ -284,18 +284,18 @@ function AdminBilling() {
 }
 
 /** Visão pessoal: "Minhas mensalidades" (celular primeiro). */
-function MyBilling() {
+export function MyBilling({ embedded = false }: { /** Dentro de outra página (Financeiro): título menor. */ embedded?: boolean } = {}) {
   const { membership } = useOrganization()
   const memberId = membership?.member_id ?? ''
   const { data, isLoading } = useQuery({ queryKey: ['billing', 'mine', memberId], enabled: Boolean(memberId), queryFn: () => listMyCharges(memberId) })
   const today = todayIso(membership?.timezone)
   return (
     <div className="space-y-4">
-      <h1>Minhas mensalidades</h1>
+      {embedded ? <h2>Minhas mensalidades</h2> : <h1>Minhas mensalidades</h1>}
       {isLoading && <Skeleton className="h-24" />}
       {data?.length === 0 && <EmptyState>Você não possui mensalidades. Se isso estiver errado, fale com a direção.</EmptyState>}
       <div className="grid gap-2">
-        {data?.map((c) => {
+        <ProgressiveList items={data ?? []} step={5} render={(c) => {
           const overdue = c.status === 'pending' && c.due_on < today
           return (
             <Card key={c.id} className="space-y-1 p-3">
@@ -312,7 +312,7 @@ function MyBilling() {
               <p className="text-muted-foreground">{c.status === 'paid' ? `Pago em ${formatDate(c.paid_on)}` : `Vence em ${formatDate(c.due_on)}`}</p>
             </Card>
           )
-        })}
+        }} />
       </div>
     </div>
   )

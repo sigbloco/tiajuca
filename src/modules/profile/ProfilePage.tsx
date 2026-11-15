@@ -3,7 +3,7 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Card, EmptyState, Input, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Card, Input, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -97,7 +97,7 @@ export function ProfilePage() {
       <PixSection memberId={memberId} />
       {(payments.isLoading || (payments.data?.length ?? 0) > 0) && (
         <section className="space-y-2">
-          <h3>Meus pagamentos</h3>
+          <h3>Pagamentos que recebo</h3>
           {payments.isLoading && <Skeleton className="h-16" />}
           <ProgressiveList items={(payments.data) ?? []} render={(p) => (
             <Card key={p.id} className="flex items-center justify-between gap-3 p-3">
@@ -109,7 +109,6 @@ export function ProfilePage() {
           )} />
         </section>
       )}
-      {payments.data?.length === 0 && <EmptyState>Você não tem pagamentos registrados.</EmptyState>}
       {/* "Outras informações" vai por último no perfil. */}
       <MyData memberId={memberId} bind={bindOther} part="other" />
       <StickySave><SaveButton type="button" className="w-full" disabled={saving} onClick={saveAll} hint="Salvar meu perfil" /></StickySave>
