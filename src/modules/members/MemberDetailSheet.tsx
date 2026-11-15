@@ -108,7 +108,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const qc = useQueryClient()
   const { data: cycles } = useCycles()
   const { data: statuses } = useCycleStatuses()
-  const canManage = usePermission('member_cycles.manage', 'group')
+  const canManage = usePermission('member_cycles.manage')
   const canForce = usePermission('capacity.manage')
   const [adding, setAdding] = useState(false)
   const [pick, setPick] = useState('')

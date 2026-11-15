@@ -91,8 +91,8 @@ export function ProfilePage() {
         <p className="text-muted-foreground">{membership.name}</p>
       </Card>
       <MyData memberId={memberId} bind={bindData} />
-      <MyParticipation memberId={memberId} />
       <MySensitiveData memberId={memberId} bind={bindSens} />
+      <MyParticipation memberId={memberId} />
       <PixSection memberId={memberId} />
       {(payments.isLoading || (payments.data?.length ?? 0) > 0) && (
         <section className="space-y-2">
