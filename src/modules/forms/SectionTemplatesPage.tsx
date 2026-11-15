@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CopyPlus, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { confirmBox, promptBox } from '@/components/shared/DialogHost'
@@ -70,6 +70,11 @@ export function SectionTemplatesPage() {
     onSuccess: () => { toast.success('Modelo renomeado.'); refresh() },
     onError: (e) => toast.error(/23505|duplicate/i.test(JSON.stringify(e)) ? 'Já existe um modelo com esse nome.' : friendlyError(e)),
   })
+  const duplicate = useMutation({
+    mutationFn: async (v: { t: SectionTemplate; name: string }) => { const { error } = await supabase.rpc('duplicate_section_template', { p_template: v.t.id, p_name: v.name }); if (error) throw error },
+    onSuccess: () => { toast.success('Modelo duplicado.'); refresh() },
+    onError: (e) => toast.error(/23505|duplicate|Já existe/i.test(JSON.stringify(e)) ? 'Já existe um modelo com esse nome.' : friendlyError(e)),
+  })
   const remove = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.rpc('delete_section_template', { p_template: id }); if (error) throw error },
     onSuccess: () => { toast.success('Modelo apagado. Os formulários que já o usaram não mudam.'); refresh() },
@@ -97,8 +102,9 @@ export function SectionTemplatesPage() {
               <Link to={`${base}/configuracoes/modelos/${t.id}`} className="break-words font-display text-lg font-bold leading-tight hover:underline">{t.name}</Link>
               <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'pergunta' : 'perguntas'}</p>
             </div>
-            <div className="flex shrink-0 gap-1.5">
+            <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:grid-cols-4">
               <Button asChild size="sm" variant="outline"><Link to={`${base}/configuracoes/modelos/${t.id}`}><Pencil className="h-4 w-4" /> Editar</Link></Button>
+              <Button size="sm" variant="outline" disabled={duplicate.isPending} onClick={async () => { const n = await promptBox({ title: 'Duplicar modelo', message: 'Nome do novo modelo:', initial: `${t.name} (cópia)`, confirmLabel: 'Duplicar' }); if (n && n.trim()) duplicate.mutate({ t, name: n.trim() }) }}><CopyPlus className="h-4 w-4" /> Duplicar</Button>
               <Button size="sm" variant="outline" onClick={async () => { const n = await promptBox({ title: 'Renomear modelo', message: 'Nome do modelo:', initial: t.name, confirmLabel: 'Salvar' }); if (n && n.trim() && n.trim() !== t.name) rename.mutate({ t, name: n.trim() }) }}>Renomear</Button>
               <Button size="sm" variant="outline" className="text-destructive" aria-label={`Apagar ${t.name}`} onClick={async () => { if (await confirmBox(`Apagar o modelo “${t.name}”? Os formulários que já o usaram não mudam.`)) remove.mutate(t.id) }}><Trash2 className="h-4 w-4" /> Apagar</Button>
             </div>
