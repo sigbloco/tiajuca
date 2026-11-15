@@ -190,7 +190,7 @@ export function FormListsPage() {
           Definidas uma vez e usadas em todos os formulários. No editor de cada pergunta ligada ao cadastro, você marca quais itens aparecem.
           Instrumentos ficam em <PageLink to="naipes">Naipes e instrumentos</PageLink> e categorias em <PageLink to="funcoes">Organização → Categorias</PageLink>.
         </p>
-        {canEdit && <Button variant="add" disabled={create.isPending} onClick={async () => { const n = await promptBox({ title: 'Nova lista', message: 'Nome da lista:', confirmLabel: 'Criar' }); if (n && n.trim()) create.mutate(n.trim()) }}><Plus className="h-4 w-4" /> Nova lista</Button>}
+        {canEdit && <Button variant="add" className="w-full" disabled={create.isPending} onClick={async () => { const n = await promptBox({ title: 'Nova lista', message: 'Nome da lista:', confirmLabel: 'Criar' }); if (n && n.trim()) create.mutate(n.trim()) }}><Plus className="h-4 w-4" /> Nova lista</Button>}
       </div>
       {lists.isLoading && <Skeleton className="h-24" />}
       <div className="space-y-2">

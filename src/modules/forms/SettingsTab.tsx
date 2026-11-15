@@ -5,7 +5,7 @@ import { RichTextarea } from '@/components/shared/RichText'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy, Eye, RotateCcw, Rocket, Upload } from 'lucide-react'
+import { Copy, Eye, Rocket, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
@@ -16,7 +16,6 @@ import { supabase } from '@/core/supabase'
 import { useCycles } from '@/modules/cycles/service'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { HeaderBand } from './HeaderBand'
-import { PRIVACY_FALLBACK, loadSendDefaults } from './SendDefaultsPage'
 import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow, type FormStatus } from './service'
 
 // Horário de Brasília (sem horário de verão em vigor): abre às 00:00 e encerra às 23:59 do dia escolhido.
@@ -39,7 +38,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
     mutationFn: async () => {
       const patch = part === 'main'
         ? { title: f.title.trim(), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
-        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe }
+        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, requires_consent: f.consent, prevent_duplicates: f.dedupe }
       const { error } = await supabase.from('forms').update(patch
       ).eq('id', form.id)
       if (error) throw error
@@ -140,12 +139,6 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
 
         <div className="space-y-1.5"><Label htmlFor="fs-desc">Descrição</Label>
           <RichTextarea id="fs-desc" rows={3} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
-          <RichTextarea id="fs-priv" rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} />
-          <Button type="button" size="sm" variant="outline" onClick={async () => {
-            if (f.privacy.trim() && !(await confirmBox('Substituir o texto atual pelo texto padrão das Configurações?'))) return
-            try { const d = await loadSendDefaults(orgId); setF((x) => ({ ...x, privacy: d?.privacy_text?.trim() || PRIVACY_FALLBACK })); toast.success('Texto padrão colocado. Salve para aplicar.') } catch (e) { toast.error(friendlyError(e)) }
-          }}><RotateCcw className="h-4 w-4" /> Restaurar texto padrão</Button></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
         <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar configurações" /></StickySave>

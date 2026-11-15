@@ -15,8 +15,9 @@ import { loadSendDefaults } from './SendDefaultsPage'
 const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 
 /** Os cinco textos da seção de Envio (os do formulário e os padrão das Configurações usam os mesmos campos). */
-export interface SendTexts { send: string; confirmation: string; review: string; approved: string; rejected: string; waitlist: string }
+export interface SendTexts { privacy: string; send: string; confirmation: string; review: string; approved: string; rejected: string; waitlist: string }
 export const SEND_FALLBACK = {
+  privacy: 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à Direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.',
   confirmation: 'Inscrição recebida!',
   review: 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.',
   approved: 'Sua inscrição foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.',
@@ -25,15 +26,18 @@ export const SEND_FALLBACK = {
 }
 /** Colunas da tabela (forms e form_send_defaults) a partir dos textos, com o texto padrão quando um campo fica vazio. */
 export const sendColumns = (f: SendTexts) => ({
-  send_text: f.send.trim() || null, confirmation_message: f.confirmation.trim() || SEND_FALLBACK.confirmation,
+  privacy_text: f.privacy.trim() || null, send_text: f.send.trim() || null, confirmation_message: f.confirmation.trim() || SEND_FALLBACK.confirmation,
   review_message: f.review.trim() || SEND_FALLBACK.review, approved_email_text: f.approved.trim() || SEND_FALLBACK.approved, rejected_email_text: f.rejected.trim() || SEND_FALLBACK.rejected, waitlist_email_text: f.waitlist.trim() || SEND_FALLBACK.waitlist,
 })
 
-export function SendFields({ f, setF, prefix }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string }) {
+export function SendFields({ f, setF, prefix, onRestorePrivacy }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; /** Só no formulário: recoloca o texto de privacidade padrão das Configurações. */ onRestorePrivacy?: () => void }) {
   return (
     <>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-send`}>Antes de enviar (opcional, aparece na última etapa)</Label>
         <RichTextarea id={`${prefix}-send`} rows={3} value={f.send} onChange={(v) => setF({ ...f, send: v })} /></div>
+      <div className="space-y-1.5"><Label htmlFor={`${prefix}-priv`}>Texto de privacidade (LGPD)</Label>
+        <RichTextarea id={`${prefix}-priv`} rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} />
+        {onRestorePrivacy && <Button type="button" variant="outline" className="w-full" onClick={onRestorePrivacy}><RotateCcw className="h-4 w-4" /> Restaurar texto de privacidade padrão</Button>}</div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-conf`}>Depois de enviar (mensagem na tela)</Label>
         <Textarea id={`${prefix}-conf`} rows={2} value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-rev`}>Enquanto a Direção avalia (tela de quem entrou com o Google)</Label>
@@ -57,10 +61,10 @@ export function SendSection({ formId }: { formId: string }) {
   const qc = useQueryClient()
   const { data: form } = useForm(formId)
   const [open, setOpen] = useState(false)
-  const [f, setF] = useState<SendTexts>({ send: '', confirmation: '', review: '', approved: '', rejected: '', waitlist: '' })
+  const [f, setF] = useState<SendTexts>({ privacy: '', send: '', confirmation: '', review: '', approved: '', rejected: '', waitlist: '' })
   const start = () => {
     if (!form) return
-    setF({ send: form.send_text ?? '', confirmation: form.confirmation_message, review: form.review_message, approved: form.approved_email_text, rejected: form.rejected_email_text, waitlist: form.waitlist_email_text })
+    setF({ privacy: form.privacy_text ?? '', send: form.send_text ?? '', confirmation: form.confirmation_message, review: form.review_message, approved: form.approved_email_text, rejected: form.rejected_email_text, waitlist: form.waitlist_email_text })
     setOpen(true)
   }
   const save = useMutation({
@@ -86,12 +90,15 @@ export function SendSection({ formId }: { formId: string }) {
         {open && (
           <SheetContent title="Envio" description="Textos fixos do fim do formulário. Valem na hora, sem republicar.">
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
-              <SendFields f={f} setF={setF} prefix="sd" />
-              <Button type="button" variant="outline" onClick={async () => {
+              <SendFields f={f} setF={setF} prefix="sd" onRestorePrivacy={async () => {
+                if (f.privacy.trim() && !(await confirmBox('Substituir o texto de privacidade pelo padrão das Configurações?'))) return
+                try { const d = await loadSendDefaults(orgId); setF((x) => ({ ...x, privacy: d?.privacy_text?.trim() || SEND_FALLBACK.privacy })); toast.success('Texto padrão colocado. Salve para aplicar.') } catch (e) { toast.error(friendlyError(e)) }
+              }} />
+              <Button type="button" variant="outline" className="w-full" onClick={async () => {
                 if (!(await confirmBox('Substituir todos os textos do envio pelos padrões das Configurações?'))) return
                 try {
                   const d = await loadSendDefaults(orgId)
-                  setF({ send: d?.send_text ?? '', confirmation: d?.confirmation_message ?? SEND_FALLBACK.confirmation, review: d?.review_message ?? SEND_FALLBACK.review, approved: d?.approved_email_text ?? SEND_FALLBACK.approved, rejected: d?.rejected_email_text ?? SEND_FALLBACK.rejected, waitlist: d?.waitlist_email_text ?? SEND_FALLBACK.waitlist })
+                  setF({ privacy: d?.privacy_text?.trim() || SEND_FALLBACK.privacy, send: d?.send_text ?? '', confirmation: d?.confirmation_message ?? SEND_FALLBACK.confirmation, review: d?.review_message ?? SEND_FALLBACK.review, approved: d?.approved_email_text ?? SEND_FALLBACK.approved, rejected: d?.rejected_email_text ?? SEND_FALLBACK.rejected, waitlist: d?.waitlist_email_text ?? SEND_FALLBACK.waitlist })
                   toast.success('Textos padrão colocados. Salve para aplicar.')
                 } catch (e) { toast.error(friendlyError(e)) }
               }}><RotateCcw className="h-4 w-4" /> Restaurar textos padrão</Button>

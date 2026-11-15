@@ -3,17 +3,13 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { StickySave } from '@/components/shared/StickySave'
-import { RichTextarea } from '@/components/shared/RichText'
-import { Label, Skeleton } from '@/components/ui/primitives'
+import { Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { FormSettingsTabs } from './FormSettingsTabs'
 import { SEND_FALLBACK, SendFields, sendColumns, type SendTexts } from './SendSection'
-
-/** Texto de privacidade de fábrica, usado quando ainda não há um padrão salvo em Configurações. */
-export const PRIVACY_FALLBACK = 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à Direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.'
 
 /** Lê os textos padrão de Envio da organização (ou null se ainda não houver). Usado ao criar um formulário novo. */
 export async function loadSendDefaults(orgId: string) {
@@ -28,17 +24,15 @@ export function SendDefaultsPage() {
   const qc = useQueryClient()
   const canEdit = usePermission('forms.manage')
   const row = useQuery({ queryKey: ['form-send-defaults', orgId], queryFn: () => loadSendDefaults(orgId) })
-  const [privacy, setPrivacy] = useState('')
-  const [f, setF] = useState<SendTexts>({ send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
+  const [f, setF] = useState<SendTexts>({ privacy: SEND_FALLBACK.privacy, send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
   useEffect(() => {
     if (!row.isSuccess) return
     const d = row.data
-    setPrivacy(d?.privacy_text ?? '')
-    setF(d ? { send: d.send_text ?? '', confirmation: d.confirmation_message, review: d.review_message, approved: d.approved_email_text, rejected: d.rejected_email_text, waitlist: d.waitlist_email_text }
-      : { send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
+    setF(d ? { privacy: d.privacy_text ?? '', send: d.send_text ?? '', confirmation: d.confirmation_message, review: d.review_message, approved: d.approved_email_text, rejected: d.rejected_email_text, waitlist: d.waitlist_email_text }
+      : { privacy: SEND_FALLBACK.privacy, send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
   }, [row.isSuccess, row.data])
   const save = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from('form_send_defaults').upsert({ organization_id: orgId, ...sendColumns(f), privacy_text: privacy.trim() || null, updated_at: new Date().toISOString() }, { onConflict: 'organization_id' }); if (error) throw error },
+    mutationFn: async () => { const { error } = await supabase.from('form_send_defaults').upsert({ organization_id: orgId, ...sendColumns(f), updated_at: new Date().toISOString() }, { onConflict: 'organization_id' }); if (error) throw error },
     onSuccess: () => { toast.success('Textos padrão salvos. Valem para os próximos formulários.'); qc.invalidateQueries({ queryKey: ['form-send-defaults', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -51,7 +45,6 @@ export function SendDefaultsPage() {
       {row.isLoading ? <Skeleton className="h-40" /> : (
         <form onSubmit={(e) => { e.preventDefault(); if (canEdit) save.mutate() }} className="space-y-4">
           <fieldset disabled={!canEdit} className="min-w-0 space-y-4 border-0 p-0">
-            <div className="space-y-1.5"><Label htmlFor="dd-priv">Texto de privacidade (LGPD)</Label><RichTextarea id="dd-priv" rows={5} value={privacy} onChange={setPrivacy} /></div>
             <SendFields f={f} setF={setF} prefix="dd" />
           </fieldset>
           {canEdit && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar textos padrão" /></StickySave>}
