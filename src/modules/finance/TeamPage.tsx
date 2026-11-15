@@ -178,7 +178,7 @@ export function TeamPage() {
     queryKey: ['staff-pay-rules', orgId, cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_pay_rules').select('id, member_id, kind, fixed_amount, percent, hourly_rate, scope, section_id, instrument_id, members(full_name, display_name)')
+      const { data, error } = await supabase.from('staff_pay_rules').select('id, member_id, kind, fixed_amount, percent, hourly_rate, scope, section_id, instrument_id, members!inner(full_name, display_name)').is('members.archived_at', null)
         .eq('organization_id', orgId).eq('cycle_id', cycleId).order('created_at')
       if (error) throw error
       return (data ?? []) as unknown as RuleRow[]
@@ -189,15 +189,15 @@ export function TeamPage() {
     queryKey: ['member-links', orgId, 'team-paid', cycleId, cycle?.is_current ?? null],
     enabled: Boolean(cycleId && cycle),
     queryFn: async () => {
-      const sel = 'member_id, artistic_functions(name), members(full_name, display_name)'
+      const sel = 'member_id, artistic_functions(name), members!inner(full_name, display_name)'
       type R = { member_id: string; artistic_functions: { name: string } | null; members: { full_name: string; display_name: string | null } | null }
       let rows: R[]
       if (cycle!.is_current) {
-        const { data, error } = await supabase.from('member_artistic_links').select(sel).eq('organization_id', orgId).eq('is_paid', true).not('function_id', 'is', null).is('ended_at', null).limit(3000)
+        const { data, error } = await supabase.from('member_artistic_links').select(sel).eq('organization_id', orgId).eq('is_paid', true).not('function_id', 'is', null).is('ended_at', null).is('members.archived_at', null).limit(3000)
         if (error) throw error
         rows = (data ?? []) as unknown as R[]
       } else {
-        const { data, error } = await supabase.from('cycle_participations').select(sel).eq('organization_id', orgId).eq('cycle_id', cycleId).eq('is_paid', true).not('function_id', 'is', null).limit(3000)
+        const { data, error } = await supabase.from('cycle_participations').select(sel).eq('organization_id', orgId).eq('cycle_id', cycleId).eq('is_paid', true).not('function_id', 'is', null).is('members.archived_at', null).limit(3000)
         if (error) throw error
         rows = (data ?? []) as unknown as R[]
       }

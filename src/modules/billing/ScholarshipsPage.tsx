@@ -51,7 +51,7 @@ export function ScholarshipsPage() {
     queryKey: ['scholarships', orgId, 'list'],
     queryFn: async () => {
       const { data, error } = await supabase.from('scholarships')
-        .select('id, member_id, percent, reason, valid_from, valid_to, members(full_name, display_name), scholarship_types(name)')
+        .select('id, member_id, percent, reason, valid_from, valid_to, members!inner(full_name, display_name), scholarship_types(name)').is('members.archived_at', null)
         .eq('organization_id', orgId).order('percent', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as Row[]

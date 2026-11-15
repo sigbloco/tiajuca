@@ -53,7 +53,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
     queryKey: ['staff-assignments', orgId, 'naipes', cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, compensation, section_id, instrument_id, members(full_name, display_name)')
+      const { data, error } = await supabase.from('staff_assignments').select('id, member_id, staff_kind, compensation, section_id, instrument_id, members!inner(full_name, display_name)').is('members.archived_at', null)
         .eq('organization_id', orgId).is('valid_to', null).eq('cycle_id', cycleId).limit(3000)
       if (error) throw error
       return (data ?? []) as unknown as Assignment[]

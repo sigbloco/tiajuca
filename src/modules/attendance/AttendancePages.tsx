@@ -356,7 +356,7 @@ export function AttendanceRosterPage() {
     enabled: Boolean(activity.data) && Boolean(cyclesAll.data),
     queryFn: async () => {
       const cid = cycleOf(activity.data!, cyclesAll.data ?? [])
-      let q = supabase.from('staff_assignments').select('member_id, staff_kind, section_id, instrument_id, members(full_name, display_name)').eq('organization_id', orgId).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
+      let q = supabase.from('staff_assignments').select('member_id, staff_kind, section_id, instrument_id, members!inner(full_name, display_name)').is('members.archived_at', null).eq('organization_id', orgId).is('valid_to', null).in('staff_kind', ['professor', 'monitor'])
       if (cid) q = q.eq('cycle_id', cid)
       const { data, error } = await q.limit(3000)
       if (error) throw error

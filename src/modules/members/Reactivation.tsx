@@ -25,7 +25,7 @@ function useRequests() {
     queryKey: ['reactivation', orgId],
     queryFn: async () => {
       const { data, error } = await supabase.from('reactivation_requests')
-        .select('id, member_id, cycle_id, message, status, created_at, decision_note, members(full_name, display_name)')
+        .select('id, member_id, cycle_id, message, status, created_at, decision_note, members!inner(full_name, display_name)').is('members.archived_at', null)
         .eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100)
       if (error) throw error
       return (data ?? []) as unknown as Req[]
