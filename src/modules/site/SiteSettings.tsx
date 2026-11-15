@@ -16,7 +16,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { resolveColors } from '@/core/themeModel'
-import { LogoWithRays, RAYS_TEXT_STYLE } from './Rays'
+import { LogoWithRays } from './Rays'
 import { LINK_KINDS, youtubeId, type SiteLink, type SiteVideo } from './links'
 
 const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'albums', label: 'Fotos' }, { key: 'videos', label: 'Vídeos' }] as const
@@ -64,7 +64,7 @@ export function SiteSettings() {
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
     show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
-    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, show_rays: !!row.show_rays, rays_animate: !!row.rays_animate, rays_count: row.rays_count ?? 16, rays_opacity: row.rays_opacity ?? 100, rays_rotation: row.rays_rotation ?? 0, rays_color: row.rays_color || null,
+    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline || !!row.show_rays, show_rays: !!row.show_rays, rays_animate: !!row.rays_animate, rays_count: row.rays_count ?? 16, rays_opacity: row.rays_opacity ?? 100, rays_rotation: row.rays_rotation ?? 0, rays_color: row.rays_color || null,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
   const write = async (row: SiteRow) => {
@@ -163,7 +163,7 @@ export function SiteSettings() {
         </div>
         <div className="space-y-1.5"><Label htmlFor="st-head">Título</Label>
           <Input id="st-head" placeholder={membership?.name ?? 'Nome do bloco'} value={f.headline ?? ''} onChange={(e) => setF({ ...f, headline: e.target.value })} />
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.hide_headline} onChange={(e) => setF({ ...f, hide_headline: e.target.checked })} /> Esconder o título na página</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={f.hide_headline || !!f.show_rays} disabled={!!f.show_rays} onChange={(e) => setF({ ...f, hide_headline: e.target.checked })} /> Esconder o título na página{f.show_rays && <span className="text-muted-foreground"> (com raios, fica sempre escondido)</span>}</label>
           <p className="text-xs text-muted-foreground">Só a logo aparece. O título continua no código da página, para buscadores (SEO) e leitores de tela.</p></div>
         <div className="space-y-1.5"><Label htmlFor="st-desc">Descrição curta</Label>
           <textarea id="st-desc" rows={4} maxLength={600} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.description ?? ''} onChange={(e) => setF({ ...f, description: e.target.value })} />
@@ -179,7 +179,7 @@ export function SiteSettings() {
         <div className="relative overflow-hidden rounded-xl py-8 text-center" style={{ backgroundColor: siteColors.header ?? 'rgb(var(--primary))', color: siteColors.headerText ?? undefined }} aria-label="Prévia do cabeçalho">
           <LogoWithRays size="h-24 w-24" backing={siteColors.header ?? 'rgb(var(--primary))'} name={membership?.name} logoPath={f.photo_url || membership?.logo_path}
             rays={{ on: !!f.show_rays, count: f.rays_count ?? 16, opacity: f.rays_opacity ?? 100, rotation: f.rays_rotation ?? 0, color: f.rays_color || siteColors.secondary || null, animate: !!f.rays_animate }} />
-          {!f.hide_headline && <p className="relative mt-3 font-display text-xl font-extrabold" style={f.show_rays ? RAYS_TEXT_STYLE : undefined}>{f.headline || membership?.name}</p>}
+          {!f.hide_headline && !f.show_rays && <p className="relative mt-3 font-display text-xl font-extrabold">{f.headline || membership?.name}</p>}
         </div>
         {f.show_rays && (
           <div className="grid gap-3 sm:grid-cols-2">

@@ -1,4 +1,4 @@
-import { LogoWithRays, RAYS_TEXT_STYLE } from './Rays'
+import { LogoWithRays } from './Rays'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ClipboardList, Images, LogIn, LogOut, Newspaper, ShoppingBag } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
@@ -83,7 +83,7 @@ export function LandingPage() {
         {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="relative z-10 mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
         {session ? <button type="button" onClick={() => void signOut()} className="relative z-10 mb-4 ml-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><LogOut className="h-5 w-5" aria-hidden /> Sair</button> : null}
         <LogoWithRays rays={{ on: site.show_rays, count: site.rays_count, opacity: site.rays_opacity, rotation: site.rays_rotation, color: site.rays_color, animate: site.rays_animate }} backing={heroColor ?? 'rgb(var(--primary))'} name={org.name} logoPath={photo} />
-        <h1 className={site.hide_headline ? 'sr-only' : 'relative mt-4 font-display text-3xl font-extrabold'} style={site.show_rays && !site.hide_headline ? RAYS_TEXT_STYLE : undefined}>{site.headline || org.name}</h1>
+        <h1 className={site.hide_headline || site.show_rays ? 'sr-only' : 'relative mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
       </header>
 
       <div className="-mt-12 mx-auto max-w-md space-y-5 px-4">
