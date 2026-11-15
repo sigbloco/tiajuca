@@ -73,6 +73,11 @@ export function ProfilePage() {
       return (data ?? []) as unknown as StaffPayment[]
     },
   })
+  const head = useQuery({
+    queryKey: ['me-head', orgId, memberId],
+    enabled: Boolean(memberId),
+    queryFn: async () => { const { data, error } = await supabase.from('members').select('full_name, display_name, joined_at').eq('id', memberId).single(); if (error) throw error; return data as { full_name: string; display_name: string | null; joined_at: string | null } },
+  })
   // Um único Salvar, fixo na base: salva os dados e os dados sensíveis juntos.
   const savers = useRef(new Map<string, () => Promise<boolean | void>>())
   const [saving, setSaving] = useState(false)
@@ -86,10 +91,13 @@ export function ProfilePage() {
   if (!membership) return null
   return (
     <div className="space-y-4">
-      <h1>Meu perfil</h1>
+      <div>
+        <h1>Meu perfil</h1>
+        {head.data?.joined_at && <p className="text-sm text-muted-foreground">Inscrição em {formatDate(head.data.joined_at)}</p>}
+      </div>
       <Card className="p-4">
-        <p className="font-display text-lg font-bold">{membership.display_name}</p>
-        <p className="text-muted-foreground">{membership.name}</p>
+        <p className="font-display text-lg font-bold">{head.data?.full_name ?? membership.display_name}</p>
+        {head.data?.display_name?.trim() && head.data.display_name.trim() !== head.data.full_name && <p className="text-muted-foreground">{head.data.display_name.trim()}</p>}
       </Card>
       <MyData memberId={memberId} bind={bindData} />
       <MySensitiveData memberId={memberId} bind={bindSens} />
