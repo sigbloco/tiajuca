@@ -16,7 +16,7 @@ export function RaysBackdrop({ count = 16, opacity = 100, rotation = 0, color, a
     return `M0 0 L${pt(a)} A100 100 0 0 1 ${pt(a + period / 2)} Z`
   }).join(' ')
   return (
-    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[260vmax] w-[260vmax] -translate-x-1/2 -translate-y-1/2" style={{ opacity: opacity / 100, filter: 'blur(0.6px)' }}>
+    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[260vmax] w-[260vmax] -translate-x-1/2 -translate-y-1/2" style={{ opacity: opacity / 100 }}>
       <svg viewBox="-100 -100 200 200" className={animate ? 'rays-spin h-full w-full' : 'h-full w-full'} shapeRendering="geometricPrecision" style={animate ? { animationDuration: `${720 / Math.min(20, Math.max(1, speed))}s` } : undefined}>
         <path d={d} fill={c} />
       </svg>
