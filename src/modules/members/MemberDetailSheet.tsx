@@ -110,6 +110,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const { data: statuses } = useCycleStatuses()
   const canManage = usePermission('member_cycles.manage')
   const canForce = usePermission('capacity.manage')
+  const staffCycles = usePermission('members.read', 'group') // só Direção, Titular, professores e monitores trocam o ciclo exibido
   const [adding, setAdding] = useState(false)
   const [pick, setPick] = useState('')
   const { cycleId: globalCycle } = useSelectedCycle()
@@ -161,7 +162,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
   const missing = (cycles ?? []).filter((c) => c.is_active && !rows?.some((x) => x.cycle_id === c.id)).sort((a, b) => a.starts_on.localeCompare(b.starts_on))
   return (
     <div className="space-y-3">
-      <MemberSection title={<span className="inline-flex items-center gap-1.5">Ciclos{canManage && !adding && missing.length > 0 && (
+      <MemberSection title={<span className="inline-flex items-center gap-1.5">Ciclos{canManage && staffCycles && !adding && missing.length > 0 && (
         <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
       )}</span>}>
         {isLoading && <Skeleton className="h-16" />}
@@ -176,7 +177,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
         )}
         {mine.length === 0 && !isLoading && <p className="px-1 text-sm text-muted-foreground">Sem ciclos. A participação e a contribuição ficam abaixo, sem vínculo com ciclo.</p>}
         {(chosen ? [chosen] : []).map((c) => (
-          <CycleGroup key={c.id} cycle={c} selector={
+          <CycleGroup key={c.id} cycle={c} selector={!staffCycles ? undefined :
             <Select aria-label="Ciclo" className="px-2 text-sm" value={chosen?.id ?? ''} onChange={(e) => setPick(e.target.value)}>
               {mine.map((m) => <option key={m.id} value={m.id}>{m.name}{m.is_current ? ' · atual' : ''}</option>)}
             </Select>} status={statusOfCycle(c.id)} memberId={memberId} canManage={canManage} statuses={statuses ?? []}
@@ -195,6 +196,8 @@ async function copyEmail(email: string) {
 
 function ContactLinks({ member }: { member: MemberRow }) {
   const canManage = usePermission('members.manage')
+  // E-mail, idade e ano de nascimento: só Titular, Direção e professores/monitores. Para o resto, aniversário só com dia e mês.
+  const staff = usePermission('members.read', 'group')
   const extraEmails = useQuery({
     queryKey: ['member-emails', member.id],
     enabled: canManage,
@@ -206,7 +209,7 @@ function ContactLinks({ member }: { member: MemberRow }) {
   })
   const socials = (member.social_handle ?? '').split('\n').map((x) => socialUrl(x)).filter((x): x is string => !!x)
   const wa = whatsappUrl(member.phone)
-  if (!member.phone && socials.length === 0 && !member.email && !member.birth_date) return null
+  if (!member.phone && socials.length === 0 && !(staff && member.email) && !member.birth_date) return null
   const cls = 'inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted'
   return (
     <div className="flex flex-wrap gap-2">
@@ -216,10 +219,10 @@ function ContactLinks({ member }: { member: MemberRow }) {
           {/instagram\.com/i.test(social) ? <InstagramIcon className="h-4 w-4" /> : <Globe className="h-4 w-4" />} {socialLabel(social)}
         </a>
       ))}
-      {[member.email, ...(extraEmails.data ?? []).map((e) => e.email)].filter((e): e is string => !!e).map((email) => (
+      {staff && [member.email, ...(extraEmails.data ?? []).map((e) => e.email)].filter((e): e is string => !!e).map((email) => (
         <button key={email} type="button" className={cls} onClick={() => void copyEmail(email)} aria-label={`Copiar e-mail ${email}`} title="Clique para copiar"><Mail className="h-4 w-4" /> {email}</button>
       ))}
-      {member.birth_date && <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm" aria-label="Data de nascimento"><Cake className="h-4 w-4" /> {formatDate(member.birth_date)}</span>}
+      {member.birth_date && <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-sm" aria-label="Data de nascimento"><Cake className="h-4 w-4" /> {staff ? formatDate(member.birth_date) : formatDate(member.birth_date).split('/').slice(0, 2).join('/')}</span>}
     </div>
   )
 }
@@ -376,6 +379,7 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
 export function MemberDetailSheet({ member, category, onChanged = () => {}, onCrumbClick, onArchived }: { member: MemberRow; category?: string; onCrumbClick?: () => void; onChanged?: (p: Partial<MemberRow>) => void; onArchived?: () => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
+  const staffView = usePermission('members.read', 'group')
   const [editing, setEditing] = useState(false)
   void category
   // "Excluir": move para a lixeira (some das listas e da chamada; o histórico fica e dá para restaurar).
@@ -394,7 +398,7 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" aria-label="Excluir integrante" title="Excluir integrante" disabled={archive.isPending}
           onClick={async () => { if (await confirmBox(`Excluir ${shortName(member.full_name, member.display_name)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
       </>
-    )} description={ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
+    )} description={!staffView || ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin readOnly={!editing} /></MemberSection>}
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}

@@ -8,7 +8,7 @@ import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/componen
 import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
-import { usePermission } from '@/core/permissions'
+import { useIsDirection, usePermission } from '@/core/permissions'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventCard } from './EventCard'
@@ -120,12 +120,13 @@ export function EventsPage() {
       return { cancelled: all.filter((a) => a.status === 'cancelled'), trashed }
     },
   })
+  const isDirection = useIsDirection()
   const header = canManage && (
     <ButtonRow>
       <Button variant="add" onClick={() => setSheet({ activity: null })}><Plus className="h-4 w-4 shrink-0" /> Novo evento</Button>
       <EventsArchive kind="cancelled" items={archived.data?.cancelled ?? []} />
       <EventsArchive kind="trash" items={archived.data?.trashed ?? []} />
-      <SettingsButton to={`/${membership?.slug}/eventos/configuracoes`} />
+      {isDirection && <SettingsButton to={`/${membership?.slug}/eventos/configuracoes`} />}
     </ButtonRow>
   )
   const sheetEl = (
