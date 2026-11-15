@@ -9,13 +9,15 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { FormSettingsTabs } from './FormSettingsTabs'
-import { SEND_FALLBACK, SendFields, SendPartTabs, sendColumns, type SendPart, type SendTexts } from './SendSection'
+import { RestorePartButton, SEND_FACTORY, SendFields, SendPartTabs, rowToSend, sendColumns, type SendPart, type SendTexts } from './SendSection'
 
 /** Lê os textos padrão de Envio da organização (ou null se ainda não houver). Usado ao criar um formulário novo. */
 export async function loadSendDefaults(orgId: string) {
-  const { data, error } = await supabase.from('form_send_defaults').select('privacy_text, send_text, confirmation_message, review_message, approved_email_text, rejected_email_text, waitlist_email_text').eq('organization_id', orgId).maybeSingle()
+  const { data, error } = await supabase.from('form_send_defaults')
+    .select('privacy_text, send_text, confirmation_message, review_message, approved_email_text, rejected_email_text, waitlist_email_text, privacy_enabled, send_enabled, confirmation_enabled, review_enabled, approved_enabled, rejected_enabled, waitlist_enabled')
+    .eq('organization_id', orgId).maybeSingle()
   if (error) throw error
-  return data as { privacy_text: string | null; send_text: string | null; confirmation_message: string; review_message: string; approved_email_text: string; rejected_email_text: string; waitlist_email_text: string } | null
+  return data as Record<string, unknown> | null
 }
 
 /** Formulários → Configurações → Textos padrão: os textos com que todo formulário novo começa. Formulários já criados não mudam. */
@@ -25,13 +27,8 @@ export function SendDefaultsPage() {
   const canEdit = usePermission('forms.manage')
   const [part, setPart] = useState<SendPart>('form')
   const row = useQuery({ queryKey: ['form-send-defaults', orgId], queryFn: () => loadSendDefaults(orgId) })
-  const [f, setF] = useState<SendTexts>({ privacy: SEND_FALLBACK.privacy, send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
-  useEffect(() => {
-    if (!row.isSuccess) return
-    const d = row.data
-    setF(d ? { privacy: d.privacy_text ?? '', send: d.send_text ?? '', confirmation: d.confirmation_message, review: d.review_message, approved: d.approved_email_text, rejected: d.rejected_email_text, waitlist: d.waitlist_email_text }
-      : { privacy: SEND_FALLBACK.privacy, send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
-  }, [row.isSuccess, row.data])
+  const [f, setF] = useState<SendTexts>(SEND_FACTORY)
+  useEffect(() => { if (row.isSuccess) setF(rowToSend(row.data)) }, [row.isSuccess, row.data])
   const save = useMutation({
     mutationFn: async () => { const { error } = await supabase.from('form_send_defaults').upsert({ organization_id: orgId, ...sendColumns(f), updated_at: new Date().toISOString() }, { onConflict: 'organization_id' }); if (error) throw error },
     onSuccess: () => { toast.success('Textos padrão salvos. Valem para os próximos formulários.'); qc.invalidateQueries({ queryKey: ['form-send-defaults', orgId] }) },
@@ -41,15 +38,16 @@ export function SendDefaultsPage() {
     <div className="space-y-4">
       <FormSettingsTabs />
       <p className="text-muted-foreground">
-        O texto de privacidade e os textos da seção fixa de Envio com que todo formulário novo começa. Cada formulário pode mudar os seus no editor; mexer aqui não altera os que já existem.
+        O texto de privacidade e os textos do Envio com que todo formulário novo começa. Cada formulário pode mudar os seus na aba Envio; mexer aqui não altera os que já existem.
       </p>
       {row.isLoading ? <Skeleton className="h-40" /> : (
-        <form onSubmit={(e) => { e.preventDefault(); if (canEdit) save.mutate() }} className="space-y-4">
+        <form id="defaults-form" onSubmit={(e) => { e.preventDefault(); if (canEdit) save.mutate() }} className="space-y-4">
           <SendPartTabs part={part} setPart={setPart} />
           <fieldset disabled={!canEdit} className="min-w-0 space-y-4 border-0 p-0">
-            <SendFields f={f} setF={setF} prefix="dd" part={part} />
+            <SendFields f={f} setF={setF} prefix="dd" part={part} disabled={!canEdit} />
           </fieldset>
-          {canEdit && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar textos padrão" /></StickySave>}
+          {canEdit && <RestorePartButton f={f} setF={setF} part={part} source={async () => SEND_FACTORY} />}
+          {canEdit && <StickySave><SaveButton type="submit" form="defaults-form" className="w-full" disabled={save.isPending} hint="Salvar textos padrão" /></StickySave>}
         </form>
       )}
     </div>

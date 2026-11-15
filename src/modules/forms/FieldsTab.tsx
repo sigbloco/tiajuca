@@ -275,7 +275,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
 }
 
 /** Construtor de campos: adicionar, ordenar, condições simples e ligação com o cadastro. */
-export function FieldsTab({ formId, templateMode }: { formId: string; /** Editando uma seção modelo: só a seção do modelo (sem criar outras, sem apagar a seção). */ templateMode?: boolean }) {
+export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string; /** Abre a aba Envio (o card fixo "Envio" leva para lá). */ onOpenSend?: () => void; /** Editando uma seção modelo: só a seção do modelo (sem criar outras, sem apagar a seção). */ templateMode?: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data } = useFormFields(formId)
@@ -354,7 +354,8 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
   })
   // Seções recolhíveis na edição: por padrão todas recolhidas (só o cabeçalho, com a contagem de campos); a pessoa abre as que quer.
   const [opened, setOpened] = useState<Set<string>>(new Set())
-  const collapsed = { has: (id: string) => !opened.has(id) }
+  // Editando um modelo há uma seção só: fica sempre aberta e não recolhe. Nos formulários, as seções começam recolhidas.
+  const collapsed = { has: (id: string) => !templateMode && !opened.has(id) }
   const toggleCollapsed = (id: string) => setOpened((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const applyOrder = useMutation({
     mutationFn: async (order: FormFieldRow[]) => {
@@ -419,7 +420,7 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
                   <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={sec ? hi === heads.length - 1 : i === fields.length - 1}
                     onClick={() => (sec ? moveSection(x.id, heads[hi + 1].head!.id) : move.mutate({ from: i, to: i + 1 }))}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
-                {sec && !isLoginSection(x) && (
+                {sec && !templateMode && !isLoginSection(x) && (
                   <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" aria-expanded={!isClosed} aria-label={isClosed ? `Expandir ${x.label}` : `Recolher ${x.label}`} title={isClosed ? 'Expandir a seção' : 'Recolher a seção'} onClick={() => toggleCollapsed(x.id)}>
                     {isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
@@ -451,7 +452,7 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
           )
         })}
         {heads.length === 0 && <Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Adicionar campo</Button>}
-        {!templateMode && <SendSection formId={formId} />}
+        {!templateMode && <SendSection onOpen={() => onOpenSend?.()} />}
       </div>
       <p className="text-xs text-muted-foreground">Mudanças nos campos só aparecem no link público depois de <strong>publicar de novo</strong>. Respostas antigas continuam legíveis.</p>
       <Sheet open={pickOpen} onOpenChange={setPickOpen}>

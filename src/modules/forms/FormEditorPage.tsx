@@ -8,11 +8,12 @@ import { Button, Skeleton, cn } from '@/components/ui/primitives'
 import { FitButton } from '@/components/shared/FitButton'
 import { useOrganization } from '@/core/organization'
 import { FieldsTab } from './FieldsTab'
+import { SendTab } from './SendSection'
 import { useForm } from './service'
 import { SettingsTab } from './SettingsTab'
 import { SubmissionsTab } from './SubmissionsTab'
 
-const TABS = [{ key: 'settings', label: 'Configurações' }, { key: 'header', label: 'Cabeçalho' }, { key: 'fields', label: 'Campos' }, { key: 'submissions', label: 'Respostas' }] as const
+const TABS = [{ key: 'settings', label: 'Configurações' }, { key: 'header', label: 'Cabeçalho' }, { key: 'fields', label: 'Campos' }, { key: 'send', label: 'Envio' }, { key: 'submissions', label: 'Respostas' }] as const
 
 export function FormEditorPage() {
   const { formId = '' } = useParams()
@@ -37,7 +38,8 @@ export function FormEditorPage() {
             className={cn('whitespace-nowrap rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{t.label}</FitWord></button>
         ))}
       </ButtonRow>
-      {tab === 'fields' && <FieldsTab formId={form.id} />}
+      {tab === 'fields' && <FieldsTab formId={form.id} onOpenSend={() => setTab('send')} />}
+      {tab === 'send' && <SendTab key={`s-${form.updated_at ?? form.id}`} form={form} />}
       {tab === 'settings' && <SettingsTab key={form.updated_at ?? form.id} form={form} />}
       {tab === 'header' && <SettingsTab key={`h-${form.updated_at ?? form.id}`} form={form} part="header" />}
       {tab === 'submissions' && <SubmissionsTab form={form} />}

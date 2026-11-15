@@ -122,8 +122,10 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
           <Button className="w-full" disabled={approve.isPending} onClick={() => approve.mutate()}>Aprovar e criar integrante</Button>
           {rejecting && (
             <div className="space-y-2 rounded-lg border border-border p-3">
-              <Label htmlFor="rej-msg">{sub.applicant_email ? 'Mensagem enviada por e-mail a quem se inscreveu' : 'Esta inscrição não tem e-mail: nada será enviado'}</Label>
-              <RichTextarea id="rej-msg" rows={5} value={rejMsg} onChange={setRejMsg} />
+              {form.rejected_enabled === false
+                ? <p className="text-sm text-muted-foreground">O e-mail de rejeição está desligado neste formulário: nada será enviado.</p>
+                : <><Label htmlFor="rej-msg">{sub.applicant_email ? 'Mensagem enviada por e-mail a quem se inscreveu' : 'Esta inscrição não tem e-mail: nada será enviado'}</Label>
+                  <RichTextarea id="rej-msg" rows={5} value={rejMsg} onChange={setRejMsg} /></>}
               <Button className="w-full" variant="outline" disabled={reject.isPending} onClick={() => reject.mutate()}>{sub.applicant_email ? 'Rejeitar e enviar e-mail' : 'Rejeitar'}</Button>
             </div>
           )}
