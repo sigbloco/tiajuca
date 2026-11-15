@@ -1,3 +1,4 @@
+import { OrgName } from '@/components/shared/OrgName'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
@@ -59,7 +60,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
     <main className="min-h-screen">
       <header className="bg-primary px-4 pb-16 pt-10 text-center text-primary-foreground">
         {org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="mx-auto h-28 w-28 ring-4 ring-secondary" /> : <Skeleton className="mx-auto h-28 w-28 rounded-full" />}
-        <p className="mt-3 min-h-9 font-display text-3xl font-extrabold">{org?.name}</p>
+        <p className="mt-3 min-h-9 font-display text-3xl font-extrabold leading-[1.05]">{org && <OrgName name={org.name} />}</p>
       </header>
       <div className="-mt-10 flex flex-col items-center px-4 pb-10">
         <Card className="w-full max-w-sm p-6">
