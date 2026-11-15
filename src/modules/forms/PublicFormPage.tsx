@@ -215,7 +215,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
 
   const form = preview ? { data: preview, isLoading: false, isError: false } : live
   const fields = form.data?.form?.fields ?? []
-  const fill = (t: string) => fillVars(t, form.data?.form?.vars)
+  const fill = (t: string) => fillVars(t, form.data?.form?.vars, answers)
   const visible = useMemo(() => fields.filter((f) => isVisible(f, answers)), [fields, answers])
 
   // Seções: cada cabeçalho abre um bloco com as perguntas que vêm depois dele (perguntas antes da primeira seção ficam num bloco sem título).
