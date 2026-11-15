@@ -24,6 +24,7 @@ import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
 import { FormListsPage } from '@/modules/forms/FormListsPage'
+import { SectionTemplatesPage } from '@/modules/forms/SectionTemplatesPage'
 import { FormPreviewPage } from '@/modules/forms/FormPreviewPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
@@ -153,7 +154,8 @@ export const router = createBrowserRouter(
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
                 { path: 'formularios', element: <FormsPage /> },
-                { path: 'formularios/configuracoes', element: <FormListsPage /> },
+                { path: 'formularios/configuracoes', element: <SectionTemplatesPage /> },
+                { path: 'formularios/configuracoes/listas', element: <FormListsPage /> },
                 { path: 'formularios/:formId', element: <FormEditorPage /> },
                 // Endereços antigos (quando a área se chamava Inscrições) seguem funcionando.
                 { path: 'inscricoes', element: <OldFormsRedirect /> },

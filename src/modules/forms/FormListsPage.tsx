@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { PageLink } from '@/components/shared/PageLink'
 import { usePermission } from '@/core/permissions'
+import { FormSettingsTabs } from './FormSettingsTabs'
 import { CatalogEditor, useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogTable } from '@/modules/structure/service'
 
@@ -27,8 +28,8 @@ export function FormListsPage() {
   const toggle = (t: string) => setOpened((cur) => { const n = new Set(cur); if (n.has(t)) n.delete(t); else n.add(t); return n })
   return (
     <div className="space-y-4">
+      <FormSettingsTabs />
       <div>
-        <h1>Listas do cadastro</h1>
         <p className="text-muted-foreground">
           Definidas uma vez e usadas em todos os formulários. No editor de cada pergunta ligada ao cadastro, você marca quais itens aparecem.
           Instrumentos ficam em <PageLink to="naipes">Naipes e instrumentos</PageLink> e categorias em <PageLink to="funcoes">Organização → Categorias</PageLink>.
