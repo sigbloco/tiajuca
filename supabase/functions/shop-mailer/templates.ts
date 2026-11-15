@@ -159,7 +159,7 @@ export function buildEmail(c: MailContext): BuiltEmail {
 /** Aviso ao inscrito (formulários): vem da fila form_email_outbox. */
 export interface FormMailContext {
   outbox_id: string
-  template: 'submission_approved' | 'submission_rejected'
+  template: 'submission_approved' | 'submission_rejected' | 'submission_waitlist'
   to_email: string
   name: string | null
   /** Texto do e-mail: o do formulário (aprovação) ou o que a Direção escreveu ao rejeitar. */
@@ -178,7 +178,8 @@ export function buildFormEmail(c: FormMailContext): BuiltEmail {
     contacts.length ? `<hr style="border:none;border-top:1px solid #ddd;margin:16px 0"><p style="margin:0;font-size:13px;color:#555">${contacts.map((l) => escapeHtml(l)).join('<br>')}</p>` : '',
     contacts.length ? ['--', ...contacts].join('\n') : '')
   const approved = c.template === 'submission_approved'
-  const fallback = approved ? `Sua inscrição no ${c.org.name} foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.` : 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.'
+  const waitlist = c.template === 'submission_waitlist'
+  const fallback = waitlist ? `Recebemos a sua inscrição no ${c.org.name} e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a Direção avisa se uma vaga abrir.` : approved ? `Sua inscrição no ${c.org.name} foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.` : 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.'
   const paragraphs = (c.message?.trim() || fallback).split(/\n+/).map((l) => l.trim()).filter(Boolean)
   const body: Section[] = [
     p(`Olá${c.name ? `, ${c.name}` : ''}!`),
@@ -189,5 +190,5 @@ export function buildFormEmail(c: FormMailContext): BuiltEmail {
   const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;padding:16px;background:#f5f5f5;font-family:Arial,Helvetica,sans-serif;color:#222">`
     + `<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:20px"><h2 style="margin:0 0 12px;font-size:18px">${escapeHtml(c.org.name)}</h2>${body.map((b) => b.html).join('')}</div></body></html>`
   const text = `${c.org.name}\n\n${body.map((b) => b.text).filter(Boolean).join('\n\n')}\n`
-  return { subject: approved ? `Inscrição aprovada — ${c.org.name}` : `Sobre a sua inscrição — ${c.org.name}`, html, text }
+  return { subject: waitlist ? `Sua inscrição está na lista de espera — ${c.org.name}` : approved ? `Inscrição aprovada — ${c.org.name}` : `Sobre a sua inscrição — ${c.org.name}`, html, text }
 }

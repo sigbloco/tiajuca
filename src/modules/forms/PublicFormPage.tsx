@@ -202,6 +202,9 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
       const { data, error } = await supabase.rpc('get_public_form', { p_org_slug: orgSlug, p_form_slug: formSlug })
       if (error) throw error
       const p = data as PublicFormPayload
+      // Opção com a vaga preenchida continua escolhível, mas avisa que entra na lista de espera.
+      const full = new Set(p.form?.full_options ?? [])
+      if (p.form && full.size > 0) p.form.fields = p.form.fields.map((f) => ({ ...f, options: (f.options ?? []).map((o) => (full.has(o.value) ? { ...o, label: `${o.label} (Esgotado - Lista de espera)` } : o)) }))
       if (p.organization?.theme) applyTheme(p.organization.theme, { cache: false })
       return p
     },

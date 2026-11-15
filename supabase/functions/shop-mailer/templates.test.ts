@@ -122,6 +122,12 @@ describe('inscrição aprovada', () => {
     expect(r.subject).toBe('Sobre a sua inscrição — Cordão')
     for (const part of ['Linha um.', 'Linha dois.']) expect(r.text).toContain(part)
   })
+  it('lista de espera: assunto próprio, sem posição na fila', () => {
+    const r = buildFormEmail({ outbox_id: 'f3', template: 'submission_waitlist', to_email: 'a@b.com', name: 'Ana', org: { name: 'Cordão' }, settings: null })
+    expect(r.subject).toBe('Sua inscrição está na lista de espera — Cordão')
+    expect(r.text).toContain('lista de espera')
+    expect(r.text).not.toMatch(/posição|n[ºo] d/i)
+  })
   it('assunto, saudação, aprovação e contatos', () => {
     expect(m.subject).toBe('Inscrição aprovada — Cordão da Tia Juca')
     for (const part of ['Olá, Maria!', 'foi aprovada', 'wa.me/5521990698483', 'contato@ex.com']) { expect(m.html).toContain(part); expect(m.text).toContain(part) }
