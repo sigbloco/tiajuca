@@ -14,7 +14,10 @@ export interface TextVars {
   whatsapp?: string | null; email?: string | null; chave_pix?: string | null; vencimento?: string | number | null
   /** Pergunta do formulário ligada à categoria, e o preço atual de cada categoria (id da categoria de Organização → valor). */
   valor_field?: string | null; prices?: Record<string, number> | null
+  /** Preço atual de cada categoria ativa, para {valor:Nome da categoria}. */
+  categories?: { name: string; key: string | null; price: number }[] | null
 }
+const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 
 /** Troca {valor}, {vencimento}, {chave_pix}, {whatsapp}, {whatsapp_link} e {email} pelos valores; o que não tem valor fica como está. */
 export function fillVars(text: string, vars: TextVars | null | undefined, answers?: Record<string, unknown>): string {
@@ -36,5 +39,11 @@ export function fillVars(text: string, vars: TextVars | null | undefined, answer
     chave_pix: vars.chave_pix ?? null,
     vencimento: vars.vencimento != null && vars.vencimento !== '' ? String(vars.vencimento) : null,
   }
-  return text.replace(/\{(whatsapp_link|whatsapp|email|chave_pix|vencimento|valor)\}/g, (m, k: string) => values[k] ?? m)
+  // {valor:Aluno}: o preço atual da categoria pelo nome (sem diferenciar maiúsculas e acentos) ou pela chave fixa (aluno, musico, senior...).
+  const withCats = text.replace(/\{valor:([^}]+)\}/g, (m, name: string) => {
+    const n = norm(name)
+    const cat = vars.categories?.find((c) => norm(c.name) === n || (c.key && c.key === n))
+    return cat ? formatCurrency(cat.price) : m
+  })
+  return withCats.replace(/\{(whatsapp_link|whatsapp|email|chave_pix|vencimento|valor)\}/g, (m, k: string) => values[k] ?? m)
 }
