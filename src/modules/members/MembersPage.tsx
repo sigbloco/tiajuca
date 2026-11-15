@@ -1,3 +1,4 @@
+import { ParticipationRequests } from './ParticipationRequests'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
 import { Filter, Heart, Pencil, Plus, Search } from 'lucide-react'
@@ -119,7 +120,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     queryKey: ['my-staff-scope', orgId, membership?.member_id],
     enabled: Boolean(membership?.member_id),
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff_assignments').select('section_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).eq('cycles.is_current', true)
+      const { data, error } = await supabase.from('staff_assignments').select('section_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).eq('cycles.is_current', true)
       if (error) throw error
       return (data ?? []) as unknown as { section_id: string | null; instrument_id: string | null }[]
     },
@@ -391,6 +392,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </Can>
         <MembersTrash />
       </div>
+      <ParticipationRequests />
 
       <ButtonRow role="group" aria-label="Situação">
         {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
