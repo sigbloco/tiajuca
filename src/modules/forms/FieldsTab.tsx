@@ -86,10 +86,17 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   })
   // Fonte das opções: uma lista criada em Formulários → Configurações → Listas (só quando a pergunta não está ligada ao cadastro).
   const [listSource, setListSource] = useState<string>(field?.validation.listSource ?? '')
-  const src = f.mapping ? '' : listSource
+  const src = f.mapping && f.mapping !== 'member.custom' ? '' : listSource
+  // Pergunta ligada ao nível do integrante: pode usar a lista padrão ou uma lista de níveis ligada (ex.: níveis de pernalta).
+  const [levelList, setLevelList] = useState<string>(field?.validation.levelList ?? '')
+  const levelItems = useQuery({
+    queryKey: ['form-level-items', orgId, levelList],
+    enabled: f.mapping === 'link.skill_level' && Boolean(levelList),
+    queryFn: async () => { const { data, error } = await supabase.from('skill_levels').select('id, name, sort_order, is_active, description').eq('list_id', levelList).order('sort_order'); if (error) throw error; return (data ?? []) as CatalogItem[] },
+  })
   const customLists = useQuery({
     queryKey: ['form-lists', orgId, 'custom-active'],
-    queryFn: async () => { const { data, error } = await supabase.from('form_lists').select('id, name').eq('organization_id', orgId).eq('kind', 'custom').eq('is_active', true).order('sort_order'); if (error) throw error; return (data ?? []) as { id: string; name: string }[] },
+    queryFn: async () => { const { data, error } = await supabase.from('form_lists').select('id, name, link').eq('organization_id', orgId).eq('kind', 'custom').eq('is_active', true).order('sort_order'); if (error) throw error; return (data ?? []) as { id: string; name: string; link: string | null }[] },
   })
   const customItems = useQuery({
     queryKey: ['form-list-items', orgId, src],
@@ -99,7 +106,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const linkMapped = f.mapping.startsWith('link.')
   // Listas do cadastro (marcar quais itens aparecem): instrumento, categoria, nível, gênero e cor/raça.
   const listMapped = linkMapped || f.mapping === 'sensitive.gender' || f.mapping === 'sensitive.race_color' || !!src
-  const catalogItems: CatalogItem[] = (src ? customItems.data :  f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : f.mapping === 'sensitive.gender' ? genders.data : f.mapping === 'sensitive.race_color' ? races.data : [])
+  const catalogItems: CatalogItem[] = (src ? customItems.data :  f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? (levelList ? levelItems.data : levels.data) : f.mapping === 'link.function' ? functions.data : f.mapping === 'sensitive.gender' ? genders.data : f.mapping === 'sensitive.race_color' ? races.data : [])
     ?.filter((i) => i.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0) || x.name.localeCompare(y.name, 'pt-BR')) ?? []
   const naipeList = (naipes.data ?? []).filter((n) => n.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0))
   const activeNaipe = naipe || naipeList[0]?.id || ''
@@ -117,6 +124,13 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   }, [catalogSig]) // eslint-disable-line react-hooks/exhaustive-deps
   // Ao escolher uma lista, todos os itens começam marcados (dá para desmarcar).
   const autoPick = useRef('')
+  const autoLevel = useRef('')
+  useEffect(() => {
+    if (f.mapping !== 'link.skill_level' || !levelList || autoLevel.current === levelList || !levelItems.data || levelItems.data.length === 0) return
+    autoLevel.current = levelList
+    if (field?.validation.levelList === levelList && (field?.options.length ?? 0) > 0) return
+    setPicked(new Set(levelItems.data.filter((i) => i.is_active).map((i) => i.id)))
+  }, [f.mapping, levelList, levelItems.data]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!src || autoPick.current === src || !customItems.data || customItems.data.length === 0) return
     autoPick.current = src
@@ -161,6 +175,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       if (f.other && OPTION_TYPES.includes(f.type as FieldType) && !f.mapping.startsWith('link.')) validation.other = true
       if (listMapped && showDesc) validation.descriptions = true
       if (src) validation.listSource = src
+      if (f.mapping === 'link.skill_level' && levelList) validation.levelList = levelList
       const opts = OPTION_TYPES.includes(f.type as FieldType) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
       const marks = asSection ? { section: true, ...(f.consent && !field?.validation.login ? { consent: true } : {}), ...(field?.validation.login ? { login: true } : {}) } : {}
@@ -233,11 +248,19 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {asSection && !field?.validation.login && (
           <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
-        {needsOptions && !f.mapping && (customLists.data?.length ?? 0) > 0 && (
+        {needsOptions && (!f.mapping || f.mapping === 'member.custom') && (customLists.data ?? []).some((l) => !l.link) && (
           <div className="space-y-1.5"><Label htmlFor="fl-src">Fonte das opções</Label>
             <Select id="fl-src" value={listSource} onChange={(e) => { setListSource(e.target.value); setPicked(new Set()); autoPick.current = '' }}>
               <option value="">Digitar as opções aqui</option>
-              {customLists.data!.map((l) => <option key={l.id} value={l.id}>Lista: {l.name}</option>)}
+              {customLists.data!.filter((l) => !l.link).map((l) => <option key={l.id} value={l.id}>Lista: {l.name}</option>)}
+            </Select>
+          </div>
+        )}
+        {needsOptions && f.mapping === 'link.skill_level' && (customLists.data ?? []).some((l) => l.link === 'skill_level') && (
+          <div className="space-y-1.5"><Label htmlFor="fl-levels">Lista de níveis</Label>
+            <Select id="fl-levels" value={levelList} onChange={(e) => { setLevelList(e.target.value); setPicked(new Set()); autoLevel.current = '' }}>
+              <option value="">Níveis (padrão)</option>
+              {customLists.data!.filter((l) => l.link === 'skill_level').map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </Select>
           </div>
         )}
