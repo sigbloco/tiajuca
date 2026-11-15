@@ -1,4 +1,5 @@
 import { fillVars } from '@/core/textVars'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { BackButton } from '@/components/shared/BackButton'
 import { DEFAULT_FRAME, HeaderBand } from './HeaderBand'
 import { RichText } from '@/components/shared/RichText'
@@ -378,12 +379,12 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
           </p>
         )}
         {(stepIdx > 0 || titlePast) && anchors.length > 1 && (
-          <nav aria-label="Blocos desta etapa" className="mt-1.5 flex flex-wrap gap-1">
+          <nav aria-label="Blocos desta etapa" className="mt-1.5"><ButtonRow className="!gap-1">
             {anchors.map((a) => (
               <button key={a.key} type="button" aria-current={activeAnchor === a.key ? 'true' : undefined} onClick={() => goAnchor(a.key)}
-                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${activeAnchor === a.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}>{a.label}</button>
+                className={`rounded-full px-2.5 py-0.5 text-center text-xs font-semibold transition-colors ${activeAnchor === a.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}>{a.label}</button>
             ))}
-          </nav>
+          </ButtonRow></nav>
         )}
       </header>
       {children}
