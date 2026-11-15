@@ -126,15 +126,13 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const form = (
     <div className="space-y-2 rounded-md bg-muted/40 p-2">
       {collab ? (
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Select value={f.function_id} aria-label="Categoria" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
+        <div className="flex items-center gap-2">
+          <Select className="min-w-0 flex-1" value={f.function_id} aria-label="Categoria" onChange={(e) => setF({ ...f, function_id: e.target.value })}>
             <option value="">Escolha a categoria</option>
             {active(functions.data).filter((i) => (i.kind ?? 'collab') === (f.is_paid ? 'paid' : 'collab')).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </Select>
-          <Select value={f.is_paid ? 'paid' : 'collaborative'} aria-label="Remunerada ou colaborativa" onChange={(e) => setF({ ...f, is_paid: e.target.value === 'paid', function_id: '' })}>
-            <option value="paid">Remunerada</option>
-            <option value="collaborative">Colaborativa</option>
-          </Select>
+          <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>OK</Button>
+          <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       ) : (
         <>
@@ -151,12 +149,12 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
           <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked })} /> Aluno</label>
         </>
       )}
-      <div className="flex gap-2">
-        <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>
-          {editing === 'new' ? 'Adicionar' : 'Salvar'}
-        </Button>
-        <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
-      </div>
+      {!collab && (
+        <div className="flex gap-2">
+          <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>OK</Button>
+          <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+        </div>
+      )}
     </div>
   )
 
