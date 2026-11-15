@@ -95,7 +95,7 @@ export function SendFields({ f, setF, prefix, part, disabled, general, consent, 
               {part === 'email' && <Mail className="h-4 w-4 shrink-0" aria-hidden />}{m.label}
             </label>
             {f.on[k] || !toggles
-              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} />{(k === 'send' || k === 'privacy') && <VarsHint />}{k === 'privacy' && consent && (
+              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} extra={k === 'send' || k === 'privacy' ? (insert) => <VarsHint onInsert={insert} /> : undefined} />{k === 'privacy' && consent && (
                 <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={consent.value} onChange={(e) => consent.onChange(e.target.checked)} /> Exigir que a pessoa aceite para enviar (caixa “Li e concordo”)</label>
               )}{m.hint && <p className="text-xs text-muted-foreground">{m.hint}</p>}</>
               : <p className="rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">Desligado. {m.off}</p>}

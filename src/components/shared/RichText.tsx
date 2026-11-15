@@ -64,7 +64,7 @@ export function RichText({ text, className }: { text: string; className?: string
 }
 
 /** Caixa de texto com barra de formatação (negrito, itálico, lista e link). */
-export function RichTextarea({ value, onChange, rows = 4, id, maxLength, className }: { value: string; onChange: (v: string) => void; rows?: number; id?: string; maxLength?: number; className?: string }) {
+export function RichTextarea({ value, onChange, rows = 4, id, maxLength, className, extra }: { value: string; onChange: (v: string) => void; rows?: number; id?: string; maxLength?: number; className?: string; /** Conteúdo embaixo da caixa que recebe `insert`: coloca um texto onde está o cursor (ex.: variáveis clicáveis). */ extra?: (insert: (text: string) => void) => ReactNode }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const apply = (fn: (sel: string) => { text: string; from: number; to: number }) => {
     const el = ref.current
@@ -88,6 +88,13 @@ export function RichTextarea({ value, onChange, rows = 4, id, maxLength, classNa
     if (!/^(https?:\/\/|mailto:)\S+$/.test(url)) { window.alert('Use um endereço que comece com https:// (ou mailto:).'); return }
     apply((sel) => { const label = sel || 'texto do link'; return { text: `[${label}](${url})`, from: 1, to: 1 + label.length } })
   }
+  const insert = (text: string) => {
+    const el = ref.current
+    const a = el ? el.selectionStart : value.length
+    const b = el ? el.selectionEnd : value.length
+    onChange(value.slice(0, a) + text + value.slice(b))
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(a + text.length, a + text.length) })
+  }
   const tool = 'h-8 w-8'
   return (
     <div className={cn('space-y-1', className)}>
@@ -99,6 +106,7 @@ export function RichTextarea({ value, onChange, rows = 4, id, maxLength, classNa
       </div>
       <textarea ref={ref} id={id} rows={rows} maxLength={maxLength} value={value} onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" />
+      {extra?.(insert)}
     </div>
   )
 }
