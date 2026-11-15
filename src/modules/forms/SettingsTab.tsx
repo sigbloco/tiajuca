@@ -31,14 +31,14 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
   const [f, setF] = useState({
     kind: form.kind, title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
     opens: toDate(form.opens_at), closes: toDate(form.closes_at),
-    privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, consent: form.requires_consent, dedupe: form.prevent_duplicates,
+    privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, hlogo: form.header_logo_size ?? 80, consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
   const refresh = () => { qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }); qc.invalidateQueries({ queryKey: ['forms', orgId] }) }
   const save = useMutation({
     mutationFn: async () => {
       const patch = part === 'main'
         ? { title: f.title.trim(), kind: f.kind, ...(f.kind !== form.kind ? kindFlags(f.kind) : {}), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
-        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, prevent_duplicates: f.dedupe }
+        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, header_logo_size: f.hlogo, prevent_duplicates: f.dedupe }
       const { error } = await supabase.from('forms').update(patch
       ).eq('id', form.id)
       if (error) throw error
@@ -119,15 +119,17 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="space-y-4">
         <div className="space-y-2">
-          <HeaderBand frame={{ image_url: f.headerImage || null, x: f.hx, y: f.hy, zoom: f.hzoom, height: f.hheight }}
+          <HeaderBand frame={{ image_url: f.headerImage || null, x: f.hx, y: f.hy, zoom: f.hzoom, height: f.hheight, logo: f.hlogo }}
             onChange={(p) => setF((x) => ({ ...x, hx: Math.round(p.x * 10) / 10, hy: Math.round(p.y * 10) / 10 }))}
-            logo={<OrgLogo name={membership?.name ?? ''} logoPath={membership?.logo_path ?? null} className="h-20 w-20 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" />} />
+            logo={<OrgLogo name={membership?.name ?? ''} logoPath={membership?.logo_path ?? null} className="drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" style={{ width: f.hlogo, height: f.hlogo }} />} />
           <p className="text-xs text-muted-foreground">{f.headerImage ? 'Prévia de como fica no formulário. Arraste a foto para posicioná-la na moldura.' : 'Prévia do cabeçalho. Escolha uma foto para ficar atrás da logo.'}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {f.headerImage && (
               <div className="space-y-1"><Label htmlFor="fs-zoom">Tamanho da foto ({Math.round(f.hzoom * 100)}%)</Label>
                 <input id="fs-zoom" type="range" min={1} max={4} step={0.05} value={f.hzoom} className="w-full accent-primary" onChange={(e) => setF({ ...f, hzoom: Number(e.target.value) })} /></div>
             )}
+            <div className="space-y-1"><Label htmlFor="fs-logo">Tamanho da logo ({f.hlogo} px)</Label>
+              <input id="fs-logo" type="range" min={32} max={Math.max(64, f.hheight)} step={4} value={Math.min(f.hlogo, Math.max(64, f.hheight))} className="w-full accent-primary" onChange={(e) => setF({ ...f, hlogo: Number(e.target.value) })} /></div>
             <div className="space-y-1"><Label htmlFor="fs-height">Altura do cabeçalho ({f.hheight} px)</Label>
               <input id="fs-height" type="range" min={64} max={320} step={4} value={f.hheight} className="w-full accent-primary" onChange={(e) => setF({ ...f, hheight: Number(e.target.value) })} /></div>
           </div>

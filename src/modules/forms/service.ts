@@ -19,7 +19,7 @@ export interface FormRow {
   kind: FormKind
   id: string; title: string; description: string | null; slug: string; cycle_id: string | null; status: FormStatus
   opens_at: string | null; closes_at: string | null; confirmation_message: string; max_responses: number | null
-  privacy_text: string | null; header_image_url: string | null; header_pos_x: number; header_pos_y: number; header_zoom: number; header_height: number; requires_consent: boolean; prevent_duplicates: boolean; send_text: string | null; review_message: string; approved_email_text: string; rejected_email_text: string; waitlist_email_text: string; privacy_enabled: boolean; send_enabled: boolean; confirmation_enabled: boolean; review_enabled: boolean; approved_enabled: boolean; rejected_enabled: boolean; waitlist_enabled: boolean; published_version_id: string | null; updated_at?: string
+  privacy_text: string | null; header_image_url: string | null; header_pos_x: number; header_pos_y: number; header_zoom: number; header_height: number; header_logo_size: number; requires_consent: boolean; prevent_duplicates: boolean; send_text: string | null; review_message: string; approved_email_text: string; rejected_email_text: string; waitlist_email_text: string; privacy_enabled: boolean; send_enabled: boolean; confirmation_enabled: boolean; review_enabled: boolean; approved_enabled: boolean; rejected_enabled: boolean; waitlist_enabled: boolean; published_version_id: string | null; updated_at?: string
   form_submissions?: { count: number }[]
 }
 export interface FormFieldRow {

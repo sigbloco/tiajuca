@@ -369,7 +369,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
       <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 shadow-[0_6px_14px_-6px_rgba(0,0,0,0.3)] backdrop-blur">
-        <HeaderBand frame={f0?.header ?? DEFAULT_FRAME} logo={org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="h-20 w-20 drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" /> : null} />
+        <HeaderBand frame={f0?.header ?? DEFAULT_FRAME} logo={org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" style={{ width: f0?.header?.logo ?? 80, height: f0?.header?.logo ?? 80 }} /> : null} />
         {progress}
         {f0 && (stepIdx > 0 || titlePast) && (
           <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-left">
