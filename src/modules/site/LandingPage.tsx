@@ -86,7 +86,7 @@ export function LandingPage() {
         <h1 className={site.hide_headline || site.show_rays ? 'sr-only' : 'relative mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
       </header>
 
-      <div className="-mt-12 mx-auto max-w-md space-y-5 px-4">
+      <div className="relative z-10 -mt-12 mx-auto max-w-md space-y-5 px-4">
         {(site.description || links.length > 0) && (
           <section className="space-y-4 rounded-3xl bg-card p-5 text-center shadow-card">
             {site.description && <p className="whitespace-pre-wrap text-base leading-relaxed">{site.description}</p>}
