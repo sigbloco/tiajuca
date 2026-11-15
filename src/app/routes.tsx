@@ -23,6 +23,7 @@ import { ReportsPage } from '@/modules/reports/ReportsPage'
 import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
+import { AlunosRedirect } from '@/modules/members/AlunosRedirect'
 import { FormListsPage } from '@/modules/forms/FormListsPage'
 import { TemplateEditorPage } from '@/modules/forms/TemplateEditorPage'
 import { SectionTemplatesPage } from '@/modules/forms/SectionTemplatesPage'
@@ -188,7 +189,7 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="oficina" />,
                   children: [
-                    { path: 'alunos', element: <Navigate to="../membros?tipo=aluno" replace relative="path" /> },
+                    { path: 'alunos', element: <AlunosRedirect /> },
                     { path: 'relatorios', element: <ReportsPage /> },
                     { path: 'presenca', element: <AttendanceListPage /> },
                     { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },
