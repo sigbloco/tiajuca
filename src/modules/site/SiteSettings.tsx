@@ -16,7 +16,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { resolveColors } from '@/core/themeModel'
-import { LogoWithRays } from './Rays'
+import { LogoWithRays, RAYS_TEXT_STYLE } from './Rays'
 import { LINK_KINDS, youtubeId, type SiteLink, type SiteVideo } from './links'
 
 const TABS = [{ key: 'header', label: 'Cabeçalho' }, { key: 'menu', label: 'Menu' }, { key: 'albums', label: 'Fotos' }, { key: 'videos', label: 'Vídeos' }] as const
@@ -28,7 +28,7 @@ const menuOrder = (o?: string[] | null): MenuKey[] => [...(o ?? []).filter((k): 
 
 interface SiteRow {
   headline: string | null; description: string | null; photo_url: string | null; links: SiteLink[]; videos: SiteVideo[]
-  show_rays?: boolean; rays_count?: number; rays_opacity?: number; rays_rotation?: number; rays_color?: string | null
+  show_rays?: boolean; rays_animate?: boolean; rays_count?: number; rays_opacity?: number; rays_rotation?: number; rays_color?: string | null
   enrollment_label: string; shop_label: string; login_label: string; show_shop: boolean; show_enrollment: boolean; show_login: boolean; menu_construction: string[]; shop_product_id: string | null; show_albums: boolean; albums_label: string; show_release: boolean; release_label: string; release_url: string | null; shake_button: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order: string[]; hide_headline: boolean; header_color: string | null; page_color: string | null
 }
 const EMPTY: SiteRow = { headline: null, description: null, photo_url: null, links: [], videos: [], enrollment_label: 'Inscrições da oficina', shop_label: 'Loja', login_label: 'Área dos integrantes', albums_label: 'Fotos', show_albums: true, show_release: true, release_label: 'Release', release_url: null, show_shop: true, show_enrollment: true, show_login: true, menu_construction: [], shop_product_id: null, shake_button: null, menu_order: MENU_DEFAULT, hide_headline: false, header_color: null, page_color: null }
@@ -64,7 +64,7 @@ export function SiteSettings() {
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
     show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
-    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, show_rays: !!row.show_rays, rays_count: row.rays_count ?? 16, rays_opacity: row.rays_opacity ?? 100, rays_rotation: row.rays_rotation ?? 0, rays_color: row.rays_color || null,
+    shake_button: row.shake_button ?? null, menu_order: menuOrder(row.menu_order), hide_headline: row.hide_headline, show_rays: !!row.show_rays, rays_animate: !!row.rays_animate, rays_count: row.rays_count ?? 16, rays_opacity: row.rays_opacity ?? 100, rays_rotation: row.rays_rotation ?? 0, rays_color: row.rays_color || null,
     header_color: row.header_color ?? null, page_color: row.page_color ?? null,
   })
   const write = async (row: SiteRow) => {
@@ -174,21 +174,22 @@ export function SiteSettings() {
       {tab === 'header' && (
       <Card className="space-y-3 p-4">
         <h3>Raios</h3>
-        <label className="flex items-center gap-2 font-semibold"><input type="checkbox" className="h-5 w-5" checked={!!f.show_rays} onChange={(e) => setF({ ...f, show_rays: e.target.checked })} /> Raios atrás da logo (como na camiseta)</label>
+        <label className="flex items-center gap-2 font-semibold"><input type="checkbox" className="h-5 w-5" checked={!!f.show_rays} onChange={(e) => setF({ ...f, show_rays: e.target.checked })} /> Raios atrás da logo</label>
         {/* Prévia ao vivo: mostra o cabeçalho do site com o que está nos controles, antes de salvar. */}
         <div className="relative overflow-hidden rounded-xl py-8 text-center" style={{ backgroundColor: siteColors.header ?? 'rgb(var(--primary))', color: siteColors.headerText ?? undefined }} aria-label="Prévia do cabeçalho">
           <LogoWithRays size="h-24 w-24" backing={siteColors.header ?? 'rgb(var(--primary))'} name={membership?.name} logoPath={f.photo_url || membership?.logo_path}
-            rays={{ on: !!f.show_rays, count: f.rays_count ?? 16, opacity: f.rays_opacity ?? 100, rotation: f.rays_rotation ?? 0, color: f.rays_color || siteColors.secondary || null }} />
-          <p className="relative mt-3 font-display text-xl font-extrabold">{f.headline || membership?.name}</p>
+            rays={{ on: !!f.show_rays, count: f.rays_count ?? 16, opacity: f.rays_opacity ?? 100, rotation: f.rays_rotation ?? 0, color: f.rays_color || siteColors.secondary || null, animate: !!f.rays_animate }} />
+          {!f.hide_headline && <p className="relative mt-3 font-display text-xl font-extrabold" style={f.show_rays ? RAYS_TEXT_STYLE : undefined}>{f.headline || membership?.name}</p>}
         </div>
         {f.show_rays && (
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1"><Label htmlFor="ry-n">Quantidade ({f.rays_count ?? 16})</Label>
-              <input id="ry-n" type="range" min={6} max={40} step={2} className="w-full accent-primary" value={f.rays_count ?? 16} onChange={(e) => setF({ ...f, rays_count: Number(e.target.value) })} /></div>
+              <input id="ry-n" type="range" min={5} max={20} step={1} className="w-full accent-primary" value={f.rays_count ?? 16} onChange={(e) => setF({ ...f, rays_count: Number(e.target.value) })} /></div>
             <div className="space-y-1"><Label htmlFor="ry-o">Transparência ({100 - (f.rays_opacity ?? 100)}%)</Label>
               <input id="ry-o" type="range" min={10} max={100} step={5} className="w-full accent-primary" value={f.rays_opacity ?? 100} onChange={(e) => setF({ ...f, rays_opacity: Number(e.target.value) })} /></div>
             <div className="space-y-1"><Label htmlFor="ry-r">Giro ({f.rays_rotation ?? 0}°)</Label>
-              <input id="ry-r" type="range" min={0} max={360} step={5} className="w-full accent-primary" value={f.rays_rotation ?? 0} onChange={(e) => setF({ ...f, rays_rotation: Number(e.target.value) })} /></div>
+              <input id="ry-r" type="range" min={0} max={360} step={5} className="w-full accent-primary" value={f.rays_rotation ?? 0} onChange={(e) => setF({ ...f, rays_rotation: Number(e.target.value) })} />
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={!!f.rays_animate} onChange={(e) => setF({ ...f, rays_animate: e.target.checked })} /> Animar (gira bem devagar)</label></div>
             <div className="space-y-1"><Label htmlFor="ry-c">Cor</Label>
               <div className="flex items-center gap-2">
                 <input id="ry-c" type="color" className="h-10 w-14 cursor-pointer rounded border border-input bg-card" value={f.rays_color || siteColors.secondary || '#ffed00'} onChange={(e) => setF({ ...f, rays_color: e.target.value })} />

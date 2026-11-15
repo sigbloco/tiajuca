@@ -85,3 +85,8 @@ input, textarea, select { font-size: max(16px, 1em); }
 }
 /* Sem movimento (preferência do aparelho): o destaque vira um contorno vermelho fixo, completo e parado. */
 @media (prefers-reduced-motion: reduce) { .trim-ring::after { animation: none; background: rgb(220 38 38); } }
+
+/* Raios do Site: giro bem devagar (uma volta a cada 3 minutos); parado para quem pede menos movimento. */
+@keyframes rays-spin { to { transform: rotate(360deg); } }
+.rays-spin { animation: rays-spin 180s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .rays-spin { animation: none; } }
