@@ -455,6 +455,8 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
           </section>
         ))}
 
+        {isLast && f0?.send_text && <Card className="p-4"><RichText text={f0.send_text} /></Card>}
+
         {isLast && f0?.privacy_text && !hasConsentBlock && (
           <Card className="space-y-2 p-4">
             <h3>Privacidade e proteção de dados</h3>

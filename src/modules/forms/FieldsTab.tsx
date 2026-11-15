@@ -6,6 +6,7 @@ import { confirmBox } from '@/components/shared/DialogHost'
 import { ArrowDown, ArrowUp, Ban, BookmarkPlus, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { promptBox } from '@/components/shared/DialogHost'
+import { SendSection } from './SendSection'
 import { useSectionTemplates } from './SectionTemplatesPage'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useEffect, useState } from 'react'
@@ -450,6 +451,7 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
           )
         })}
         {heads.length === 0 && <Button variant="add" onClick={() => setSheet({ field: null })}><Plus className="h-4 w-4" /> Adicionar campo</Button>}
+        {!templateMode && <SendSection formId={formId} />}
       </div>
       <p className="text-xs text-muted-foreground">Mudanças nos campos só aparecem no link público depois de <strong>publicar de novo</strong>. Respostas antigas continuam legíveis.</p>
       <Sheet open={pickOpen} onOpenChange={setPickOpen}>

@@ -1,0 +1,77 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Mail, Pencil, Send } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { RichTextarea } from '@/components/shared/RichText'
+import { SaveButton } from '@/components/shared/SaveButton'
+import { Badge, Button, Card, Label, Sheet, SheetContent } from '@/components/ui/primitives'
+import { friendlyError } from '@/core/errors'
+import { useOrgId } from '@/core/organization'
+import { supabase } from '@/core/supabase'
+import { useForm } from './service'
+
+const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+
+/** Seção fixa de Envio: sempre fica no fim do formulário, não pode ser apagada nem movida; só os textos são editáveis (valem na hora, sem republicar). */
+export function SendSection({ formId }: { formId: string }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const { data: form } = useForm(formId)
+  const [open, setOpen] = useState(false)
+  const [f, setF] = useState({ send: '', confirmation: '', review: '', approved: '', rejected: '' })
+  const start = () => {
+    if (!form) return
+    setF({ send: form.send_text ?? '', confirmation: form.confirmation_message, review: form.review_message, approved: form.approved_email_text, rejected: form.rejected_email_text })
+    setOpen(true)
+  }
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('forms').update({
+        send_text: f.send.trim() || null, confirmation_message: f.confirmation.trim() || 'Inscrição recebida!',
+        review_message: f.review.trim() || 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.',
+        approved_email_text: f.approved.trim() || 'Sua inscrição foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.',
+        rejected_email_text: f.rejected.trim() || 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.',
+      }).eq('id', formId)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Textos do envio salvos.'); qc.invalidateQueries({ queryKey: ['form', orgId, formId] }); setOpen(false) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  if (!form) return null
+  return (
+    <>
+      <Card className="flex flex-wrap items-center gap-2 border-l-4 border-l-primary bg-muted/60 p-2.5">
+        <Send className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+        <button className="min-w-0 flex-1 basis-40 text-left" onClick={start}>
+          <p className="font-display text-lg font-bold leading-tight">Envio</p>
+          <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+            <Badge>Seção fixa</Badge>
+            <span>Textos de depois do envio, da avaliação e dos e-mails de aprovação e rejeição.</span>
+          </p>
+        </button>
+        <Button size="sm" variant="outline" aria-label="Editar os textos do envio" title="Editar" onClick={start}><Pencil className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Editar</span></Button>
+      </Card>
+      <Sheet open={open} onOpenChange={setOpen}>
+        {open && (
+          <SheetContent title="Envio" description="Textos fixos do fim do formulário. Valem na hora, sem republicar.">
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
+              <div className="space-y-1.5"><Label htmlFor="sd-send">Antes de enviar (opcional, aparece na última etapa)</Label>
+                <RichTextarea id="sd-send" rows={3} value={f.send} onChange={(v) => setF({ ...f, send: v })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="sd-conf">Depois de enviar (mensagem na tela)</Label>
+                <Textarea id="sd-conf" rows={2} value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="sd-rev">Enquanto a Direção avalia (tela de quem entrou com o Google)</Label>
+                <Textarea id="sd-rev" rows={3} value={f.review} onChange={(e) => setF({ ...f, review: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label htmlFor="sd-app"><Mail className="mr-1 inline h-4 w-4" />E-mail de aprovação</Label>
+                <Textarea id="sd-app" rows={4} value={f.approved} onChange={(e) => setF({ ...f, approved: e.target.value })} />
+                <p className="text-xs text-muted-foreground">Confirmação de que a inscrição foi aprovada. Não libera acesso por si só: o acesso segue por convite.</p></div>
+              <div className="space-y-1.5"><Label htmlFor="sd-rej"><Mail className="mr-1 inline h-4 w-4" />Texto-base da rejeição</Label>
+                <Textarea id="sd-rej" rows={4} value={f.rejected} onChange={(e) => setF({ ...f, rejected: e.target.value })} />
+                <p className="text-xs text-muted-foreground">Ao rejeitar, a Direção pode editar esta mensagem antes de enviar o e-mail.</p></div>
+              <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar textos do envio" />
+            </form>
+          </SheetContent>
+        )}
+      </Sheet>
+    </>
+  )
+}

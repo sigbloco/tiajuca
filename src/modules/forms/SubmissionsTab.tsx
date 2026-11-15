@@ -6,7 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { ChevronLeft, ChevronRight, Download, Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Button, Card, EmptyState, Input, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -45,6 +45,12 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
   const review = useMutation({
     mutationFn: async (status: string) => { const { error } = await supabase.rpc('review_submission', { p_id: sub.id, p_status: status, p_notes: notes || null }); if (error) throw error },
     onSuccess: (_d, s) => done(s === 'rejected' ? 'Inscrição rejeitada.' : s === 'archived' ? 'Inscrição arquivada.' : 'Inscrição reaberta.'), onError: (e) => toast.error(friendlyError(e)),
+  })
+  const [rejecting, setRejecting] = useState(false)
+  const [rejMsg, setRejMsg] = useState(form.rejected_email_text)
+  const reject = useMutation({
+    mutationFn: async () => { const { error } = await supabase.rpc('reject_submission', { p_id: sub.id, p_message: rejMsg }); if (error) throw error; if (sub.applicant_email) void supabase.functions.invoke('shop-mailer').catch(() => { /* a fila é processada na próxima chamada */ }) },
+    onSuccess: () => done(sub.applicant_email ? 'Inscrição rejeitada. O e-mail com a mensagem foi enviado.' : 'Inscrição rejeitada.'), onError: (e) => toast.error(friendlyError(e)),
   })
   const approve = useMutation({
     mutationFn: async () => { const { error } = await supabase.rpc('approve_submission', { p_id: sub.id, p_notes: notes || null, p_cycle_status: cycleStatus || null }); if (error) throw error; void supabase.functions.invoke('shop-mailer').catch(() => { /* a fila é processada na próxima chamada */ }) },
@@ -95,8 +101,15 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
             </Select>
           )}
           <Button className="w-full" disabled={approve.isPending} onClick={() => approve.mutate()}>Aprovar e criar integrante</Button>
+          {rejecting && (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <Label htmlFor="rej-msg">{sub.applicant_email ? 'Mensagem enviada por e-mail a quem se inscreveu' : 'Esta inscrição não tem e-mail: nada será enviado'}</Label>
+              <textarea id="rej-msg" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={rejMsg} onChange={(e) => setRejMsg(e.target.value)} />
+              <Button className="w-full" variant="outline" disabled={reject.isPending} onClick={() => reject.mutate()}>{sub.applicant_email ? 'Rejeitar e enviar e-mail' : 'Rejeitar'}</Button>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={() => review.mutate('rejected')}>Rejeitar</Button>
+            <Button variant="outline" onClick={() => setRejecting((v) => !v)}>Rejeitar</Button>
             <Button variant="ghost" onClick={() => review.mutate('archived')}>Arquivar</Button>
           </div>
         </div>
