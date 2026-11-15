@@ -8,6 +8,8 @@ export interface CatalogItem {
   name: string
   sort_order: number
   is_active: boolean
+  /** Chave fixa de categorias que o sistema usa por significado (aluno, musico, senior...): renomear não quebra nada. */
+  system_key?: string | null
   /** Descrição opcional (listas do cadastro e categorias): explica o item onde ele é escolhido. */
   description?: string | null
   section_id?: string | null

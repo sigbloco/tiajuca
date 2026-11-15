@@ -79,12 +79,15 @@ function useStudentInstruments(cycleId: string | null | undefined) {
     queryKey: ['student-instruments', orgId, cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const [cats, parts, mc, sts] = await Promise.all([
+      const [cats, parts, mc, sts, alunoCat] = await Promise.all([
         supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: cycleId }),
         supabase.from('cycle_participations').select('member_id, instrument_id').eq('cycle_id', cycleId!).not('instrument_id', 'is', null).limit(5000),
         supabase.from('member_cycles').select('member_id, status_id').eq('cycle_id', cycleId!).limit(5000),
         supabase.from('member_cycle_statuses').select('id').eq('organization_id', orgId).eq('counts_as_active', true),
+        supabase.from('fee_categories').select('name').eq('organization_id', orgId).eq('system_key', 'aluno'),
       ])
+      if (alunoCat.error) throw alunoCat.error
+      const alunoNames = new Set((alunoCat.data ?? []).map((x) => x.name as string)) // a categoria Aluno, mesmo que tenha sido renomeada
       if (mc.error) throw mc.error
       if (sts.error) throw sts.error
       if (cats.error) throw cats.error
@@ -92,8 +95,8 @@ function useStudentInstruments(cycleId: string | null | undefined) {
       const activeIds = new Set((sts.data ?? []).map((x) => x.id as string))
       const activeMembers = new Set((mc.data ?? []).filter((m) => activeIds.has(m.status_id as string)).map((m) => m.member_id as string))
       // Instrumentos: só com alunos ATIVOS. Lista da chamada: todo aluno (o servidor decide quem estava ativo na data).
-      const allStudents = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[]).filter((c) => c.category_name === 'Aluno').map((c) => c.member_id))
-      const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[])  .filter((c) => c.category_name === 'Aluno' && activeMembers.has(c.member_id)).map((c) => c.member_id))
+      const allStudents = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[]).filter((c) => alunoNames.has(c.category_name)).map((c) => c.member_id))
+      const students = new Set(((cats.data ?? []) as { member_id: string; category_name: string }[])  .filter((c) => alunoNames.has(c.category_name) && activeMembers.has(c.member_id)).map((c) => c.member_id))
       return { members: allStudents, instruments: new Set((parts.data ?? []).filter((p) => students.has(p.member_id as string)).map((p) => p.instrument_id as string)) }
     },
   })

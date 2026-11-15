@@ -144,13 +144,23 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       return out
     },
   })
+  // Os tipos vêm da chave fixa da categoria, não do nome: renomear "Músico" para "Músico convidado" mantém os filtros e os chips (que passam a usar o nome novo).
+  const feeCats = useCatalog('fee_categories')
+  const keyByName = new Map((feeCats.data ?? []).filter((c) => c.system_key).map((c) => [c.name, c.system_key as string]))
   const typesOf = (memberId: string) => {
     const out = new Set<string>(staffKinds.data?.get(memberId) ?? [])
     for (const cat of allCategories(memberId)) {
-      if (cat === 'Aluno') out.add('aluno'); else if (cat === 'Senior') out.add('senior'); else if (cat === 'Músico') out.add('musico'); else if (cat === 'Monitor') out.add('monitor')
+      const k = keyByName.get(cat)
+      if (k === 'aluno' || k === 'senior' || k === 'musico' || k === 'monitor') out.add(k)
     }
     return out
   }
+  const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const catName = (k: string) => (feeCats.data ?? []).find((c) => c.system_key === k)?.name
+  /** Nome mostrado: o padrão se a categoria ainda tem o nome de fábrica; senão, o nome que a Direção deu. */
+  const typeName = (k: string, fallback: string, factory: string[]) => { const n = catName(k); return n && !factory.some((f) => norm(f) === norm(n)) ? n : fallback }
+  const typeBadge = (k: string) => (k === 'musico' ? typeName(k, TYPE_LABEL[k], ['Músico']) : k === 'senior' ? typeName(k, TYPE_LABEL[k], ['Senior', 'Sênior']) : k === 'aluno' ? typeName(k, TYPE_LABEL[k], ['Aluno']) : TYPE_LABEL[k] ?? k)
+  const typeChip = (k: string, label: string) => (k === 'musico' || k === 'senior' || k === 'aluno' ? typeName(k, label, k === 'musico' ? ['Músico'] : k === 'senior' ? ['Senior', 'Sênior'] : ['Aluno']) : label)
   const { cycleId: globalCycleId } = useSelectedCycle()
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -331,7 +341,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
               <span className="break-words">{rowName(m)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
-              {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{TYPE_LABEL[t] ?? t}</Badge>)}
+              {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
             </p>
             {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="break-words text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
@@ -406,10 +416,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       </ButtonRow>
       {!lockedCategory && (
         <ButtonRow role="group" aria-label="Tipo de integrante">
-          {TYPE_OPTIONS.map(([k, label]) => (
+          {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
             <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
               onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
-          ))}
+          ) })}
         </ButtonRow>
       )}
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
