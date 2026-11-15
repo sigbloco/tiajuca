@@ -31,7 +31,7 @@ export interface FormFieldRow {
 export interface SubmissionRow {
   id: string; form_id: string; form_version_id: string; answers: Record<string, unknown>; consent_given: boolean
   status: 'pending' | 'approved' | 'rejected' | 'archived'; reviewer_notes: string | null; reviewed_at: string | null
-  member_id: string | null; applicant_email: string | null; submitted_at: string; purged_at: string | null
+  member_id: string | null; applicant_email: string | null; submitted_at: string; edited_at?: string | null; purged_at: string | null
 }
 export const SUB_STATUS_LABEL = { pending: 'Pendente', approved: 'Aprovada', rejected: 'Rejeitada', archived: 'Arquivada' } as const
 export const SUB_STATUS_CLASS = {

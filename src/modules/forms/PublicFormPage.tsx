@@ -214,6 +214,7 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
   const [answers, setAnswers] = useState<Answers>(initialAnswers ?? {})
   const { session, signInWithGoogle, signOut } = useAuth()
   const [consent, setConsent] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [honeypot, setHoneypot] = useState('')
   const [error, setError] = useState('')
@@ -441,9 +442,17 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
   if (form.isError || form.data?.state === 'not_found') return shell(<Card className="p-6 text-center"><h1>Formulário não encontrado</h1><p className="text-muted-foreground">Confira o link com a organização.</p></Card>)
   if (form.data!.state === 'login_required') return shell(<Card className="space-y-3 p-6 text-center"><h1>{f0?.title}</h1><p>Este formulário é só para integrantes do bloco. Entre com a conta Google que você usa no sistema.</p><Button type="button" className="w-full" onClick={goLogin}>Continuar com Google</Button></Card>)
   if (form.data!.state === 'not_member') return shell(<Card className="space-y-3 p-6 text-center"><h1>{f0?.title}</h1><p>Não encontramos você entre os integrantes{session?.user.email ? <> (conta <strong>{session.user.email}</strong>)</> : null}. Este formulário é só para quem já faz parte do bloco: entre com a conta Google cadastrada no sistema ou fale com a direção.</p><Button type="button" variant="outline" className="w-full" onClick={() => void signOut()}>Trocar de conta</Button></Card>)
-  if (form.data!.state === 'already') return shell(<Card className="space-y-2 p-6 text-center"><h1>Você já está inscrito</h1><p className="text-muted-foreground">Recebemos a sua resposta para “{f0?.title}”. Não é preciso enviar de novo: a direção avisa quando houver novidades.</p></Card>)
+  if (form.data!.state === 'already' && !editing) {
+    const mine = form.data!.mine
+    return shell(<Card className="space-y-3 p-6 text-center"><h1>Você já está inscrito</h1>
+      <p className="text-muted-foreground">{mine?.status === 'pending'
+        ? <>Recebemos a sua resposta para “{f0?.title}”{mine.edited_at ? <> (editada em {formatDate(mine.edited_at.slice(0, 10))})</> : null} e a direção está avaliando. Dá para corrigir enquanto ela não for aprovada.</>
+        : <>A sua inscrição em “{f0?.title}” já foi aprovada. Para mudar algum dado, fale com a direção ou use o seu perfil.</>}</p>
+      {mine?.status === 'pending' && <Button type="button" className="w-full" onClick={() => { setAnswers(mine.answers ?? {}); setStep(0); setEditing(true); window.scrollTo({ top: 0 }) }}>Editar minha resposta</Button>}
+    </Card>)
+  }
   if (done !== null) return shell(<Card className="space-y-2 p-6 text-center"><h1>Tudo certo!</h1>{done && <RichText text={done} />}</Card>)
-  if (form.data!.state !== 'open') {
+  if (form.data!.state !== 'open' && !(form.data!.state === 'already' && editing)) {
     const msg = { not_open: 'As inscrições ainda não abriram.', closed: 'As inscrições estão encerradas.', full: 'As vagas desta inscrição foram preenchidas.' }[form.data!.state as 'not_open' | 'closed' | 'full']
     return shell(<Card className="space-y-2 p-6 text-center"><h1>{f0?.title}</h1><p className="text-muted-foreground">{msg}</p></Card>)
   }
