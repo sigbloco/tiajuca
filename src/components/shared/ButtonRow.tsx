@@ -5,7 +5,9 @@ import { Children, useEffect, useLayoutEffect, useRef, useState, type ReactNode 
  * Cabendo, ficam todos numa linha só; senão, quebram de forma harmônica (4 → 2+2, 6 → 3+3, 5 → 3+2) e cada coluna
  * divide a largura por igual. Ex.: "Pedidos · Produtos · Estoque · Pontos de retirada" vira 2 em cima e 2 embaixo.
  */
-export function ButtonRow({ children, className = '', ...aria }: { children: ReactNode; className?: string; role?: string; 'aria-label'?: string }) {
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
+
+export function ButtonRow({ children, className = '', split, ...aria }: { children: ReactNode; className?: string; role?: string; 'aria-label'?: string; /** Quando quebra de linha: quantos botões em cada linha (ex.: [2, 3] com 5 botões). Sem isto, linhas cheias e a última completa a largura. */ split?: number[] }) {
   const items = Children.toArray(children)
   const n = items.length
   const ref = useRef<HTMLDivElement>(null)
@@ -42,10 +44,15 @@ export function ButtonRow({ children, className = '', ...aria }: { children: Rea
     return () => ro.disconnect()
   })
 
+  // Linhas: tudo numa linha só, ou as indicadas em `split`, ou linhas cheias com a última esticada até a borda (nada fica pequeno e desigual).
+  const rows: number[] = cols >= n ? [n] : split && split.reduce((a, b) => a + b, 0) === n ? split : [...Array(Math.floor(n / cols)).fill(cols), ...(n % cols ? [n % cols] : [])]
+  const total = rows.reduce((l, r) => (l * r) / gcd(l, r), 1)
+  const spans: number[] = rows.flatMap((r) => Array(r).fill(total / r))
+  const uniform = rows.every((r) => r === rows[0])
   return (
-    <div ref={ref} {...aria} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+    <div ref={ref} {...aria} style={{ gridTemplateColumns: uniform ? `repeat(${rows[0]}, minmax(0, 1fr))` : `repeat(${total}, minmax(0, 1fr))` }}
       className={`grid gap-2 [&>*]:w-full [&>*]:min-w-0 ${className}`}>
-      {items}
+      {uniform ? items : items.map((it, i) => <div key={i} style={{ gridColumn: `span ${spans[i]}` }} className="flex [&>*]:w-full [&>*]:min-w-0">{it}</div>)}
     </div>
   )
 }
