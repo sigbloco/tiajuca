@@ -201,7 +201,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
           ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
         {asSection && !field?.validation.login && (
-          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
+          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
         {needsOptions && listMapped && (
           <fieldset className="space-y-2">
@@ -242,7 +242,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
           </div>
         )}
         {needsOptions && !linkMapped && (
-          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.other} onChange={(e) => setF({ ...f, other: e.target.checked })} /> <span>Permitir “Outro”: aparece como última opção e abre um campo para a pessoa digitar.</span></label>
+          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.other} onChange={(e) => setF({ ...f, other: e.target.checked })} /> <span>Permitir “Outro”: aparece como última opção e abre um campo para a pessoa digitar.</span></label>
         )}
         {(f.type === 'number' || f.type === 'scale') && (
           <div className="grid grid-cols-2 gap-2">
@@ -418,7 +418,7 @@ export function FieldsTab({ formId, templateMode }: { formId: string; /** Editan
                   <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={sec ? hi === heads.length - 1 : i === fields.length - 1}
                     onClick={() => (sec ? moveSection(x.id, heads[hi + 1].head!.id) : move.mutate({ from: i, to: i + 1 }))}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
-                {sec && (
+                {sec && !isLoginSection(x) && (
                   <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" aria-expanded={!isClosed} aria-label={isClosed ? `Expandir ${x.label}` : `Recolher ${x.label}`} title={isClosed ? 'Expandir a seção' : 'Recolher a seção'} onClick={() => toggleCollapsed(x.id)}>
                     {isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>

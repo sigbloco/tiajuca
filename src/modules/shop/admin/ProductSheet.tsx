@@ -287,7 +287,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
             <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
             <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p>
             {f.minUnits && (
-              <label className="flex items-start gap-2 pt-1"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.notifyMin} onChange={(e) => setF({ ...f, notifyMin: e.target.checked })} />
+              <label className="flex items-start gap-2 pt-1"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.notifyMin} onChange={(e) => setF({ ...f, notifyMin: e.target.checked })} />
                 <span>Avisar por e-mail quem comprou quando o mínimo for atingido (uma vez só, para todos os pedidos pagos deste produto).</span></label>
             )}</div>
         )}

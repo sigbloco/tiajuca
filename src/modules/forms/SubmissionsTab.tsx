@@ -47,7 +47,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
     onSuccess: (_d, s) => done(s === 'rejected' ? 'Inscrição rejeitada.' : s === 'archived' ? 'Inscrição arquivada.' : 'Inscrição reaberta.'), onError: (e) => toast.error(friendlyError(e)),
   })
   const approve = useMutation({
-    mutationFn: async () => { const { error } = await supabase.rpc('approve_submission', { p_id: sub.id, p_notes: notes || null, p_cycle_status: cycleStatus || null }); if (error) throw error },
+    mutationFn: async () => { const { error } = await supabase.rpc('approve_submission', { p_id: sub.id, p_notes: notes || null, p_cycle_status: cycleStatus || null }); if (error) throw error; void supabase.functions.invoke('shop-mailer').catch(() => { /* a fila é processada na próxima chamada */ }) },
     onSuccess: () => done('Aprovada! O integrante foi criado com os dados da inscrição.'), onError: (e) => toast.error(friendlyError(e)),
   })
   const saveNotes = useMutation({
