@@ -258,7 +258,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         )}
         <div className="space-y-1.5"><Label htmlFor="fl-label" required>{asSection ? 'Nome da seção' : f.type === 'info' ? 'Título' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
         {f.type === 'info'
-          ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /><VarsHint /></div>
+          ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} extra={(insert) => <VarsHint onInsert={insert} />} /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
         {needsOptions && (!f.mapping || f.mapping === 'member.custom') && (customLists.data ?? []).some((l) => !l.link) && (
           <div className="space-y-1.5"><Label htmlFor="fl-src">Fonte das opções</Label>
