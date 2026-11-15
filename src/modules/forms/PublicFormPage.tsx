@@ -183,9 +183,9 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
 }
 
 /** Formulário público de inscrição: sem login, identidade visual do bloco, validação no servidor. */
-export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes dados em vez do servidor e não envia nada. */ preview?: PublicFormPayload } = {}) {
+export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualização: usa estes dados em vez do servidor e não envia nada. */ preview?: PublicFormPayload; /** Respostas já preenchidas (renovação: o formulário vem com os dados do integrante). */ initialAnswers?: Answers } = {}) {
   const { orgSlug = '', formSlug = '' } = useParams()
-  const [answers, setAnswers] = useState<Answers>({})
+  const [answers, setAnswers] = useState<Answers>(initialAnswers ?? {})
   const [consent, setConsent] = useState(false)
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [honeypot, setHoneypot] = useState('')
@@ -367,8 +367,8 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
   // Função (não componente): um componente declarado aqui dentro seria recriado a cada renderização e remontaria o formulário inteiro.
   const shell = (children: React.ReactNode) => (
     <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
-      {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.</p> : <BackButton to="/site" name="a página inicial" />}
-      <header ref={headerRef} className="sticky top-0 z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 shadow-[0_6px_14px_-6px_rgba(0,0,0,0.3)] backdrop-blur">
+      {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">{initialAnswers ? 'Pré-visualização com os dados do integrante já preenchidos: é assim que a renovação aparece para ele. Nada é enviado.' : 'Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.'}</p> : <BackButton to="/site" name="a página inicial" />}
+      <header ref={headerRef} className="sticky top-[var(--viewas-h,0px)] z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 shadow-[0_6px_14px_-6px_rgba(0,0,0,0.3)] backdrop-blur">
         <HeaderBand frame={f0?.header ?? DEFAULT_FRAME} logo={org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" style={{ width: f0?.header?.logo ?? 80, height: f0?.header?.logo ?? 80 }} /> : null} />
         {progress}
         {f0 && (stepIdx > 0 || titlePast) && (
