@@ -113,7 +113,7 @@ export function FunctionsPage() {
         )}
       </div>
       <ReadMore>
-        Integrantes podem acumular categorias (por exemplo, Direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
+        Integrantes podem acumular categorias (por exemplo, direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
         As categorias de <PageLink to="valores">Financeiro → Contribuições</PageLink> refletem estas.
       </ReadMore>
       {SECTIONS.map((s) => {

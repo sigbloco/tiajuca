@@ -73,7 +73,7 @@ export function EventsPage() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('birthday_list', { p_org: orgId })
       if (error) throw error
-      // Dia e mês para todos; o ano (idade) só chega para Titular, Direção e professores/monitores (o banco decide).
+      // Dia e mês para todos; o ano (idade) só chega para Titular, direção e professores/monitores (o banco decide).
       const map: Record<string, { id: string; name: string; year: number | null }[]> = {}
       for (const m of (data ?? []) as { member_id: string; full_name: string; display_name: string | null; month_day: string; birth_year: number | null }[]) {
         const name = m.display_name?.trim() || m.full_name.trim().split(/\s+/)[0]

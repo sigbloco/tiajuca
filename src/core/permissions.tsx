@@ -57,7 +57,7 @@ export function useIsDirection(): boolean {
   return roles.includes('direcao') || roles.includes('titular')
 }
 
-/** Guarda de rota: quem não é Direção nem Titular volta ao início. */
+/** Guarda de rota: quem não é direção nem Titular volta ao início. */
 export function DirectionOnly({ children }: { children: ReactNode }) {
   const { membership } = useOrganization()
   const ok = useIsDirection()

@@ -7,7 +7,7 @@ import { useAuth } from '@/core/auth'
 import { friendlyError } from '@/core/errors'
 
 /** Login sempre em popup (com X), em qualquer página pública. Quando a sessão começa, fecha sozinho e chama `onSignedIn`. */
-export function LoginPopup({ open, onOpenChange, title = 'Entrar', description = 'Acesso de integrantes, professores, monitores e Direção.', returnTo = '/', successMessage, onSignedIn }: {
+export function LoginPopup({ open, onOpenChange, title = 'Entrar', description = 'Acesso de integrantes, professores, monitores e direção.', returnTo = '/', successMessage, onSignedIn }: {
   open: boolean; onOpenChange: (o: boolean) => void; title?: string; description?: string; returnTo?: string; successMessage?: string; onSignedIn?: () => void
 }) {
   const { signInWithGoogle, session } = useAuth()

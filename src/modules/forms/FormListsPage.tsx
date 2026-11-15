@@ -20,8 +20,8 @@ import { FormSettingsTabs } from './FormSettingsTabs'
 /** As três listas originais: ficam sempre (não podem ser apagadas), mas mudam de ordem como as demais. */
 const SYSTEM: Record<string, { title: string; singular: string; hint: string }> = {
   skill_levels: { title: 'Níveis', singular: 'Nível', hint: 'O nível é uma autodeclaração: a pessoa diz que nível acredita ter (ex.: Iniciante, Intermediário, Avançado).' },
-  gender_options: { title: 'Gênero', singular: 'Opção', hint: 'Dado sensível: fica restrito à Direção.' },
-  race_options: { title: 'Cor/raça', singular: 'Opção', hint: 'Dado sensível: fica restrito à Direção.' },
+  gender_options: { title: 'Gênero', singular: 'Opção', hint: 'Dado sensível: fica restrito à direção.' },
+  race_options: { title: 'Cor/raça', singular: 'Opção', hint: 'Dado sensível: fica restrito à direção.' },
 }
 
 interface ListRow { id: string; name: string; kind: 'system' | 'custom'; source: string | null; sort_order: number; is_active: boolean }

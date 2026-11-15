@@ -32,7 +32,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   )
 }
 
-/** Indicadores e gestão de bolsas (somente Direção). */
+/** Indicadores e gestão de bolsas (somente direção). */
 export function ScholarshipsPage() {
   const orgId = useOrgId()
   const [sheet, setSheet] = useState<{ memberId: string; name: string } | 'new' | null>(null)

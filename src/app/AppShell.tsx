@@ -93,7 +93,7 @@ export function AppShell() {
   }, [orgIdForCycles]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
   if (!membership) return null
-  // Área dos integrantes em construção: só Titular e Direção entram (vale pelo acesso real, não pela simulação).
+  // Área dos integrantes em construção: só Titular e direção entram (vale pelo acesso real, não pela simulação).
   const realRoles = (realMembership ?? membership).roles
   if (!realRoles.includes('titular') && !realRoles.includes('direcao')) {
     return (

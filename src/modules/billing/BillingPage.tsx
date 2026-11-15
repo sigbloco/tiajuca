@@ -293,7 +293,7 @@ function MyBilling() {
     <div className="space-y-4">
       <h1>Minhas mensalidades</h1>
       {isLoading && <Skeleton className="h-24" />}
-      {data?.length === 0 && <EmptyState>Você não possui mensalidades. Se isso estiver errado, fale com a Direção.</EmptyState>}
+      {data?.length === 0 && <EmptyState>Você não possui mensalidades. Se isso estiver errado, fale com a direção.</EmptyState>}
       <div className="grid gap-2">
         {data?.map((c) => {
           const overdue = c.status === 'pending' && c.due_on < today

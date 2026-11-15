@@ -21,7 +21,7 @@ export interface Membership {
   inactive?: boolean
 }
 
-/** Pessoa que a Direção está "visualizando como". Só muda o que a INTERFACE mostra: o banco continua respondendo ao usuário real. */
+/** Pessoa que a direção está "visualizando como". Só muda o que a INTERFACE mostra: o banco continua respondendo ao usuário real. */
 export interface ViewAsTarget {
   member_id: string; display_name: string
   /** Perfil sem pessoa: só os papéis (e, se inativo, o acesso limitado) são simulados; os dados continuam os seus. */

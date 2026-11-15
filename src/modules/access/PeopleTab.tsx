@@ -125,9 +125,9 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
             const blocked = r.key === 'direcao' && !canTouchDirection
             return (
               <Button key={r.key} size="sm" variant={on ? 'default' : 'outline'} disabled={toggle.isPending || blocked} aria-pressed={on}
-                title={blocked ? 'Somente o titular do bloco concede ou remove a Direção' : undefined}
+                title={blocked ? 'Somente o titular do bloco concede ou remove a direção' : undefined}
                 onClick={async () => {
-                  if (on && r.key === 'direcao' && !(await confirmBox('Remover o papel de Direção desta pessoa?'))) return
+                  if (on && r.key === 'direcao' && !(await confirmBox('Remover o papel de direção desta pessoa?'))) return
                   toggle.mutate({ member: p.id, role: r.key, on: !on })
                 }}>
                 {blocked && <Lock className="h-3 w-3" />}{r.label}
@@ -143,12 +143,12 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
     <div className="space-y-3">
       {hasTitular && (
         <Card className="flex flex-wrap items-center justify-between gap-2 border-primary/40 bg-primary/5 p-3">
-          <p className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> O bloco tem um <strong>titular</strong>: só ele concede ou remove a Direção.</p>
+          <p className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> O bloco tem um <strong>titular</strong>: só ele concede ou remove a direção.</p>
           {isTitular && <Button size="sm" variant="outline" onClick={onTransfer}>Transferir titularidade</Button>}
         </Card>
       )}
       <ReadMore>
-        Todo cadastro já é <strong>integrante</strong>; aqui aparece só quem tem um papel além disso. Papéis acumulam (ex.: Professor e Direção). Toda mudança fica na auditoria.
+        Todo cadastro já é <strong>integrante</strong>; aqui aparece só quem tem um papel além disso. Papéis acumulam (ex.: Professor e direção). Toda mudança fica na auditoria.
       </ReadMore>
 
       <Card className="space-y-2 p-3">

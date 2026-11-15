@@ -190,7 +190,7 @@ function SyncSheet({ folder, onClose }: { folder: Folder; onClose: () => void })
   )
 }
 
-/** Pastas do Drive: cada pessoa vê só as liberadas para o seu perfil; a Direção cadastra e define as regras. */
+/** Pastas do Drive: cada pessoa vê só as liberadas para o seu perfil; a direção cadastra e define as regras. */
 export function DriveFoldersPage() {
   const orgId = useOrgId()
   const canManage = usePermission('drive.manage')

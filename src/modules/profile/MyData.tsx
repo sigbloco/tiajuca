@@ -99,8 +99,12 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="my-email">E-mail principal</Label><Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
-            {googleEmail && <p className="text-xs text-muted-foreground">E-mail da conta Google: só a Direção troca.</p>}</div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <p className="font-semibold">E-mail</p>
+            <div className="flex items-baseline gap-1.5"><Label htmlFor="my-email">Principal</Label>
+              {googleEmail && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Conta Google: só a direção altera.</span>}</div>
+            <Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          </div>
           <ExtraEmails memberId={memberId} self />
           <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
         </div>
@@ -133,7 +137,7 @@ const withCurrent = (opts: string[][], current: string) => [
 const tri = (v: boolean | null) => (v === null ? '' : v ? 'yes' : 'no')
 const fromTri = (v: string) => (v === '' ? null : v === 'yes')
 
-/** Dados pessoais sensíveis (LGPD): opcionais; só o titular e a Direção veem; nunca em listas, chamadas, financeiro ou painéis. */
+/** Dados pessoais sensíveis (LGPD): opcionais; só o titular e a direção veem; nunca em listas, chamadas, financeiro ou painéis. */
 export function MySensitiveData({ memberId, admin = false, readOnly = false, bind }: { memberId: string; /** Sem botão próprio de salvar: quem salva é o botão único da página. */ bind?: SaveBinder; /** Só leitura: os campos ficam travados até a pessoa clicar no lápis de editar. */ readOnly?: boolean; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
   const orgId = useOrgId()
   useEffect(() => { if (admin) void supabase.rpc('log_sensitive_access', { p_member: memberId }) }, [admin, memberId])
@@ -195,8 +199,8 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
       )}
       <div className={shown ? 'space-y-3' : 'hidden'}>
       <ReadMore>{admin
-        ? <>Opcionais (LGPD). Só a própria pessoa e a Direção enxergam; cada consulta fica registrada na auditoria.</>
-        : <>Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</>}</ReadMore>
+        ? <>Opcionais (LGPD). Só a própria pessoa e a direção enxergam; cada consulta fica registrada na auditoria.</>
+        : <>Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</>}</ReadMore>
       {open && (
         <>
           {row.isLoading ? <Skeleton className="h-24" /> : (
@@ -232,7 +236,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
               )} />
             </section>
           )}
-          {!admin && <p className="text-xs text-muted-foreground">Para corrigir dados cadastrais travados, excluir seu cadastro ou revogar consentimentos, fale com a Direção.</p>}
+          {!admin && <p className="text-xs text-muted-foreground">Para corrigir dados cadastrais travados, excluir seu cadastro ou revogar consentimentos, fale com a direção.</p>}
         </>
       )}
       </div>

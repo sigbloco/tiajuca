@@ -6,7 +6,7 @@ import type { StoreProduct } from '../cart'
 import { Price } from './Price'
 import { useStore } from './StoreContext'
 
-/** Meta mínima: só aparece quando a Direção preencheu o mínimo do produto. */
+/** Meta mínima: só aparece quando a direção preencheu o mínimo do produto. */
 export function MinUnitsBar({ product }: { product: StoreProduct }) {
   const min = product.min_units
   if (!min) return null

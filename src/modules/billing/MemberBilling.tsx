@@ -147,7 +147,7 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
   )
 }
 
-/** Seção "Contribuição" da ficha do integrante (somente Direção): categoria e bolsa. Dados sensíveis NÃO aparecem aqui. */
+/** Seção "Contribuição" da ficha do integrante (somente direção): categoria e bolsa. Dados sensíveis NÃO aparecem aqui. */
 type CycleWindow = { id: string; name?: string; starts_on: string; ends_on: string; is_current: boolean }
 
 /** Contribuição de um ciclo que não é o atual (passado ou futuro): categoria e bolsa daquele ciclo, editáveis. */

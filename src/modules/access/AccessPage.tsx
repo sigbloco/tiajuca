@@ -19,7 +19,7 @@ function useIsTitular() {
   return Boolean(membership?.roles.includes('titular'))
 }
 
-/** O bloco já tem titular? Então só ele mexe na Direção. */
+/** O bloco já tem titular? Então só ele mexe na direção. */
 function useOrgHasTitular() {
   const orgId = useOrgId()
   return useQuery({
@@ -43,7 +43,7 @@ function TransferSheet({ onClose }: { onClose: () => void }) {
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
-    <SheetContent title="Transferir titularidade" description="A nova pessoa passa a controlar tudo, inclusive a Direção. Você perde esse papel e todas as permissões ligadas a ele.">
+    <SheetContent title="Transferir titularidade" description="A nova pessoa passa a controlar tudo, inclusive a direção. Você perde esse papel e todas as permissões ligadas a ele.">
       <MemberPicker value={to} onChange={setTo} />
       <p className="text-xs text-muted-foreground">A pessoa precisa ter conta de acesso vinculada ao cadastro.</p>
       <Button disabled={!to || transfer.isPending} onClick={async () => { if (await confirmBox('Transferir a titularidade do bloco? Esta ação só pode ser desfeita pelo novo titular.')) transfer.mutate() }}>Transferir titularidade</Button>

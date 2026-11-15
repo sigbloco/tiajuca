@@ -162,14 +162,14 @@ export interface FormMailContext {
   template: 'submission_approved' | 'submission_rejected' | 'submission_waitlist'
   to_email: string
   name: string | null
-  /** Texto do e-mail: o do formulário (aprovação) ou o que a Direção escreveu ao rejeitar. */
+  /** Texto do e-mail: o do formulário (aprovação) ou o que a direção escreveu ao rejeitar. */
   message?: string | null
   org: { name: string }
   settings: MailContext['settings']
 }
 
 // Texto com formatação simples (o mesmo do editor): **negrito**, *itálico*, [texto](https://link) e linhas com "- " viram lista.
-// Tudo é escapado: nada do que a Direção escreve vira HTML solto.
+// Tudo é escapado: nada do que a direção escreve vira HTML solto.
 const INLINE = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g
 
 function inlineHtml(text: string): string {
@@ -219,7 +219,7 @@ export function buildFormEmail(c: FormMailContext): BuiltEmail {
     contacts.length ? ['--', ...contacts].join('\n') : '')
   const approved = c.template === 'submission_approved'
   const waitlist = c.template === 'submission_waitlist'
-  const fallback = waitlist ? `Recebemos a sua inscrição no ${c.org.name} e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a Direção avisa se uma vaga abrir.` : approved ? `Sua inscrição no ${c.org.name} foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.` : 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.'
+  const fallback = waitlist ? `Recebemos a sua inscrição no ${c.org.name} e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a direção avisa se uma vaga abrir.` : approved ? `Sua inscrição no ${c.org.name} foi aprovada. Obrigado por se inscrever! A direção entrará em contato com os próximos passos.` : 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.'
   const body: Section[] = [
     p(`Olá${c.name ? `, ${c.name}` : ''}!`),
     ...richSections(c.message?.trim() || fallback),

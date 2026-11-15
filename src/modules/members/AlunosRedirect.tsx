@@ -6,7 +6,7 @@ import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
 /**
- * Oficina → Alunos abre Integrantes já com o chip "Alunos". Para professor e monitor (que não são Direção), abre também no que eles atendem:
+ * Oficina → Alunos abre Integrantes já com o chip "Alunos". Para professor e monitor (que não são direção), abre também no que eles atendem:
  * uma atribuição só → naipe e atividade já escolhidos; várias → o chip "Meus alunos" (a soma de tudo o que atendem), que dá para desligar.
  */
 export function AlunosRedirect() {

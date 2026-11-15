@@ -19,13 +19,13 @@ export type SendTexts = Record<SendKey, string> & { on: Record<SendKey, boolean>
 export type SendPart = 'form' | 'email'
 
 export const SEND_FALLBACK: Record<SendKey, string> = {
-  privacy: 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à Direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.',
+  privacy: 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.',
   send: '',
   confirmation: 'Inscrição recebida!',
-  review: 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.',
-  approved: 'Sua inscrição foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.',
+  review: 'Recebemos a sua inscrição e a direção está avaliando. Você receberá a confirmação por e-mail.',
+  approved: 'Sua inscrição foi aprovada. Obrigado por se inscrever! A direção entrará em contato com os próximos passos.',
   rejected: 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.',
-  waitlist: 'Recebemos a sua inscrição e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a Direção avisa se uma vaga abrir.',
+  waitlist: 'Recebemos a sua inscrição e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a direção avisa se uma vaga abrir.',
 }
 const ALL_ON: Record<SendKey, boolean> = { privacy: true, send: true, confirmation: true, review: true, approved: true, rejected: true, waitlist: true }
 export const SEND_FACTORY: SendTexts = { ...SEND_FALLBACK, on: ALL_ON }
@@ -35,10 +35,10 @@ const META: Record<SendKey, { label: string; rows: number; off: string; hint?: s
   send: { label: 'Antes de enviar (aparece na última etapa)', rows: 3, off: 'Nada aparece antes do botão de enviar.' },
   privacy: { label: 'Texto de privacidade (LGPD)', rows: 5, off: 'O formulário não mostra texto de privacidade.' },
   confirmation: { label: 'Depois de enviar (mensagem na tela)', rows: 2, off: 'Depois de enviar aparece só "Tudo certo!", sem mensagem.' },
-  review: { label: 'Enquanto a Direção avalia (tela de quem entrou com o Google)', rows: 3, off: 'Quem entra com o Google vê a mensagem padrão do sistema.' },
+  review: { label: 'Enquanto a direção avalia (tela de quem entrou com o Google)', rows: 3, off: 'Quem entra com o Google vê a mensagem padrão do sistema.' },
   approved: { label: 'E-mail de aprovação', rows: 4, off: 'Nenhum e-mail é enviado ao aprovar.', hint: 'Confirmação de que a inscrição foi aprovada. Não libera acesso por si só: o acesso segue por convite.' },
-  rejected: { label: 'Texto-base da rejeição', rows: 4, off: 'Nenhum e-mail é enviado ao rejeitar.', hint: 'Ao rejeitar, a Direção pode editar esta mensagem antes de enviar o e-mail.' },
-  waitlist: { label: 'E-mail de lista de espera', rows: 4, off: 'Nenhum e-mail é enviado ao aprovar na lista de espera.', hint: 'Enviado quando a Direção aprova a inscrição na lista de espera (vaga esgotada). Sem posição na fila: a Direção escolhe quem entra por critérios próprios.' },
+  rejected: { label: 'Texto-base da rejeição', rows: 4, off: 'Nenhum e-mail é enviado ao rejeitar.', hint: 'Ao rejeitar, a direção pode editar esta mensagem antes de enviar o e-mail.' },
+  waitlist: { label: 'E-mail de lista de espera', rows: 4, off: 'Nenhum e-mail é enviado ao aprovar na lista de espera.', hint: 'Enviado quando a direção aprova a inscrição na lista de espera (vaga esgotada). Sem posição na fila: a direção escolhe quem entra por critérios próprios.' },
 }
 
 /** Colunas da tabela (forms e form_send_defaults) a partir dos textos, com o texto padrão quando um campo fica vazio. */

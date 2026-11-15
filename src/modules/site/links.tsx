@@ -31,7 +31,7 @@ const digits = (s: string) => s.replace(/\D/g, '')
 const handle = (s: string) => s.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?[^/]+\//i, '').replace(/\/$/, '')
 const https = (s: string) => (/^https?:\/\//i.test(s.trim()) ? s.trim() : `https://${s.trim()}`)
 
-/** Link final a partir do que a Direção digitou (número, @usuário ou endereço). Só devolve http(s), mailto ou tel. */
+/** Link final a partir do que a direção digitou (número, @usuário ou endereço). Só devolve http(s), mailto ou tel. */
 export function hrefOf(l: SiteLink): string | null {
   const v = (l.value ?? '').trim()
   if (!v) return null
