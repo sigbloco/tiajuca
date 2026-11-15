@@ -32,7 +32,7 @@ export function FormEditorPage() {
         <h1 className="min-w-0 flex-1 break-words">{form.title}</h1>
         <FitButton icon={Eye} label="Visualizar" href={`/${membership?.slug}/previa/${form.id}`} newTab />
       </div>
-      <ButtonRow role="tablist">
+      <ButtonRow role="tablist" split={[2, 3]}>
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
             className={cn('whitespace-nowrap rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === t.key && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{t.label}</FitWord></button>
