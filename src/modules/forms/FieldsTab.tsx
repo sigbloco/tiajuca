@@ -9,7 +9,7 @@ import { promptBox } from '@/components/shared/DialogHost'
 import { SendSection } from './SendSection'
 import { useSectionTemplates } from './SectionTemplatesPage'
 import { useHoldReorder } from '@/core/holdReorder'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -17,6 +17,7 @@ import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { keyify, useFormFields, type FormFieldRow } from './service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import type { CatalogItem } from '@/modules/structure/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { SOCIAL_NETWORKS, parseNetworks } from '@/core/social'
 import { FIELD_TYPE_LABEL, MAPPING_LABEL, hasConsent, isLoginSection, isSection, type FieldOption, type FieldType } from './types'
@@ -83,10 +84,22 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       return (data ?? []) as { instrument_id: string; instrument_name: string; section_id: string; is_full: boolean }[]
     },
   })
+  // Fonte das opções: uma lista criada em Formulários → Configurações → Listas (só quando a pergunta não está ligada ao cadastro).
+  const [listSource, setListSource] = useState<string>(field?.validation.listSource ?? '')
+  const src = f.mapping ? '' : listSource
+  const customLists = useQuery({
+    queryKey: ['form-lists', orgId, 'custom-active'],
+    queryFn: async () => { const { data, error } = await supabase.from('form_lists').select('id, name').eq('organization_id', orgId).eq('kind', 'custom').eq('is_active', true).order('sort_order'); if (error) throw error; return (data ?? []) as { id: string; name: string }[] },
+  })
+  const customItems = useQuery({
+    queryKey: ['form-list-items', orgId, src],
+    enabled: Boolean(src),
+    queryFn: async () => { const { data, error } = await supabase.from('form_list_items').select('id, name, sort_order, is_active, description').eq('list_id', src).order('sort_order'); if (error) throw error; return (data ?? []) as { id: string; name: string; sort_order: number; is_active: boolean; description: string | null }[] },
+  })
   const linkMapped = f.mapping.startsWith('link.')
   // Listas do cadastro (marcar quais itens aparecem): instrumento, categoria, nível, gênero e cor/raça.
-  const listMapped = linkMapped || f.mapping === 'sensitive.gender' || f.mapping === 'sensitive.race_color'
-  const catalogItems = (f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : f.mapping === 'sensitive.gender' ? genders.data : f.mapping === 'sensitive.race_color' ? races.data : [])
+  const listMapped = linkMapped || f.mapping === 'sensitive.gender' || f.mapping === 'sensitive.race_color' || !!src
+  const catalogItems: CatalogItem[] = (src ? customItems.data :  f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : f.mapping === 'sensitive.gender' ? genders.data : f.mapping === 'sensitive.race_color' ? races.data : [])
     ?.filter((i) => i.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0) || x.name.localeCompare(y.name, 'pt-BR')) ?? []
   const naipeList = (naipes.data ?? []).filter((n) => n.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0))
   const activeNaipe = naipe || naipeList[0]?.id || ''
@@ -102,6 +115,14 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     for (const i of catalogItems) { const o = field.options.find((x) => x.value === i.id || x.value === i.name || x.label.trim().toLowerCase() === i.name.trim().toLowerCase()); if (o?.description !== undefined) own[i.id] = o.description }
     setDescs(own)
   }, [catalogSig]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Ao escolher uma lista, todos os itens começam marcados (dá para desmarcar).
+  const autoPick = useRef('')
+  useEffect(() => {
+    if (!src || autoPick.current === src || !customItems.data || customItems.data.length === 0) return
+    autoPick.current = src
+    if (field?.validation.listSource === src && (field?.options.length ?? 0) > 0) return
+    setPicked(new Set(customItems.data.filter((i) => i.is_active).map((i) => i.id)))
+  }, [src, customItems.data]) // eslint-disable-line react-hooks/exhaustive-deps
   const togglePicked = (id: string) => setPicked((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const setShownPicked = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const i of shown) { if (on) n.add(i.id); else n.delete(i.id) } return n })
   const currentSection = field ? sectionIds(fields).get(field.id) ?? '' : defaultSection ?? sections[sections.length - 1]?.id ?? ''
@@ -139,6 +160,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       }
       if (f.other && OPTION_TYPES.includes(f.type as FieldType) && !f.mapping.startsWith('link.')) validation.other = true
       if (listMapped && showDesc) validation.descriptions = true
+      if (src) validation.listSource = src
       const opts = OPTION_TYPES.includes(f.type as FieldType) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
       const marks = asSection ? { section: true, ...(f.consent && !field?.validation.login ? { consent: true } : {}), ...(field?.validation.login ? { login: true } : {}) } : {}
@@ -211,9 +233,17 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {asSection && !field?.validation.login && (
           <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
+        {needsOptions && !f.mapping && (customLists.data?.length ?? 0) > 0 && (
+          <div className="space-y-1.5"><Label htmlFor="fl-src">Fonte das opções</Label>
+            <Select id="fl-src" value={listSource} onChange={(e) => { setListSource(e.target.value); setPicked(new Set()); autoPick.current = '' }}>
+              <option value="">Digitar as opções aqui</option>
+              {customLists.data!.map((l) => <option key={l.id} value={l.id}>Lista: {l.name}</option>)}
+            </Select>
+          </div>
+        )}
         {needsOptions && listMapped && (
           <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold">{f.mapping === 'link.instrument' ? 'Instrumentos que aparecem' : f.mapping === 'link.function' ? 'Categorias que aparecem' : f.mapping === 'sensitive.gender' ? 'Opções de gênero que aparecem' : f.mapping === 'sensitive.race_color' ? 'Opções de cor/raça que aparecem' : 'Níveis que aparecem'}</legend>
+            <legend className="text-sm font-semibold">{src ? 'Itens da lista que aparecem' : f.mapping === 'link.instrument' ? 'Instrumentos que aparecem' : f.mapping === 'link.function' ? 'Categorias que aparecem' : f.mapping === 'sensitive.gender' ? 'Opções de gênero que aparecem' : f.mapping === 'sensitive.race_color' ? 'Opções de cor/raça que aparecem' : 'Níveis que aparecem'}</legend>
             {f.mapping === 'link.instrument' && (
               <div role="radiogroup" aria-label="Naipe" className="flex flex-wrap gap-2">
                 {naipeList.map((n) => {
