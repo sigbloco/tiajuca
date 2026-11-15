@@ -12,7 +12,7 @@ import { useForm } from './service'
 import { SettingsTab } from './SettingsTab'
 import { SubmissionsTab } from './SubmissionsTab'
 
-const TABS = [{ key: 'settings', label: 'Configurações' }, { key: 'fields', label: 'Campos' }, { key: 'submissions', label: 'Respostas' }] as const
+const TABS = [{ key: 'settings', label: 'Configurações' }, { key: 'header', label: 'Cabeçalho' }, { key: 'fields', label: 'Campos' }, { key: 'submissions', label: 'Respostas' }] as const
 
 export function FormEditorPage() {
   const { formId = '' } = useParams()
@@ -39,6 +39,7 @@ export function FormEditorPage() {
       </ButtonRow>
       {tab === 'fields' && <FieldsTab formId={form.id} />}
       {tab === 'settings' && <SettingsTab key={form.updated_at ?? form.id} form={form} />}
+      {tab === 'header' && <SettingsTab key={`h-${form.updated_at ?? form.id}`} form={form} part="header" />}
       {tab === 'submissions' && <SubmissionsTab form={form} />}
     </div>
   )
