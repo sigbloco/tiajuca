@@ -70,13 +70,13 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
         <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar e-mail" title="Adicionar e-mail"
           onClick={() => setAdding((a) => !a)}><Plus className="h-3.5 w-3.5" /></button>
       </div>
-      {!manage && <p className="text-xs text-muted-foreground">Novos e-mails passam pela Direção: cada e-mail serve para entrar com a conta Google e ligá-la ao seu cadastro, então a Direção confere antes de liberar.</p>}
+      {!manage && <p className="text-xs text-muted-foreground">A Direção confere cada e-mail novo: ele dá acesso ao seu cadastro.</p>}
       {(pending.data ?? []).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {(pending.data ?? []).map((e) => <span key={e.id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-warning px-2.5 py-1 text-sm text-warning"><span className="break-all">{e.email}</span> · aguardando a Direção</span>)}
         </div>
       )}
-      {(list.data ?? []).length === 0 && (pending.data ?? []).length === 0 && !adding && <p className="text-xs text-muted-foreground">Nenhum. Qualquer e-mail da pessoa serve para entrar com a conta Google.</p>}
+      {(list.data ?? []).length === 0 && (pending.data ?? []).length === 0 && !adding && <p className="text-xs text-muted-foreground">Nenhum.</p>}
       {(list.data ?? []).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {(list.data ?? []).map((e) => (

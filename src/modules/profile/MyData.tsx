@@ -8,7 +8,7 @@ import { useUnsaved } from '@/core/unsaved'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { socialUrl } from '@/core/social'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock, Plus, Save, X } from 'lucide-react'
+import { ChevronRight, Lock, Plus, Save, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
@@ -21,7 +21,7 @@ import { ExtraEmails } from '@/modules/members/ExtraEmails'
 
 interface Me {
   full_name: string; display_name: string | null; email: string | null; phone: string | null; social_handle: string | null
-  birth_date: string | null; joined_at: string | null; affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null
+  birth_date: string | null; joined_at: string | null; affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null; played_instrument: string | null
 }
 
 const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); return l.length ? l : [''] }
@@ -35,34 +35,32 @@ function useBindSave(bind: SaveBinder | undefined, fn: () => Promise<boolean | v
 }
 
 /** Dados cadastrais do próprio integrante: tudo editável, exceto a data de inscrição. Redes sociais: várias, uma por linha. */
-export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder }) {
+export function MyData({ memberId, bind, part = 'contact' }: { memberId: string; bind?: SaveBinder; /** `contact`: dados e contato. `other`: "Outras informações" (vai por último no perfil). */ part?: 'contact' | 'other' }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const me = useQuery({
     queryKey: ['me', orgId, memberId],
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
-        .select('full_name, display_name, email, phone, social_handle, birth_date, joined_at, affective_relation, played_other_blocks, other_blocks').eq('id', memberId).single()
+        .select('full_name, display_name, email, phone, social_handle, birth_date, joined_at, affective_relation, played_other_blocks, other_blocks, played_instrument').eq('id', memberId).single()
       if (error) throw error
       return data as Me
     },
   })
-  const [f, setF] = useState({ full_name: '', email: '', birth_date: '', display_name: '', phone: '', socials: [''], affective_relation: '', played_other_blocks: false, other_blocks: '' })
-  useEffect(() => {
-    const d = me.data
-    if (d) setF({ full_name: d.full_name, email: d.email ?? '', birth_date: d.birth_date ?? '', display_name: d.display_name ?? '', phone: d.phone ? maskPhone(d.phone) : '', socials: toList(d.social_handle), affective_relation: d.affective_relation ?? '',
-      played_other_blocks: d.played_other_blocks, other_blocks: d.other_blocks ?? '' })
-  }, [me.data])
+  const toF = (d: Me) => ({ full_name: d.full_name, email: d.email ?? '', birth_date: d.birth_date ?? '', display_name: d.display_name ?? '', phone: d.phone ? maskPhone(d.phone) : '', socials: toList(d.social_handle), affective_relation: d.affective_relation ?? '', other_blocks: d.other_blocks ?? '', played_instrument: d.played_instrument ?? '' })
+  const [f, setF] = useState(() => toF({ full_name: '', display_name: null, email: null, phone: null, social_handle: null, birth_date: null, joined_at: null, affective_relation: null, played_other_blocks: false, other_blocks: null, played_instrument: null }))
+  useEffect(() => { if (me.data) setF(toF(me.data)) }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Cada bloco só olha e grava os seus campos.
+  const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
+  const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : [x.full_name, x.email, x.birth_date, x.display_name, x.phone, x.socials])
 
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('update_my_profile', {
         p_member: memberId,
-        p_patch: {
-          full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''),
-          social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n'), affective_relation: f.affective_relation,
-          played_other_blocks: f.played_other_blocks, other_blocks: f.played_other_blocks ? f.other_blocks : '',
-        },
+        p_patch: part === 'other'
+          ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '', played_instrument: f.played_instrument }
+          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n') },
       })
       if (error) throw error
     },
@@ -70,17 +68,28 @@ export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? JSON.stringify({ full_name: me.data.full_name, email: me.data.email ?? '', birth_date: me.data.birth_date ?? '', display_name: me.data.display_name ?? '', phone: me.data.phone ? maskPhone(me.data.phone) : '', socials: toList(me.data.social_handle), affective_relation: me.data.affective_relation ?? '', played_other_blocks: me.data.played_other_blocks, other_blocks: me.data.other_blocks ?? '' }) : ''
-  useUnsaved(!!me.data && JSON.stringify(f) !== baseline, () => save.mutateAsync())
+  const baseline = me.data ? mine(toF(me.data)) : ''
+  useUnsaved(!!me.data && mine(f) !== baseline, () => save.mutateAsync())
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
   useBindSave(bind, async () => {
-    if (!me.data || JSON.stringify(f) === baseline) return
-    if (!requireFields([['Telefone válido (DDD + número)', phoneOk]])) return false
+    if (!me.data || mine(f) === baseline) return
+    if (part === 'contact' && !requireFields([['Telefone válido (DDD + número)', phoneOk]])) return false
     await save.mutateAsync()
   })
   if (me.isLoading || !me.data) return <Skeleton className="h-40" />
   const d = me.data
+  if (part === 'other') {
+    return (
+      <Card className="space-y-3 p-4">
+        <h3>Outras informações</h3>
+        <div className="space-y-1.5"><Label htmlFor="my-instr">Toca ou já tocou algum instrumento?</Label><Input id="my-instr" value={f.played_instrument} onChange={(e) => setF({ ...f, played_instrument: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="my-other">Toca ou já tocou com outros blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label htmlFor="my-aff">Qual é a sua relação com a Grande Tijuca?</Label>
+          <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
+      </Card>
+    )
+  }
   // E-mail do Google (gmail) é o que liga o login ao cadastro: trocar por conta própria quebraria o acesso.
   const googleEmail = /@(gmail|googlemail)[.]com$/i.test(d.email ?? '')
   return (
@@ -91,7 +100,7 @@ export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="my-email">E-mail principal</Label><Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
-            {googleEmail && <p className="text-xs text-muted-foreground">É o e-mail da sua conta Google, usado para entrar: fica travado. Para trocá-lo, fale com a Direção. Você pode adicionar outros e-mails abaixo.</p>}</div>
+            {googleEmail && <p className="text-xs text-muted-foreground">E-mail da conta Google: só a Direção troca.</p>}</div>
           <ExtraEmails memberId={memberId} self />
           <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
         </div>
@@ -108,10 +117,6 @@ export function MyData({ memberId, bind }: { memberId: string; bind?: SaveBinder
             ))}
             <Button type="button" size="sm" variant="outline" onClick={() => setF({ ...f, socials: [...f.socials, ''] })}><Plus className="h-4 w-4" /> Adicionar rede social</Button></div>
         </div>
-        <div className="space-y-1.5"><Label htmlFor="my-aff">Qual é a sua relação com a Grande Tijuca?</Label>
-          <textarea id="my-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} /></div>
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.played_other_blocks} onChange={(e) => setF({ ...f, played_other_blocks: e.target.checked })} /> Toco ou já toquei com outros blocos</label>
-        {f.played_other_blocks && <div className="space-y-1.5"><Label htmlFor="my-other">Quais blocos?</Label><Input id="my-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} /></div>}
         {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
       </form>
     </Card>
@@ -135,6 +140,8 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const open = true
+  // No próprio perfil a seção começa recolhida (os dados carregam do mesmo jeito, para o Salvar da página funcionar).
+  const [shown, setShown] = useState(admin)
   const row = useQuery({
     queryKey: ['my-sensitive', orgId, memberId],
     enabled: open,
@@ -180,9 +187,13 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
   const Wrap = admin ? 'div' : Card
   return (
     <Wrap className={admin ? 'space-y-3' : 'space-y-3 p-4'}>
-      {!admin && <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2"><Lock className="h-4 w-4" /> Dados pessoais sensíveis</h3>
-      </div>}
+      {!admin && (
+        <button type="button" aria-expanded={shown} className="flex w-full items-center gap-2 text-left" onClick={() => setShown((v) => !v)}>
+          <ChevronRight className={`h-5 w-5 shrink-0 transition-transform ${shown ? 'rotate-90' : ''}`} />
+          <h3 className="flex items-center gap-2"><Lock className="h-4 w-4" /> Dados pessoais sensíveis</h3>
+        </button>
+      )}
+      <div className={shown ? 'space-y-3' : 'hidden'}>
       <ReadMore>{admin
         ? <>Opcionais (LGPD). Só a própria pessoa e a Direção enxergam; cada consulta fica registrada na auditoria.</>
         : <>Gênero, cor/raça e deficiência são <strong>opcionais</strong>. Só você e a Direção de {membership?.short_name} enxergam. Não aparecem em listas, chamadas, financeiro, relatórios nem painéis.</>}</ReadMore>
@@ -224,6 +235,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
           {!admin && <p className="text-xs text-muted-foreground">Para corrigir dados cadastrais travados, excluir seu cadastro ou revogar consentimentos, fale com a Direção.</p>}
         </>
       )}
+      </div>
     </Wrap>
   )
 }

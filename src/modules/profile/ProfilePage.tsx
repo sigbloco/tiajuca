@@ -77,6 +77,7 @@ export function ProfilePage() {
   const savers = useRef(new Map<string, () => Promise<boolean | void>>())
   const [saving, setSaving] = useState(false)
   const bindData = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('data', fn); else savers.current.delete('data') }, [])
+  const bindOther = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('other', fn); else savers.current.delete('other') }, [])
   const bindSens = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('sens', fn); else savers.current.delete('sens') }, [])
   const saveAll = async () => {
     setSaving(true)
@@ -109,6 +110,8 @@ export function ProfilePage() {
         </section>
       )}
       {payments.data?.length === 0 && <EmptyState>Você não tem pagamentos registrados.</EmptyState>}
+      {/* "Outras informações" vai por último no perfil. */}
+      <MyData memberId={memberId} bind={bindOther} part="other" />
       <StickySave><SaveButton type="button" className="w-full" disabled={saving} onClick={saveAll} hint="Salvar meu perfil" /></StickySave>
     </div>
   )
