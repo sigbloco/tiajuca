@@ -8,7 +8,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react'
 import { SOCIAL_NETWORKS, networkUrl, splitNetwork } from '@/core/social'
 import { useAuth } from '@/core/auth'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Input, Label, Select, Skeleton, cn } from '@/components/ui/primitives'
@@ -49,6 +49,30 @@ function SocialInput({ id, value, onChange, networks }: { id: string; value: str
         </div>
       ))}
       <Button type="button" size="sm" variant="outline" onClick={() => update([...rows, { network: first, user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>
+    </div>
+  )
+}
+
+/** Chips que dividem 100% da largura: numa linha só quando cabem (esticados), senão quebram de forma harmônica (4 → 2+2, 5 → 3+2). */
+function ChipRow({ children }: { children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null)
+  const probe = useRef<HTMLDivElement>(null)
+  const [one, setOne] = useState(true)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const check = () => { if (probe.current) setOne(probe.current.scrollWidth <= el.clientWidth + 0.5) }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
+  const items = Children.toArray(children)
+  return (
+    <div ref={box} className="relative">
+      {/* Medida: largura natural de todos os chips lado a lado (invisível). */}
+      <div ref={probe} aria-hidden="true" {...({ inert: '' } as object)} className="pointer-events-none invisible absolute left-0 top-0 flex w-max gap-1 [&>*]:whitespace-nowrap">{items}</div>
+      {one ? <div className="flex gap-1 [&>*]:flex-1 [&>*]:whitespace-nowrap">{items}</div> : <ButtonRow className="!gap-1">{items}</ButtonRow>}
     </div>
   )
 }
@@ -401,12 +425,12 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
           </p>
         )}
         {(stepIdx > 0 || titlePast) && anchors.length > 1 && (
-          <nav aria-label="Blocos desta etapa" className="mt-1.5"><ButtonRow className="!gap-1">
+          <nav aria-label="Blocos desta etapa" className="mt-1.5"><ChipRow>
             {anchors.map((a) => (
               <button key={a.key} type="button" aria-current={activeAnchor === a.key ? 'true' : undefined} onClick={() => goAnchor(a.key)}
                 className={`rounded-full px-2.5 py-0.5 text-center text-xs font-semibold transition-colors ${activeAnchor === a.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}>{a.label}</button>
             ))}
-          </ButtonRow></nav>
+          </ChipRow></nav>
         )}
       </header>
       {children}
