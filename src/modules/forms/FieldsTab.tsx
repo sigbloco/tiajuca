@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
@@ -338,7 +339,9 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
           )}
         </Card>}
 
-        <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar campo" />
+        <StickySave bleed={false}>
+          <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar campo" />
+        </StickySave>
       </form>
     </SheetContent>
   )

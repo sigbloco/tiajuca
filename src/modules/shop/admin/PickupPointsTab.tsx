@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -112,7 +113,9 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
         {!person && slots.length > 0 && !hasFutureSlot(slots, today) && <p role="alert" className="text-sm text-destructive">Todas as datas já passaram: este ponto não vai aparecer no checkout.</p>}
 
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <StickySave bleed={false}>
+          <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        </StickySave>
       </form>
     </SheetContent>
   )

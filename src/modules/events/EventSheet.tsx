@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { ActionRow } from '@/components/shared/ActionRow'
 import { requireFields } from '@/core/required'
 import { confirmBox, promptBox } from '@/components/shared/DialogHost'
@@ -217,10 +218,12 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           </div>
         </div>
         <AudiencePicker value={auds} onChange={setAuds} />
+        <StickySave bleed={false}>
         <div className="flex gap-2">
           <Button type="submit" className="flex-1" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
         </div>
+        </StickySave>
         {!isNew && (
           <Button type="button" variant="outline" className="w-full text-destructive" disabled={remove.isPending}
             onClick={async () => { if (await confirmBox('Apagar este evento? Ele vai para a lixeira, de onde dá para restaurar. Se já tiver presença registrada, use Cancelar.')) remove.mutate() }}>

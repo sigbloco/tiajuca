@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { ProgressiveList } from '@/components/shared/LoadMore'
@@ -241,7 +242,9 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
           <div className="space-y-1.5"><Label htmlFor="s-guide">Link da guia</Label><Input id="s-guide" type="url" placeholder="https://" value={f.guide_url} onChange={set('guide_url')} /></div>
           <div className="space-y-1.5"><Label htmlFor="s-notes">Observações</Label>
             <textarea id="s-notes" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.notes} onChange={set('notes')} /></div>
-          <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar música" />
+          <StickySave bleed={false}>
+            <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar música" />
+          </StickySave>
         </form>
       ) : (
         <dl className="space-y-1">
