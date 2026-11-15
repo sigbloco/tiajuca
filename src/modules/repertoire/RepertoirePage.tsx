@@ -16,17 +16,19 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { COLOR_DOT, type TypeColor } from '@/modules/events/service'
+import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { listRepertoires, type Repertoire } from './service'
 
 export function RepertoireSheet({ rep, onClose }: { rep: Repertoire | null; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
+  const { cycleId } = useSelectedCycle()
   const [f, setF] = useState({ name: rep?.name ?? '', description: rep?.description ?? '', color: (rep?.color ?? 'primary') as TypeColor })
   const save = useMutation({
     mutationFn: async () => {
       const row = { name: f.name.trim(), description: f.description.trim() || null, color: f.color }
       const q = rep ? supabase.from('repertoires').update(row).eq('id', rep.id)
-        : supabase.from('repertoires').insert({ ...row, organization_id: orgId, sort_order: 9999 })
+        : supabase.from('repertoires').insert({ ...row, organization_id: orgId, cycle_id: cycleId || null, sort_order: 9999 })
       const { error } = await q
       if (error) throw error
     },
@@ -66,7 +68,8 @@ export function RepertoirePage() {
   const qc = useQueryClient()
   const canManage = usePermission('repertoire.manage')
   const [sheet, setSheet] = useState<{ rep: Repertoire | null } | null>(null)
-  const { data, isLoading } = useQuery({ queryKey: ['repertoires', orgId], queryFn: () => listRepertoires(orgId) })
+  const { cycleId } = useSelectedCycle()
+  const { data, isLoading } = useQuery({ queryKey: ['repertoires', orgId, cycleId], enabled: !!cycleId, queryFn: () => listRepertoires(orgId, cycleId) })
 
   // Reordena renumerando toda a lista (evita empates de ordem).
   const swap = useMutation({
