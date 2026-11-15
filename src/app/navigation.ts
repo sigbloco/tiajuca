@@ -34,7 +34,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: '', label: 'Início', icon: Home },
   { to: 'perfil', label: 'Meu perfil', icon: UserRound },
-  { to: 'naipes', label: 'Naipes', crumb: 'Naipes e instrumentos', icon: Drum, permission: 'structure.manage' },
+  { to: 'naipes', label: 'Naipes', crumb: 'Naipes e instrumentos', icon: Drum },
   { to: 'membros', label: 'Integrantes', icon: Users, permission: 'members.read' },
   { to: 'formularios', label: 'Formulários', icon: ClipboardList, permission: 'forms.manage' },
   { to: 'repertorio', label: 'Repertório', icon: Music2, permission: 'repertoire.read' },

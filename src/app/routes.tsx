@@ -1,3 +1,4 @@
+import { DirectionOnly } from '@/core/permissions'
 import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/primitives'
 import { takePostLoginPath, useAuth } from '@/core/auth'
@@ -157,17 +158,17 @@ export const router = createBrowserRouter(
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
                 { path: 'formularios', element: <FormsPage /> },
-                { path: 'formularios/configuracoes', element: <SectionTemplatesPage /> },
-                { path: 'formularios/configuracoes/listas', element: <FormListsPage /> },
-                { path: 'formularios/configuracoes/envio', element: <SendDefaultsPage /> },
-                { path: 'formularios/configuracoes/modelos/:templateId', element: <TemplateEditorPage /> },
+                { path: 'formularios/configuracoes', element: <DirectionOnly><SectionTemplatesPage /></DirectionOnly> },
+                { path: 'formularios/configuracoes/listas', element: <DirectionOnly><FormListsPage /></DirectionOnly> },
+                { path: 'formularios/configuracoes/envio', element: <DirectionOnly><SendDefaultsPage /></DirectionOnly> },
+                { path: 'formularios/configuracoes/modelos/:templateId', element: <DirectionOnly><TemplateEditorPage /></DirectionOnly> },
                 { path: 'formularios/:formId', element: <FormEditorPage /> },
                 // Endereços antigos (quando a área se chamava Inscrições) seguem funcionando.
                 { path: 'inscricoes', element: <OldFormsRedirect /> },
                 { path: 'inscricoes/*', element: <OldFormsRedirect /> },
                 { path: 'naipes', element: <NaipesPage /> },
                 { path: 'naipes/organograma', element: <Organogram /> },
-                { path: 'naipes/configuracoes', element: <SectionNamesPage /> },
+                { path: 'naipes/configuracoes', element: <DirectionOnly><SectionNamesPage /></DirectionOnly> },
                 {
                   element: <HubLayout hub="organizacao" />,
                   children: [
@@ -205,7 +206,7 @@ export const router = createBrowserRouter(
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
-                { path: 'eventos/configuracoes', element: <EventSettingsPage /> },
+                { path: 'eventos/configuracoes', element: <DirectionOnly><EventSettingsPage /></DirectionOnly> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                 { path: 'site', element: <SiteSettings /> },
                 { path: 'interface', element: <InterfacePage /> },

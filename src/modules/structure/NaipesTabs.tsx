@@ -3,13 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { LabelFitRow } from '@/components/shared/LabelFitRow'
 import { Button } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
-import { usePermission } from '@/core/permissions'
+import { useIsDirection, usePermission } from '@/core/permissions'
 
 /** Páginas de Naipes e instrumentos, como botões de alternância: a que está aberta fica marcada e dá para ir de uma à outra. */
 export function NaipesTabs() {
   const { membership } = useOrganization()
   const { pathname } = useLocation()
-  const canEdit = usePermission('structure.manage')
+  const canEdit = useIsDirection()
   const canVagas = usePermission('capacity.read')
   const base = `/${membership?.slug}`
   const tabs = [

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useOrganization } from './organization'
 
 // Espelha o catálogo `permissions` do banco. O BANCO decide (RLS); aqui só controlamos a interface.
@@ -47,4 +48,19 @@ export function Can({
   fallback?: ReactNode
 }) {
   return usePermission(permission, scope) ? <>{children}</> : <>{fallback}</>
+}
+
+/** Direção e Titular: os únicos que veem as páginas de Configurações. */
+export function useIsDirection(): boolean {
+  const { membership } = useOrganization()
+  const roles = membership?.roles ?? []
+  return roles.includes('direcao') || roles.includes('titular')
+}
+
+/** Guarda de rota: quem não é Direção nem Titular volta ao início. */
+export function DirectionOnly({ children }: { children: ReactNode }) {
+  const { membership } = useOrganization()
+  const ok = useIsDirection()
+  if (!membership) return null
+  return ok ? <>{children}</> : <Navigate to={`/${membership.slug}`} replace />
 }

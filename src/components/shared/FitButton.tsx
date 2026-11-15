@@ -24,7 +24,10 @@ export function FitButton({ icon: Icon, label, shortLabel, hint, to, href, newTa
     for (let a = btn.parentElement; a && chain.length < 4 && a !== document.body; a = a.parentElement) chain.push(a)
     const saved = chain.map((a) => a.style.flexWrap)
     chain.forEach((a) => { if (getComputedStyle(a).display.includes('flex')) a.style.flexWrap = 'nowrap' })
-    const overflows = () => btn.scrollWidth > btn.clientWidth + 0.5 || chain.some((a) => a.scrollWidth > a.clientWidth + 0.5)
+    // Ponto de partida (só o ícone): contêiner que já estoura por outro motivo (margens negativas, rodapé fixo...) não conta contra o texto.
+    full.current.style.display = 'none'; short.current.style.display = 'none'
+    const base = chain.map((a) => Math.max(a.clientWidth, a.scrollWidth))
+    const overflows = () => btn.scrollWidth > btn.clientWidth + 0.5 || chain.some((a, i) => a.scrollWidth > base[i] + 0.5)
     let chosen: (typeof LEVELS)[number] = 'none'
     for (const level of LEVELS) {
       if (level === 'short' && !shortLabel) continue
