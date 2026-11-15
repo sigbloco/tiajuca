@@ -49,7 +49,7 @@ export function FormPreviewPage() {
   const prefill = useMemberPrefill(memberId)
   // Valores das variáveis ({valor}, {whatsapp}...) como no formulário publicado.
   const vars = useQuery({ queryKey: ['form-vars', formId], queryFn: async () => { const { data, error } = await supabase.rpc('form_vars', { p_form: formId }); if (error) throw error; return data as TextVars } })
-  const bar = <ViewAsBar />
+  const bar = <ViewAsBar contained />
   if (form.isLoading || fields.isLoading || vars.isLoading || (!!memberId && prefill.isLoading) || !form.data || !membership) return <>{bar}<main className="mx-auto max-w-xl p-8"><Skeleton className="h-64" /></main></>
   const f = form.data
   const list: PublicField[] = (fields.data ?? []).filter((x) => x.is_active).map((x) => ({
