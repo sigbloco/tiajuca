@@ -5,60 +5,70 @@ import { toast } from 'sonner'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { RichTextarea } from '@/components/shared/RichText'
 import { SaveButton } from '@/components/shared/SaveButton'
-import { Badge, Button, Card, Label, Sheet, SheetContent } from '@/components/ui/primitives'
+import { StickySave } from '@/components/shared/StickySave'
+import { Badge, Button, Card } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { useForm } from './service'
+import type { FormRow } from './service'
 import { loadSendDefaults } from './SendDefaultsPage'
 
+/** Cada mensagem do envio liga/desliga: formulário que não é inscrição de oficina não precisa de avaliação, aprovação etc. */
+export type SendKey = 'privacy' | 'send' | 'confirmation' | 'review' | 'approved' | 'rejected' | 'waitlist'
+export type SendTexts = Record<SendKey, string> & { on: Record<SendKey, boolean> }
+export type SendPart = 'form' | 'email'
 
-/** Os cinco textos da seção de Envio (os do formulário e os padrão das Configurações usam os mesmos campos). */
-export interface SendTexts { privacy: string; send: string; confirmation: string; review: string; approved: string; rejected: string; waitlist: string }
-export const SEND_FALLBACK = {
+export const SEND_FALLBACK: Record<SendKey, string> = {
   privacy: 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à Direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.',
+  send: '',
   confirmation: 'Inscrição recebida!',
   review: 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.',
   approved: 'Sua inscrição foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.',
   rejected: 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.',
   waitlist: 'Recebemos a sua inscrição e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a Direção avisa se uma vaga abrir.',
 }
+const ALL_ON: Record<SendKey, boolean> = { privacy: true, send: true, confirmation: true, review: true, approved: true, rejected: true, waitlist: true }
+export const SEND_FACTORY: SendTexts = { ...SEND_FALLBACK, on: ALL_ON }
+
+const PARTS: Record<SendPart, SendKey[]> = { form: ['send', 'privacy', 'confirmation', 'review'], email: ['approved', 'rejected', 'waitlist'] }
+const META: Record<SendKey, { label: string; rows: number; off: string; hint?: string }> = {
+  send: { label: 'Antes de enviar (aparece na última etapa)', rows: 3, off: 'Nada aparece antes do botão de enviar.' },
+  privacy: { label: 'Texto de privacidade (LGPD)', rows: 5, off: 'O formulário não mostra texto de privacidade.' },
+  confirmation: { label: 'Depois de enviar (mensagem na tela)', rows: 2, off: 'Depois de enviar aparece só "Tudo certo!", sem mensagem.' },
+  review: { label: 'Enquanto a Direção avalia (tela de quem entrou com o Google)', rows: 3, off: 'Quem entra com o Google vê a mensagem padrão do sistema.' },
+  approved: { label: 'E-mail de aprovação', rows: 4, off: 'Nenhum e-mail é enviado ao aprovar.', hint: 'Confirmação de que a inscrição foi aprovada. Não libera acesso por si só: o acesso segue por convite.' },
+  rejected: { label: 'Texto-base da rejeição', rows: 4, off: 'Nenhum e-mail é enviado ao rejeitar.', hint: 'Ao rejeitar, a Direção pode editar esta mensagem antes de enviar o e-mail.' },
+  waitlist: { label: 'E-mail de lista de espera', rows: 4, off: 'Nenhum e-mail é enviado ao aprovar na lista de espera.', hint: 'Enviado quando a Direção aprova a inscrição na lista de espera (vaga esgotada). Sem posição na fila: a Direção escolhe quem entra por critérios próprios.' },
+}
+
 /** Colunas da tabela (forms e form_send_defaults) a partir dos textos, com o texto padrão quando um campo fica vazio. */
 export const sendColumns = (f: SendTexts) => ({
   privacy_text: f.privacy.trim() || null, send_text: f.send.trim() || null, confirmation_message: f.confirmation.trim() || SEND_FALLBACK.confirmation,
-  review_message: f.review.trim() || SEND_FALLBACK.review, approved_email_text: f.approved.trim() || SEND_FALLBACK.approved, rejected_email_text: f.rejected.trim() || SEND_FALLBACK.rejected, waitlist_email_text: f.waitlist.trim() || SEND_FALLBACK.waitlist,
+  review_message: f.review.trim() || SEND_FALLBACK.review, approved_email_text: f.approved.trim() || SEND_FALLBACK.approved, rejected_email_text: f.rejected.trim() || SEND_FALLBACK.rejected,
+  waitlist_email_text: f.waitlist.trim() || SEND_FALLBACK.waitlist,
+  privacy_enabled: f.on.privacy, send_enabled: f.on.send, confirmation_enabled: f.on.confirmation, review_enabled: f.on.review,
+  approved_enabled: f.on.approved, rejected_enabled: f.on.rejected, waitlist_enabled: f.on.waitlist,
 })
 
-export function SendFields({ f, setF, prefix, part, onRestorePrivacy }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; /** Qual metade mostrar: o que faz parte do formulário ou o que vira e-mail. */ part: SendPart; /** Só no formulário: recoloca o texto de privacidade padrão das Configurações. */ onRestorePrivacy?: () => void }) {
-  return (
-    <>
-      {part === 'form' && <>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-send`}>Antes de enviar (opcional, aparece na última etapa)</Label>
-        <RichTextarea id={`${prefix}-send`} rows={3} value={f.send} onChange={(v) => setF({ ...f, send: v })} /></div>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-priv`}>Texto de privacidade (LGPD)</Label>
-        <RichTextarea id={`${prefix}-priv`} rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} />
-        {onRestorePrivacy && <Button type="button" variant="outline" className="w-full" onClick={onRestorePrivacy}><RotateCcw className="h-4 w-4" /> Restaurar texto de privacidade padrão</Button>}</div>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-conf`}>Depois de enviar (mensagem na tela)</Label>
-        <RichTextarea id={`${prefix}-conf`} rows={2} value={f.confirmation} onChange={(v) => setF({ ...f, confirmation: v })} /></div>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-rev`}>Enquanto a Direção avalia (tela de quem entrou com o Google)</Label>
-        <RichTextarea id={`${prefix}-rev`} rows={3} value={f.review} onChange={(v) => setF({ ...f, review: v })} /></div>
-      </>}
-      {part === 'email' && <>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-app`}><Mail className="mr-1 inline h-4 w-4" />E-mail de aprovação</Label>
-        <RichTextarea id={`${prefix}-app`} rows={4} value={f.approved} onChange={(v) => setF({ ...f, approved: v })} />
-        <p className="text-xs text-muted-foreground">Confirmação de que a inscrição foi aprovada. Não libera acesso por si só: o acesso segue por convite.</p></div>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-rej`}><Mail className="mr-1 inline h-4 w-4" />Texto-base da rejeição</Label>
-        <RichTextarea id={`${prefix}-rej`} rows={4} value={f.rejected} onChange={(v) => setF({ ...f, rejected: v })} />
-        <p className="text-xs text-muted-foreground">Ao rejeitar, a Direção pode editar esta mensagem antes de enviar o e-mail.</p></div>
-      <div className="space-y-1.5"><Label htmlFor={`${prefix}-wait`}><Mail className="mr-1 inline h-4 w-4" />E-mail de lista de espera</Label>
-        <RichTextarea id={`${prefix}-wait`} rows={4} value={f.waitlist} onChange={(v) => setF({ ...f, waitlist: v })} />
-        <p className="text-xs text-muted-foreground">Enviado quando a Direção aprova a inscrição na lista de espera (vaga esgotada). Sem posição na fila: a Direção escolhe quem entra por critérios próprios.</p></div>
-      </>}
-    </>
-  )
+/** Linha de `forms` ou de `form_send_defaults` (as colunas têm os mesmos nomes) → textos e chaves do editor. Sem linha: os padrões de fábrica. */
+export function rowToSend(r: Record<string, unknown> | null | undefined): SendTexts {
+  if (!r) return SEND_FACTORY
+  const s = (v: unknown, fb: string) => (typeof v === 'string' ? v : fb)
+  const b = (v: unknown) => v !== false
+  return {
+    privacy: s(r.privacy_text, ''), send: s(r.send_text, ''), confirmation: s(r.confirmation_message, SEND_FALLBACK.confirmation), review: s(r.review_message, SEND_FALLBACK.review),
+    approved: s(r.approved_email_text, SEND_FALLBACK.approved), rejected: s(r.rejected_email_text, SEND_FALLBACK.rejected), waitlist: s(r.waitlist_email_text, SEND_FALLBACK.waitlist),
+    on: { privacy: b(r.privacy_enabled), send: b(r.send_enabled), confirmation: b(r.confirmation_enabled), review: b(r.review_enabled), approved: b(r.approved_enabled), rejected: b(r.rejected_enabled), waitlist: b(r.waitlist_enabled) },
+  }
 }
 
-export type SendPart = 'form' | 'email'
+/** Troca só os textos (e chaves) da subpágina aberta pelos de `src`. */
+export function restorePart(f: SendTexts, part: SendPart, src: SendTexts): SendTexts {
+  const out: SendTexts = { ...f, on: { ...f.on } }
+  for (const k of PARTS[part]) { out[k] = src[k]; out.on[k] = src.on[k] }
+  return out
+}
+
 /** Subpáginas dos textos de envio: o que faz parte do formulário e o que é e-mail. */
 export function SendPartTabs({ part, setPart }: { part: SendPart; setPart: (p: SendPart) => void }) {
   return (
@@ -70,60 +80,72 @@ export function SendPartTabs({ part, setPart }: { part: SendPart; setPart: (p: S
   )
 }
 
-/** Seção fixa de Envio: sempre fica no fim do formulário, não pode ser apagada nem movida; só os textos são editáveis (valem na hora, sem republicar). */
-export function SendSection({ formId }: { formId: string }) {
-  const orgId = useOrgId()
-  const qc = useQueryClient()
-  const { data: form } = useForm(formId)
-  const [open, setOpen] = useState(false)
-  const [part, setPart] = useState<SendPart>('form')
-  const [f, setF] = useState<SendTexts>({ privacy: '', send: '', confirmation: '', review: '', approved: '', rejected: '', waitlist: '' })
-  const start = () => {
-    if (!form) return
-    setF({ privacy: form.privacy_text ?? '', send: form.send_text ?? '', confirmation: form.confirmation_message, review: form.review_message, approved: form.approved_email_text, rejected: form.rejected_email_text, waitlist: form.waitlist_email_text })
-    setOpen(true)
-  }
-  const save = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from('forms').update(sendColumns(f)).eq('id', formId); if (error) throw error },
-    onSuccess: () => { toast.success('Textos do envio salvos.'); qc.invalidateQueries({ queryKey: ['form', orgId, formId] }); setOpen(false) },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  if (!form) return null
+/** Editor dos textos de uma subpágina: cada mensagem com seu checkbox; desligada, o campo some e fica só o aviso do que acontece. */
+export function SendFields({ f, setF, prefix, part, disabled }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean }) {
   return (
     <>
-      <Card className="flex flex-wrap items-center gap-2 border-l-4 border-l-primary bg-muted/60 p-2.5">
-        <Send className="h-5 w-5 shrink-0 text-primary" aria-hidden />
-        <button className="min-w-0 flex-1 basis-40 text-left" onClick={start}>
-          <p className="font-display text-lg font-bold leading-tight">Envio</p>
-          <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-            <Badge>Seção fixa</Badge>
-            <span>Textos de depois do envio, da avaliação e dos e-mails de aprovação e rejeição.</span>
-          </p>
-        </button>
-        <Button size="sm" variant="outline" aria-label="Editar os textos do envio" title="Editar" onClick={start}><Pencil className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Editar</span></Button>
-      </Card>
-      <Sheet open={open} onOpenChange={setOpen}>
-        {open && (
-          <SheetContent title="Envio" description="Textos fixos do fim do formulário. Valem na hora, sem republicar.">
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
-              <SendPartTabs part={part} setPart={setPart} />
-              <SendFields f={f} setF={setF} prefix="sd" part={part} onRestorePrivacy={async () => {
-                if (f.privacy.trim() && !(await confirmBox('Substituir o texto de privacidade pelo padrão das Configurações?'))) return
-                try { const d = await loadSendDefaults(orgId); setF((x) => ({ ...x, privacy: d?.privacy_text?.trim() || SEND_FALLBACK.privacy })); toast.success('Texto padrão colocado. Salve para aplicar.') } catch (e) { toast.error(friendlyError(e)) }
-              }} />
-              <Button type="button" variant="outline" className="w-full" onClick={async () => {
-                if (!(await confirmBox('Substituir todos os textos do envio pelos padrões das Configurações?'))) return
-                try {
-                  const d = await loadSendDefaults(orgId)
-                  setF({ privacy: d?.privacy_text?.trim() || SEND_FALLBACK.privacy, send: d?.send_text ?? '', confirmation: d?.confirmation_message ?? SEND_FALLBACK.confirmation, review: d?.review_message ?? SEND_FALLBACK.review, approved: d?.approved_email_text ?? SEND_FALLBACK.approved, rejected: d?.rejected_email_text ?? SEND_FALLBACK.rejected, waitlist: d?.waitlist_email_text ?? SEND_FALLBACK.waitlist })
-                  toast.success('Textos padrão colocados. Salve para aplicar.')
-                } catch (e) { toast.error(friendlyError(e)) }
-              }}><RotateCcw className="h-4 w-4" /> Restaurar textos padrão</Button>
-              <SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar textos do envio" />
-            </form>
-          </SheetContent>
-        )}
-      </Sheet>
+      {PARTS[part].map((k) => {
+        const m = META[k]
+        return (
+          <div key={k} className="space-y-1.5">
+            <label className="flex items-center gap-2 font-semibold" htmlFor={`${prefix}-${k}-on`}>
+              <input id={`${prefix}-${k}-on`} type="checkbox" className="h-5 w-5 shrink-0" disabled={disabled} checked={f.on[k]} onChange={(e) => setF({ ...f, on: { ...f.on, [k]: e.target.checked } })} />
+              {part === 'email' && <Mail className="h-4 w-4 shrink-0" aria-hidden />}{m.label}
+            </label>
+            {f.on[k]
+              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} />{m.hint && <p className="text-xs text-muted-foreground">{m.hint}</p>}</>
+              : <p className="rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">Desligado. {m.off}</p>}
+          </div>
+        )
+      })}
     </>
+  )
+}
+
+/** Botão de restaurar da subpágina aberta: só os textos dela. `source` devolve os textos de origem (padrões das Configurações ou de fábrica). */
+export function RestorePartButton({ f, setF, part, source }: { f: SendTexts; setF: (v: SendTexts) => void; part: SendPart; source: () => Promise<SendTexts> }) {
+  return (
+    <Button type="button" variant="outline" className="w-full" onClick={async () => {
+      if (!(await confirmBox(`Substituir os textos de ${part === 'form' ? 'formulário' : 'e-mail'} pelos padrões?`))) return
+      try { setF(restorePart(f, part, await source())); toast.success('Textos padrão colocados. Salve para aplicar.') } catch (e) { toast.error(friendlyError(e)) }
+    }}><RotateCcw className="h-4 w-4" /> {part === 'form' ? 'Restaurar textos padrão de formulário' : 'Restaurar textos padrão de e-mail'}</Button>
+  )
+}
+
+/** Card fixo "Envio" no fim da lista de campos: leva à aba Envio. */
+export function SendSection({ onOpen }: { onOpen: () => void }) {
+  return (
+    <Card className="flex flex-wrap items-center gap-2 border-l-4 border-l-primary bg-muted/60 p-2.5">
+      <Send className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+      <button className="min-w-0 flex-1 basis-40 text-left" onClick={onOpen}>
+        <p className="font-display text-lg font-bold leading-tight">Envio</p>
+        <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+          <Badge>Seção fixa</Badge>
+          <span>Textos de depois do envio, da avaliação e dos e-mails de aprovação, rejeição e lista de espera.</span>
+        </p>
+      </button>
+      <Button size="sm" variant="outline" aria-label="Editar os textos do envio" title="Editar" onClick={onOpen}><Pencil className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Editar</span></Button>
+    </Card>
+  )
+}
+
+/** Aba Envio do formulário: os textos fixos do fim do formulário e dos e-mails. Valem na hora, sem republicar. */
+export function SendTab({ form }: { form: FormRow }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const [part, setPart] = useState<SendPart>('form')
+  const [f, setF] = useState<SendTexts>(() => rowToSend(form as unknown as Record<string, unknown>))
+  const save = useMutation({
+    mutationFn: async () => { const { error } = await supabase.from('forms').update(sendColumns(f)).eq('id', form.id); if (error) throw error },
+    onSuccess: () => { toast.success('Textos do envio salvos.'); qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  return (
+    <form id="send-form" className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
+      <SendPartTabs part={part} setPart={setPart} />
+      <SendFields f={f} setF={setF} prefix="sd" part={part} />
+      <RestorePartButton f={f} setF={setF} part={part} source={async () => rowToSend((await loadSendDefaults(orgId)) as unknown as Record<string, unknown> | null)} />
+      <StickySave><SaveButton type="submit" form="send-form" className="w-full" disabled={save.isPending} hint="Salvar textos do envio" /></StickySave>
+    </form>
   )
 }
