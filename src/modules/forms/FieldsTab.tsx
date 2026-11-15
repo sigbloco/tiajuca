@@ -22,7 +22,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogItem } from '@/modules/structure/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { SOCIAL_NETWORKS, parseNetworks } from '@/core/social'
-import { FIELD_TYPE_LABEL, MAPPING_LABEL, hasConsent, isLoginSection, isSection, type FieldOption, type FieldType } from './types'
+import { FIELD_TYPE_LABEL, MAPPING_LABEL, isLoginSection, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
 /** Tipo escolhido no editor: os de sempre mais "Redes sociais" (texto longo com rede + usuário). */
@@ -57,7 +57,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     label: field?.label ?? '', description: field?.description ?? '',
     type: (asSection ? 'info' : field?.field_type === 'long_text' && field.validation.social ? 'social' : field?.field_type ?? 'short_text') as TypeChoice,
     networks: (field?.validation.networks?.length ? SOCIAL_NETWORKS.filter((n) => field.validation.networks!.includes(n.key)) : SOCIAL_NETWORKS).map((n) => n.label).join(', '),
-    other: !!field?.validation.other, consent: !!field?.validation.consent, required: field?.required ?? false,
+    other: !!field?.validation.other, required: field?.required ?? false,
     options: (field?.options ?? []).map((o) => o.label).join('\n'),
     min: field?.validation.min?.toString() ?? '', max: field?.validation.max?.toString() ?? '',
     condField: field?.condition?.field ?? '', condOp: field?.condition?.op ?? 'eq', condValue: field?.condition?.value ?? '',
@@ -180,7 +180,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       if (f.mapping === 'link.skill_level' && levelList) validation.levelList = levelList
       const opts = OPTION_TYPES.includes(f.type as FieldType) ? toOptions() : []
       // Seção e consentimento são campos "info" com uma marca em validation.
-      const marks = asSection ? { section: true, ...(f.consent && !field?.validation.login ? { consent: true } : {}), ...(field?.validation.login ? { login: true } : {}) } : {}
+      const marks = asSection ? { section: true, ...(field?.validation.login ? { login: true } : {}) } : {}
       const row = {
         label: f.label.trim(), description: f.description.trim() || null, field_type: f.type === 'social' ? 'long_text' : f.type, required: f.type === 'info' ? false : f.required, options: opts, validation: f.type === 'info' ? marks : validation,
         condition: f.condField && f.condValue !== '' ? { field: f.condField, op: f.condOp, value: f.condValue } : null,
@@ -247,9 +247,6 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {f.type === 'info'
           ? <div className="space-y-1.5"><Label htmlFor="fl-desc">Texto</Label><RichTextarea id="fl-desc" rows={5} value={f.description} onChange={(v) => setF({ ...f, description: v })} /><VarsHint /></div>
           : <div className="space-y-1.5"><Label htmlFor="fl-desc">Descrição</Label><Input id="fl-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>}
-        {asSection && !field?.validation.login && (
-          <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
-        )}
         {needsOptions && (!f.mapping || f.mapping === 'member.custom') && (customLists.data ?? []).some((l) => !l.link) && (
           <div className="space-y-1.5"><Label htmlFor="fl-src">Fonte das opções</Label>
             <Select id="fl-src" value={listSource} onChange={(e) => { setListSource(e.target.value); setPicked(new Set()); autoPick.current = '' }}>
@@ -505,7 +502,6 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                     <Badge>{sec ? 'Seção' : FIELD_TYPE_LABEL[x.field_type]}</Badge>
                       {sec && !isLoginSection(x) && <Badge className="bg-muted text-muted-foreground">{count} {count === 1 ? 'campo' : 'campos'}</Badge>}
                       {isLoginSection(x) && <Badge className="bg-info/15 text-info">login com Google</Badge>}
-                    {hasConsent(x) && <Badge className="bg-success/15 text-success">consentimento</Badge>}
                     {x.condition && <Badge className="bg-info/15 text-info">condicional</Badge>}
                     {x.member_mapping && <Badge className="bg-primary/10 text-primary">{MAPPING_LABEL[x.member_mapping]}</Badge>}
                   </p>
