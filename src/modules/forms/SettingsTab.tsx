@@ -16,6 +16,9 @@ import { supabase } from '@/core/supabase'
 import { useCycles } from '@/modules/cycles/service'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { HeaderBand } from './HeaderBand'
+import { ColorPick } from '@/modules/site/ColorPick'
+
+const DEFAULT_HEADER = '#E93D2B'
 import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, kindFlags, publicUrl, slugify, type FormKind, type FormRow, type FormStatus } from './service'
 
 // Horário de Brasília (sem horário de verão em vigor): abre às 00:00 e encerra às 23:59 do dia escolhido.
@@ -31,7 +34,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
   const [f, setF] = useState({
     kind: form.kind, title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
     opens: toDate(form.opens_at), closes: toDate(form.closes_at),
-    privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, hlogo: form.header_logo_size ?? 80, hcolor: form.header_color ?? '#B71C1C', hmode: (form.header_color && !form.header_image_url ? 'color' : 'photo') as 'photo' | 'color', consent: form.requires_consent, dedupe: form.prevent_duplicates,
+    privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, hlogo: form.header_logo_size ?? 80, hcolor: form.header_color ?? DEFAULT_HEADER, hmode: (form.header_color && !form.header_image_url ? 'color' : 'photo') as 'photo' | 'color', consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
   const refresh = () => { qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }); qc.invalidateQueries({ queryKey: ['forms', orgId] }) }
   const save = useMutation({
@@ -127,10 +130,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
             onChange={(p) => setF((x) => ({ ...x, hx: Math.round(p.x * 10) / 10, hy: Math.round(p.y * 10) / 10 }))}
             logo={<OrgLogo name={membership?.name ?? ''} logoPath={membership?.logo_path ?? null} className="drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" style={{ width: f.hlogo, height: f.hlogo }} />} />
           <p className="text-xs text-muted-foreground">{f.hmode === 'color' ? 'Prévia do cabeçalho com a cor escolhida atrás da logo.' : f.headerImage ? 'Prévia de como fica no formulário. Arraste a foto para posicioná-la na moldura.' : 'Prévia do cabeçalho. Escolha uma foto para ficar atrás da logo.'}</p>
-          {f.hmode === 'color' && (
-            <div className="flex items-center gap-2"><Label htmlFor="fs-color">Cor do cabeçalho</Label>
-              <input id="fs-color" type="color" className="h-10 w-14 cursor-pointer rounded border border-input bg-card" value={f.hcolor} onChange={(e) => setF({ ...f, hcolor: e.target.value })} /></div>
-          )}
+          {f.hmode === 'color' && <ColorPick label="Cor do cabeçalho" area="general" value={f.hcolor} onChange={(v) => setF({ ...f, hcolor: v ?? DEFAULT_HEADER })} />}
           <div className="grid gap-3 sm:grid-cols-2">
             {f.hmode === 'photo' && f.headerImage && (
               <div className="space-y-1"><Label htmlFor="fs-zoom">Tamanho da foto ({Math.round(f.hzoom * 100)}%)</Label>
