@@ -1,3 +1,4 @@
+import { nameWithSurname } from './personLabel'
 import { ParticipationRequests } from './ParticipationRequests'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
@@ -315,6 +316,10 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   }, [wantNaipe, wantInst, tree, activeCycleId])
   const loading = members.isLoading || sections.isLoading || instruments.isLoading || allRows.isLoading
 
+  // Dois integrantes com o mesmo primeiro nome (dois "Leonardo"): a linha ganha o último sobrenome, além do "como prefere ser chamado" embaixo.
+  const givenCounts = new Map<string, number>()
+  for (const m of members.data ?? []) { const k = givenName(m.full_name, m.display_name).toLowerCase(); givenCounts.set(k, (givenCounts.get(k) ?? 0) + 1) }
+  const rowName = (m: { full_name: string; display_name: string | null }) => ((givenCounts.get(givenName(m.full_name, m.display_name).toLowerCase()) ?? 0) > 1 ? nameWithSurname(m.full_name, m.display_name) : givenName(m.full_name, m.display_name))
   const memberRow = (m: GroupMember) => {
     const st = statusOf(m.id)
     const dim = !st?.counts_as_active && !st?.is_waitlist
@@ -324,7 +329,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
-              <span className="break-words">{givenName(m.full_name, m.display_name)}</span>
+              <span className="break-words">{rowName(m)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
               {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{TYPE_LABEL[t] ?? t}</Badge>)}
             </p>
