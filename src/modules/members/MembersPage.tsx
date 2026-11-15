@@ -19,7 +19,7 @@ import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleto
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
-import { Can, usePermission } from '@/core/permissions'
+import { Can, useIsDirection, usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { hrefOf } from '@/modules/site/links'
 import { maskPhone } from '@/components/ui/masked-inputs'
@@ -102,12 +102,16 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
 const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
+/** Visão do integrante (fora da direção): só ativos; filtros "Integrantes" (aluno, músico convidado, sênior), "Professores e Monitores" e "Regentes". */
+const MEMBER_VIEW_OPTIONS: [string, string][] = [['integrantes', 'Integrantes'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes']]
+const MEMBER_VIEW_GROUP = ['aluno', 'musico', 'senior']
 const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['musico', 'Músicos'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes'], ['senior', 'Sêniors']]
 
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const wantedCategory = lockedCategory ?? ''
+  const memberView = !useIsDirection()
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
   const [search, setSearch] = useState('')
@@ -273,12 +277,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     for (const m of members.data ?? []) {
       if (!inCycle(m.id, activeCycleId)) continue
       const st = statusOf(m.id)
-      if (showActive !== showInactive) {
+      if (memberView) { if (!st?.counts_as_active) continue }
+      else if (showActive !== showInactive) {
         if (showActive && !st?.counts_as_active) continue
         if (showInactive && (st?.counts_as_active || st?.is_waitlist)) continue
       }
       if (!lockedCategory && types.size > 0) {
         const mine = typesOf(m.id); if (mine.has('professor') || mine.has('monitor')) mine.add('equipe')
+        if (memberView && MEMBER_VIEW_GROUP.some((k) => mine.has(k))) mine.add('integrantes')
         if (![...types].some((t) => mine.has(t))) continue
       }
       if (wantedCategory && !allCategories(m.id).includes(wantedCategory)) continue
@@ -307,7 +313,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
+  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, memberView, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -343,7 +349,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
               <span className="break-words">{rowName(m)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
-              {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
+              {!memberView && [...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
             </p>
             {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="break-words text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
@@ -411,14 +417,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       </div>
       <ParticipationRequests />
 
-      <ButtonRow role="group" aria-label="Situação">
+      {!memberView && <ButtonRow role="group" aria-label="Situação">
         {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
           <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
         ))}
-      </ButtonRow>
+      </ButtonRow>}
       {!lockedCategory && (
         <ButtonRow role="group" aria-label="Tipo de integrante">
-          {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
+          {(memberView ? MEMBER_VIEW_OPTIONS : TYPE_OPTIONS).map(([k, label0]) => { const label = memberView ? label0 : typeChip(k, label0); return (
             <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
               onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
           ) })}
