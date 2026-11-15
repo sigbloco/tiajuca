@@ -24,6 +24,7 @@ import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
 import { FormListsPage } from '@/modules/forms/FormListsPage'
+import { TemplateEditorPage } from '@/modules/forms/TemplateEditorPage'
 import { SectionTemplatesPage } from '@/modules/forms/SectionTemplatesPage'
 import { FormPreviewPage } from '@/modules/forms/FormPreviewPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
@@ -156,6 +157,7 @@ export const router = createBrowserRouter(
                 { path: 'formularios', element: <FormsPage /> },
                 { path: 'formularios/configuracoes', element: <SectionTemplatesPage /> },
                 { path: 'formularios/configuracoes/listas', element: <FormListsPage /> },
+                { path: 'formularios/configuracoes/modelos/:templateId', element: <TemplateEditorPage /> },
                 { path: 'formularios/:formId', element: <FormEditorPage /> },
                 // Endereços antigos (quando a área se chamava Inscrições) seguem funcionando.
                 { path: 'inscricoes', element: <OldFormsRedirect /> },
