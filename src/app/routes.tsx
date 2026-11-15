@@ -23,6 +23,7 @@ import { ReportsPage } from '@/modules/reports/ReportsPage'
 import { InterfacePage } from '@/modules/interface/InterfacePage'
 import { FormEditorPage } from '@/modules/forms/FormEditorPage'
 import { FormsPage } from '@/modules/forms/FormsPage'
+import { FormListsPage } from '@/modules/forms/FormListsPage'
 import { FormPreviewPage } from '@/modules/forms/FormPreviewPage'
 import { PublicFormPage } from '@/modules/forms/PublicFormPage'
 import { MembersPage } from '@/modules/members/MembersPage'
@@ -146,6 +147,7 @@ export const router = createBrowserRouter(
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
                 { path: 'inscricoes', element: <FormsPage /> },
+                { path: 'inscricoes/configuracoes', element: <FormListsPage /> },
                 { path: 'inscricoes/:formId', element: <FormEditorPage /> },
                 { path: 'naipes', element: <NaipesPage /> },
                 { path: 'naipes/organograma', element: <Organogram /> },

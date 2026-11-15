@@ -1,7 +1,7 @@
 import { supabase } from '@/core/supabase'
 
 // Naipe (sections) → Instrumento (instruments)
-export type CatalogTable = 'sections' | 'instruments' | 'artistic_functions' | 'skill_levels' | 'activity_types' | 'fee_categories' | 'section_names'
+export type CatalogTable = 'sections' | 'instruments' | 'artistic_functions' | 'skill_levels' | 'gender_options' | 'race_options' | 'activity_types' | 'fee_categories' | 'section_names'
 
 export interface CatalogItem {
   id: string
