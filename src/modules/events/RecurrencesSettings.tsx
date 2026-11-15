@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -111,7 +112,9 @@ function RuleSheet({ rule, onClose }: { rule: Rule | null; onClose: () => void }
             </Select>
           </div>
         </div>
-        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <StickySave bleed={false}>
+          <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        </StickySave>
       </form>
     </SheetContent>
   )

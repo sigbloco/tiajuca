@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
@@ -55,7 +56,9 @@ function CycleSheet({ cycle, onClose }: { cycle: Cycle | null; onClose: () => vo
           <div className="space-y-1.5"><Label htmlFor="cy-start" required>Início (mês e ano)</Label><MonthInput id="cy-start" required value={form.start} onChange={(v) => setForm({ ...form, start: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="cy-end" required>Término (mês e ano)</Label><MonthInput id="cy-end" required value={form.end} onChange={(v) => setForm({ ...form, end: v })} /></div>
         </div>
-        <Button type="submit" className="w-full" disabled={save.isPending}>{cycle ? 'Salvar' : 'Criar ciclo'}</Button>
+        <StickySave bleed={false}>
+          <Button type="submit" className="w-full" disabled={save.isPending}>{cycle ? 'Salvar' : 'Criar ciclo'}</Button>
+        </StickySave>
         {form.start && form.end && form.end < form.start && <p className="text-sm text-destructive">O término deve ser depois do início.</p>}
       </form>
     </SheetContent>

@@ -53,7 +53,7 @@ export function FunctionsPage() {
     mutationFn: async (kind: Kind) => {
       const nm = name.trim()
       const id = await saveCatalogItem('artistic_functions', orgId, { name: nm, kind, sort_order: (all.reduce((m, f) => Math.max(m, f.sort_order === 99 ? 10 : f.sort_order), 0)) + 1, is_exempt: kind === 'paid' || exempt, ...(kind === 'paid' ? { exempt_locked: true } : {}) })
-      await mirrorFunctionToFees(orgId, { created: nm })
+      await mirrorFunctionToFees(orgId, { fnId: id, created: nm })
       return id
     },
     onSuccess: () => { setName(''); setExempt(false); setAdding(null); refresh(); notifySaved('Categoria criada.') },
@@ -62,8 +62,8 @@ export function FunctionsPage() {
   const patch = useMutation({
     mutationFn: async (v: { f: CatalogItem; fields: Partial<CatalogItem> & { name?: string } }) => {
       await saveCatalogItem('artistic_functions', orgId, { id: v.f.id, name: v.fields.name ?? v.f.name, ...v.fields })
-      if (v.fields.name && v.fields.name !== v.f.name) await mirrorFunctionToFees(orgId, { renamed: { from: v.f.name, to: v.fields.name } })
-      if (v.fields.is_active !== undefined) await mirrorFunctionToFees(orgId, { active: { name: v.fields.name ?? v.f.name, value: v.fields.is_active } })
+      if (v.fields.name && v.fields.name !== v.f.name) await mirrorFunctionToFees(orgId, { fnId: v.f.id, renamed: { from: v.f.name, to: v.fields.name } })
+      if (v.fields.is_active !== undefined) await mirrorFunctionToFees(orgId, { fnId: v.f.id, active: { name: v.fields.name ?? v.f.name, value: v.fields.is_active } })
     },
     onSuccess: () => { refresh(); notifySaved('Categoria atualizada.') },
     onError,

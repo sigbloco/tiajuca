@@ -1,3 +1,4 @@
+import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -88,7 +89,9 @@ function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
           <Input id="sp-site" placeholder="https://" value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="sp-notes">Observações</Label>
           <Input id="sp-notes" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
-        <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        <StickySave bleed={false}>
+          <Button type="submit" className="w-full" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        </StickySave>
         {sup && (
           <Button type="button" variant="ghost" className={sup.is_active ? 'w-full text-destructive' : 'w-full'} onClick={async () => {
             if (!sup.is_active || await confirmBox('Mover este fornecedor para a lixeira? Você pode restaurar depois.')) toggle.mutate()
