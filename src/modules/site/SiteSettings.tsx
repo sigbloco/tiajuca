@@ -56,7 +56,7 @@ export function SiteSettings() {
 
   const payload = (row: SiteRow) => ({
     headline: row.headline?.trim() || null, description: row.description?.trim() || null, photo_url: row.photo_url ?? null,
-    videos: row.videos.filter((v) => v.url.trim()),
+    links: row.links, videos: row.videos.filter((v) => v.url.trim()),
     enrollment_label: row.enrollment_label.trim() || EMPTY.enrollment_label, shop_label: row.shop_label.trim() || EMPTY.shop_label,
     login_label: row.login_label.trim() || EMPTY.login_label, albums_label: (row.albums_label ?? '').trim() || EMPTY.albums_label,
     show_shop: row.show_shop, show_enrollment: row.show_enrollment, show_login: row.show_login, menu_construction: [...(row.menu_construction ?? [])].sort(), shop_product_id: row.shop_product_id ?? null, show_albums: row.show_albums, show_release: row.show_release, release_label: (row.release_label ?? '').trim() || EMPTY.release_label, release_url: row.release_url?.trim() || null,
@@ -100,9 +100,11 @@ export function SiteSettings() {
   })
 
   const setVideo = (i: number, p: Partial<SiteVideo>) => setF((x) => ({ ...x, videos: x.videos.map((v, k) => (k === i ? { ...v, ...p } : v)) }))
+  const moveLink = (i: number, d: number) => setF((x) => { const a = [...x.links]; const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, links: a } })
   const moveVideo = (i: number, d: number) => setF((x) => { const a = [...x.videos]; const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, videos: a } })
   // Arrastar pela alça: o id da linha é o índice (escopo "links" ou "videos").
   const dnd = useHoldReorder()
+  const dragLink = (from: string, to: string) => moveLink(Number(from), Number(to) - Number(from))
   const moveMenu = (i: number, d: number) => setF((x) => { const a = menuOrder(x.menu_order); const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, menu_order: a } })
   const dragMenu = (from: string, to: string) => moveMenu(Number(from), Number(to) - Number(from))
   const vids = useProgressive(f.videos, 3)
@@ -168,11 +170,20 @@ export function SiteSettings() {
       {tab === 'header' && (
       <Card className="space-y-3 p-4">
         <h3>Redes sociais e contatos</h3>
-        <p className="text-sm text-muted-foreground">Vêm do <PageLink to="perfil">Perfil do bloco</PageLink> (titular). Para mudar, edite lá.</p>
+        <p className="text-sm text-muted-foreground">Vêm do <PageLink to="perfil">Perfil do bloco</PageLink> (titular); para incluir ou mudar um contato, edite lá. Aqui você escolhe a ordem e o que aparece (olho).</p>
         {f.links.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contato no perfil do bloco ainda.</p>}
-        {f.links.map((l, i) => (
-          <div key={i} className="flex items-center gap-2 rounded-lg bg-muted/40 p-2"><span className="w-24 shrink-0 font-semibold">{LINK_KINDS[l.kind]?.label ?? l.kind}</span><span className="min-w-0 break-all text-muted-foreground">{l.value}</span></div>
-        ))}
+        {f.links.map((l, i) => {
+          const id = String(i)
+          return (
+            <div key={`${l.kind}-${l.value}`} {...dnd.row(id, dragLink, 'links')} className={`flex items-center gap-2 rounded-lg p-2 ${i % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${l.hidden ? 'opacity-60' : ''} ${dnd.cls(id)}`}>
+              {reorderCol(id, i, f.links.length, moveLink, dragLink, 'links', 'item')}
+              <span className="w-24 shrink-0 font-semibold">{LINK_KINDS[l.kind]?.label ?? l.kind}</span>
+              <span className="min-w-0 flex-1 break-all text-muted-foreground">{l.value}</span>
+              <Button type="button" size="icon" variant="ghost" aria-label={l.hidden ? 'Mostrar no site' : 'Ocultar no site'} title={l.hidden ? 'Oculto no site: clique para mostrar' : 'Visível no site: clique para ocultar'}
+                onClick={() => setF({ ...f, links: f.links.map((x, k) => (k === i ? { ...x, hidden: !x.hidden } : x)) })}>{l.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
+            </div>
+          )
+        })}
       </Card>
       )}
 

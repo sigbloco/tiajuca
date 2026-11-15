@@ -64,7 +64,7 @@ export function LandingPage() {
   }
   const { org, site } = data
   const slug = org.slug
-  const links = (site.links ?? []).map((l) => ({ l, href: hrefOf(l) })).filter((x): x is { l: SiteLink; href: string } => !!x.href)
+  const links = (site.links ?? []).filter((l) => !l.hidden).map((l) => ({ l, href: hrefOf(l) })).filter((x): x is { l: SiteLink; href: string } => !!x.href)
   const videos = (site.videos ?? []).map((v) => ({ v, id: youtubeId(v.url) })).filter((x): x is { v: SiteVideo; id: string } => !!x.id)
   // "Em construção": o botão aparece com a etiqueta e não abre (exceto o de entrada, que a direção ainda precisa usar).
   const under = (k: string) => (site.menu_construction ?? []).includes(k)
