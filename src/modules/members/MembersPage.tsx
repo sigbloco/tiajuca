@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
-import { Filter, Pencil, Plus, Search } from 'lucide-react'
+import { Filter, Heart, Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
@@ -365,6 +365,18 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     )
   })
 
+  /** "Meus alunos": com um naipe só, preenche Naipe (e Atividade, se for uma atribuição só); com vários naipes, soma tudo o que a pessoa atende. Mexer nos menus desliga o chip. */
+  const toggleMine = () => {
+    if (mine) { setMine(false); setNaipeF(''); setAtvF(''); return }
+    const list = myStaff.data ?? []
+    const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
+    const secOf = (a: { section_id: string | null; instrument_id: string | null }) => a.section_id ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id ?? null : null)
+    const secs = [...new Set(list.map(secOf).filter(Boolean))] as string[]
+    if (secs.length === 1) {
+      setNaipeF(secs[0]); setAtvF(list.length === 1 && list[0].instrument_id ? list[0].instrument_id : '')
+      setMine(true)
+    } else { setNaipeF(''); setAtvF(''); setMine(true) }
+  }
   const chip = (on: boolean) => cn('rounded-full border px-2.5 py-1.5 text-center text-xs font-semibold leading-tight', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
 
   return (
@@ -395,20 +407,22 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       )}
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
       <div className="space-y-1.5">
-        <p className="flex items-center gap-1.5 text-sm font-semibold"><Filter className="h-4 w-4" aria-hidden /> Filtrar</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="flex items-center gap-1.5 text-sm font-semibold"><Filter className="h-4 w-4" aria-hidden /> Filtrar</p>
+          {(myStaff.data?.length ?? 0) > 0 && (
+            <button type="button" aria-pressed={mine} className={cn(chip(mine), 'inline-flex items-center gap-1')} onClick={toggleMine}>Meus alunos <Heart className={cn('h-3.5 w-3.5', mine && 'fill-current')} aria-hidden /></button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <Select aria-label="Naipe" value={naipeF} onChange={(e) => { setNaipeF(e.target.value); setAtvF(''); setMine(false) }}>
             <option value="">Todos os naipes</option>
             {(sections.data ?? []).filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </Select>
-          <Select aria-label="Atividade" value={atvF} disabled={!naipeF} onChange={(e) => setAtvF(e.target.value)}>
+          <Select aria-label="Atividade" value={atvF} disabled={!naipeF} onChange={(e) => { setAtvF(e.target.value); setMine(false) }}>
             <option value="">{naipeF ? 'Todas as atividades' : 'Escolha o naipe antes'}</option>
             {(instruments.data ?? []).filter((i) => i.is_active && i.section_id === naipeF).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </Select>
         </div>
-        {(myStaff.data?.length ?? 0) > 0 && (
-          <button type="button" aria-pressed={mine} className={chip(mine)} onClick={() => { setMine(!mine); setNaipeF(''); setAtvF('') }}>Meus alunos</button>
-        )}
       </div>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

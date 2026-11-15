@@ -32,6 +32,7 @@ export function AlunosRedirect() {
       const sec = a.section_id ?? instruments.data?.find((i) => i.id === a.instrument_id)?.section_id
       if (sec) params.set('naipeId', sec)
       if (a.instrument_id) params.set('atividadeId', a.instrument_id)
+      params.set('meus', '1') // o chip "Meus alunos" já abre marcado
     } else params.set('meus', '1')
   }
   return <Navigate to={`../membros?${params.toString()}`} replace relative="path" />

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useProgressive } from '@/components/shared/LoadMore'
@@ -29,6 +30,8 @@ interface Props {
   noFilter?: boolean
   /** O que for criado/renomeado/ativado aqui se reflete em Contribuições (categorias de mensalidade). */
   mirrorFees?: boolean
+  /** Em vez de "Desativar": ícone de lixeira, e os itens apagados ficam numa lixeira própria (restaurar). */
+  trashMode?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -37,7 +40,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -45,7 +48,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
   const [name, setName] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
-  const visible = (items ?? []).filter((i) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search))
+  const visible = (items ?? []).filter((i) => (trashMode ? i.is_active : matchesStatus(i.is_active, filter.status)) && matchesText(i.name, filter.search))
     .sort((a, b) => (alphabetical ? a.name.localeCompare(b.name, 'pt-BR') : 0))
   const prog = useProgressive(visible, 5, filter.search)
 
@@ -98,7 +101,15 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
 
   return (
     <div className="space-y-3">
-      {title && <h2>{title}</h2>}
+      {(title || trashMode) && (
+        <div className="flex items-center justify-between gap-2">
+          {title ? <h2>{title}</h2> : <span />}
+          {trashMode && canEdit && (
+            <TrashDrawer iconOnly entries={(items ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))}
+              onRestore={(id) => { const it = items?.find((x) => x.id === id); if (it) save.mutate({ id, name: it.name, is_active: true }) }} />
+          )}
+        </div>
+      )}
       {hint && <p className="text-muted-foreground">{hint}</p>}
       {canEdit && (
         <Card className="flex flex-wrap items-end gap-2 p-3">
@@ -135,16 +146,18 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
                 {(Object.keys(COLOR_LABEL) as TypeColor[]).map((c) => <option key={c} value={c}>{COLOR_LABEL[c]}</option>)}
               </OkSelect>
             )}
-            {canEdit && (
-              <Button size="sm" variant="outline" onClick={() => save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })}>
-                {item.is_active ? 'Desativar' : 'Ativar'}
-              </Button>
-            )}
+            {canEdit && (trashMode
+              ? <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover ${item.name} para a lixeira`} title="Mover para a lixeira" onClick={() => save.mutate({ id: item.id, name: item.name, is_active: false })}><Trash2 className="h-4 w-4" /></Button>
+              : (
+                <Button size="sm" variant="outline" onClick={() => save.mutate({ id: item.id, name: item.name, is_active: !item.is_active })}>
+                  {item.is_active ? 'Desativar' : 'Ativar'}
+                </Button>
+              ))}
           </Card>
         ))}
       </div>
       {prog.button}
-      <p className="text-xs text-muted-foreground">Itens desativados somem das novas escolhas, mas o histórico é preservado.</p>
+      <p className="text-xs text-muted-foreground">{trashMode ? 'Itens na lixeira somem das novas escolhas, mas o histórico é preservado.' : 'Itens desativados somem das novas escolhas, mas o histórico é preservado.'}</p>
     </div>
   )
 }
