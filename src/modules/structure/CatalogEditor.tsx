@@ -98,7 +98,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
 
   return (
     <div className="space-y-3">
-      <h2>{title}</h2>
+      {title && <h2>{title}</h2>}
       {hint && <p className="text-muted-foreground">{hint}</p>}
       {canEdit && (
         <Card className="flex flex-wrap items-end gap-2 p-3">

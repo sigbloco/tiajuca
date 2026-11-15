@@ -1,11 +1,30 @@
-import { Card } from '@/components/ui/primitives'
+import { useState } from 'react'
+import { Collapsible } from '@/components/shared/Collapsible'
 import { PageLink } from '@/components/shared/PageLink'
 import { usePermission } from '@/core/permissions'
-import { CatalogEditor } from '@/modules/structure/CatalogEditor'
+import { CatalogEditor, useCatalog } from '@/modules/structure/CatalogEditor'
+import type { CatalogTable } from '@/modules/structure/service'
+
+const LISTS: { table: CatalogTable; title: string; singular: string; hint: string }[] = [
+  { table: 'skill_levels', title: 'Níveis', singular: 'Nível', hint: 'O nível é uma autodeclaração: a pessoa diz que nível acredita ter (ex.: Iniciante, Intermediário, Avançado).' },
+  { table: 'gender_options', title: 'Gênero', singular: 'Opção', hint: 'Dado sensível: fica restrito à Direção.' },
+  { table: 'race_options', title: 'Cor/raça', singular: 'Opção', hint: 'Dado sensível: fica restrito à Direção.' },
+]
+
+function ListGroup({ table, title, singular, hint, open, onToggle, canEdit }: (typeof LISTS)[number] & { open: boolean; onToggle: () => void; canEdit: boolean }) {
+  const items = useCatalog(table)
+  return (
+    <Collapsible open={open} onToggle={onToggle} title={title} count={items.data?.filter((i) => i.is_active).length}>
+      <CatalogEditor table={table} title="" singular={singular} canEdit={canEdit} hint={hint} noFilter />
+    </Collapsible>
+  )
+}
 
 /** Inscrições → Configurações: as listas universais do cadastro, usadas por todos os formulários (cada formulário marca quais itens mostrar). */
 export function FormListsPage() {
   const canEdit = usePermission('forms.manage')
+  const [opened, setOpened] = useState<Set<string>>(new Set()) // começam todas recolhidas
+  const toggle = (t: string) => setOpened((cur) => { const n = new Set(cur); if (n.has(t)) n.delete(t); else n.add(t); return n })
   return (
     <div className="space-y-4">
       <div>
@@ -15,16 +34,9 @@ export function FormListsPage() {
           Instrumentos ficam em <PageLink to="naipes">Naipes e instrumentos</PageLink> e categorias em <PageLink to="funcoes">Organização → Categorias</PageLink>.
         </p>
       </div>
-      <Card className="space-y-2 p-4">
-        <CatalogEditor table="skill_levels" title="Níveis" singular="Nível" canEdit={canEdit}
-          hint="O nível é uma autodeclaração: a pessoa diz que nível acredita ter (ex.: Iniciante, Intermediário, Avançado)." />
-      </Card>
-      <Card className="space-y-2 p-4">
-        <CatalogEditor table="gender_options" title="Gênero" singular="Opção" canEdit={canEdit} hint="Dado sensível: fica restrito à Direção." />
-      </Card>
-      <Card className="space-y-2 p-4">
-        <CatalogEditor table="race_options" title="Cor/raça" singular="Opção" canEdit={canEdit} hint="Dado sensível: fica restrito à Direção." />
-      </Card>
+      <div className="space-y-2">
+        {LISTS.map((l) => <ListGroup key={l.table} {...l} open={opened.has(l.table)} onToggle={() => toggle(l.table)} canEdit={canEdit} />)}
+      </div>
     </div>
   )
 }
