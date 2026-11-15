@@ -11,7 +11,12 @@ function Chip({ text, help, onInsert }: { text: string; help: string; onInsert: 
 /** Lista as variáveis que dá para escrever num texto de formulário: o valor atual do bloco entra sozinho. */
 export function VarsHint({ onInsert }: { /** Clicar numa variável coloca ela onde está o cursor do texto. */ onInsert: (text: string) => void }) {
   const cats = useCatalog('fee_categories')
-  const names = (cats.data ?? []).filter((c) => c.is_active && !c.is_exempt && c.name !== 'Isento').map((c) => c.name)
+  const funcs = useCatalog('artistic_functions')
+  // Categorias de funções isentas (Escritora, Monitor, direção...) não pagam: não sugere variável de valor para elas.
+  const exemptFns = (funcs.data ?? []).filter((f) => f.is_exempt || f.exempt_locked)
+  const exemptIds = new Set(exemptFns.map((f) => f.id))
+  const exemptNames = new Set(exemptFns.map((f) => f.name.toLowerCase()))
+  const names = (cats.data ?? []).filter((c) => c.is_active && !c.is_exempt && c.name !== 'Isento' && !(c.function_id && exemptIds.has(c.function_id)) && !exemptNames.has(c.name.toLowerCase())).map((c) => c.name)
   return (
     <div className="space-y-0.5 text-xs text-muted-foreground">
       <p>Inserir variável {TEXT_VARS.map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
