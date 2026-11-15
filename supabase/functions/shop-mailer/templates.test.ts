@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brl, buildEmail, escapeHtml, type MailContext, type TemplateKey } from './templates'
+import { brl, buildEmail, buildFormEmail, escapeHtml, type MailContext, type TemplateKey } from './templates'
 
 const ctx = (over: Partial<MailContext> = {}, order: Partial<MailContext['order']> = {}): MailContext => ({
   outbox_id: 'o1', template: 'order_created', to_email: 'maria@ex.com', kind: null, cancel_reason: null,
@@ -110,5 +110,14 @@ describe('produção começou (mínimo atingido)', () => {
     const n = buildEmail(ctx({ template: 'production_started', product: { name: 'Boné', min_units: 20, lead_time_days: null } }))
     expect(n.text).toContain('Avisaremos quando estiver pronto')
     expect(n.text).not.toContain('conta a partir de agora')
+  })
+})
+
+describe('inscrição aprovada', () => {
+  const m = buildFormEmail({ outbox_id: 'f1', template: 'submission_approved', to_email: 'a@b.com', name: 'Maria', org: { name: 'Cordão da Tia Juca' },
+    settings: { pix_key: null, pix_beneficiary: null, public_site_url: null, contact_whatsapp: '5521990698483', contact_email: 'contato@ex.com', directors: [], mail_from_name: null, mail_from_email: null } })
+  it('assunto, saudação, aprovação e contatos', () => {
+    expect(m.subject).toBe('Inscrição aprovada — Cordão da Tia Juca')
+    for (const part of ['Olá, Maria!', 'foi aprovada', 'wa.me/5521990698483', 'contato@ex.com']) { expect(m.html).toContain(part); expect(m.text).toContain(part) }
   })
 })

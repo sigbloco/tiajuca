@@ -446,7 +446,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
                 {f0?.privacy_text && <><h3>Privacidade e proteção de dados</h3><RichText text={f0.privacy_text} className="text-xs text-muted-foreground" /></>}
                 {f0?.requires_consent && (
                   <label className="flex items-start gap-3 pt-1">
-                    <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                    <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                     <span>Estou ciente e concordo <span className="text-destructive">*</span></span>
                   </label>
                 )}
@@ -461,7 +461,7 @@ export function PublicFormPage({ preview }: { /** Pré-visualização: usa estes
             <RichText text={f0.privacy_text} className="text-xs text-muted-foreground" />
             {f0.requires_consent && (
               <label className="flex items-start gap-3 pt-1">
-                <input type="checkbox" className="mt-0.5 h-5 w-5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                 <span>Li e concordo com o tratamento dos meus dados para esta inscrição. <span className="text-destructive">*</span></span>
               </label>
             )}

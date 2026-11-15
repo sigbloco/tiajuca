@@ -8,7 +8,7 @@
 // Sem credenciais, nada é enviado e os avisos continuam esperando na fila.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { buildEmail, type MailContext } from './templates.ts'
+import { buildEmail, buildFormEmail, type FormMailContext, type MailContext } from './templates.ts'
 import { pickProvider, resolveSender, sendViaResend, formatFrom, type OutgoingMail } from './providers.ts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -51,6 +51,26 @@ Deno.serve(async (req) => {
       failed++
       console.error('envio falhou', ctx.template, ctx.order.code, (e as Error).message)
       await admin.rpc('shop_mail_done', { p_id: ctx.outbox_id, p_ok: false, p_error: (e as Error).message })
+    }
+  }
+  // Avisos dos formulários (inscrição aprovada): mesma fila de envio, mesmo remetente.
+  const { data: fbatch, error: ferr } = await admin.rpc('form_mail_claim', { p_limit: 20 })
+  if (ferr) console.error('form_mail_claim', ferr.message)
+  for (const ctx of (fbatch ?? []) as FormMailContext[]) {
+    try {
+      const sender = resolveSender(provider, ctx.settings, ctx.org.name, { get: (k) => Deno.env.get(k) })
+      if (!sender.valid) throw new Error('remetente não configurado (Loja → Pagamentos e contatos)')
+      const built = buildFormEmail(ctx)
+      const mail: OutgoingMail = { to: ctx.to_email, ...built, fromName: sender.fromName, fromEmail: sender.fromEmail, replyTo: sender.replyTo }
+      if (provider === 'smtp') await sendViaSmtp(mail)
+      else if (provider === 'resend') await sendViaResend(mail, Deno.env.get('RESEND_API_KEY')!)
+      else console.log('[mail:log]', ctx.template, '→', mail.to.replace(/^(.).*(@.*)$/, '$1***$2'), '|', mail.subject)
+      await admin.rpc('form_mail_done', { p_id: ctx.outbox_id, p_ok: true, p_error: null })
+      sent++
+    } catch (e) {
+      failed++
+      console.error('envio de formulário falhou', ctx.template, (e as Error).message)
+      await admin.rpc('form_mail_done', { p_id: ctx.outbox_id, p_ok: false, p_error: (e as Error).message })
     }
   }
   return json({ configured: true, provider, sent, failed })

@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Globe, LogOut, Store } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -60,7 +61,20 @@ export function ClaimInvitePage() {
  * a área dos integrantes ainda não está pronta. Dá para ir à loja ou ao site.
  */
 export function NoOrganizationPage() {
-  const { signOut } = useAuth()
+  const { signOut, session } = useAuth()
+  // Quem se inscreveu por um formulário com login vê só o andamento da inscrição (nenhum acesso antes de a Direção avaliar).
+  const status = useQuery({
+    queryKey: ['my-submission-status', session?.user.id],
+    enabled: Boolean(session),
+    queryFn: async () => { const { data, error } = await supabase.rpc('my_submission_status'); if (error) throw error; return data as string },
+  })
+  if (status.data === 'pending') {
+    return (
+      <AuthLayout title="Inscrição em avaliação" subtitle="Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.">
+        <Button variant="ghost" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+      </AuthLayout>
+    )
+  }
   return (
     <AuthLayout title="Área em construção" subtitle="A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.">
       <div className="space-y-2">
