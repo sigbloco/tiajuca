@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
-import { Pencil, Plus, Search } from 'lucide-react'
+import { Filter, Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
@@ -12,10 +12,10 @@ import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
-import { useOrgId } from '@/core/organization'
+import { useOrgId, useOrganization } from '@/core/organization'
 import { Can, usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { hrefOf } from '@/modules/site/links'
@@ -109,6 +109,21 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const [search, setSearch] = useState('')
   const filter: FilterValue = { ...EMPTY_FILTER, search }
   const sectionFilter = ''
+  // Filtro por naipe e atividade (a atividade só depois do naipe) e, para professor/monitor, "Meus alunos" (o que eles atendem no ciclo atual).
+  const initial = new URLSearchParams(window.location.search)
+  const [naipeF, setNaipeF] = useState(() => initial.get('naipeId') ?? '')
+  const [atvF, setAtvF] = useState(() => initial.get('atividadeId') ?? '')
+  const [mine, setMine] = useState(() => initial.get('meus') === '1')
+  const { membership } = useOrganization()
+  const myStaff = useQuery({
+    queryKey: ['my-staff-scope', orgId, membership?.member_id],
+    enabled: Boolean(membership?.member_id),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('staff_assignments').select('section_id, instrument_id, cycles!inner(is_current)').eq('organization_id', orgId).eq('member_id', membership!.member_id).is('valid_to', null).eq('cycles.is_current', true)
+      if (error) throw error
+      return (data ?? []) as unknown as { section_id: string | null; instrument_id: string | null }[]
+    },
+  })
   // Situação: Ativos (padrão) e Inativos acumulam; os dois marcados = todos.
   const [showActive, setShowActive] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
@@ -257,27 +272,32 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       // Instrumento/função NAQUELE ciclo (participação do próprio ciclo).
       const links = parts.data?.get(m.id) ?? []
       let placed = false
+      const filtering = Boolean(naipeF || atvF || mine)
+      const mineRules = myStaff.data ?? []
       for (const l of links) {
         const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
         const fn = l.function_id ? fnById.get(l.function_id) : undefined
-        if (inst?.section_id) {
-          add(inst.section_id, '', inst.id, inst.name, m); placed = true
-        } else if (fn?.section_id) {
-          add(fn.section_id, '', `fn:${fn.id}`, fn.name, m); placed = true
-        }
+        const secId = inst?.section_id ?? fn?.section_id ?? null
+        if (!secId) continue
+        if (naipeF && secId !== naipeF) continue
+        if (atvF && inst?.id !== atvF) continue
+        if (mine && !mineRules.some((a) => (a.instrument_id ? a.instrument_id === inst?.id : a.section_id === secId))) continue
+        if (inst?.section_id) add(inst.section_id, '', inst.id, inst.name, m)
+        else add(secId, '', `fn:${fn!.id}`, fn!.name, m)
+        placed = true
       }
-      if (!placed) add('none', '', 'none', 'Sem instrumento', m)
+      if (!placed) { if (filtering) continue; add('none', '', 'none', 'Sem instrumento', m) }
       seen.add(m.id)
     }
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data])
+  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
-  const forceOpen = tree.searching || sectionFilter !== ''
+  const forceOpen = tree.searching || sectionFilter !== '' || Boolean(naipeF || atvF || mine)
   // auto: grupo que é filho único do pai abre sozinho (evita clique redundante), mas o usuário ainda pode fechá-lo.
   const isOpen = (k: string, auto = false) => forceOpen || (open[k] ?? auto)
   // Link de naipe/instrumento (?naipe=Percussão&inst=Caixa): abre esse grupo na lista.
@@ -325,12 +345,19 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const subs = t.map.get(sec.id)!
     const count = new Set([...subs.values()].flatMap((l) => [...l.values()].flatMap((x) => x.members.map((m) => m.id)))).size
     const renderLeaves = (leaves: Map<string, Leaf>, p: string) =>
-      [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => (
+      [...leaves.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((leaf) => leaf.members.length === 1 ? (
+        <Collapsible key={p + leaf.key} level={1} tone={tone} title={leaf.label} expandable={false} open={false} onToggle={() => {}} below={memberRow(leaf.members[0])}>{null}</Collapsible>
+      ) : (
         <Collapsible key={p + leaf.key} level={1} tone={tone} title={leaf.label} count={leaf.members.length} open={isOpen(p + leaf.key, leaves.size === 1)} onToggle={() => toggle(p + leaf.key, isOpen(p + leaf.key, leaves.size === 1))}>
           <ProgressiveList items={leaf.members} render={memberRow} resetKey={filter.search + activeCycleId} />
         </Collapsible>
       ))
     const sk0 = `${activeCycleId}:${sec.id}`
+    if (count === 1) {
+      return (
+        <Collapsible key={sk0} tone={tone} title={sec.name} expandable={false} open={false} onToggle={() => {}} below={<div className="space-y-2">{renderLeaves(subs.get('') ?? new Map(), `${sk0}:`)}</div>}>{null}</Collapsible>
+      )
+    }
     return (
       <Collapsible key={sk0} tone={tone} title={sec.name} count={count} open={isOpen(sk0, t.sectionList.length === 1)} onToggle={() => toggle(sk0, isOpen(sk0, t.sectionList.length === 1))}>
         <div className="space-y-2">{renderLeaves(subs.get('') ?? new Map(), `${sk0}:`)}</div>
@@ -367,6 +394,22 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         </ButtonRow>
       )}
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
+      <div className="space-y-1.5">
+        <p className="flex items-center gap-1.5 text-sm font-semibold"><Filter className="h-4 w-4" aria-hidden /> Filtrar</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Select aria-label="Naipe" value={naipeF} onChange={(e) => { setNaipeF(e.target.value); setAtvF(''); setMine(false) }}>
+            <option value="">Todos os naipes</option>
+            {(sections.data ?? []).filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </Select>
+          <Select aria-label="Atividade" value={atvF} disabled={!naipeF} onChange={(e) => setAtvF(e.target.value)}>
+            <option value="">{naipeF ? 'Todas as atividades' : 'Escolha o naipe antes'}</option>
+            {(instruments.data ?? []).filter((i) => i.is_active && i.section_id === naipeF).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </Select>
+        </div>
+        {(myStaff.data?.length ?? 0) > 0 && (
+          <button type="button" aria-pressed={mine} className={chip(mine)} onClick={() => { setMine(!mine); setNaipeF(''); setAtvF('') }}>Meus alunos</button>
+        )}
+      </div>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input className="pl-9" type="search" aria-label="Buscar integrante pelo nome" placeholder="Buscar pelo nome" value={search} onChange={(e) => setSearch(e.target.value)} />
