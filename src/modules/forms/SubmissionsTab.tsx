@@ -69,6 +69,23 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
   const plain = fields.filter((f) => !SENSITIVE(f.mapping))
   const sensitive = fields.filter((f) => SENSITIVE(f.mapping))
   const purged = Boolean(sub.purged_at)
+  // Vaga do instrumento escolhido: a vaga só é preenchida na aprovação; se já está cheia, a Direção decide quem entra e quem vai para a lista de espera.
+  const instField = fields.find((f) => f.mapping === 'link.instrument')
+  const instId = instField ? String(sub.answers[instField.key] ?? '') : ''
+  const cap = useQuery({
+    queryKey: ['sub-capacity', orgId, form.cycle_id, instId],
+    enabled: Boolean(form.cycle_id && instId && sub.status === 'pending'),
+    queryFn: async () => {
+      const c = await supabase.from('instrument_cycle_capacity').select('capacity').eq('instrument_id', instId).eq('cycle_id', form.cycle_id!).maybeSingle()
+      if (c.error) throw c.error
+      if (!c.data) return null
+      const o = await supabase.rpc('instrument_occupied', { p_instrument: instId, p_cycle: form.cycle_id! })
+      if (o.error) throw o.error
+      return { capacity: Number(c.data.capacity), occupied: Number(o.data) }
+    },
+  })
+  const isFull = !!cap.data && cap.data.occupied >= cap.data.capacity
+  useEffect(() => { if (isFull && !cycleStatus) setCycleStatus('waitlist') }, [isFull]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <SheetContent title="Inscrição" description={`${formatDateTime(sub.submitted_at)} · versão ${version?.version ?? '?'} do formulário`}>
@@ -95,6 +112,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
 
       {sub.status === 'pending' && !purged && (
         <div className="mt-auto space-y-2">
+          {isFull && <p className="rounded-md bg-warning/15 p-2 text-sm text-warning">Vagas esgotadas neste instrumento ({cap.data!.occupied} de {cap.data!.capacity}). Aprove na lista de espera (a pessoa recebe um e-mail avisando) ou escolha quem entra liberando outra vaga antes.</p>}
           {form.cycle_id && (
             <Select aria-label="Status no ciclo" value={cycleStatus} onChange={(e) => setCycleStatus(e.target.value)}>
               <option value="">Aprovar sem definir status no ciclo</option><option value="waitlist">Entrar na lista de espera</option><option value="active">Entrar como ativo</option>

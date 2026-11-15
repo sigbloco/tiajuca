@@ -14,9 +14,9 @@ import { SEND_FALLBACK, SendFields, sendColumns, type SendTexts } from './SendSe
 
 /** Lê os textos padrão de Envio da organização (ou null se ainda não houver). Usado ao criar um formulário novo. */
 export async function loadSendDefaults(orgId: string) {
-  const { data, error } = await supabase.from('form_send_defaults').select('privacy_text, send_text, confirmation_message, review_message, approved_email_text, rejected_email_text').eq('organization_id', orgId).maybeSingle()
+  const { data, error } = await supabase.from('form_send_defaults').select('privacy_text, send_text, confirmation_message, review_message, approved_email_text, rejected_email_text, waitlist_email_text').eq('organization_id', orgId).maybeSingle()
   if (error) throw error
-  return data as { privacy_text: string | null; send_text: string | null; confirmation_message: string; review_message: string; approved_email_text: string; rejected_email_text: string } | null
+  return data as { privacy_text: string | null; send_text: string | null; confirmation_message: string; review_message: string; approved_email_text: string; rejected_email_text: string; waitlist_email_text: string } | null
 }
 
 /** Formulários → Configurações → Textos padrão: os textos com que todo formulário novo começa. Formulários já criados não mudam. */
@@ -26,13 +26,13 @@ export function SendDefaultsPage() {
   const canEdit = usePermission('forms.manage')
   const row = useQuery({ queryKey: ['form-send-defaults', orgId], queryFn: () => loadSendDefaults(orgId) })
   const [privacy, setPrivacy] = useState('')
-  const [f, setF] = useState<SendTexts>({ send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected })
+  const [f, setF] = useState<SendTexts>({ send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
   useEffect(() => {
     if (!row.isSuccess) return
     const d = row.data
     setPrivacy(d?.privacy_text ?? '')
-    setF(d ? { send: d.send_text ?? '', confirmation: d.confirmation_message, review: d.review_message, approved: d.approved_email_text, rejected: d.rejected_email_text }
-      : { send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected })
+    setF(d ? { send: d.send_text ?? '', confirmation: d.confirmation_message, review: d.review_message, approved: d.approved_email_text, rejected: d.rejected_email_text, waitlist: d.waitlist_email_text }
+      : { send: '', confirmation: SEND_FALLBACK.confirmation, review: SEND_FALLBACK.review, approved: SEND_FALLBACK.approved, rejected: SEND_FALLBACK.rejected, waitlist: SEND_FALLBACK.waitlist })
   }, [row.isSuccess, row.data])
   const save = useMutation({
     mutationFn: async () => { const { error } = await supabase.from('form_send_defaults').upsert({ organization_id: orgId, ...sendColumns(f), privacy_text: privacy.trim() || null, updated_at: new Date().toISOString() }, { onConflict: 'organization_id' }); if (error) throw error },

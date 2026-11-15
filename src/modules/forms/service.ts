@@ -12,7 +12,7 @@ export const FORM_STATUS_CLASS: Record<FormStatus, string> = {
 export interface FormRow {
   id: string; title: string; description: string | null; slug: string; cycle_id: string | null; status: FormStatus
   opens_at: string | null; closes_at: string | null; confirmation_message: string; max_responses: number | null
-  privacy_text: string | null; header_image_url: string | null; header_pos_x: number; header_pos_y: number; header_zoom: number; header_height: number; requires_consent: boolean; prevent_duplicates: boolean; send_text: string | null; review_message: string; approved_email_text: string; rejected_email_text: string; published_version_id: string | null; updated_at?: string
+  privacy_text: string | null; header_image_url: string | null; header_pos_x: number; header_pos_y: number; header_zoom: number; header_height: number; requires_consent: boolean; prevent_duplicates: boolean; send_text: string | null; review_message: string; approved_email_text: string; rejected_email_text: string; waitlist_email_text: string; published_version_id: string | null; updated_at?: string
   form_submissions?: { count: number }[]
 }
 export interface FormFieldRow {

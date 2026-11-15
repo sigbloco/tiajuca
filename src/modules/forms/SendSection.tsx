@@ -13,17 +13,18 @@ import { useForm } from './service'
 const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...p} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 
 /** Os cinco textos da seção de Envio (os do formulário e os padrão das Configurações usam os mesmos campos). */
-export interface SendTexts { send: string; confirmation: string; review: string; approved: string; rejected: string }
+export interface SendTexts { send: string; confirmation: string; review: string; approved: string; rejected: string; waitlist: string }
 export const SEND_FALLBACK = {
   confirmation: 'Inscrição recebida!',
   review: 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.',
   approved: 'Sua inscrição foi aprovada. Obrigado por se inscrever! A Direção entrará em contato com os próximos passos.',
   rejected: 'Agradecemos o seu interesse. Neste momento não foi possível aprovar a sua inscrição.',
+  waitlist: 'Recebemos a sua inscrição e ela foi aprovada, mas as vagas do seu instrumento estão preenchidas. Você ficou na lista de espera e a Direção avisa se uma vaga abrir.',
 }
 /** Colunas da tabela (forms e form_send_defaults) a partir dos textos, com o texto padrão quando um campo fica vazio. */
 export const sendColumns = (f: SendTexts) => ({
   send_text: f.send.trim() || null, confirmation_message: f.confirmation.trim() || SEND_FALLBACK.confirmation,
-  review_message: f.review.trim() || SEND_FALLBACK.review, approved_email_text: f.approved.trim() || SEND_FALLBACK.approved, rejected_email_text: f.rejected.trim() || SEND_FALLBACK.rejected,
+  review_message: f.review.trim() || SEND_FALLBACK.review, approved_email_text: f.approved.trim() || SEND_FALLBACK.approved, rejected_email_text: f.rejected.trim() || SEND_FALLBACK.rejected, waitlist_email_text: f.waitlist.trim() || SEND_FALLBACK.waitlist,
 })
 
 export function SendFields({ f, setF, prefix }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string }) {
@@ -41,6 +42,9 @@ export function SendFields({ f, setF, prefix }: { f: SendTexts; setF: (v: SendTe
       <div className="space-y-1.5"><Label htmlFor={`${prefix}-rej`}><Mail className="mr-1 inline h-4 w-4" />Texto-base da rejeição</Label>
         <Textarea id={`${prefix}-rej`} rows={4} value={f.rejected} onChange={(e) => setF({ ...f, rejected: e.target.value })} />
         <p className="text-xs text-muted-foreground">Ao rejeitar, a Direção pode editar esta mensagem antes de enviar o e-mail.</p></div>
+      <div className="space-y-1.5"><Label htmlFor={`${prefix}-wait`}><Mail className="mr-1 inline h-4 w-4" />E-mail de lista de espera</Label>
+        <Textarea id={`${prefix}-wait`} rows={4} value={f.waitlist} onChange={(e) => setF({ ...f, waitlist: e.target.value })} />
+        <p className="text-xs text-muted-foreground">Enviado quando a Direção aprova a inscrição na lista de espera (vaga esgotada). Sem posição na fila: a Direção escolhe quem entra por critérios próprios.</p></div>
     </>
   )
 }
@@ -51,10 +55,10 @@ export function SendSection({ formId }: { formId: string }) {
   const qc = useQueryClient()
   const { data: form } = useForm(formId)
   const [open, setOpen] = useState(false)
-  const [f, setF] = useState<SendTexts>({ send: '', confirmation: '', review: '', approved: '', rejected: '' })
+  const [f, setF] = useState<SendTexts>({ send: '', confirmation: '', review: '', approved: '', rejected: '', waitlist: '' })
   const start = () => {
     if (!form) return
-    setF({ send: form.send_text ?? '', confirmation: form.confirmation_message, review: form.review_message, approved: form.approved_email_text, rejected: form.rejected_email_text })
+    setF({ send: form.send_text ?? '', confirmation: form.confirmation_message, review: form.review_message, approved: form.approved_email_text, rejected: form.rejected_email_text, waitlist: form.waitlist_email_text })
     setOpen(true)
   }
   const save = useMutation({
