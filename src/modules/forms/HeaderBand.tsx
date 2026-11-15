@@ -1,8 +1,8 @@
 import { useRef, type ReactNode } from 'react'
 import { cn } from '@/components/ui/primitives'
 
-export interface HeaderFrame { image_url: string | null; x: number; y: number; zoom: number; height: number }
-export const DEFAULT_FRAME: HeaderFrame = { image_url: null, x: 50, y: 50, zoom: 1, height: 104 }
+export interface HeaderFrame { image_url: string | null; x: number; y: number; zoom: number; height: number; /** Tamanho da logo em px (padrão 80). */ logo?: number }
+export const DEFAULT_FRAME: HeaderFrame = { image_url: null, x: 50, y: 50, zoom: 1, height: 104, logo: 80 }
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n))
 
 /**
