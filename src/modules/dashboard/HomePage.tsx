@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { Cake } from 'lucide-react'
+import { Cake, UserRound } from 'lucide-react'
+import { useParticipationLine } from '@/modules/profile/participationLine'
+import { useProfileGaps } from '@/modules/profile/profileGaps'
 import { useState } from 'react'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Link } from 'react-router-dom'
@@ -232,13 +234,25 @@ export function HomePage() {
   const { membership } = useOrganization()
   const isDirection = usePermission('finance.read')
   const isStaff = usePermission('attendance.read', 'group')
+  const line = useParticipationLine(membership?.organization_id ?? '', membership?.member_id, membership?.short_name ?? '')
+  const gaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   if (!membership) return null
   return (
     <div className="space-y-4">
       <div>
-        <h1>Olá, {membership.display_name.trim().split(/s+/)[0]}!</h1>
-        <p className="text-muted-foreground">{membership.roles.length ? membership.roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') : 'Sem papel de acesso atribuído.'} em {membership.name}</p>
+        <h1>Olá, {membership.display_name.trim().split(/\s+/)[0]}!</h1>
+        <p className="text-muted-foreground">{line || `${membership.roles.length ? membership.roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') : 'Sem papel de acesso atribuído.'} em ${membership.name}`}</p>
       </div>
+      {gaps && gaps.length > 0 && (
+        <Card className="flex items-start gap-3 border-primary/40 bg-primary/5 p-4">
+          <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+          <div className="min-w-0 space-y-1">
+            <p className="font-semibold">Termine o seu perfil</p>
+            <p className="text-sm text-muted-foreground">Ainda faltam {gaps.length === 1 ? 'uma informação' : `${gaps.length} informações`}: {gaps.join(', ')}. Tudo é opcional, mas ajuda o bloco a te conhecer melhor.</p>
+            <Link to={`/${membership.slug}/perfil`} className="inline-block text-sm font-semibold text-primary underline">Completar agora</Link>
+          </div>
+        </Card>
+      )}
       <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} />
       <BirthdaysToday orgId={membership.organization_id} tz={membership.timezone} />
       <UpcomingEvents orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} tz={membership.timezone} filterByMine={!isDirection} />

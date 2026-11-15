@@ -18,6 +18,7 @@ import { HUBS, NAV_ITEMS, crumbsFor, type CameFrom, type HubKey, type NavItem } 
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { BulletTrail } from '@/components/shared/BulletTrail'
 import { ViewAsBar } from './ViewAsBar'
+import { useProfileGaps } from '@/modules/profile/profileGaps'
 
 interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; /** Traço separador acima do item. */ sep?: boolean }
 
@@ -92,6 +93,9 @@ export function AppShell() {
     void supabase.rpc('refresh_current_cycle', { p_org: orgIdForCycles }).then(() => qcShell.invalidateQueries({ queryKey: ['cycles'] }))
   }, [orgIdForCycles]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
+  // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
+  const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
+  const hasGaps = (profileGaps?.length ?? 0) > 0
   if (!membership) return null
   // Área dos integrantes em construção: só Titular e direção entram (vale pelo acesso real, não pela simulação).
   const realRoles = (realMembership ?? membership).roles
@@ -155,6 +159,7 @@ export function AppShell() {
     <div key={e.to || 'home'} className={cn(e.sep && idx > 0 && 'mt-2 border-t border-border pt-3')}>
       <NavLink to={`${base}/${e.to}`} className={link(e)} onClick={onClick}>
         <e.icon className="h-5 w-5" /> {e.label}
+        {e.to === 'perfil' && hasGaps && <span className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full bg-warning ring-2 ring-background" role="img" aria-label="Perfil incompleto" title="Perfil incompleto" />}
       </NavLink>
     </div>
   ))
@@ -226,7 +231,7 @@ export function AppShell() {
           </NavLink>
         ))}
         <button onClick={() => setMoreOpen(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground">
-          <Menu className="h-5 w-5" /> Mais
+          <span className="relative"><Menu className="h-5 w-5" />{hasGaps && <span className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-warning ring-2 ring-header" aria-hidden />}</span> Mais
         </button>
       </nav>
 
