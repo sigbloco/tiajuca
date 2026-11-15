@@ -99,12 +99,14 @@ export function SectionTemplatesPage() {
               <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === list.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
             </div>
             <div className="min-w-0 flex-1 basis-40">
-              <Link to={`${base}/configuracoes/modelos/${t.id}`} className="break-words font-display text-lg font-bold leading-tight hover:underline">{t.name}</Link>
+              <div className="flex items-center gap-2">
+                <Link to={`${base}/configuracoes/modelos/${t.id}`} className="min-w-0 break-words font-display text-lg font-bold leading-tight hover:underline">{t.name}</Link>
+                <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`Duplicar ${t.name}`} title="Duplicar" disabled={duplicate.isPending} onClick={async () => { const n = await promptBox({ title: 'Duplicar modelo', message: 'Nome do novo modelo:', initial: `${t.name} (cópia)`, confirmLabel: 'Duplicar' }); if (n && n.trim()) duplicate.mutate({ t, name: n.trim() }) }}><CopyPlus className="h-4 w-4" /></Button>
+              </div>
               <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'pergunta' : 'perguntas'}</p>
             </div>
-            <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:grid-cols-4">
+            <div className="grid w-full grid-cols-3 gap-1.5 sm:w-auto">
               <Button asChild size="sm" variant="outline"><Link to={`${base}/configuracoes/modelos/${t.id}`}><Pencil className="h-4 w-4" /> Editar</Link></Button>
-              <Button size="sm" variant="outline" disabled={duplicate.isPending} onClick={async () => { const n = await promptBox({ title: 'Duplicar modelo', message: 'Nome do novo modelo:', initial: `${t.name} (cópia)`, confirmLabel: 'Duplicar' }); if (n && n.trim()) duplicate.mutate({ t, name: n.trim() }) }}><CopyPlus className="h-4 w-4" /> Duplicar</Button>
               <Button size="sm" variant="outline" onClick={async () => { const n = await promptBox({ title: 'Renomear modelo', message: 'Nome do modelo:', initial: t.name, confirmLabel: 'Salvar' }); if (n && n.trim() && n.trim() !== t.name) rename.mutate({ t, name: n.trim() }) }}>Renomear</Button>
               <Button size="sm" variant="outline" className="text-destructive" aria-label={`Apagar ${t.name}`} onClick={async () => { if (await confirmBox(`Apagar o modelo “${t.name}”? Os formulários que já o usaram não mudam.`)) remove.mutate(t.id) }}><Trash2 className="h-4 w-4" /> Apagar</Button>
             </div>
