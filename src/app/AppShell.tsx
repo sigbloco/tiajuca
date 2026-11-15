@@ -205,7 +205,7 @@ export function AppShell() {
                 else navigate(base)
               }}>
               <ArrowLeft className="mt-0.5 h-4 w-4 shrink-0" />
-              <BulletTrail items={(() => { if (deepPanels.length > 0) { const base = trailNow.length ? trailNow : ['Início']; return [`Voltar para ${base[0]}`, ...base.slice(1), ...deepPanels.slice(0, -1).map((e) => e.title)] }; const t = cameFrom ? cameFrom.label : backTrail; if (!t) return ['Voltar']; const p = t.split(' • '); return [`Voltar para ${p[0]}`, ...p.slice(1)] })()} />
+              <BulletTrail items={(() => { if (deepPanels.length > 0) { const base = trailNow.length ? trailNow : ['Início']; return [`Voltar para ${base[0]}`, ...base.slice(1), ...deepPanels.slice(0, -1).map((e) => e.title)] }; const t = cameFrom ? cameFrom.label : backTrail; if (!t) return ['Voltar']; const p = t.split(' • '); return [`Voltar para ${p[0]}`, ...p.slice(1)] })()} maxLines={1} />
             </button>
           )}
           <Breadcrumbs crumbs={crumbs} />
