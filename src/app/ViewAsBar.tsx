@@ -31,7 +31,7 @@ type CatKey = (typeof CATEGORIES)[number]['key']
 const virtualRoles = (key: CatKey) => (key === 'direcao' ? ['direcao', 'integrante'] : key === 'professor' ? ['professor', 'integrante'] : key === 'monitor' ? ['monitor', 'integrante'] : ['integrante'])
 
 /** Barra fixa no topo (só Titular/Direção): escolhe uma CATEGORIA e, depois, uma pessoa dela; a interface passa a mostrar o que ela veria. */
-export function ViewAsBar() {
+export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à coluna do formulário (max-w-xl, com o mesmo respiro lateral). */ contained?: boolean } = {}) {
   const { realMembership, viewAs, viewAsLoading, setViewAs } = useOrganization()
   const allowed = !!realMembership && hasPermission(realMembership.permissions, 'roles.manage')
   const orgId = realMembership?.organization_id
@@ -120,7 +120,8 @@ export function ViewAsBar() {
   const apply = (p: Person | undefined) => setViewAs(p ? { member_id: p.id, display_name: p.name, ...(p.virtual ? { virtual: p.virtual } : {}) } : null)
 
   return (
-    <div ref={barRef} className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted')}>
+    <div ref={barRef} className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted', contained && 'px-4')}>
+      <div className={contained ? 'mx-auto max-w-xl' : undefined}>
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4 shrink-0" aria-hidden />
         <span className="hidden shrink-0 font-semibold sm:inline">{viewAs ? 'Visualizando como' : 'Visualizar como'}</span>
@@ -159,6 +160,7 @@ export function ViewAsBar() {
           {' '}Os dados e as ações continuam sendo os <strong>seus</strong> (você ainda é direção): confira o que o perfil vê, mas edite com cuidado.
         </p>
       )}
+      </div>
     </div>
   )
 }
