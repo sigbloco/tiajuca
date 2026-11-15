@@ -133,6 +133,8 @@ export function AppShell() {
   // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
   const trailNow = [...crumbs.map((c) => c.label), ...extras.filter((e) => e.level === 0).map((e) => e.title)]
   trailRender.current = (trailNow.length ? trailNow : ['Início']).join(' • ')
+  // Painéis abertos dentro da página (ficha do integrante, edição dos dados): o "voltar" nomeia o nível de fora, ex.: "Voltar para Integrantes" e, dentro da edição, "Voltar para Integrantes • Leonardo".
+  const deepPanels = extras.filter((e) => e.level >= 1)
   const backTrail = (() => {
     if (!previous || previous.path === pathname || !previous.path.startsWith(base)) return null
     if (previous.trail) return previous.trail
@@ -186,7 +188,8 @@ export function AppShell() {
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
               onClick={() => {
-                // Com um formulário aberto na página, "voltar" fecha o formulário (e pergunta se há algo sem salvar).
+                // Com painéis abertos na página (ficha, edição), "voltar" fecha o mais interno (e pergunta se há algo sem salvar).
+                if (deepPanels.length > 0) { deepPanels[deepPanels.length - 1].close(); return }
                 const close = document.querySelector<HTMLElement>('#edit-slot [data-sheet-close]')
                 if (close) { close.click(); return }
                 if (cameFrom) navigate(cameFrom.path)
@@ -194,7 +197,7 @@ export function AppShell() {
                 else navigate(base)
               }}>
               <ArrowLeft className="mt-0.5 h-4 w-4 shrink-0" />
-              <BulletTrail items={(() => { const t = cameFrom ? cameFrom.label : backTrail; if (!t) return ['Voltar']; const p = t.split(' • '); return [`Voltar para ${p[0]}`, ...p.slice(1)] })()} />
+              <BulletTrail items={(() => { if (deepPanels.length > 0) { const base = trailNow.length ? trailNow : ['Início']; return [`Voltar para ${base[0]}`, ...base.slice(1), ...deepPanels.slice(0, -1).map((e) => e.title)] }; const t = cameFrom ? cameFrom.label : backTrail; if (!t) return ['Voltar']; const p = t.split(' • '); return [`Voltar para ${p[0]}`, ...p.slice(1)] })()} />
             </button>
           )}
           <Breadcrumbs crumbs={crumbs} />

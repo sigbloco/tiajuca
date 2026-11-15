@@ -1,6 +1,8 @@
+import { usePersonLabeler } from './personLabel'
+import { useRegisterCrumb } from '@/core/breadcrumb'
 import { ExtraEmails } from './ExtraEmails'
 import { requireFields } from '@/core/required'
-import { formatDate, shortName } from '@/core/format'
+import { formatDate } from '@/core/format'
 
 function ageOf(iso: string | null | undefined): number | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '')
@@ -380,7 +382,9 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
   const staffView = usePermission('members.read', 'group')
+  const labeler = usePersonLabeler() // nome com sobrenome quando há outro integrante com o mesmo primeiro nome
   const [editing, setEditing] = useState(false)
+  useRegisterCrumb('Editar dados', () => setEditing(false), editing, 2) // "Voltar para Integrantes • Leonardo" enquanto edita
   void category
   // "Excluir": move para a lixeira (some das listas e da chamada; o histórico fica e dá para restaurar).
   const archive = useMutation({
@@ -392,11 +396,11 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
-    <SheetContent onCrumbClick={onCrumbClick} title={shortName(member.full_name, member.display_name)} titleAction={canManage && (
+    <SheetContent onCrumbClick={onCrumbClick} title={labeler(member)} titleAction={canManage && (
       <>
         <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" aria-label="Excluir integrante" title="Excluir integrante" disabled={archive.isPending}
-          onClick={async () => { if (await confirmBox(`Excluir ${shortName(member.full_name, member.display_name)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
+          onClick={async () => { if (await confirmBox(`Excluir ${labeler(member)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
       </>
     )} description={!staffView || ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
       <ContactLinks member={member} />

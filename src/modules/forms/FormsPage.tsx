@@ -11,11 +11,11 @@ import { notifyChange } from '@/core/undo'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
-import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, publicUrl, slugify, type FormRow } from './service'
+import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, kindFlags, publicUrl, slugify, type FormKind, type FormRow } from './service'
 
 function NewFormSheet() {
   const orgId = useOrgId()
@@ -24,10 +24,11 @@ function NewFormSheet() {
   const { membership } = useOrganization()
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
+  const [kind, setKind] = useState<FormKind>('enrollment')
   const create = useMutation({
     mutationFn: async () => {
       const defaults = await loadSendDefaults(orgId) // textos padrão de Envio (Configurações)
-      const { data, error } = await supabase.from('forms').insert({ organization_id: orgId, title: title.trim(), slug: slug || slugify(title), ...(defaults ?? {}) }).select('id').single()
+      const { data, error } = await supabase.from('forms').insert({ organization_id: orgId, title: title.trim(), slug: slug || slugify(title), ...(defaults ?? {}), kind, ...(kind === 'general' ? kindFlags('general') : {}) }).select('id').single()
       if (error) throw error
       return data.id as string
     },
@@ -38,6 +39,8 @@ function NewFormSheet() {
     <SheetContent title="Novo formulário" description="Começa como rascunho; só vai ao ar quando você publicar.">
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', title.trim()]])) create.mutate() }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="nf-title" required>Título</Label><Input id="nf-title" required value={title} onChange={(e) => { setTitle(e.target.value); setSlug(slugify(e.target.value)) }} /></div>
+        <div className="space-y-1.5"><Label htmlFor="nf-kind">Tipo</Label>
+          <Select id="nf-kind" value={kind} onChange={(e) => setKind(e.target.value as FormKind)}><option value="enrollment">Inscrição (com avaliação e aprovação)</option><option value="general">Geral (enquete, pedido…)</option></Select></div>
         <div className="space-y-1.5"><Label htmlFor="nf-slug">Endereço (final do link)</Label>
           <Input id="nf-slug" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} />
           <p className="text-xs text-muted-foreground">{membership ? publicUrl(membership.slug, slug || '—') : ''}</p></div>

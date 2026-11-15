@@ -9,7 +9,14 @@ export const FORM_STATUS_CLASS: Record<FormStatus, string> = {
   draft: 'bg-muted text-muted-foreground', published: 'bg-success/15 text-success', closed: 'bg-warning/15 text-warning', archived: 'bg-muted text-muted-foreground',
 }
 
+/** Inscrição: passa por avaliação e aprovação (e-mails de resultado). Geral: enquetes, pedidos etc., sem nada disso. */
+export type FormKind = 'enrollment' | 'general'
+export const FORM_KIND_LABEL: Record<FormKind, string> = { enrollment: 'Inscrição', general: 'Geral' }
+/** Ao virar "Geral", as mensagens de avaliação e de resultado desligam; ao voltar a "Inscrição", ligam. */
+export const kindFlags = (k: FormKind) => ({ review_enabled: k === 'enrollment', approved_enabled: k === 'enrollment', rejected_enabled: k === 'enrollment', waitlist_enabled: k === 'enrollment' })
+
 export interface FormRow {
+  kind: FormKind
   id: string; title: string; description: string | null; slug: string; cycle_id: string | null; status: FormStatus
   opens_at: string | null; closes_at: string | null; confirmation_message: string; max_responses: number | null
   privacy_text: string | null; header_image_url: string | null; header_pos_x: number; header_pos_y: number; header_zoom: number; header_height: number; requires_consent: boolean; prevent_duplicates: boolean; send_text: string | null; review_message: string; approved_email_text: string; rejected_email_text: string; waitlist_email_text: string; privacy_enabled: boolean; send_enabled: boolean; confirmation_enabled: boolean; review_enabled: boolean; approved_enabled: boolean; rejected_enabled: boolean; waitlist_enabled: boolean; published_version_id: string | null; updated_at?: string
