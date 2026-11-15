@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { ArrowDown, ArrowUp, Ban, ChevronDown, ChevronRight, GitBranch, Layers, Plus, Trash2 } from 'lucide-react'
 import { useHoldReorder } from '@/core/holdReorder'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -60,6 +60,8 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const instruments = useCatalog('instruments')
   const levels = useCatalog('skill_levels')
   const functions = useCatalog('artistic_functions')
+  const genders = useCatalog('gender_options')
+  const races = useCatalog('race_options')
   const naipes = useCatalog('sections')
   const { cycleId, cycle } = useSelectedCycle()
   const [naipe, setNaipe] = useState('')
@@ -75,12 +77,21 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     },
   })
   const linkMapped = f.mapping.startsWith('link.')
-  const catalogItems = (f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : [])
+  // Listas do cadastro (marcar quais itens aparecem): instrumento, categoria, nível, gênero e cor/raça.
+  const listMapped = linkMapped || f.mapping === 'sensitive.gender' || f.mapping === 'sensitive.race_color'
+  const catalogItems = (f.mapping === 'link.instrument' ? instruments.data : f.mapping === 'link.skill_level' ? levels.data : f.mapping === 'link.function' ? functions.data : f.mapping === 'sensitive.gender' ? genders.data : f.mapping === 'sensitive.race_color' ? races.data : [])
     ?.filter((i) => i.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0) || x.name.localeCompare(y.name, 'pt-BR')) ?? []
   const naipeList = (naipes.data ?? []).filter((n) => n.is_active).slice().sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0))
   const activeNaipe = naipe || naipeList[0]?.id || ''
   const shown = f.mapping === 'link.instrument' ? catalogItems.filter((i) => i.section_id === activeNaipe) : catalogItems
   const fullIds = new Set((overview.data ?? []).filter((r) => r.is_full).map((r) => r.instrument_id))
+  const catalogSig = catalogItems.map((i) => i.id).join(',')
+  useEffect(() => {
+    if (!field || catalogItems.length === 0) return
+    const labels = new Set(field.options.map((o) => o.label.trim().toLowerCase()))
+    const values = new Set(field.options.map((o) => o.value))
+    setPicked(new Set(catalogItems.filter((i) => values.has(i.id) || labels.has(i.name.trim().toLowerCase())).map((i) => i.id)))
+  }, [catalogSig]) // eslint-disable-line react-hooks/exhaustive-deps
   const togglePicked = (id: string) => setPicked((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const setShownPicked = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const i of shown) { if (on) n.add(i.id); else n.delete(i.id) } return n })
   const currentSection = field ? sectionIds(fields).get(field.id) ?? '' : defaultSection ?? sections[sections.length - 1]?.id ?? ''
@@ -93,7 +104,8 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   // Mantém o valor interno de opções com o mesmo rótulo (respostas antigas seguem consistentes).
   const toOptions = (): FieldOption[] => {
     // Listas do cadastro: só os marcados, na ordem do cadastro (o valor é o código do item, que liga ao integrante).
-    if (linkMapped) return catalogItems.filter((i) => picked.has(i.id)).map((i) => ({ value: i.id, label: i.name }))
+    // Instrumento, categoria e nível guardam o código do item (liga ao integrante); gênero e cor/raça guardam o próprio nome.
+    if (listMapped) return catalogItems.filter((i) => picked.has(i.id)).map((i) => ({ value: linkMapped ? i.id : i.name, label: i.name }))
     const existing = new Map((field?.options ?? []).map((o) => [o.label, o.value]))
     const seen = new Set<string>()
     return f.options.split('\n').map((l) => l.trim()).filter(Boolean).map((label) => {
@@ -147,7 +159,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const uniqueKey = () => { const base = keyify(f.label); let k = base, i = 2; const keys = new Set(fields.map((x) => x.field_key)); while (keys.has(k)) k = `${base.slice(0, 36)}_${i++}`; return k }
 
   const needsOptions = OPTION_TYPES.includes(f.type as FieldType)
-  const optionsOk = linkMapped ? catalogItems.some((i) => picked.has(i.id)) : Boolean(f.options.trim())
+  const optionsOk = listMapped ? catalogItems.some((i) => picked.has(i.id)) : Boolean(f.options.trim())
   return (
     <SheetContent title={asSection ? (field ? 'Editar seção' : 'Nova seção') : field ? 'Editar campo' : 'Novo campo'} description={asSection ? 'Agrupa as perguntas que vêm depois, até a próxima seção.' : field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || optionsOk]])) save.mutate() }} className="space-y-3">
@@ -161,11 +173,11 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         )}
         {f.type !== 'info' && f.type !== 'file' && (
           <div className="space-y-1.5"><Label htmlFor="fl-map">Ligar ao cadastro do integrante</Label>
-            <Select id="fl-map" value={f.mapping} onChange={(e) => { const m = e.target.value; setF({ ...f, mapping: m, type: m.startsWith('link.') && !OPTION_TYPES.includes(f.type as FieldType) ? 'single_select' : f.type }) }}>
+            <Select id="fl-map" value={f.mapping} onChange={(e) => { const m = e.target.value; setF({ ...f, mapping: m, type: (m.startsWith('link.') || m === 'sensitive.gender' || m === 'sensitive.race_color') && !OPTION_TYPES.includes(f.type as FieldType) ? 'single_select' : f.type }) }}>
               <option value="">Não ligar (fica só no histórico da inscrição)</option>
-              {Object.entries(MAPPING_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {Object.entries(MAPPING_LABEL).filter(([k]) => k !== 'member.played_other_blocks' || f.mapping === k).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </Select>
-            <p className="text-xs text-muted-foreground">Ao aprovar, o valor vai direto para o cadastro, sem digitar de novo.{f.mapping === 'link.skill_level' ? ' O nível aparece no cadastro como autodeclarado.' : ''}</p></div>
+            <p className="text-xs text-muted-foreground">Ao aprovar, o valor vai direto para o cadastro, sem digitar de novo.{f.mapping === 'link.skill_level' ? ' O nível aparece no cadastro como autodeclarado.' : ''}{f.mapping === 'member.custom' ? ' A resposta vai para “Outras informações”, no fim da ficha do integrante, com o texto da pergunta como título.' : ''}</p></div>
         )}
         {!asSection && <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5"><Label htmlFor="fl-type">Tipo</Label>
@@ -188,9 +200,9 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         {asSection && (
           <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> <span>Consentimento no fim desta seção: mostra o texto de privacidade (das configurações do formulário) e a caixa “Estou ciente e concordo”. Sem nenhuma seção com consentimento, ele fica no fim do formulário.</span></label>
         )}
-        {needsOptions && linkMapped && (
+        {needsOptions && listMapped && (
           <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold">{f.mapping === 'link.instrument' ? 'Instrumentos que aparecem' : f.mapping === 'link.function' ? 'Categorias que aparecem' : 'Níveis que aparecem'}</legend>
+            <legend className="text-sm font-semibold">{f.mapping === 'link.instrument' ? 'Instrumentos que aparecem' : f.mapping === 'link.function' ? 'Categorias que aparecem' : f.mapping === 'sensitive.gender' ? 'Opções de gênero que aparecem' : f.mapping === 'sensitive.race_color' ? 'Opções de cor/raça que aparecem' : 'Níveis que aparecem'}</legend>
             {f.mapping === 'link.instrument' && (
               <div role="radiogroup" aria-label="Naipe" className="flex flex-wrap gap-2">
                 {naipeList.map((n) => {
@@ -221,7 +233,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
             </div>
           </fieldset>
         )}
-        {needsOptions && !linkMapped && (
+        {needsOptions && !listMapped && (
           <div className="space-y-1.5"><Label htmlFor="fl-opts">Opções (uma por linha)</Label>
             <textarea id="fl-opts" rows={5} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" value={f.options} onChange={(e) => setF({ ...f, options: e.target.value })} />
           </div>
