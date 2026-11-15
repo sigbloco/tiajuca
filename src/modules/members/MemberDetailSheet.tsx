@@ -224,7 +224,7 @@ function ContactLinks({ member }: { member: MemberRow }) {
   )
 }
 
-interface Registration { birth_date: string | null; joined_at: string | null; affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null }
+interface Registration { birth_date: string | null; joined_at: string | null; affective_relation: string | null; played_other_blocks: boolean; other_blocks: string | null; extra_info: Record<string, string> | null }
 const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); return l.length ? l : [''] }
 
 /** Dados cadastrais: só quem pode gerenciar integrantes (Titular e Direção) edita — todos os campos. */
@@ -235,18 +235,18 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
     queryKey: ['member-registration', orgId, member.id],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('birth_date, joined_at, affective_relation, played_other_blocks, other_blocks').eq('id', member.id).single()
+      const { data, error } = await supabase.from('members').select('birth_date, joined_at, affective_relation, played_other_blocks, other_blocks, extra_info').eq('id', member.id).single()
       if (error) throw error
       return data as Registration
     },
   })
-  const [f, setF] = useState({ full_name: '', display_name: '', email: '', phone: '', socials: [''], birth_date: '', joined_at: '', affective_relation: '', played_other_blocks: false, other_blocks: '' })
+  const [f, setF] = useState({ full_name: '', display_name: '', email: '', phone: '', socials: [''], birth_date: '', joined_at: '', affective_relation: '', played_other_blocks: false, other_blocks: '', extra: {} as Record<string, string> })
   useEffect(() => {
     const d = reg.data
     if (!d) return
     setF({
       full_name: member.full_name, display_name: member.display_name ?? '', email: member.email ?? '', phone: member.phone ? maskPhone(member.phone) : '', socials: toList(member.social_handle),
-      birth_date: d.birth_date ?? '', joined_at: d.joined_at ?? '', affective_relation: d.affective_relation ?? '', played_other_blocks: d.played_other_blocks, other_blocks: d.other_blocks ?? '',
+      birth_date: d.birth_date ?? '', joined_at: d.joined_at ?? '', affective_relation: d.affective_relation ?? '', played_other_blocks: d.played_other_blocks, other_blocks: d.other_blocks ?? '', extra: { ...(d.extra_info ?? {}) },
     })
   }, [reg.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -260,6 +260,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
         social_handle: f.socials.map((x) => socialUrl(x)).filter(Boolean).join('\n') || null,
         birth_date: f.birth_date || null, joined_at: f.joined_at || null, affective_relation: nn(f.affective_relation),
         played_other_blocks: !!nn(f.other_blocks), other_blocks: nn(f.other_blocks),
+        extra_info: Object.fromEntries(Object.entries(f.extra).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v)),
       }
       const { error } = await supabase.from('members').update(patch).eq('id', member.id)
       if (error) throw error
@@ -268,7 +269,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
     onSuccess: (p) => {
       toast.success('Dados atualizados.')
       onChanged({ full_name: p.full_name, display_name: p.display_name, email: p.email, phone: p.phone, social_handle: p.social_handle, birth_date: p.birth_date })
-      qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['member-registration', orgId, member.id] }); qc.invalidateQueries({ queryKey: ['memberships'] })
+      qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['member-registration', orgId, member.id] }); qc.invalidateQueries({ queryKey: ['member-relation', orgId, member.id] }); qc.invalidateQueries({ queryKey: ['memberships'] })
       setOpen(false)
     },
     onError: (e) => toast.error(friendlyError(e)),
@@ -300,6 +301,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
         </>)}
         {fld('rd-aff', 'Relação com a Grande Tijuca', <textarea id="rd-aff" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.affective_relation} onChange={(e) => setF({ ...f, affective_relation: e.target.value })} />)}
         {fld('rd-other', 'Outros blocos', <Input id="rd-other" value={f.other_blocks} onChange={(e) => setF({ ...f, other_blocks: e.target.value })} />)}
+        {Object.keys(f.extra).map((k, i) => fld(`rd-extra-${i}`, k, <textarea id={`rd-extra-${i}`} rows={2} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={f.extra[k]} onChange={(e) => setF({ ...f, extra: { ...f.extra, [k]: e.target.value } })} />))}
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Salvar</span></Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
@@ -319,9 +321,9 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   const field = useQuery({
     queryKey: ['member-relation', orgId, memberId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('affective_relation, other_blocks').eq('id', memberId).single()
+      const { data, error } = await supabase.from('members').select('affective_relation, other_blocks, extra_info').eq('id', memberId).single()
       if (error) throw error
-      return data as { affective_relation: string | null; other_blocks: string | null }
+      return data as { affective_relation: string | null; other_blocks: string | null; extra_info: Record<string, string> | null }
     },
   })
   const answers = useQuery({
@@ -357,6 +359,13 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
     <section className="space-y-3 border-t border-border pt-3">
       {section('Relação com a Grande Tijuca', 'affective_relation', field.data?.affective_relation)}
       {section('Outros blocos', 'other_blocks', field.data?.other_blocks)}
+      {/* Perguntas do formulário ligadas ao cadastro como "campo novo": cada uma com o texto da pergunta como título. */}
+      {Object.entries(field.data?.extra_info ?? {}).map(([title, text]) => (
+        <div key={title} className="space-y-0.5">
+          <h3 className="font-display text-base font-bold">{title}</h3>
+          <p className="whitespace-pre-wrap text-sm">{text}</p>
+        </div>
+      ))}
       {hasOlder && (
         <button type="button" className="font-semibold text-primary hover:underline" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Ocultar' : 'Ler mais'}</button>
       )}
