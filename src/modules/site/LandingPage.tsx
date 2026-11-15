@@ -19,7 +19,7 @@ export interface PublicSite {
   org: { slug: string; name: string; short_name: string; logo_path: string | null; theme: OrgTheme }
   site: {
     headline?: string | null; description?: string | null; photo_url?: string | null; links?: SiteLink[]; videos?: SiteVideo[]
-    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_rays?: boolean; rays_animate?: boolean; rays_count?: number; rays_opacity?: number; rays_rotation?: number; rays_color?: string | null; rays_outline?: boolean; rays_outline_color?: string | null; show_enrollment?: boolean; show_login?: boolean; menu_construction?: string[]; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
+    enrollment_label?: string; shop_label?: string; login_label?: string; show_shop?: boolean; show_rays?: boolean; rays_animate?: boolean; rays_count?: number; rays_opacity?: number; rays_rotation?: number; rays_color?: string | null; rays_speed?: number; rays_outline?: boolean; rays_outline_color?: string | null; show_enrollment?: boolean; show_login?: boolean; menu_construction?: string[]; show_albums?: boolean; albums_label?: string; show_release?: boolean; release_label?: string; release_url?: string | null; shake_button?: 'enrollment' | 'shop' | 'login' | 'albums' | 'release' | null; menu_order?: string[]; hide_headline?: boolean; header_color?: string | null; page_color?: string | null
   }
   shop_product?: { slug: string; name: string; image_path: string | null } | null
   open_forms: { slug: string; title: string }[]
@@ -82,7 +82,7 @@ export function LandingPage() {
       <header className={`relative overflow-hidden px-4 pb-20 pt-10 text-center ${heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: heroColor, color: areaOverrides(org.theme, 'site').headerText ?? textOn(heroColor) } : undefined}>
         {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="relative z-10 mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
         {session ? <button type="button" onClick={() => void signOut()} className="relative z-10 mb-4 ml-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><LogOut className="h-5 w-5" aria-hidden /> Sair</button> : null}
-        <LogoWithRays rays={{ on: site.show_rays, count: site.rays_count, opacity: site.rays_opacity, rotation: site.rays_rotation, color: site.rays_color, animate: site.rays_animate, outline: site.rays_outline, outlineColor: site.rays_outline_color }} backing={heroColor ?? 'rgb(var(--primary))'} name={org.name} logoPath={photo} />
+        <LogoWithRays rays={{ on: site.show_rays, count: site.rays_count, opacity: site.rays_opacity, rotation: site.rays_rotation, color: site.rays_color, animate: site.rays_animate, speed: site.rays_speed, outline: site.rays_outline, outlineColor: site.rays_outline_color }} backing={heroColor ?? 'rgb(var(--primary))'} name={org.name} logoPath={photo} />
         <h1 className={site.hide_headline || site.show_rays ? 'sr-only' : 'relative mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
       </header>
 
