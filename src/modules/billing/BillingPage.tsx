@@ -289,13 +289,16 @@ export function MyBilling({ embedded = false }: { /** Dentro de outra página (F
   const memberId = membership?.member_id ?? ''
   const { data, isLoading } = useQuery({ queryKey: ['billing', 'mine', memberId], enabled: Boolean(memberId), queryFn: () => listMyCharges(memberId) })
   const today = todayIso(membership?.timezone)
+  // Só as mensalidades do ciclo escolhido no menu de ciclo (competência dentro das datas do ciclo).
+  const { cycle } = useSelectedCycle()
+  const shown = (data ?? []).filter((c) => !cycle || (c.competence.slice(0, 7) >= cycle.starts_on.slice(0, 7) && c.competence.slice(0, 7) <= cycle.ends_on.slice(0, 7)))
   return (
     <div className="space-y-4">
       {embedded ? <h2>Minhas mensalidades</h2> : <h1>Minhas mensalidades</h1>}
       {isLoading && <Skeleton className="h-24" />}
-      {data?.length === 0 && <EmptyState>Você não possui mensalidades. Se isso estiver errado, fale com a direção.</EmptyState>}
+      {data && shown.length === 0 && <EmptyState>{data.length === 0 ? 'Você não possui mensalidades. Se isso estiver errado, fale com a direção.' : `Sem mensalidades em ${cycle?.name ?? 'este ciclo'}.`}</EmptyState>}
       <div className="grid gap-2">
-        <ProgressiveList items={data ?? []} step={5} render={(c) => {
+        <ProgressiveList items={shown} step={5} resetKey={cycle?.id} render={(c) => {
           const overdue = c.status === 'pending' && c.due_on < today
           return (
             <Card key={c.id} className="space-y-1 p-3">

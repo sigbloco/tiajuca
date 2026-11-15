@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import { maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatDate, formatDateTime } from '@/core/format'
+import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { ExtraEmails } from '@/modules/members/ExtraEmails'
@@ -64,7 +64,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
       })
       if (error) throw error
     },
-    onSuccess: () => { toast.success('Seus dados foram atualizados.'); qc.invalidateQueries({ queryKey: ['me', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['memberships'] }) },
+    onSuccess: () => { toast.success('Seus dados foram atualizados.'); qc.invalidateQueries({ queryKey: ['me', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['me-head', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['memberships'] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -95,7 +95,6 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   return (
     <Card className="space-y-3 p-4">
       <h3>Meus dados</h3>
-      <p className="text-sm text-muted-foreground">Inscrição em <strong>{formatDate(d.joined_at)}</strong> (não pode ser alterada).</p>
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
