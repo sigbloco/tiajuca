@@ -34,6 +34,7 @@ export async function listCharges(p: {
 }) {
   let q = supabase.from('monthly_charges').select(SELECT, { count: 'exact' })
     .eq('organization_id', p.orgId).eq('competence', p.competence)
+    .is('members.archived_at', null)
     .order('full_name', { referencedTable: 'members', ascending: true })
     .range(p.page * p.pageSize, p.page * p.pageSize + p.pageSize - 1)
   if (p.status) q = q.eq('status', p.status)
@@ -48,6 +49,7 @@ export async function listCharges(p: {
 export async function listAllCharges(orgId: string, competence: string) {
   const { data, error } = await supabase.from('monthly_charges').select(SELECT)
     .eq('organization_id', orgId).eq('competence', competence)
+    .is('members.archived_at', null)
     .order('full_name', { referencedTable: 'members', ascending: true }).limit(2000)
   if (error) throw error
   return (data ?? []) as unknown as Charge[]
@@ -87,6 +89,7 @@ export async function overdueWhatsapp(orgId: string, competence: string, today: 
   const { data, error } = await supabase.from('monthly_charges')
     .select('final_amount, due_on, members!inner(full_name, display_name)')
     .eq('organization_id', orgId).eq('competence', competence).eq('status', 'pending').lt('due_on', today)
+    .is('members.archived_at', null)
     .order('full_name', { referencedTable: 'members' }).limit(500)
   if (error) throw error
   const rows = (data ?? []) as unknown as { final_amount: number; due_on: string; members: { full_name: string; display_name: string | null } }[]
