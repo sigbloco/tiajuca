@@ -182,7 +182,7 @@ export function SiteSettings() {
         <h3>Raios</h3>
         <label className="flex items-center gap-2 font-semibold"><input type="checkbox" className="h-5 w-5" checked={!!f.show_rays} onChange={(e) => setF({ ...f, show_rays: e.target.checked })} /> Raios atrás da logo</label>
         {/* Prévia ao vivo: mostra o cabeçalho do site com o que está nos controles, antes de salvar. */}
-        <div className="relative overflow-hidden rounded-xl py-8 text-center" style={{ backgroundColor: f.show_rays && f.rays_full ? 'rgb(var(--background))' : (siteColors.header ?? 'rgb(var(--primary))'), color: siteColors.headerText ?? undefined }} aria-label="Prévia do cabeçalho">
+        <div className="relative overflow-hidden rounded-xl py-8 text-center" style={{ backgroundColor: f.show_rays && f.rays_full ? (siteColors.background ?? 'rgb(var(--background))') : (siteColors.header ?? 'rgb(var(--primary))'), color: siteColors.headerText ?? undefined }} aria-label="Prévia do cabeçalho">
           <LogoWithRays size="h-24 w-24" backing={siteColors.header ?? 'rgb(var(--primary))'} name={membership?.name} logoPath={f.photo_url || membership?.logo_path}
             rays={{ on: !!f.show_rays, count: f.rays_count ?? 16, opacity: f.rays_opacity ?? 100, rotation: f.rays_rotation ?? 0, color: f.rays_color || (f.rays_full ? siteColors.header : siteColors.secondary) || null, animate: !!f.rays_animate, speed: f.rays_speed ?? 4, outline: f.rays_outline ?? true, outlineColor: f.rays_outline_color || siteColors.secondary || null }} />
           {!f.hide_headline && !f.show_rays && <p className="relative mt-3 font-display text-xl font-extrabold">{f.headline || membership?.name}</p>}
