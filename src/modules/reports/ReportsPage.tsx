@@ -20,7 +20,7 @@ interface Streak { member_id: string; display_name: string; streak: number }
 
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
 
-/** Relatórios de presença no escopo de quem consulta (Direção = todos; Professor/Monitor = seu grupo). */
+/** Relatórios de presença no escopo de quem consulta (direção = todos; Professor/Monitor = seu grupo). */
 export function ReportsPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()

@@ -116,15 +116,18 @@ export function AppShell() {
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))
+  // Organização só para a equipe (Titular, direção, professores e monitores): integrante comum não vê.
+  const staffView = hasPermission(membership.permissions, 'members.read', 'group')
   const hubEntry = (hub: HubKey): MenuEntry[] => {
+    if (hub === 'organizacao' && !staffView) return []
     const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
     const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
     return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to)] }]
   }
   const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
-    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('oficina'), ...direct('membros'), ...direct('formularios'), ...direct('repertorio'), ...direct('naipes').map((e) => ({ ...e, also: ['vagas'] })),
-    ...withSep([...hubEntry('organizacao'), ...hubEntry('financeiro')]),
+    ...direct(''), ...direct('perfil'), ...direct('eventos'), ...hubEntry('financeiro'), ...hubEntry('oficina'), ...direct('membros'), ...direct('formularios'), ...direct('repertorio'), ...direct('naipes').map((e) => ({ ...e, also: ['vagas'] })),
+    ...withSep([...hubEntry('organizacao')]),
     ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
   ]
   const segs = pathname.slice(base.length).split('/').filter(Boolean)

@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
 import { Card } from '@/components/ui/primitives'
+import { MyBilling } from '@/modules/billing/BillingPage'
 import { FinancePage } from '@/modules/finance/FinancePage'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
@@ -57,10 +58,13 @@ export function HubHome({ hub }: { hub: HubKey }) {
 
 /** Financeiro: as subpáginas (mensalidades, bolsas) em cartões e, embaixo, receitas, despesas e distribuição. */
 export function FinanceHome() {
+  const { membership } = useOrganization()
+  const manager = !!membership && hasPermission(membership.permissions, 'finance.read')
   return (
     <div className="space-y-6">
-      <HubCards hub="financeiro" />
-      <FinancePage />
+      <MyBilling embedded />
+      {manager && <HubCards hub="financeiro" />}
+      {manager && <FinancePage />}
     </div>
   )
 }

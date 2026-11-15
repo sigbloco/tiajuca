@@ -48,7 +48,7 @@ function CategoryRow({ item, current, canEdit, from }: { item: CatalogItem; curr
 }
 
 /**
- * Contribuições: as categorias refletem as funções. "Isento" vem primeiro e não se edita (Direção, Professor, Monitor e as funções marcadas como isentas).
+ * Contribuições: as categorias refletem as funções. "Isento" vem primeiro e não se edita (direção, Professor, Monitor e as funções marcadas como isentas).
  * Cada função não isenta tem uma categoria com o valor mensal; o nome vem da função.
  */
 export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycle?: { id: string; name: string; starts_on: string; ends_on: string } }) {

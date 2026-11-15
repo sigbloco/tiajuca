@@ -199,7 +199,7 @@ function DirectionDashboard({ orgId }: { orgId: string }) {
   const maxSection = Math.max(1, ...data.by_section.map((s) => s.active))
   return (
     <div className="space-y-3">
-      <h2>Visão da Direção {data.cycle && <span className="text-base font-normal text-muted-foreground">· {data.cycle.name}</span>}</h2>
+      <h2>Visão da direção {data.cycle && <span className="text-base font-normal text-muted-foreground">· {data.cycle.name}</span>}</h2>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Integrantes" value={data.members_total} />
         <Stat label="Ativos no ciclo" value={data.members_active} tone="text-success" />

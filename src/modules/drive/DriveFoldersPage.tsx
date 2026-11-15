@@ -120,7 +120,7 @@ function FolderSheet({ folder, rules, onClose }: { folder: Folder | null; rules:
         <div className="space-y-2">
           <p className="font-semibold">Quem vê esta pasta no app</p>
           <div className="rounded-md bg-muted p-2 text-sm">
-            <p className="font-semibold">Sempre têm acesso: Direção, Professores e Monitores</p>
+            <p className="font-semibold">Sempre têm acesso: direção, professores e monitores</p>
             <p className="text-xs text-muted-foreground">Em todas as pastas, de qualquer naipe. Não precisa marcar.</p>
           </div>
           <p className="text-xs text-muted-foreground">Marque os naipes que também veem esta pasta. Sem nenhum naipe, só a equipe acima vê.</p>

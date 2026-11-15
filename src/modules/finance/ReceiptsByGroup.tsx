@@ -15,7 +15,7 @@ const STAFF_ROLES = ['titular', 'direcao', 'professor', 'monitor']
 
 /**
  * Receitas de mensalidades agrupadas: naipe → pessoas, cada uma com a etiqueta da categoria (aluno, sênior, músico, pernalta).
- * Quem não contribui por fazer parte da organização (Direção, professores, monitores, regentes e a categoria de equipe) não aparece.
+ * Quem não contribui por fazer parte da organização (direção, professores, monitores, regentes e a categoria de equipe) não aparece.
  */
 export function ReceiptsByGroup({ competence }: { competence: string }) {
   const orgId = useOrgId()
@@ -92,7 +92,7 @@ export function ReceiptsByGroup({ competence }: { competence: string }) {
   return (
     <div className="space-y-2">
       <h2>Mensalidades por naipe <span className="text-base font-normal text-muted-foreground">· {tree.total} {tree.total === 1 ? 'pessoa' : 'pessoas'}</span></h2>
-      <p className="text-muted-foreground">Quem não contribui por fazer parte da organização (Direção, professores, monitores e regentes) não aparece aqui.</p>
+      <p className="text-muted-foreground">Quem não contribui por fazer parte da organização (direção, professores, monitores e regentes) não aparece aqui.</p>
       {loading && <Skeleton className="h-24" />}
       {!loading && tree.total === 0 && <EmptyState>Nenhuma cobrança de contribuinte neste mês. Em <PageLink to="cobrancas">Financeiro → Mensalidades</PageLink>, use “Gerar cobranças”.</EmptyState>}
       {secList.map((sec, idx) => {

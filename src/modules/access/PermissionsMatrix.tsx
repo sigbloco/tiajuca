@@ -125,7 +125,7 @@ export function PermissionsMatrix() {
     <div className="space-y-3">
       <ReadMore>
         Escolha o papel e defina, página por página, o que ele pode <strong>ver</strong> (a página aparece no menu) e o que pode <strong>editar</strong>, com o alcance: só o próprio, o meu grupo ou tudo.
-        A <strong>Direção</strong> sempre tem tudo. O que tem cadeado é exclusivo da direção e não muda. Editar liga o ver automaticamente.
+        A <strong>direção</strong> sempre tem tudo. O que tem cadeado é exclusivo da direção e não muda. Editar liga o ver automaticamente.
       </ReadMore>
       {isLoading && <Skeleton className="h-24" />}
       {role && (
