@@ -1,4 +1,4 @@
-import { LayoutTemplate, ListChecks } from 'lucide-react'
+import { LayoutTemplate, ListChecks, Send } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { LabelFitRow } from '@/components/shared/LabelFitRow'
 import { Button } from '@/components/ui/primitives'
@@ -12,6 +12,7 @@ export function FormSettingsTabs() {
   const tabs = [
     { to: base, label: 'Seções modelo', icon: LayoutTemplate },
     { to: `${base}/listas`, label: 'Listas do cadastro', icon: ListChecks },
+    { to: `${base}/envio`, label: 'Envio', icon: Send },
   ]
   return (
     <LabelFitRow role="tablist" aria-label="Páginas de configurações dos formulários">
