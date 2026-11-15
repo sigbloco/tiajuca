@@ -1,8 +1,8 @@
 import { useRef, type ReactNode } from 'react'
 import { cn } from '@/components/ui/primitives'
 
-export interface HeaderFrame { image_url: string | null; x: number; y: number; zoom: number; height: number; /** Tamanho da logo em px (padrão 80). */ logo?: number }
-export const DEFAULT_FRAME: HeaderFrame = { image_url: null, x: 50, y: 50, zoom: 1, height: 104, logo: 80 }
+export interface HeaderFrame { image_url: string | null; x: number; y: number; zoom: number; height: number; /** Tamanho da logo em px (padrão 80). */ logo?: number; /** Cor chapada (#RRGGBB) no lugar da foto. */ color?: string | null }
+export const DEFAULT_FRAME: HeaderFrame = { image_url: null, x: 50, y: 50, zoom: 1, height: 104, logo: 80, color: null }
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n))
 
 /**
@@ -15,7 +15,7 @@ export function HeaderBand({ frame, logo, onChange, className }: { frame: Header
   return (
     <div
       className={cn('relative flex items-center justify-center overflow-hidden rounded-2xl', editable && 'cursor-grab touch-none active:cursor-grabbing', className)}
-      style={{ height: frame.height }}
+      style={{ height: frame.height, ...(frame.color && !frame.image_url ? { backgroundColor: frame.color } : {}) }}
       onPointerDown={editable ? (e) => {
         const r = e.currentTarget.getBoundingClientRect()
         drag.current = { cx: e.clientX, cy: e.clientY, x: frame.x, y: frame.y, w: r.width, h: r.height }
