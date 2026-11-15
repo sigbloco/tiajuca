@@ -38,7 +38,7 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
     mutationFn: async () => {
       const patch = part === 'main'
         ? { title: f.title.trim(), kind: f.kind, ...(f.kind !== form.kind ? kindFlags(f.kind) : {}), slug: f.slug, cycle_id: f.cycle_id || null, opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), max_responses: null }
-        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, requires_consent: f.consent, prevent_duplicates: f.dedupe }
+        : { description: f.description.trim() || null, header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, prevent_duplicates: f.dedupe }
       const { error } = await supabase.from('forms').update(patch
       ).eq('id', form.id)
       if (error) throw error
@@ -142,7 +142,6 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
 
         <div className="space-y-1.5"><Label htmlFor="fs-desc">Descrição</Label>
           <RichTextarea id="fs-desc" rows={3} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
         <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar configurações" /></StickySave>
         </form>

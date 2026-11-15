@@ -50,7 +50,7 @@ function placeInSection(fields: FormFieldRow[], item: FormFieldRow, sectionId: s
   return [...rest.slice(0, at), item, ...rest.slice(at)]
 }
 
-function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defaultSection }: { asSection?: boolean; defaultSection?: string; formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
+function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defaultSection, templateMode }: { /** Editando uma seção modelo: o nome da seção é o nome do modelo. */ templateMode?: boolean; asSection?: boolean; defaultSection?: string; formId: string; field: FormFieldRow | null; fields: FormFieldRow[]; nextOrder: number; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
@@ -190,6 +190,19 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       if (field) {
         const { error } = await supabase.from('form_fields').update(row).eq('id', field.id)
         if (error) throw error
+        // Modelo de seção: mudar o nome da seção muda o nome do modelo (título da página e lista de modelos).
+        // (só quando o nome do modelo era igual ao da seção: modelos de nome próprio, como "Participação sopro", mantêm o nome.)
+        if (templateMode && asSection && row.label !== field.label) {
+          const t = await supabase.from('form_section_templates').select('id, name').eq('form_id', formId).maybeSingle()
+          if (t.error) throw t.error
+          if (t.data && t.data.name === field.label) {
+            const a = await supabase.from('form_section_templates').update({ name: row.label }).eq('id', t.data.id)
+            if (a.error) throw a.error
+            const b = await supabase.from('forms').update({ title: row.label }).eq('id', formId)
+            if (b.error) throw b.error
+            qc.invalidateQueries({ queryKey: ['form-templates'] })
+          }
+        }
       } else {
         const { data, error } = await supabase.from('form_fields').insert({ ...row, organization_id: orgId, form_id: formId, field_key: uniqueKey(), sort_order: nextOrder }).select('id').single()
         if (error) throw error
@@ -545,7 +558,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
         )}
       </Sheet>
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        {sheet && <FieldSheet key={sheet.field?.id ?? (sheet.section ? 'new-section' : `new-${sheet.defaultSection ?? ''}`)} asSection={sheet.section} defaultSection={sheet.defaultSection} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
+        {sheet && <FieldSheet key={sheet.field?.id ?? (sheet.section ? 'new-section' : `new-${sheet.defaultSection ?? ''}`)} templateMode={templateMode} asSection={sheet.section} defaultSection={sheet.defaultSection} formId={formId} field={sheet.field} fields={fields} nextOrder={fields.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )
