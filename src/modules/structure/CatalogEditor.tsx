@@ -32,6 +32,8 @@ interface Props {
   mirrorFees?: boolean
   /** Em vez de "Desativar": ícone de lixeira, e os itens apagados ficam numa lixeira própria (restaurar). */
   trashMode?: boolean
+  /** Com trashMode: a lixeira fica em outro lugar da página (não mostra a própria). */
+  externalTrash?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -40,7 +42,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -101,10 +103,10 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
 
   return (
     <div className="space-y-3">
-      {(title || trashMode) && (
+      {(title || (trashMode && !externalTrash)) && (
         <div className="flex items-center justify-between gap-2">
           {title ? <h2>{title}</h2> : <span />}
-          {trashMode && canEdit && (
+          {trashMode && !externalTrash && canEdit && (
             <TrashDrawer iconOnly entries={(items ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))}
               onRestore={(id) => { const it = items?.find((x) => x.id === id); if (it) save.mutate({ id, name: it.name, is_active: true }) }} />
           )}

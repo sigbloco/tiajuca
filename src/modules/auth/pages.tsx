@@ -64,13 +64,13 @@ export function NoOrganizationPage() {
   const { signOut, session } = useAuth()
   // Quem se inscreveu por um formulário com login vê só o andamento da inscrição (nenhum acesso antes de a Direção avaliar).
   const status = useQuery({
-    queryKey: ['my-submission-status', session?.user.id],
+    queryKey: ['my-submission-info', session?.user.id],
     enabled: Boolean(session),
-    queryFn: async () => { const { data, error } = await supabase.rpc('my_submission_status'); if (error) throw error; return data as string },
+    queryFn: async () => { const { data, error } = await supabase.rpc('my_submission_info'); if (error) throw error; return data as { status: string; message: string | null } },
   })
-  if (status.data === 'pending') {
+  if (status.data?.status === 'pending') {
     return (
-      <AuthLayout title="Inscrição em avaliação" subtitle="Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.">
+      <AuthLayout title="Inscrição em avaliação" subtitle={status.data.message ?? 'Recebemos a sua inscrição e a Direção está avaliando. Você receberá a confirmação por e-mail.'}>
         <Button variant="ghost" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
       </AuthLayout>
     )

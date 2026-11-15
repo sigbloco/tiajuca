@@ -29,7 +29,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
   const cycles = useCycles()
   const [f, setF] = useState({
     title: form.title, description: form.description ?? '', slug: form.slug, cycle_id: form.cycle_id ?? '',
-    opens: toDate(form.opens_at), closes: toDate(form.closes_at), confirmation: form.confirmation_message,
+    opens: toDate(form.opens_at), closes: toDate(form.closes_at),
     privacy: form.privacy_text ?? '', headerImage: form.header_image_url ?? '', hx: Number(form.header_pos_x), hy: Number(form.header_pos_y), hzoom: Number(form.header_zoom), hheight: form.header_height, consent: form.requires_consent, dedupe: form.prevent_duplicates,
   })
   const refresh = () => { qc.invalidateQueries({ queryKey: ['form', orgId, form.id] }); qc.invalidateQueries({ queryKey: ['forms', orgId] }) }
@@ -37,7 +37,7 @@ export function SettingsTab({ form }: { form: FormRow }) {
     mutationFn: async () => {
       const { error } = await supabase.from('forms').update({
         title: f.title.trim(), description: f.description.trim() || null, slug: f.slug, cycle_id: f.cycle_id || null,
-        opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true), confirmation_message: f.confirmation.trim() || 'Inscrição recebida!',
+        opens_at: toTs(f.opens, false), closes_at: toTs(f.closes, true),
         header_image_url: f.headerImage || null, header_pos_x: f.hx, header_pos_y: f.hy, header_zoom: f.hzoom, header_height: f.hheight, max_responses: null, privacy_text: f.privacy.trim() || null, requires_consent: f.consent, prevent_duplicates: f.dedupe,
       }).eq('id', form.id)
       if (error) throw error
@@ -135,7 +135,6 @@ export function SettingsTab({ form }: { form: FormRow }) {
           <RichTextarea id="fs-desc" rows={3} value={f.description} onChange={(v) => setF({ ...f, description: v })} /></div>
         <div className="space-y-1.5"><Label htmlFor="fs-priv">Texto de privacidade (LGPD)</Label>
           <RichTextarea id="fs-priv" rows={5} value={f.privacy} onChange={(v) => setF({ ...f, privacy: v })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="fs-conf">Mensagem após o envio</Label><Input id="fs-conf" value={f.confirmation} onChange={(e) => setF({ ...f, confirmation: e.target.value })} /></div>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} /> Exigir consentimento para enviar</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.dedupe} onChange={(e) => setF({ ...f, dedupe: e.target.checked })} /> Impedir envio duplicado (mesmo e-mail)</label>
         <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar configurações" /></StickySave>

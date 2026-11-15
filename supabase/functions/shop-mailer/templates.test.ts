@@ -116,6 +116,12 @@ describe('produção começou (mínimo atingido)', () => {
 describe('inscrição aprovada', () => {
   const m = buildFormEmail({ outbox_id: 'f1', template: 'submission_approved', to_email: 'a@b.com', name: 'Maria', org: { name: 'Cordão da Tia Juca' },
     settings: { pix_key: null, pix_beneficiary: null, public_site_url: null, contact_whatsapp: '5521990698483', contact_email: 'contato@ex.com', directors: [], mail_from_name: null, mail_from_email: null } })
+  it('rejeição usa o texto escrito pela Direção', () => {
+    const r = buildFormEmail({ outbox_id: 'f2', template: 'submission_rejected', to_email: 'a@b.com', name: 'Zé', message: 'Linha um.\nLinha dois.', org: { name: 'Cordão' },
+      settings: null })
+    expect(r.subject).toBe('Sobre a sua inscrição — Cordão')
+    for (const part of ['Linha um.', 'Linha dois.']) expect(r.text).toContain(part)
+  })
   it('assunto, saudação, aprovação e contatos', () => {
     expect(m.subject).toBe('Inscrição aprovada — Cordão da Tia Juca')
     for (const part of ['Olá, Maria!', 'foi aprovada', 'wa.me/5521990698483', 'contato@ex.com']) { expect(m.html).toContain(part); expect(m.text).toContain(part) }
