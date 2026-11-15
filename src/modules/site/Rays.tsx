@@ -2,9 +2,6 @@ import { OrgLogo } from '@/components/shared/OrgLogo'
 
 export interface RaysConfig { on?: boolean; count?: number; opacity?: number; rotation?: number; color?: string | null; /** Gira bem devagar. */ animate?: boolean }
 
-/** Título sobre os raios: contorno preto e sombra, para ler em cima do amarelo e do vermelho. */
-export const RAYS_TEXT_STYLE = { WebkitTextStroke: '4px #000', paintOrder: 'stroke fill', textShadow: '0 2px 6px rgba(0,0,0,0.6)' } as const
-
 /** Raios (como na camiseta): um gradiente cônico centrado no meio do elemento, bem maior que a tela; quem contém corta o excesso (overflow hidden), então ocupa 100% em qualquer largura. */
 export function RaysBackdrop({ count = 16, opacity = 100, rotation = 0, color, animate }: Omit<RaysConfig, 'on'>) {
   const period = 360 / Math.max(2, count)
@@ -23,8 +20,8 @@ export function LogoWithRays({ rays, backing, name, logoPath, size = 'h-36 w-36'
   return (
     <div className={`relative mx-auto ${size}`}>
       {rays?.on && <RaysBackdrop count={rays.count} opacity={rays.opacity} rotation={rays.rotation} color={rays.color} animate={rays.animate} />}
-      {/* Fundo sólido + contorno amarelo + um anel da cor do cabeçalho por fora: os raios nunca encostam no contorno nem aparecem pela logo. */}
-      <span aria-hidden className="absolute inset-0 rounded-full" style={{ background: backing, boxShadow: `0 0 0 4px rgb(var(--secondary)), 0 0 0 ${rays?.on ? 10 : 4}px ${rays?.on ? backing : 'transparent'}` }} />
+      {/* Fundo sólido e um contorno só: os raios ficam atrás da logo e do contorno, sem aparecer por áreas transparentes da logo. */}
+      <span aria-hidden className="absolute inset-0 rounded-full" style={{ background: backing, boxShadow: '0 0 0 4px rgb(var(--secondary))' }} />
       <OrgLogo name={name} logoPath={logoPath} className={`relative mx-auto ${size} object-cover`} />
     </div>
   )
