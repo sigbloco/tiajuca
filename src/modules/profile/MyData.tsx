@@ -16,6 +16,7 @@ import { Badge, Button, Card, Input, Label, Select, Skeleton, cn } from '@/compo
 import { friendlyError } from '@/core/errors'
 import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
+import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { ExtraEmails } from '@/modules/members/ExtraEmails'
 
@@ -78,6 +79,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   const [foundedOn, setFoundedOn] = useState('')
   useEffect(() => { if (founded.data !== undefined) setFoundedOn(founded.data) }, [founded.data])
   const [noSocial, setNoSocial] = useState(false)
+  const manageMembers = usePermission('members.manage')
+  const { viewAs } = useOrganization()
   const linked = useQuery({
     queryKey: ['me-linked', orgId, memberId], enabled: part !== 'bloco',
     queryFn: async () => { const { data, error } = await supabase.from('members').select('user_id').eq('id', memberId).single(); if (error) throw error; return Boolean((data as { user_id: string | null }).user_id) },
@@ -114,7 +117,6 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     await save.mutateAsync()
   })
   if (me.isLoading || !me.data) return <Skeleton className="h-40" />
-  const d = me.data
   if (part === 'bloco') {
     return (
       <Card className="space-y-3 p-4">
@@ -152,26 +154,28 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   }
   // E-mail do Google (gmail) é o que liga o login ao cadastro: trocar por conta própria quebraria o acesso.
   // Conta Google pode ter qualquer e-mail (não só gmail): vale estar vinculada a um login.
-  const googleEmail = Boolean(linked.data) || /@(gmail|googlemail)[.]com$/i.test(d.email ?? '')
+  // O principal é o e-mail da conta Google que entra no sistema: quem não gerencia não troca (pede por "Adicionais"). Vale para qualquer e-mail, não só gmail.
+  const lockEmail = !manageMembers
+  const showEmailNote = !manageMembers || !!viewAs || Boolean(linked.data)
   return (
     <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-4">
       <Card className="space-y-3 p-4">
         <h3>E-mail</h3>
         <div className="space-y-1.5">
           <div className="flex items-baseline gap-1.5"><Label htmlFor="my-email">Principal</Label>
-            {googleEmail && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Conta Google: só a direção altera.</span>}</div>
-          <Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
+            {showEmailNote && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Conta Google: só a direção altera.</span>}</div>
+          <Input id="my-email" type="email" value={f.email} disabled={lockEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
         </div>
         <ExtraEmails memberId={memberId} self />
       </Card>
       <Card className="space-y-3 p-4">
         <h3>Meus dados</h3>
-        <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="my-display">Como prefere ser chamado(a)</Label><Input id="my-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} /></div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="order-1 space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
+          <div className="order-2 space-y-1.5"><Label htmlFor="my-display">Como prefere ser chamado(a)</Label><Input id="my-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} /></div>
+          <div className="order-3 space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
-          <div className="space-y-1.5">
+          <div className="order-4 space-y-1.5 sm:order-5 sm:col-span-2">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Label htmlFor="my-user-0">Redes sociais</Label>
               <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar rede social" title="Adicionar rede social" disabled={noSocial}
@@ -188,8 +192,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
               </div>
             ))}
           </div>
+          <div className="order-5 space-y-1.5 sm:order-4"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
         </div>
-        <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
       </Card>
       {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
     </form>

@@ -66,9 +66,9 @@ export function MyParticipation({ memberId }: { memberId: string }) {
     </div>
   )
   const head = (title: string, kind?: 'artistic' | 'collab') => (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center gap-1.5">
       <h4 className="font-semibold">{title}</h4>
-      {kind && adding !== kind && <Button size="sm" variant="outline" onClick={() => { setAdding(kind); setPick('') }}><Plus className="h-4 w-4" /> Pedir mudança</Button>}
+      {kind && adding !== kind && <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={`Pedir mudança em ${title}`} title="Pedir mudança" onClick={() => { setAdding(kind); setPick('') }}><Plus className="h-3.5 w-3.5" /></button>}
     </div>
   )
   return (
@@ -79,11 +79,11 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {head('Artística', 'artistic')}
         {d.artistic.length === 0 && <p className="text-muted-foreground">Nenhuma atividade artística.</p>}
         {d.artistic.map((a) => (
-          <div key={a.id} className="flex items-center justify-between gap-2">
+          <div key={a.id} className="flex items-center gap-1.5">
             <p className="min-w-0 break-words">{a.name}{a.section ? <span className="text-muted-foreground"> · {a.section}</span> : null}{a.level ? <span className="text-muted-foreground"> · {a.level}</span> : null}</p>
             {pending('artistic', 'remove', a.name)
               ? <Badge className={REQ_CLASS.pending}>Saída pedida</Badge>
-              : <Button size="sm" variant="ghost" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-4 w-4" /></Button>}
+              : <button type="button" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-card text-muted-foreground hover:text-destructive" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-3.5 w-3.5" /></button>}
           </div>
         ))}
         {addForm('artistic')}
