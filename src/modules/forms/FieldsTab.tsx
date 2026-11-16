@@ -550,7 +550,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                   </p>
                 </button>
                 </div>
-                <div className="flex shrink-0 gap-1.5">
+                <div className="flex w-full shrink-0 gap-1.5 [&>*]:flex-1 sm:w-auto sm:[&>*]:flex-none">
                   {sec && !templateMode && !isLoginSection(x) && (
                     <Button size="sm" variant="outline" disabled={saveAsTemplate.isPending} aria-label={`Salvar ${x.label} como modelo`} title="Salvar esta seção como modelo (com o mesmo nome, atualiza o modelo)"
                       onClick={async () => { const n = await promptBox({ title: 'Salvar como modelo', message: 'Nome do modelo:', initial: x.label, confirmLabel: 'Salvar' }); if (n && n.trim()) saveAsTemplate.mutate({ id: x.id, name: n.trim() }) }}><BookmarkPlus className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Modelo</span></Button>
