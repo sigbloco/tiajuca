@@ -43,6 +43,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const sections = useCatalog('sections')
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
+  const levels = useCatalog('skill_levels')
   // null = fechado · 'new' = novo vínculo · id = editando aquele vínculo
   const [editing, setEditing] = useState<string | null>(null)
   const [f, setF] = useState<Draft>(EMPTY)
@@ -96,7 +97,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
 
   const save = useMutation({
     mutationFn: async () => {
-      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id) }
+      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id), skill_level_id: nn(f.skill_level_id) }
       if (editing === 'new') {
         const { data: ins, error } = await supabase.from(table).insert({
           organization_id: orgId, member_id: memberId, ...(byCycle ? { cycle_id: cycle!.id } : {}), ...row, is_primary: (data?.length ?? 0) === 0,
@@ -178,6 +179,15 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
                 onPick={(o) => setF({ ...f, instrument_id: o.id })} />
             )}
           </div>
+          {f.instrument_id && !isReg && (
+            <div className="space-y-1.5">
+              <Label>Nível</Label>
+              <Select value={f.skill_level_id} aria-label="Nível" onChange={(e) => setF({ ...f, skill_level_id: e.target.value })}>
+                <option value="">Sem nível</option>
+                {active(levels.data).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </Select>
+            </div>
+          )}
         </>
       )}
       {!collab && (
@@ -201,7 +211,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
             <p className="break-words font-semibold">
               {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :(l.skill_levels?.name ? `${l.instruments?.name} · ${l.skill_levels.name}` : l.instruments?.name)}
             </p>
-            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name  ? null : null].filter(Boolean).join(' · ')}</p>}
+            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name].filter(Boolean).join(' · ')}</p>}
           </div>
           {canManage && (
             <div className="flex shrink-0 gap-1">

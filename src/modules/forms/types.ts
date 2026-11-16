@@ -59,5 +59,5 @@ export const MAPPING_LABEL: Record<string, string> = {
   'member.affective_relation': 'Relação com a Grande Tijuca', 'member.played_other_blocks': 'Já tocou em outros blocos? (sim/não) — antigo',
   'member.other_blocks': 'Outros blocos (texto livre)', 'member.custom': 'Novo campo no cadastro (Outras informações)', 'sensitive.gender': 'Gênero (sensível)', 'sensitive.is_trans': 'Se considera trans (sensível)',
   'sensitive.race_color': 'Cor/raça (sensível)', 'sensitive.is_pcd': 'É PCD (sensível)', 'sensitive.pcd_description': 'Qual deficiência (sensível)',
-  'link.instrument': 'Instrumento (vínculo artístico)', 'link.function': 'Categoria (vínculo artístico)', 'link.skill_level': 'Nível (vínculo artístico)',
+  'link.instrument': 'Instrumento (vínculo artístico)', 'link.function': 'Categoria principal (contribuição)', 'link.skill_level': 'Nível (vínculo artístico)',
 }
