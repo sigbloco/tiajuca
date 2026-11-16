@@ -91,17 +91,22 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
     </Select>
   )
   return (
-    <div className="space-y-1.5 rounded-lg bg-muted/50 p-2">
+    <div className="space-y-2 rounded-lg bg-muted/50 p-2">
       <Select aria-label="Tipo" disabled={!canEdit} value={r.kind} onChange={(e) => setR({ ...r, kind: e.target.value as Kind, scope: 'all', section_id: null, instrument_id: null })}>
         <option value="percent">Porcentagem</option><option value="fixed">Valor fixo</option><option value="hourly">Por hora de aula</option>
       </Select>
-      {r.kind === 'fixed' && <MoneyInput value={r.fixed_amount} onChange={(v) => setR({ ...r, fixed_amount: v })} />}
+      {r.kind === 'fixed' && (
+        <div className="flex items-center gap-2"><div className="w-40 shrink-0"><MoneyInput value={r.fixed_amount} onChange={(v) => setR({ ...r, fixed_amount: v })} /></div><span className="font-semibold">por mês</span></div>
+      )}
       {r.kind === 'percent' && (
         <>
-          <div className="flex items-center gap-1"><Input aria-label="Porcentagem" inputMode="decimal" disabled={!canEdit} placeholder="0" value={pct} onChange={(e) => setPct(e.target.value)} /><span className="font-semibold">%</span></div>
-          <Select aria-label="Sobre" disabled={!canEdit} value={r.scope} onChange={(e) => setR({ ...r, scope: e.target.value as Scope, section_id: null, instrument_id: null })}>
-            {(Object.keys(SCOPE_LABEL) as Scope[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}
-          </Select>
+          <div className="flex items-center gap-1.5">
+            <Input className="w-14 shrink-0 px-1 text-center" aria-label="Porcentagem" inputMode="decimal" maxLength={5} disabled={!canEdit} placeholder="00" value={pct} onChange={(e) => setPct(e.target.value)} />
+            <span className="font-semibold">%</span>
+            <Select className="min-w-0 flex-1" aria-label="Sobre" disabled={!canEdit} value={r.scope} onChange={(e) => setR({ ...r, scope: e.target.value as Scope, section_id: null, instrument_id: null })}>
+              {(Object.keys(SCOPE_LABEL) as Scope[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}
+            </Select>
+          </div>
           {r.scope === 'section' && naipeSelect}
           {r.scope === 'instrument' && (
             <Select aria-label="Instrumento" disabled={!canEdit} value={r.instrument_id ?? ''} onChange={(e) => setR({ ...r, instrument_id: e.target.value || null })}>
@@ -112,7 +117,7 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
       )}
       {r.kind === 'hourly' && (
         <>
-          <div className="flex items-center gap-1"><MoneyInput value={r.hourly_rate} onChange={(v) => setR({ ...r, hourly_rate: v })} /><span className="shrink-0 font-semibold">por hora</span></div>
+          <div className="flex items-center gap-2"><div className="w-40 shrink-0"><MoneyInput value={r.hourly_rate} onChange={(v) => setR({ ...r, hourly_rate: v })} /></div><span className="font-semibold">por hora de aula</span></div>
           <Select aria-label="Aulas" disabled={!canEdit} value={r.scope === 'section' ? 'section' : 'all'} onChange={(e) => setR({ ...r, scope: e.target.value as Scope, section_id: null })}>
             <option value="all">Todas as oficinas</option><option value="section">Oficinas de um naipe</option>
           </Select>
@@ -121,9 +126,9 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
         </>
       )}
       {canEdit && (
-        <div className="flex gap-1">
-          <SaveButton disabled={!valid || save.isPending} onClick={() => save.mutate()} hint="Salvar regra" />
-          <Button size="icon" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onDone}><X className="h-4 w-4" /></Button>
+        <div className="grid grid-cols-2 gap-2">
+          <SaveButton className="w-full" disabled={!valid || save.isPending} onClick={() => save.mutate()} hint="Salvar regra" />
+          <Button className="w-full" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onDone}><X className="h-4 w-4" /></Button>
         </div>
       )}
     </div>
