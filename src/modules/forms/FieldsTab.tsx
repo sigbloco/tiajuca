@@ -191,11 +191,11 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
         const { error } = await supabase.from('form_fields').update(row).eq('id', field.id)
         if (error) throw error
         // Modelo de seção: mudar o nome da seção muda o nome do modelo (título da página e lista de modelos).
-        // (só quando o nome do modelo era igual ao da seção: modelos de nome próprio, como "Participação sopro", mantêm o nome.)
+        // O nome do modelo é sempre o nome da seção dele.
         if (templateMode && asSection && row.label !== field.label) {
           const t = await supabase.from('form_section_templates').select('id, name').eq('form_id', formId).maybeSingle()
           if (t.error) throw t.error
-          if (t.data && t.data.name === field.label) {
+          if (t.data) {
             const a = await supabase.from('form_section_templates').update({ name: row.label }).eq('id', t.data.id)
             if (a.error) throw a.error
             const b = await supabase.from('forms').update({ title: row.label }).eq('id', formId)
