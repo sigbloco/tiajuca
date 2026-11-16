@@ -35,7 +35,7 @@ import { MembersPage } from '@/modules/members/MembersPage'
 import { NaipesPage } from '@/modules/structure/NaipesPage'
 import { SiteSettings } from '@/modules/site/SiteSettings'
 import { Organogram } from '@/modules/structure/Organogram'
-import { ChecklistsPage, FunctionsPage } from '@/modules/structure/OrgPages'
+import { FunctionsPage } from '@/modules/structure/OrgPages'
 import { CyclesPage } from '@/modules/cycles/CyclesPage'
 import { SectionNamesPage } from '@/modules/structure/NaipesSettings'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
@@ -174,7 +174,7 @@ export const router = createBrowserRouter(
                   children: [
                     { path: 'ciclos', element: <CyclesPage /> },
                     { path: 'fornecedores', element: <SuppliersPage /> },
-                    { path: 'checklists', element: <ChecklistsPage /> },
+                    { path: 'checklists', element: <Navigate to="../eventos/configuracoes" replace /> },
                     { path: 'funcoes', element: <FunctionsPage /> },
                     { path: 'drive', element: <DriveFoldersPage /> },
                       ],

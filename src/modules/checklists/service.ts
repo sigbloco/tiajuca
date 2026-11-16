@@ -10,15 +10,16 @@ export interface ChecklistItem {
   status: ItemStatus
   assignee_member_id: string | null
   notes: string | null
+  description?: string | null
   sort_order: number
   members: { full_name: string; display_name: string | null } | null
 }
 export interface Template { id: string; name: string; is_active: boolean }
-export interface TemplateItem { id: string; template_id: string; title: string; sort_order: number; is_active: boolean }
+export interface TemplateItem { id: string; template_id: string; title: string; description?: string | null; sort_order: number; is_active: boolean }
 
 export async function listChecklist(activityId: string) {
   const { data, error } = await supabase.from('activity_checklist_items')
-    .select('id, title, status, assignee_member_id, notes, sort_order, members(full_name, display_name)')
+    .select('id, title, description, status, assignee_member_id, notes, sort_order, members(full_name, display_name)')
     .eq('activity_id', activityId).order('sort_order')
   if (error) throw error
   return (data ?? []) as unknown as ChecklistItem[]
