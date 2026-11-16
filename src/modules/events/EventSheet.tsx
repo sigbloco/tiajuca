@@ -170,6 +170,12 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
                 <Ban className="h-4 w-4" /><span className="act-label ml-1.5">Cancelar</span>
               </Button>
             )}
+            {canManage && (
+              <Button variant="outline" className="text-destructive" aria-label="Apagar" title="Apagar o evento (vai para a lixeira)" disabled={remove.isPending}
+                onClick={async () => { if (await confirmBox(`Apagar ${theThing}? Ele vai para a lixeira, de onde dá para restaurar. Se já tiver presença registrada, use Cancelar.`)) remove.mutate() }}>
+                <Trash2 className="h-4 w-4" /><span className="act-label ml-1.5">Apagar</span>
+              </Button>
+            )}
           </ActionRow>
           {canManage && activity.status === 'cancelled' && (
             <Button variant="outline" onClick={() => changeStatus.mutate({ s: 'scheduled' })}>Reativar {cancelWord(activity.activity_types?.name)}</Button>
