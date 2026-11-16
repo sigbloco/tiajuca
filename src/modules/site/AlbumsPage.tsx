@@ -51,7 +51,7 @@ export function AlbumsPage() {
       {/* Cabeçalho fixo, vermelho como o da página inicial: voltar, título e filtro por ano ficam sempre à vista. */}
       <header className={`sticky top-0 z-20 shadow-card ${heroColor ? '' : 'bg-primary text-primary-foreground'}`} style={heroColor ? { backgroundColor: heroColor, color: heroText } : undefined}>
         <div className="mx-auto max-w-3xl space-y-3 px-4 pb-3 pt-3">
-          <Link to="/site" className="inline-flex min-h-9 items-center gap-2 font-semibold hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar para a página inicial</Link>
+          <Link to="/site" className="inline-flex min-h-9 items-center gap-2 font-semibold hover:underline"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar para o site</Link>
           {data && (
             <div className="flex items-center gap-3">
               <OrgLogo name={data.org.name} logoPath={data.org.logo_path} className="h-10 w-10 shrink-0 ring-2 ring-secondary" />
