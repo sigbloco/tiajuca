@@ -9,8 +9,13 @@ import { notifyChange } from '@/core/undo'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberSection } from './MemberSection'
+import { CompensationPick } from './StaffSection'
+
+/** Regência é uma atividade artística (atribuição de regente de um naipe, a mesma de Naipes): aparece ao lado dos instrumentos. */
+const REGENCIA = '__regencia'
 
 interface LinkRow {
   id: string
@@ -42,6 +47,21 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   // null = fechado · 'new' = novo vínculo · id = editando aquele vínculo
   const [editing, setEditing] = useState<string | null>(null)
   const [f, setF] = useState<Draft>(EMPTY)
+  const [regSection, setRegSection] = useState('')
+  const [regComp, setRegComp] = useState<'paid' | 'collaborative' | null>(null)
+  const cycles = useCycles()
+  const cycleId = byCycle ? cycle!.id : (cycles.data ?? []).find((c) => c.is_current)?.id
+  const regentes = useQuery({
+    queryKey: ['member-regencia', orgId, memberId, cycleId],
+    enabled: !collab && Boolean(cycleId),
+    queryFn: async () => {
+      let q = supabase.from('staff_assignments').select('id, section_id, compensation').eq('organization_id', orgId).eq('member_id', memberId).eq('staff_kind', 'regente').eq('cycle_id', cycleId!)
+      if (!byCycle) q = q.is('valid_to', null)
+      const { data, error } = await q
+      if (error) throw error
+      return (data ?? []) as { id: string; section_id: string | null; compensation: 'paid' | 'collaborative' }[]
+    },
+  })
 
   const { data } = useQuery({
     queryKey: ['member-links', orgId, memberId, mode, cycle?.id ?? 'now'],
@@ -63,7 +83,19 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
     qc.invalidateQueries({ queryKey: ['members', orgId] })
   }
   const nn = (v: string) => v || null
-  const close = () => { setEditing(null); setF({ ...EMPTY, is_paid: paid }) }
+  const close = () => { setEditing(null); setF({ ...EMPTY, is_paid: paid }); setRegSection(''); setRegComp(null) }
+  const refreshReg = () => { qc.invalidateQueries({ queryKey: ['member-regencia', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['staff-assignments'] }); qc.invalidateQueries({ queryKey: ['members', orgId] }) }
+  const addReg = useMutation({
+    mutationFn: async () => { const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: memberId, staff_kind: 'regente', section_id: regSection, compensation: regComp, cycle_id: cycleId }); if (error) throw error },
+    onSuccess: () => { close(); refreshReg(); toast.success('Regência adicionada.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const endReg = useMutation({
+    mutationFn: async (id: string) => { const { error } = byCycle ? await supabase.from('staff_assignments').delete().eq('id', id) : await supabase.from('staff_assignments').update({ valid_to: new Date().toISOString().slice(0, 10) }).eq('id', id); if (error) throw error },
+    onSuccess: () => { refreshReg(); toast.success('Regência encerrada.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const isReg = f.instrument_id === REGENCIA
 
   const save = useMutation({
     mutationFn: async () => {
@@ -132,7 +164,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
             <option value="">Escolha a categoria</option>
             {active(functions.data).filter((i) => (i.kind ?? 'collab') === (f.is_paid ? 'paid' : 'collab')).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </Select>
-          <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>OK</Button>
+          <Button size="sm" disabled={isReg ? !regSection || !regComp || addReg.isPending : (collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => (isReg ? addReg.mutate() : save.mutate())}>OK</Button>
           <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
         {functions.data?.find((x) => x.id === f.function_id)?.description?.trim() && <p className="text-sm text-muted-foreground">{functions.data?.find((x) => x.id === f.function_id)?.description}</p>}
@@ -142,19 +174,28 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
           <div className="space-y-1.5">
             <Label>Atividade</Label>
             {f.instrument_id ? (
-              <div><Chip label={instrumentLabel(f.instrument_id)} onRemove={() => setF({ ...f, instrument_id: '' })} removeLabel="Trocar atividade" /></div>
+              <div><Chip label={isReg ? 'Regência' : instrumentLabel(f.instrument_id)} onRemove={() => setF({ ...f, instrument_id: '' })} removeLabel="Trocar atividade" /></div>
             ) : (
               <AutoComplete aria-label="Atividade" placeholder="Escreva a atividade (ex.: Surdo)"
-                options={active(instruments.data).map((i) => ({ id: i.id, label: i.name, hint: sections.data?.find((s) => s.id === i.section_id)?.name }))}
+                options={[{ id: REGENCIA, label: 'Regência', hint: 'atividade artística' }, ...active(instruments.data).map((i) => ({ id: i.id, label: i.name, hint: sections.data?.find((s) => s.id === i.section_id)?.name }))]}
                 onPick={(o) => setF({ ...f, instrument_id: o.id })} />
             )}
           </div>
-          <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked })} /> Aluno</label>
+          {isReg && (
+            <div className="space-y-1.5">
+              <Select aria-label="Naipe da regência" value={regSection} onChange={(e) => setRegSection(e.target.value)}>
+                <option value="">Regência de qual naipe?</option>
+                {active(sections.data).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </Select>
+              <CompensationPick value={regComp} onChange={setRegComp} />
+            </div>
+          )}
+          {!isReg && <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked })} /> Aluno</label>}
         </>
       )}
       {!collab && (
         <div className="flex gap-2">
-          <Button size="sm" disabled={(collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => save.mutate()}>OK</Button>
+          <Button size="sm" disabled={isReg ? !regSection || !regComp || addReg.isPending : (collab ? !f.function_id : !f.instrument_id) || save.isPending} onClick={() => (isReg ? addReg.mutate() : save.mutate())}>OK</Button>
           <Button size="sm" variant="outline" onClick={close} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
         </div>
       )}
@@ -162,7 +203,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   )
 
   // Sem participação e sem permissão de editar: nada para mostrar.
-  if (!canManage && (data?.length ?? 0) === 0) return null
+  if (!canManage && (data?.length ?? 0) === 0 && (regentes.data?.length ?? 0) === 0) return null
   return (
     <MemberSection level={2} title={<span className="inline-flex items-center gap-1.5">{paid ? 'Remunerada' : collab ? 'Colaborativa' : 'Artística'}{canManage && editing === null && (
       <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={paid ? 'Adicionar participação remunerada' : collab ? 'Adicionar participação colaborativa' : 'Adicionar participação artística'} title="Adicionar" onClick={() => { setF({ ...EMPTY, is_paid: paid }); setEditing('new') }}><Plus className="h-3.5 w-3.5" /></button>
@@ -183,6 +224,15 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
           )}
         </div>
       )))}
+      {!collab && (regentes.data ?? []).map((g, i) => (
+        <div key={g.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', ((data?.length ?? 0) + i) % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
+          <div className="min-w-0">
+            <p className="break-words font-semibold">Regência</p>
+            <p className="text-muted-foreground">{[sections.data?.find((x) => x.id === g.section_id)?.name, g.compensation === 'paid' ? 'remunerada' : 'colaborativa'].filter(Boolean).join(' · ')}</p>
+          </div>
+          {canManage && <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive" aria-label="Encerrar regência" title="Encerrar" disabled={endReg.isPending} onClick={() => endReg.mutate(g.id)}><X className="h-4 w-4" /></Button>}
+        </div>
+      ))}
       {canManage && editing === 'new' && form}
     </MemberSection>
   )

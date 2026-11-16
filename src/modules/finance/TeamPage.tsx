@@ -271,7 +271,11 @@ export function TeamPage() {
         if (error) throw error
         rows = (data ?? []) as unknown as R[]
       }
-      return rows.map((r) => ({ member_id: r.member_id, staff_kind: r.artistic_functions?.name ?? '', members: r.members }))
+      // Regência é atribuição de regente (Naipes): quem rege como remunerado entra no grupo "Regência".
+      const reg = await supabase.from('staff_assignments').select('member_id, members!inner(full_name, display_name)').eq('organization_id', orgId).eq('cycle_id', cycleId).eq('staff_kind', 'regente').eq('compensation', 'paid').is('valid_to', null).is('members.archived_at', null)
+      if (reg.error) throw reg.error
+      const regRows = ((reg.data ?? []) as unknown as { member_id: string; members: { full_name: string; display_name: string | null } | null }[]).map((r) => ({ member_id: r.member_id, staff_kind: 'Regência', members: r.members }))
+      return [...rows.map((r) => ({ member_id: r.member_id, staff_kind: r.artistic_functions?.name ?? '', members: r.members })), ...regRows]
     },
   })
   // Base do %: cobranças pagas no mês, por pessoa, e o instrumento de cada uma no ciclo.
@@ -453,11 +457,15 @@ export function TeamPage() {
           <p className="font-semibold"><MemberLink id={p.id}>{p.name}</MemberLink> {p.kinds.map((k) => <Badge key={k} className="ml-1">{k}</Badge>)}</p>
           <p className="font-display text-lg font-bold">{formatCurrency(totalOf(p.id))} <span className="text-sm font-normal text-muted-foreground">previsto no mês</span></p>
         </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-semibold">Regras</span>
+          {canEdit && <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Nova regra" title="Nova regra" onClick={() => setDrafts((d) => ({ ...d, [p.id]: [...(d[p.id] ?? []), Date.now()] }))}><Plus className="h-3.5 w-3.5" /></button>}
+        </div>
+        {mine.length === 0 && (drafts[p.id] ?? []).length === 0 && <p className="text-sm text-muted-foreground">nenhuma</p>}
         {mine.map((r) => <RuleLine key={r.id} rule={r} memberId={p.id} cycleId={cycleId} canEdit={canEdit} summary={summaryOf(r)} detail={detailOf(r)} groupKeys={groupKeysOf(p)} hours={r.kind === 'hourly' ? { auto: autoHoursFor(r), value: hoursFor(r), competence } : undefined} />)}
         {(drafts[p.id] ?? []).map((k) => (
           <RuleEditor key={k} rule={EMPTY_RULE} memberId={p.id} groupKeys={groupKeysOf(p)} cycleId={cycleId} canEdit={canEdit} onDone={() => setDrafts((d) => ({ ...d, [p.id]: (d[p.id] ?? []).filter((x) => x !== k) }))} />
         ))}
-        {canEdit && <Button size="sm" variant="outline" aria-label="Nova regra" title="Nova regra" onClick={() => setDrafts((d) => ({ ...d, [p.id]: [...(d[p.id] ?? []), Date.now()] }))}><Plus className="h-4 w-4" /> Regra</Button>}
       </Card>
     )
   }
