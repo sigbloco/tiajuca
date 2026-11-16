@@ -29,6 +29,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
   const qc = useQueryClient()
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
+  const levels = useCatalog('skill_levels')
   const [adding, setAdding] = useState<'artistic' | 'collab' | null>(null)
   const manager = usePermission('members.manage')
   const [pick, setPick] = useState('')
@@ -45,6 +46,10 @@ export function MyParticipation({ memberId }: { memberId: string }) {
       if (error) throw error
     },
     onSuccess: () => { toast.success('Pedido enviado. A direção vai avaliar.'); setAdding(null); setPick(''); refresh() }, onError,
+  })
+  const setLevel = useMutation({
+    mutationFn: async (v: { link: string; level: string }) => { const { error } = await supabase.rpc('set_my_skill_level', { p_link: v.link, p_level: v.level || null }); if (error) throw error },
+    onSuccess: () => { toast.success('Nível atualizado.'); refresh() }, onError,
   })
   const giveUp = useMutation({
     mutationFn: async (link: string) => { const { error } = await supabase.rpc('give_up_collaboration', { p_link: link }); if (error) throw error },
@@ -90,8 +95,12 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {head('Artística', 'artistic')}
         {d.artistic.length === 0 && <p className="text-muted-foreground">Nenhuma atividade artística.</p>}
         {d.artistic.map((a) => (
-          <div key={a.id} className="flex items-center gap-1.5">
-            <p className="min-w-0 break-words">{a.name}{a.section ? <span className="text-muted-foreground"> · {a.section}</span> : null}{a.level ? <span className="text-muted-foreground"> · {a.level}</span> : null}</p>
+          <div key={a.id} className="flex flex-wrap items-center gap-1.5">
+            <p className="min-w-0 break-words">{a.name}{a.section ? <span className="text-muted-foreground"> · {a.section}</span> : null}</p>
+            <Select className="h-6 w-auto shrink-0 px-1 text-xs" aria-label={`Nível em ${a.name}`} value={levels.data?.find((x) => x.name === a.level)?.id ?? ''} disabled={setLevel.isPending} onChange={(e) => setLevel.mutate({ link: a.id, level: e.target.value })}>
+              <option value="">Nível</option>
+              {(levels.data ?? []).filter((x) => x.is_active).sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </Select>
             {pending('artistic', 'remove', a.name)
               ? <Badge className={REQ_CLASS.pending}>Saída pedida</Badge>
               : <button type="button" className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-card px-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-3.5 w-3.5" /> Pedir para sair</button>}
