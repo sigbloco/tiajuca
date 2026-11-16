@@ -37,6 +37,8 @@ interface Props {
   externalTrash?: boolean
   /** Campo de descrição (opcional) em cada item: aparece onde o item é escolhido (ex.: formulários). */
   withDescription?: boolean
+  /** Níveis: escolher em quais naipes cada item vale. */
+  withNaipes?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -45,7 +47,7 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash, withDescription }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash, withDescription, withNaipes }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
@@ -151,6 +153,23 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
                   {item.is_active ? 'Desativar' : 'Ativar'}
                 </Button>
               ))}
+            {withNaipes && (
+              <div className="flex basis-full flex-wrap items-center gap-1.5" role="group" aria-label={`Naipes em que ${item.name} vale`}>
+                {(() => {
+                  const cur = item.section_ids ?? []
+                  const set = (next: string[]) => save.mutate({ id: item.id, name: item.name, section_ids: next })
+                  const chip = (on: boolean) => cn('rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors', on ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70', !canEdit && 'pointer-events-none')
+                  return (
+                    <>
+                      <button type="button" aria-pressed={cur.length === 0} className={chip(cur.length === 0)} onClick={() => set([])}>Todos os naipes</button>
+                      {(sections.data ?? []).filter((s) => s.is_active).map((s) => (
+                        <button key={s.id} type="button" aria-pressed={cur.includes(s.id)} className={chip(cur.includes(s.id))} onClick={() => set(cur.includes(s.id) ? cur.filter((x) => x !== s.id) : [...cur, s.id])}>{s.name}</button>
+                      ))}
+                    </>
+                  )
+                })()}
+              </div>
+            )}
             {withDescription && (
               <div className="basis-full">
                 <SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${item.name}`}

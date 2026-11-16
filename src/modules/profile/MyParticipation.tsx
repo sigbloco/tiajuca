@@ -11,6 +11,7 @@ import { usePermission } from '@/core/permissions'
 import { ArtisticLinks } from '@/modules/members/ArtisticLinks'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { levelsForSection } from '@/modules/structure/service'
 
 interface Participation {
   artistic: { id: string; name: string; section: string | null; level: string | null }[]
@@ -30,6 +31,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
   const levels = useCatalog('skill_levels')
+  const sections = useCatalog('sections')
   const [adding, setAdding] = useState<'artistic' | 'collab' | null>(null)
   const manager = usePermission('members.manage')
   const [pick, setPick] = useState('')
@@ -99,7 +101,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
             <p className="min-w-0 break-words">{a.name}{a.section ? <span className="text-muted-foreground"> · {a.section}</span> : null}</p>
             <Select className="h-6 w-auto shrink-0 px-1 text-xs" aria-label={`Nível em ${a.name}`} value={levels.data?.find((x) => x.name === a.level)?.id ?? ''} disabled={setLevel.isPending} onChange={(e) => setLevel.mutate({ link: a.id, level: e.target.value })}>
               <option value="">Nível</option>
-              {(levels.data ?? []).filter((x) => x.is_active).sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              {levelsForSection(levels.data, sections.data?.find((x) => x.name === a.section)?.id, levels.data?.find((x) => x.name === a.level)?.id).sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
             </Select>
             {pending('artistic', 'remove', a.name)
               ? <Badge className={REQ_CLASS.pending}>Saída pedida</Badge>
