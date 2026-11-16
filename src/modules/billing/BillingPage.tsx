@@ -2,7 +2,8 @@ import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
-import { ChevronLeft, ChevronRight, ClipboardCopy, Search } from 'lucide-react'
+import { ClipboardCopy, Search } from 'lucide-react'
+import { StepNav } from '@/components/shared/StepNav'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible, TONES } from '@/components/shared/Collapsible'
@@ -222,11 +223,7 @@ function AdminBilling() {
   return (
     <div className="space-y-4">
       <div className="flex justify-center">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="icon" variant="outline" aria-label="Mês anterior" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="min-w-40 text-center font-display text-lg font-bold">{formatCompetence(competence)}</span>
-          <Button size="icon" variant="outline" aria-label="Próximo mês" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
+        <StepNav prevLabel="Mês anterior" nextLabel="Próximo mês" onPrev={() => shift(-1)} onNext={() => shift(1)}>{formatCompetence(competence)}</StepNav>
       </div>
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">

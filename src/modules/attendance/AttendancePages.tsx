@@ -1,6 +1,6 @@
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check, ChevronLeft, ChevronRight, Pencil, Search, Undo2 } from 'lucide-react'
+import { Ban, Check, Pencil, Search, Undo2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -8,6 +8,7 @@ import { ChipRows } from '@/components/shared/ChipRows'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { FitChoice } from '@/components/shared/FitLabel'
 import { FitText } from '@/components/shared/FitText'
+import { StepNav } from '@/components/shared/StepNav'
 import { Badge, Button, Card, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDayShort, formatTime, todayIso } from '@/core/format'
@@ -268,11 +269,9 @@ export function AttendanceListPage() {
       {isLoading && <Skeleton className="h-24" />}
       {data && days.length === 0 && <EmptyState>Nenhuma atividade neste ciclo.</EmptyState>}
       {current && (
-        <div className="flex items-center justify-between gap-2">
-          <Button size="icon" variant="outline" className="h-10 w-auto min-w-0 flex-1" aria-label="Dia anterior" disabled={idx <= 0} onClick={() => setPicked(days[idx - 1])}><ChevronLeft className="h-5 w-5" /></Button>
-          <p className="shrink-0 text-center font-display text-lg font-bold">{formatDayShort(current)}{current === today && <Badge className="ml-2 bg-primary text-primary-foreground">Hoje</Badge>}</p>
-          <Button size="icon" variant="outline" className="h-10 w-auto min-w-0 flex-1" aria-label="Próximo dia" disabled={idx >= days.length - 1} onClick={() => setPicked(days[idx + 1])}><ChevronRight className="h-5 w-5" /></Button>
-        </div>
+        <StepNav prevLabel="Dia anterior" nextLabel="Próximo dia" prevDisabled={idx <= 0} nextDisabled={idx >= days.length - 1} onPrev={() => setPicked(days[idx - 1])} onNext={() => setPicked(days[idx + 1])}>
+          {formatDayShort(current)}{current === today && <Badge className="ml-2 bg-primary text-primary-foreground">Hoje</Badge>}
+        </StepNav>
       )}
       <div className="grid gap-2">
         {dayItems.map((a) => <ActivityCard key={a.id} a={a} instruments={catalog.data?.list ?? []} studentIds={students.data?.instruments ?? new Set()} slug={membership?.slug} audience={audiences.data?.get(a.id)} staff={staffSet.data ?? new Set()} studentMembers={students.data?.members} presentIds={presentIds} />)}

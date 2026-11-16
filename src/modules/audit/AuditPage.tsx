@@ -1,10 +1,10 @@
+import { StepNav } from '@/components/shared/StepNav'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { shortName } from '@/core/format'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { EMPTY_FILTER, FilterBar, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, EmptyState, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Card, EmptyState, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -124,13 +124,9 @@ export function AuditLogTab() {
           </Card>
         ))}
       </div>
-      <div className="flex items-center justify-between">
+      <div className="space-y-2">
         <p className="text-muted-foreground">{total} registro(s)</p>
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant="outline" aria-label="Página anterior" disabled={page === 0} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <span>{page + 1} / {pages}</span>
-          <Button size="icon" variant="outline" aria-label="Próxima página" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
+        <StepNav prevLabel="Página anterior" nextLabel="Próxima página" prevDisabled={page === 0} nextDisabled={page + 1 >= pages} onPrev={() => setPage(page - 1)} onNext={() => setPage(page + 1)}>{page + 1} / {pages}</StepNav>
       </div>
     </div>
   )

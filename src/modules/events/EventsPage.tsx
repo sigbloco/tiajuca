@@ -2,7 +2,8 @@ import { ButtonRow } from '@/components/shared/ButtonRow'
 import { SettingsButton } from '@/components/shared/SettingsButton'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Cake, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Cake, Plus } from 'lucide-react'
+import { StepNav } from '@/components/shared/StepNav'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
@@ -145,11 +146,7 @@ export function EventsPage() {
       {header}
 
       <Card className="p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <Button size="icon" variant="ghost" aria-label="Mês anterior" onClick={() => shift(-1)}><ChevronLeft className="h-5 w-5" /></Button>
-          <p className="font-display text-lg font-bold">{formatCompetence(monthPrefix)}</p>
-          <Button size="icon" variant="ghost" aria-label="Próximo mês" onClick={() => shift(1)}><ChevronRight className="h-5 w-5" /></Button>
-        </div>
+        <StepNav className="mb-2" prevLabel="Mês anterior" nextLabel="Próximo mês" onPrev={() => shift(-1)} onNext={() => shift(1)}>{formatCompetence(monthPrefix)}</StepNav>
         <div className="grid grid-cols-7 text-center text-xs font-semibold text-muted-foreground">
           {WEEK_HEAD.map((d, i) => <div key={i} className="py-1">{d}</div>)}
         </div>

@@ -1,9 +1,10 @@
+import { StepNav } from '@/components/shared/StepNav'
 import { RichTextarea } from '@/components/shared/RichText'
 import { PageLink } from '@/components/shared/PageLink'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Download, Eye, EyeOff } from 'lucide-react'
+import { Download, Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
@@ -228,13 +229,9 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
           </Card>
         )} />
       </div>
-      <div className="flex items-center justify-between">
+      <div className="space-y-2">
         <p className="text-muted-foreground">{total} resposta(s)</p>
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant="outline" aria-label="Página anterior" disabled={page === 0} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <span>{page + 1} / {pages}</span>
-          <Button size="icon" variant="outline" aria-label="Próxima página" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
+        <StepNav prevLabel="Página anterior" nextLabel="Próxima página" prevDisabled={page === 0} nextDisabled={page + 1 >= pages} onPrev={() => setPage(page - 1)} onNext={() => setPage(page + 1)}>{page + 1} / {pages}</StepNav>
       </div>
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         {selected && <SubmissionSheet key={selected.id} sub={selected} version={versions.data?.find((v) => v.id === selected.form_version_id)} form={form} onClose={() => setSelected(null)} />}
