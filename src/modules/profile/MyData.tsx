@@ -163,7 +163,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
         <h3>E-mail</h3>
         <div className="space-y-1.5">
           <div className="flex items-baseline gap-1.5"><Label htmlFor="my-email">Principal</Label>
-            {showEmailNote && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Conta Google: só a direção altera.</span>}</div>
+            {showEmailNote && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">conta Google: só a direção altera</span>}</div>
           <Input id="my-email" type="email" value={f.email} disabled={lockEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
         </div>
         <ExtraEmails memberId={memberId} self />
@@ -180,7 +180,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
               <Label htmlFor="my-user-0">Redes sociais</Label>
               <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar rede social" title="Adicionar rede social" disabled={noSocial}
                 onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-3.5 w-3.5" /></button>
-              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> Não tenho / não uso</label>
+              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> não tenho / não uso</label>
             </div>
             {rows.map((r, i) => (
               <div key={i} className={cn('flex gap-2', noSocial && 'opacity-50')}>

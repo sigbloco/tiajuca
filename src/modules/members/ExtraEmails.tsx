@@ -72,7 +72,7 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
         <Label>{self ? 'Adicionais' : 'E-mails adicionais'}</Label>
         <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar e-mail" title="Adicionar e-mail"
           onClick={() => setAdding((a) => !a)}><Plus className="h-3.5 w-3.5" /></button>
-        {needsApproval && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Sujeito à aprovação da direção.</span>}
+        {needsApproval && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">sujeito à aprovação da direção</span>}
       </div>
       {(pending.data ?? []).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
