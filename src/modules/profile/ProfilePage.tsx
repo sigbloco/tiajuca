@@ -1,11 +1,10 @@
 import { BlocoLogo } from './BlocoLogo'
-import { Check } from 'lucide-react'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Card, Input, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -53,8 +52,7 @@ function PixSection({ memberId }: { memberId: string }) {
           {PIX_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </Select>
         <div className="flex gap-2 sm:col-span-2">
-          <Input className="min-w-0 flex-1" aria-label="Chave" placeholder="Digite a nova chave" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && value.trim() && !save.isPending) { e.preventDefault(); save.mutate() } }} />
-          <Button type="button" size="icon" disabled={!value.trim() || save.isPending} aria-label="Salvar chave" title="Salvar chave" onClick={() => save.mutate()}><Check className="h-4 w-4" /></Button>
+          <Input className="min-w-0 flex-1" aria-label="Chave" placeholder="Digite a nova chave" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => { if (value.trim() && !save.isPending) save.mutate() }} onKeyDown={(e) => { if (e.key === 'Enter' && value.trim() && !save.isPending) { e.preventDefault(); save.mutate() } }} />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">Só você e a direção veem a chave. Ao trocar, a anterior é arquivada e os pagamentos passados mantêm a chave usada na época.</p>
