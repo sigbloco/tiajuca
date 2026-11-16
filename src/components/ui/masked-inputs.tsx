@@ -122,9 +122,9 @@ export function TimeInput({ id, value, onChange, required }: { id?: string; valu
 }
 
 /** Valor em R$ com máscara (digita só números: 15000 → R$ 150,00). Emite número ou null. */
-export function MoneyInput({ id, value, onChange, required }: { id?: string; value: number | null; onChange: (v: number | null) => void; required?: boolean }) {
+export function MoneyInput({ id, value, onChange, required, onBlur }: { id?: string; value: number | null; onChange: (v: number | null) => void; required?: boolean; onBlur?: () => void }) {
   return (
-    <Input id={id} inputMode="numeric" autoComplete="off" placeholder="R$ 0,00" required={required}
+    <Input id={id} inputMode="numeric" autoComplete="off" placeholder="R$ 0,00" required={required} onBlur={onBlur}
       value={value === null ? '' : formatCurrency(value)}
       onChange={(e) => {
         const digits = e.target.value.replace(/\D/g, '').slice(0, 9)

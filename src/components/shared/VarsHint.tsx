@@ -9,7 +9,7 @@ function Chip({ text, help, onInsert }: { text: string; help: string; onInsert: 
 }
 
 /** Lista as variáveis que dá para escrever num texto de formulário: o valor atual do bloco entra sozinho. */
-export function VarsHint({ onInsert }: { /** Clicar numa variável coloca ela onde está o cursor do texto. */ onInsert: (text: string) => void }) {
+export function VarsHint({ onInsert, valueVars = true }: { /** Clicar numa variável coloca ela onde está o cursor do texto. */ onInsert: (text: string) => void; /** As variáveis de valor dependem do ciclo do formulário: sem ciclo, não aparecem. */ valueVars?: boolean }) {
   const cats = useCatalog('fee_categories')
   const funcs = useCatalog('artistic_functions')
   // Categorias de funções isentas (Escritora, Monitor, direção...) não pagam: não sugere variável de valor para elas.
@@ -19,8 +19,8 @@ export function VarsHint({ onInsert }: { /** Clicar numa variável coloca ela on
   const names = (cats.data ?? []).filter((c) => c.is_active && !c.is_exempt && c.name !== 'Isento' && !(c.function_id && exemptIds.has(c.function_id)) && !exemptNames.has(c.name.toLowerCase())).map((c) => c.name)
   return (
     <div className="space-y-0.5 text-xs text-muted-foreground">
-      <p>Inserir variável {TEXT_VARS.map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
-      {names.length > 0 && <p>{names.map((n, i) => <span key={n}>{i > 0 && ' '}<Chip text={`{valor:${n}}`} help={`valor atual de ${n}`} onInsert={onInsert} /></span>)}.</p>}
+      <p>Inserir variável {TEXT_VARS.filter((v) => valueVars || v.key !== 'valor').map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
+      {valueVars && names.length > 0 && <p>{names.map((n, i) => <span key={n}>{i > 0 && ' '}<Chip text={`{valor:${n}}`} help={`valor atual de ${n}`} onInsert={onInsert} /></span>)}.</p>}
     </div>
   )
 }

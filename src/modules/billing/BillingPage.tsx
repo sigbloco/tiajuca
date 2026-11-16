@@ -51,6 +51,7 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
   }
   const pay = useMutation({ mutationFn: rpc('mark_charge_paid', { p_charge: charge.id, p_paid_on: paidOn, p_method: method }), onSuccess: () => done('Pagamento registrado.'), onError: (e) => toast.error(friendlyError(e)) })
   const adjust = useMutation({ mutationFn: rpc('adjust_charge', { p_charge: charge.id, p_new_amount: amount, p_reason: reason }), onSuccess: () => done('Valor ajustado e registrado.'), onError: (e) => toast.error(friendlyError(e)) })
+  const autoAdjust = () => { if (amount !== null && reason.trim() && amount !== charge.final_amount && !adjust.isPending) adjust.mutate() }
   const status = useMutation({
     mutationFn: (s: 'cancelled' | 'pending') => rpc('change_charge_status', { p_charge: charge.id, p_status: s, p_notes: null })(),
     onSuccess: (_d, s) => done(s === 'cancelled' ? 'Cobrança cancelada.' : 'Cobrança reaberta.'), onError: (e) => toast.error(friendlyError(e)),
@@ -112,12 +113,9 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
       {editable && (
         <section className="space-y-2">
           <h3>Ajustar valor</h3>
-          <MoneyInput value={amount} onChange={setAmount} />
-          <Input placeholder="Motivo do ajuste (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} />
-          <Button variant="outline" className="w-full" disabled={amount === null || !reason.trim() || amount === charge.final_amount || adjust.isPending} onClick={() => adjust.mutate()}>
-            Salvar ajuste
-          </Button>
-          <p className="text-xs text-muted-foreground">Fica registrado: valor original, novo valor, motivo, responsável e horário.</p>
+          <MoneyInput value={amount} onChange={setAmount} onBlur={autoAdjust} />
+          <Input placeholder="Motivo do ajuste (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} onBlur={autoAdjust} />
+          <p className="text-xs text-muted-foreground">Grava sozinho quando o valor e o motivo estão preenchidos. Fica registrado: valor original, novo valor, motivo, responsável e horário.</p>
         </section>
       )}
 

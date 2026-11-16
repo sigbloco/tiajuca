@@ -40,7 +40,8 @@ function CategoryRow({ item, current, canEdit, from }: { item: CatalogItem; curr
   })
   return (
     <Card className="flex flex-nowrap items-center gap-2 p-2 pl-3">
-      <span className="min-w-0 flex-1"><span className="font-semibold">{item.name}</span><span className="text-muted-foreground">/mês</span></span>
+      <span className="min-w-0 flex-1"><span className="font-semibold">{item.name}</span><span className="text-muted-foreground">/mês</span>
+        <span className="block break-words font-mono text-xs text-muted-foreground" title="Variável para usar nos textos dos formulários">{'{valor:' + item.name + '}'}</span></span>
       <div className="w-28 shrink-0 sm:w-32"><MoneyInput value={value} onChange={setValue} /></div>
       {canEdit && <SaveButton disabled={!dirty || save.isPending} onClick={() => save.mutate()} className="h-9 px-3" />}
     </Card>

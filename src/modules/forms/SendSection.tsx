@@ -83,7 +83,7 @@ export function SendPartTabs({ part, setPart, general }: { part: SendPart; setPa
 }
 
 /** Editor dos textos de uma subpágina: cada mensagem com seu checkbox; desligada, o campo some e fica só o aviso do que acontece. */
-export function SendFields({ f, setF, prefix, part, disabled, general, consent, toggles = true }: { f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean; general?: boolean; /** Só no formulário: exigir o aceite do texto de privacidade para enviar. */ consent?: { value: boolean; onChange: (v: boolean) => void }; /** Checkbox para ligar/desligar cada mensagem: só no formulário (os textos padrão sempre valem para todos). */ toggles?: boolean }) {
+export function SendFields({ f, setF, prefix, part, disabled, general, consent, toggles = true, valueVars = true }: { /** Mostra as variáveis de valor (só fazem sentido com ciclo no formulário). */ valueVars?: boolean; f: SendTexts; setF: (v: SendTexts) => void; prefix: string; part: SendPart; disabled?: boolean; general?: boolean; /** Só no formulário: exigir o aceite do texto de privacidade para enviar. */ consent?: { value: boolean; onChange: (v: boolean) => void }; /** Checkbox para ligar/desligar cada mensagem: só no formulário (os textos padrão sempre valem para todos). */ toggles?: boolean }) {
   return (
     <>
       {PARTS[part].filter((k) => !(general && k === 'review')).map((k) => {
@@ -95,7 +95,7 @@ export function SendFields({ f, setF, prefix, part, disabled, general, consent, 
               {part === 'email' && <Mail className="h-4 w-4 shrink-0" aria-hidden />}{m.label}
             </label>
             {f.on[k] || !toggles
-              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} extra={k === 'send' || k === 'privacy' ? (insert) => <VarsHint onInsert={insert} /> : undefined} />{k === 'privacy' && consent && (
+              ? <><RichTextarea id={`${prefix}-${k}`} rows={m.rows} value={f[k]} onChange={(v) => setF({ ...f, [k]: v })} extra={k === 'send' || k === 'privacy' ? (insert) => <VarsHint onInsert={insert} valueVars={valueVars} /> : undefined} />{k === 'privacy' && consent && (
                 <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={consent.value} onChange={(e) => consent.onChange(e.target.checked)} /> Exigir que a pessoa aceite para enviar (caixa “Li e concordo”)</label>
               )}{m.hint && <p className="text-xs text-muted-foreground">{m.hint}</p>}</>
               : <p className="rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">Desligado. {m.off}</p>}
@@ -149,7 +149,7 @@ export function SendTab({ form }: { form: FormRow }) {
   return (
     <form id="send-form" className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate() }}>
       <SendPartTabs part={part} setPart={setPart} general={general} />
-      <SendFields f={f} setF={setF} prefix="sd" part={general ? 'form' : part} general={general} consent={{ value: requireConsent, onChange: setRequireConsent }} />
+      <SendFields f={f} setF={setF} prefix="sd" valueVars={!!form.cycle_id} part={general ? 'form' : part} general={general} consent={{ value: requireConsent, onChange: setRequireConsent }} />
       <RestorePartButton f={f} setF={setF} part={general ? 'form' : part} source={async () => rowToSend((await loadSendDefaults(orgId)) as unknown as Record<string, unknown> | null)} />
       <StickySave><SaveButton type="submit" form="send-form" className="w-full" disabled={save.isPending} hint="Salvar textos do envio" /></StickySave>
     </form>
