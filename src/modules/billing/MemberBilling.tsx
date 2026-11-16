@@ -38,6 +38,35 @@ function useExemptFunction(memberId: string, cycleId: string | undefined) {
   }).data ?? null
 }
 
+/** Quem é remunerado não contribui: a "Categoria" dele é a dos vínculos de participação (remunerada e colaborativa) — a principal e as outras. Sem menu de contribuição. */
+function ParticipationCategories({ memberId, cycleId, current }: { memberId: string; cycleId?: string; current: boolean }) {
+  const rows = useQuery({
+    queryKey: ['member-categories', memberId, cycleId ?? 'now'],
+    queryFn: async () => {
+      const sel = 'is_primary, is_paid, created_at, artistic_functions(name, kind)'
+      const base = current
+        ? supabase.from('member_artistic_links').select(sel).eq('member_id', memberId).is('ended_at', null)
+        : supabase.from('cycle_participations').select(sel).eq('member_id', memberId).eq('cycle_id', cycleId!)
+      const { data, error } = await base.not('function_id', 'is', null).is('instrument_id', null).order('created_at')
+      if (error) throw error
+      return (data ?? []) as unknown as { is_primary: boolean; is_paid: boolean; artistic_functions: { name: string; kind: string } | null }[]
+    },
+  })
+  const list = (rows.data ?? []).filter((r) => r.artistic_functions).sort((a, b) => Number(b.is_paid) - Number(a.is_paid) || Number(b.is_primary) - Number(a.is_primary))
+  const names = [...new Set(list.map((r) => r.artistic_functions!.name))]
+  if (names.length === 0) return <p className="text-muted-foreground">Sem categoria neste ciclo. Adicione em Participação.</p>
+  return (
+    <div className="space-y-1.5">
+      <p><span className="font-semibold">Principal:</span> {names[0]}</p>
+      {names.length > 1 && (
+        <p className="flex flex-wrap items-center gap-1.5"><span className="font-semibold">Também é:</span>
+          {names.slice(1).map((n) => <span key={n} className="rounded-full border border-dashed border-border px-2.5 py-0.5 text-sm text-muted-foreground">{n}</span>)}
+        </p>
+      )}
+    </div>
+  )
+}
+
 /** Categorias extras do ciclo (ex.: Aluno + Sênior): só marcações; a cobrança segue a categoria principal. Botão "+" abre a escolha. */
 function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; cycleId: string; primaryId: string }) {
   const orgId = useOrgId()
@@ -232,14 +261,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   if (info.data.paid) {
     return (
       <MemberSection title="Categoria">
-        <div className="space-y-1">
-          <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
-          <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
-            <option value="">Não contribui</option>
-            {categories.data?.filter((c) => isMemberCategory(c) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </OkSelect>
-        </div>
-        {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
+        <ParticipationCategories memberId={memberId} cycleId={cycle.id} current={false} />
       </MemberSection>
     )
   }
@@ -249,8 +271,8 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
       <div className="space-y-1">
         <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
-            <option value="">Não contribui</option>
-            {categories.data?.filter((c) => isMemberCategory(c) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {!catId && <option value="">Escolha a categoria</option>}
+            {categories.data?.filter((c) => (isMemberCategory(c) && c.system_key !== 'isento') || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
         <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
@@ -333,14 +355,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   if (paid.data) {
     return (
       <MemberSection title="Categoria">
-        <div className="space-y-1">
-          <Label htmlFor="fee-cat" className="block">Principal</Label>
-          <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
-            <option value="">Não contribui</option>
-            {categories.data?.filter((c) => isMemberCategory(c) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </OkSelect>
-        </div>
-        {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
+        <ParticipationCategories memberId={memberId} current />
       </MemberSection>
     )
   }
@@ -349,8 +364,8 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
       <div className="space-y-1">
         <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
           <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
-            <option value="">Não contribui</option>
-            {categories.data?.filter((c) => isMemberCategory(c) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {!assignment?.fee_category_id && <option value="">Escolha a categoria</option>}
+            {categories.data?.filter((c) => (isMemberCategory(c) && c.system_key !== 'isento') || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
         <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
