@@ -11,7 +11,7 @@ export function PaymentsPage() {
   const [ym, setYm] = useState<YearMonth>({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })
   return (
     <div className="space-y-4">
-      <div className="flex justify-end"><MonthNav value={ym} onChange={setYm} /></div>
+      <div className="flex justify-center"><MonthNav value={ym} onChange={setYm} /></div>
       <StaffTab competence={toCompetence(ym)} />
     </div>
   )
