@@ -17,10 +17,10 @@ import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useCycles } from '@/modules/cycles/service'
+import { PageLink } from '@/components/shared/PageLink'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { StaffTab } from './StaffTab'
 
 type Scope = 'all' | 'section' | 'instrument'
 type Kind = 'fixed' | 'percent' | 'hourly'
@@ -379,10 +379,7 @@ export function TeamPage() {
         <p className="font-semibold">Total previsto no mês: {formatCurrency(grand)}</p>
         {canEdit && <Button disabled={generate.isPending || grand <= 0} onClick={() => generate.mutate()}>Gerar pagamentos do mês</Button>}
       </Card>
-      <div className="space-y-2">
-        <h2>Pagamentos</h2>
-        <StaffTab competence={competence} />
-      </div>
+      <p className="text-sm text-muted-foreground">Os pagamentos gerados aparecem em <PageLink to="pagamentos">Financeiro → Pagamentos</PageLink>.</p>
     </div>
   )
 }
