@@ -12,11 +12,13 @@ import { formatCurrency } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
+import { cycleOfMonth, useCycles } from '@/modules/cycles/service'
+import { Copy } from 'lucide-react'
 import { BASE_LABEL, useDestinations, type DistRow, type MonthSummary, type Rule } from './service'
 
 type Base = NonNullable<Rule['base']>
 
-function RuleSheet({ onClose }: { onClose: () => void }) {
+function RuleSheet({ onClose, cycleId }: { onClose: () => void; cycleId?: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const dests = useDestinations()
@@ -28,7 +30,7 @@ function RuleSheet({ onClose }: { onClose: () => void }) {
       const row = f.mode === 'percent'
         ? { mode: 'percent', percent: pct, base: f.base, fixed_amount: null }
         : { mode: 'fixed', fixed_amount: f.fixed, percent: null, base: null }
-      const { error } = await supabase.from('distribution_rules').insert({ organization_id: orgId, destination_id: f.destination_id, ...row })
+      const { error } = await supabase.from('distribution_rules').insert({ organization_id: orgId, destination_id: f.destination_id, ...(cycleId ? { cycle_id: cycleId } : {}), ...row })
       if (error) throw error
     },
     onSuccess: () => { toast.success('Regra criada.'); qc.invalidateQueries({ queryKey: ['finance-rules', orgId] }); qc.invalidateQueries({ queryKey: ['finance', orgId] }); onClose() },
@@ -69,11 +71,18 @@ export function DistributionTab({ competence }: { competence: string }) {
   const dests = useDestinations()
   const [sheet, setSheet] = useState(false)
   const [newDest, setNewDest] = useState('')
+  // Regras por ciclo: as do ciclo a que o mês pertence.
+  const cycles = useCycles()
+  const cycle = cycleOfMonth(cycles.data, competence)
+  const previous = cycle ? (cycles.data ?? []).filter((c) => c.starts_on < cycle.starts_on).sort((a, b) => b.starts_on.localeCompare(a.starts_on))[0] : undefined
 
   const rules = useQuery({
-    queryKey: ['finance-rules', orgId],
+    queryKey: ['finance-rules', orgId, cycle?.id ?? 'none'],
+    enabled: !cycles.isLoading,
     queryFn: async () => {
-      const { data, error } = await supabase.from('distribution_rules').select('*').eq('organization_id', orgId).eq('is_active', true).order('priority').order('created_at')
+      let q = supabase.from('distribution_rules').select('*').eq('organization_id', orgId).eq('is_active', true)
+      if (cycle) q = q.eq('cycle_id', cycle.id)
+      const { data, error } = await q.order('priority').order('created_at')
       if (error) throw error
       return (data ?? []) as Rule[]
     },
@@ -97,6 +106,11 @@ export function DistributionTab({ competence }: { competence: string }) {
       if (error) throw error
     },
     onSuccess: () => { toast.success('Regra encerrada.'); refresh() }, onError: (e) => toast.error(friendlyError(e)),
+  })
+  const replicate = useMutation({
+    mutationFn: async () => { const { data, error } = await supabase.rpc('replicate_distribution_rules', { p_cycle: cycle!.id }); if (error) throw error; return data as number },
+    onSuccess: (n) => { toast.success(`${n} regra(s) copiada(s) de ${previous?.name}.`); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
   })
   const addDest = useMutation({
     mutationFn: async () => {
@@ -144,7 +158,7 @@ export function DistributionTab({ competence }: { competence: string }) {
 
       <section className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3>Regras</h3>
+          <h3>Regras{cycle ? ` · ${cycle.name}` : ''}</h3>
           {canManage && <Button variant="add" size="sm" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> Nova regra</Button>}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -152,7 +166,13 @@ export function DistributionTab({ competence }: { competence: string }) {
             <Badge key={b} className={sumByBase(b) > 100 ? 'bg-destructive/15 text-destructive' : ''}>{BASE_LABEL[b]}: {sumByBase(b).toLocaleString('pt-BR')}% de 100%</Badge>
           ))}
         </div>
-        {rules.data?.length === 0 && <EmptyState>Nenhuma regra. Crie regras para simular a distribuição.</EmptyState>}
+        {rules.data?.length === 0 && canManage && previous && cycle && (
+          <Card className="flex flex-wrap items-center justify-between gap-2 border-primary/30 bg-primary/5 p-3">
+            <p className="min-w-0 flex-1 basis-56">Este ciclo ainda não tem regras. Copie as de <strong>{previous.name}</strong> e ajuste o que mudou.</p>
+            <Button variant="outline" disabled={replicate.isPending} onClick={() => replicate.mutate()}><Copy className="h-4 w-4" /> Replicar de {previous.name}</Button>
+          </Card>
+        )}
+        {rules.data?.length === 0 && <EmptyState>Nenhuma regra neste ciclo. Crie regras para simular a distribuição.</EmptyState>}
         <ProgressiveList items={(rules.data) ?? []} render={(r) => (
           <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
             <div className="min-w-0">
@@ -181,7 +201,7 @@ export function DistributionTab({ competence }: { competence: string }) {
           </Card>
         )} />
       </section>
-      <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <RuleSheet onClose={() => setSheet(false)} />}</Sheet>
+      <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <RuleSheet onClose={() => setSheet(false)} cycleId={cycle?.id} />}</Sheet>
     </div>
   )
 }

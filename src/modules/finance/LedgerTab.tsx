@@ -13,6 +13,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { ReceiptsByGroup } from './ReceiptsByGroup'
+import { cycleOfMonth, useCycles } from '@/modules/cycles/service'
 import { monthRange, useFinCategories, type LedgerRow, type MonthSummary } from './service'
 
 const SOURCE_LABEL = { lancamento: 'Lançamento', mensalidade: 'Mensalidade', equipe: 'Equipe' } as const
@@ -60,6 +61,8 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
   const canManage = usePermission('finance.manage')
   const [sheet, setSheet] = useState(false)
   const { from, to } = monthRange(competence)
+  const cycles = useCycles()
+  const monthCycle = cycleOfMonth(cycles.data, competence)
 
   const summary = useQuery({
     queryKey: ['finance', orgId, 'summary', competence],
@@ -70,10 +73,14 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
     },
   })
   const ledger = useQuery({
-    queryKey: ['finance', orgId, 'ledger', competence, kind],
+    queryKey: ['finance', orgId, 'ledger', competence, kind, monthCycle?.id ?? 'none'],
+    enabled: !cycles.isLoading,
     queryFn: async () => {
-      const { data, error } = await supabase.from('v_finance_ledger').select('ref, occurred_on, kind, amount, description, category, source')
-        .eq('organization_id', orgId).eq('kind', kind).gte('occurred_on', from).lt('occurred_on', to).order('occurred_on', { ascending: false }).limit(500)
+      // Pelo ciclo gravado em cada lançamento (os sem ciclo, antigos, valem pela data).
+      let q = supabase.from('v_finance_ledger').select('ref, occurred_on, kind, amount, description, category, source')
+        .eq('organization_id', orgId).eq('kind', kind).gte('occurred_on', from).lt('occurred_on', to)
+      if (monthCycle) q = q.or(`cycle_id.eq.${monthCycle.id},cycle_id.is.null`)
+      const { data, error } = await q.order('occurred_on', { ascending: false }).limit(500)
       if (error) throw error
       return (data ?? []) as LedgerRow[]
     },

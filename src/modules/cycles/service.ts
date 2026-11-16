@@ -87,3 +87,10 @@ export async function setMemberCycleStatus(args: {
   })
   if (error) throw error
 }
+
+/** Ciclo a que um mês (AAAA-MM-01) pertence: mesma regra do servidor (ciclo ativo que cobre o mês; o de início mais recente). */
+export function cycleOfMonth<T extends { starts_on: string; ends_on: string; is_active?: boolean }>(cycles: T[] | undefined, competence: string): T | undefined {
+  const start = competence.slice(0, 8) + '01'
+  const end = competence.slice(0, 8) + '31'
+  return (cycles ?? []).filter((c) => c.is_active !== false && c.starts_on <= end && c.ends_on >= start).sort((a, b) => b.starts_on.localeCompare(a.starts_on))[0]
+}

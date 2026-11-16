@@ -1,12 +1,12 @@
 import { confirmBox } from '@/components/shared/DialogHost'
-import { RotateCcw, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { ShowMore, usePaged } from '@/components/shared/Paged'
 import { Button, Card } from '@/components/ui/primitives'
 import type { TrashEntry } from './TrashDrawer'
 
-interface Group { label?: string; entries: TrashEntry[]; onRestore: (id: string) => void; onPurge?: (id: string) => void }
+interface Group { label?: string; /** Em vez de "Restaurar" (ex.: "Adicionar a este ciclo"). */ restoreLabel?: string; entries: TrashEntry[]; onRestore: (id: string) => void; onPurge?: (id: string) => void }
 
 function Rows({ g }: { g: Group }) {
   const paged = usePaged(g.entries)
@@ -18,7 +18,7 @@ function Rows({ g }: { g: Group }) {
             <p className="break-words font-semibold">{e.name}</p>
             {e.detail && <p className="break-words text-sm text-muted-foreground">{e.detail}</p>}
           </div>
-          <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`Restaurar ${e.name}`} title="Restaurar" onClick={() => g.onRestore(e.id)}><RotateCcw className="h-4 w-4" /></Button>
+          <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`${g.restoreLabel ?? 'Restaurar'} ${e.name}`} title={g.restoreLabel ?? 'Restaurar'} onClick={() => g.onRestore(e.id)}>{g.restoreLabel ? <Plus className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}</Button>
           {g.onPurge && (
             <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive" aria-label={`Excluir ${e.name} de vez`} title="Excluir de vez"
               onClick={async () => { if (await confirmBox(`Excluir “${e.name}” de vez? Isso não pode ser desfeito.`)) g.onPurge?.(e.id) }}><Trash2 className="h-4 w-4" /></Button>
