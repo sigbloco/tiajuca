@@ -9,7 +9,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
 import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
@@ -54,7 +54,7 @@ function MembersTrash() {
   })
   const purge = usePurge('members')
   if (!can) return null
-  return <TrashDrawer iconOnly compact title="Lixeira de integrantes" onPurge={(id) => purge.mutate(id)} entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
+  return <TrashGroup onPurge={(id) => purge.mutate(id)} entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
 }
 
 function NewMemberSheet({ onClose }: { onClose: () => void }) {
@@ -413,7 +413,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
             <NewMemberSheet onClose={() => setSheetOpen(false)} />
           </Sheet>
         </Can>
-        <MembersTrash />
       </div>
       <ParticipationRequests />
 
@@ -465,6 +464,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
         {selected && <MemberDetailSheet onArchived={() => { qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }); closeSheet() }} onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
       </Sheet>
 
+      <MembersTrash />
     </div>
   )
 }

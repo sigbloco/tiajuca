@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Chip } from '@/components/shared/AutoComplete'
 import { SaveInput } from '@/components/shared/ConfirmField'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
@@ -352,12 +352,7 @@ export function NaipesPage() {
             <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
               onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
           )}
-          {canEdit && (
-            <TrashDrawer iconOnly groups={[
-              { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
-              { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => loaded && !instOn(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
-            ]} />
-          )}
+
         </div>
       </div>
       <NaipesTabs />
@@ -390,6 +385,10 @@ export function NaipesPage() {
         })}
       </div>
       <p className="text-xs text-muted-foreground">Itens desativados somem das novas escolhas, mas o histórico é preservado. Só dá para excluir o que nunca foi usado.</p>
+      {canEdit && <TrashGroup groups={[
+      { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
+      { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => loaded && !instOn(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
+      ]} />}
     </div>
   )
 }

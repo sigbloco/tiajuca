@@ -2,7 +2,7 @@ import { usePurge } from '@/core/purge'
 import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
 import { ReadMore } from '@/components/shared/ReadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -245,7 +245,7 @@ export function DriveFoldersPage() {
       <div className="flex items-center justify-between gap-2">
         <h1>Google Drive</h1>
         <div className="flex gap-2">
-          {canManage && <TrashDrawer entries={(folders.data ?? []).filter((f) => !f.is_active).map((f) => ({ id: f.id, name: f.name, detail: f.description ?? undefined }))} onRestore={(id) => restoreFolder.mutate(id)} onPurge={(id) => purgeFolder.mutate(id)} />}
+
           {canManage && <Button variant="add" onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
         </div>
       </div>
@@ -306,6 +306,7 @@ export function DriveFoldersPage() {
       <Sheet open={syncing !== null} onOpenChange={(o) => !o && setSyncing(null)}>
         {syncing && <SyncSheet key={syncing.id} folder={syncing} onClose={() => setSyncing(null)} />}
       </Sheet>
+      {canManage && <TrashGroup entries={(folders.data ?? []).filter((f) => !f.is_active).map((f) => ({ id: f.id, name: f.name, detail: f.description ?? undefined }))} onRestore={(id) => restoreFolder.mutate(id)} onPurge={(id) => purgeFolder.mutate(id)} />}
     </div>
   )
 }

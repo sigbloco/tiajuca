@@ -6,7 +6,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, MessageCircle, Pencil, Plus, Share2 } fr
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { EMPTY_FILTER, FilterBar, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -71,7 +71,7 @@ export function RepertoireDetailPage() {
       <ButtonRow>
         <Button variant="outline" disabled={!text} onClick={copy}><Share2 className="h-4 w-4" /> Copiar lista</Button>
         <Button variant="outline" disabled={!text} onClick={whatsapp}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
-        {canManage && <TrashDrawer entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} onPurge={(id) => purgeSong.mutate(id)} />}
+
         {canManage && <Button variant="add" onClick={() => setSong({ song: null })}><Plus className="h-4 w-4" /> Adicionar música</Button>}
       </ButtonRow>
 
@@ -101,6 +101,7 @@ export function RepertoireDetailPage() {
         {song && <SongSheet key={song.song?.id ?? 'new'} repertoireId={repertoireId} song={song.song} onClose={() => setSong(null)} />}
       </Sheet>
       <Sheet open={editRep} onOpenChange={setEditRep}>{editRep && rep && <RepertoireSheet rep={rep} onClose={() => setEditRep(false)} />}</Sheet>
+      {canManage && <TrashGroup entries={(songs.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.title, detail: s.artist ?? undefined }))} onRestore={(id) => restoreSong.mutate(id)} onPurge={(id) => purgeSong.mutate(id)} />}
     </div>
   )
 }

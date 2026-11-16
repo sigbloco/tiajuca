@@ -319,7 +319,7 @@ export function MyBilling({ embedded = false }: { /** Dentro de outra página (F
     queryKey: ['my-payments-page', orgId, memberId], enabled: Boolean(memberId),
     queryFn: async () => {
       const [pay, part] = await Promise.all([
-        supabase.from('staff_payments').select('id, competence, amount, status, due_on, paid_on, payment_method, distribution_destinations(name)').eq('member_id', memberId).neq('status', 'cancelled').order('competence', { ascending: false }).limit(60),
+        supabase.from('staff_payments').select('id, competence, cycle_id, amount, status, due_on, paid_on, payment_method, distribution_destinations(name)').eq('member_id', memberId).neq('status', 'cancelled').order('competence', { ascending: false }).limit(60),
         supabase.rpc('my_participation', { p_member: memberId }),
       ])
       if (pay.error) throw pay.error
@@ -327,9 +327,10 @@ export function MyBilling({ embedded = false }: { /** Dentro de outra página (F
     },
   })
   const remunerated = !!paid.data?.remunerated
-  const inCycle = (d: string) => !cycle || (d.slice(0, 7) >= cycle.starts_on.slice(0, 7) && d.slice(0, 7) <= cycle.ends_on.slice(0, 7))
-  const myPayments = (paid.data?.payments ?? []).filter((x) => inCycle(x.competence))
-  const shown = (data ?? []).filter((c) => !cycle || (c.competence.slice(0, 7) >= cycle.starts_on.slice(0, 7) && c.competence.slice(0, 7) <= cycle.ends_on.slice(0, 7)))
+  // Pelo ciclo gravado no registro (não pelas datas do ciclo); registro antigo sem ciclo cai na regra do mês.
+  const inCycle = (d: string, id?: string | null) => !cycle || (id ? id === cycle.id : d.slice(0, 7) >= cycle.starts_on.slice(0, 7) && d.slice(0, 7) <= cycle.ends_on.slice(0, 7))
+  const myPayments = (paid.data?.payments ?? []).filter((x) => inCycle(x.competence, (x as { cycle_id?: string | null }).cycle_id))
+  const shown = (data ?? []).filter((c) => inCycle(c.competence, c.cycle_id))
   return (
     <div className="space-y-4">
       {embedded ? <h2>{remunerated ? 'Meus pagamentos' : 'Minhas mensalidades'}</h2> : <h1>{remunerated ? 'Meus pagamentos' : 'Minhas mensalidades'}</h1>}

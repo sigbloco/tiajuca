@@ -2,7 +2,8 @@ import { Collapsible } from '@/components/shared/Collapsible'
 import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Lock, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Lock, Plus, Trash2 } from 'lucide-react'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { SaveInput } from '@/components/shared/ConfirmField'
@@ -39,7 +40,6 @@ export function FunctionsPage() {
   const funcs = useCatalog('artistic_functions')
   const [adding, setAdding] = useState<Kind | null>(null)
   const [opened, setOpened] = useState<Set<Kind>>(new Set()) // os grupos carregam fechados
-  const [trashOpen, setTrashOpen] = useState(false)
   const toggle = (k: Kind) => setOpened((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })
   const [name, setName] = useState('')
   const [exempt, setExempt] = useState(false)
@@ -120,18 +120,9 @@ export function FunctionsPage() {
         )
       })}
       {canEdit && (
-        <Collapsible open={trashOpen} onToggle={() => setTrashOpen((o) => !o)} tone="muted" title="Lixeira" count={trash.length}>
-          {trash.length === 0 && <p className="text-sm text-muted-foreground">A lixeira está vazia.</p>}
-          <div className="grid gap-1.5">
-            {trash.map((f) => (
-              <Card key={f.id} className="flex items-center gap-2 p-2">
-                <span className="min-w-0 flex-1 break-words pl-2 font-semibold">{f.name} <span className="font-normal text-muted-foreground">({SECTIONS.find((x) => x.kind === kindOf(f))?.title})</span></span>
-                <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Restaurar ${f.name}`} title="Restaurar" onClick={() => patch.mutate({ f, fields: { is_active: true } })}><RotateCcw className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${f.name} de vez`} title="Excluir de vez" onClick={async () => { if (await confirmBox(`Excluir “${f.name}” de vez? Isso não pode ser desfeito.`)) del.mutate(f) }}><Trash2 className="h-4 w-4" /></Button>
-              </Card>
-            ))}
-          </div>
-        </Collapsible>
+        <TrashGroup entries={trash.map((f) => ({ id: f.id, name: `${f.name} (${SECTIONS.find((x) => x.kind === kindOf(f))?.title})` }))}
+          onRestore={(id) => { const f = all.find((x) => x.id === id); if (f) patch.mutate({ f, fields: { is_active: true } }) }}
+          onPurge={(id) => { const f = all.find((x) => x.id === id); if (f) del.mutate(f) }} />
       )}
     </div>
   )
