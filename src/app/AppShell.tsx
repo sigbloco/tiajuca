@@ -178,8 +178,8 @@ export function AppShell() {
           <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-11 w-11 shrink-0" />
           <p className="font-display text-xl font-extrabold leading-[1.05] text-primary"><OrgName name={membership.name} /></p>
         </div>
-        <nav className="flex-1 space-y-1">{renderEntries(entries)}</nav>
-        <div className="border-t border-border pt-3">
+        <nav className="space-y-1">{renderEntries(entries)}</nav>
+        <div className="mt-2 border-t border-border pt-3">
           <Link to="/site" className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
           <p className="mt-2 break-words px-1 font-semibold">{membership.display_name}</p>
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
@@ -236,10 +236,13 @@ export function AppShell() {
       </nav>
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent drawer title="Mais" description={membership.display_name}>
+        <SheetContent drawer title="Menu" description={membership.display_name} headSlot={(
+          <div className="grid grid-cols-2 gap-2">
+            <Link to="/site" onClick={() => setMoreOpen(false)}><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Ver o site</Button></Link>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+          </div>
+        )}>
           <nav className="space-y-1">{renderEntries(more, () => setMoreOpen(false))}</nav>
-          <Link to="/site" onClick={() => setMoreOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
-          <Button variant="outline" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </SheetContent>
       </Sheet>
     </div>

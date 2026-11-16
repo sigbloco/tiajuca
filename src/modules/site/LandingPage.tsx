@@ -1,6 +1,6 @@
 import { LogoWithRays } from './Rays'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ClipboardList, Images, LogIn, LogOut, Newspaper, ShoppingBag } from 'lucide-react'
+import { ClipboardList, Images, LogIn, Newspaper, ShoppingBag } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LoginPopup } from '@/modules/auth/LoginPopup'
@@ -43,7 +43,7 @@ const pill = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-ful
 /** Página inicial pública do bloco, no estilo "link na bio": foto, descrição, redes, menu e vídeos. Tudo vem do banco. */
 export function LandingPage() {
   const { data, isLoading, isError } = usePublicSite(DEFAULT_ORG_SLUG)
-  const { session, signOut } = useAuth()
+  const { session } = useAuth()
   const [shown, setShown] = useState(3)
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
@@ -81,8 +81,6 @@ export function LandingPage() {
   return (
     <main className={`relative min-h-screen bg-background pb-16 text-foreground ${full ? "overflow-x-clip" : ""}`}>
       <header className={`relative px-4 pb-20 pt-10 text-center ${full ? "" : "overflow-hidden"} ${full ? "" : heroColor ? "" : "bg-primary text-primary-foreground"}`} style={heroColor ? { backgroundColor: full ? undefined : heroColor, color: areaOverrides(org.theme, 'site').headerText ?? textOn(heroColor) } : undefined}>
-        {session && mine?.length ? <Link to={`/${mine[0].slug}`} className="relative z-10 mb-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><ArrowLeft className="h-5 w-5" aria-hidden /> Voltar ao sistema</Link> : null}
-        {session ? <button type="button" onClick={() => void signOut()} className="relative z-10 mb-4 ml-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-black/25 px-4 font-semibold text-white"><LogOut className="h-5 w-5" aria-hidden /> Sair</button> : null}
         <LogoWithRays rays={{ on: site.show_rays, count: site.rays_count, opacity: site.rays_opacity, rotation: site.rays_rotation, color: site.rays_color || (full ? heroColor : null), animate: site.rays_animate, speed: site.rays_speed, outline: site.rays_outline, outlineColor: site.rays_outline_color }} backing={heroColor ?? 'rgb(var(--primary))'} name={org.name} logoPath={photo} />
         <h1 className={site.hide_headline || site.show_rays ? 'sr-only' : 'relative mt-4 font-display text-3xl font-extrabold'}>{site.headline || org.name}</h1>
       </header>
@@ -138,7 +136,9 @@ export function LandingPage() {
               {k === 'release' && site.show_release !== false && site.release_url && (
                 <a href={site.release_url} target="_blank" rel="noreferrer noopener" aria-disabled={under('release') || undefined} className={`${pill} bg-card text-foreground ${off('release')} ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}{under('release') && chip}</a>
               )}
-              {k === 'login' && site.show_login !== false && <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>}
+              {k === 'login' && site.show_login !== false && (session && mine?.length
+                ? <Link to={`/${mine[0].slug}`} className={`${pill} bg-card text-foreground`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</Link>
+                : <button type="button" onClick={() => setLoginOpen(true)} className={`${pill} bg-card text-foreground ${site.shake_button === 'login' ? 'animate-attention trim-ring' : ''}`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</button>)}
             </Fragment>
           ))}
         </nav>
@@ -162,7 +162,7 @@ export function LandingPage() {
 
         <footer className="pt-4 text-center text-xs text-muted-foreground">{org.name}</footer>
       </div>
-      <LoginPopup open={loginOpen} onOpenChange={closeLogin} onSignedIn={() => navigate(safeBack(params.get('voltar')), { replace: true })} />
+      <LoginPopup open={loginOpen} onOpenChange={closeLogin} onSignedIn={() => { const b = params.get('voltar'); if (b) navigate(safeBack(b), { replace: true }) }} />
     </main>
   )
 }
