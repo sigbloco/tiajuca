@@ -1,4 +1,6 @@
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { ChevronRight } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { TEXT_VARS } from '@/core/textVars'
 
 function Chip({ text, help, onInsert }: { text: string; help: string; onInsert: (t: string) => void }) {
@@ -17,10 +19,24 @@ export function VarsHint({ onInsert, valueVars = true }: { /** Clicar numa vari�
   const exemptIds = new Set(exemptFns.map((f) => f.id))
   const exemptNames = new Set(exemptFns.map((f) => f.name.toLowerCase()))
   const names = (cats.data ?? []).filter((c) => c.is_active && !c.is_exempt && c.name !== 'Isento' && !(c.function_id && exemptIds.has(c.function_id)) && !exemptNames.has(c.name.toLowerCase())).map((c) => c.name)
+  // Grupos recolhíveis (fechados por padrão): a lista de variáveis só cresce.
+  const group = (title: string, count: number, children: ReactNode) => count === 0 ? null : (
+    <details className="group rounded-md border border-border bg-card">
+      <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 px-2 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+        <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" aria-hidden /> {title} <span className="font-normal text-muted-foreground">({count})</span>
+      </summary>
+      <p className="px-2 pb-2">{children}</p>
+    </details>
+  )
+  const chip = (v: (typeof TEXT_VARS)[number]) => <span key={v.key}><Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /> </span>
+  const general = TEXT_VARS.filter((v) => !v.needsCycle)
+  const cycleVars = valueVars ? TEXT_VARS.filter((v) => v.needsCycle) : []
   return (
-    <div className="space-y-0.5 text-xs text-muted-foreground">
-      <p>Inserir variável {TEXT_VARS.filter((v) => valueVars || !v.needsCycle).map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
-      {valueVars && names.length > 0 && <p>{names.map((n, i) => <span key={n}>{i > 0 && ' '}<Chip text={`{valor:${n}}`} help={`valor atual de ${n}`} onInsert={onInsert} /></span>)}.</p>}
+    <div className="space-y-1 text-xs text-muted-foreground">
+      <p>Inserir variável:</p>
+      {group('Do bloco e do formulário', general.length, general.map(chip))}
+      {group('Do ciclo', cycleVars.length, cycleVars.map(chip))}
+      {group('Valor de cada categoria', valueVars ? names.length : 0, names.map((n) => <span key={n}><Chip text={`{valor:${n}}`} help={`valor de ${n} no ciclo do formulário`} onInsert={onInsert} /> </span>))}
     </div>
   )
 }

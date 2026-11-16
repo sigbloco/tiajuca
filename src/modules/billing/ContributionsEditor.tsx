@@ -5,7 +5,7 @@ import { Copy, Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
-import { Button, Card, Skeleton } from '@/components/ui/primitives'
+import { Button, Card, Skeleton, cn } from '@/components/ui/primitives'
 import { useCycles } from '@/modules/cycles/service'
 import { friendlyError } from '@/core/errors'
 import { todayIso } from '@/core/format'
@@ -26,7 +26,7 @@ function useSetPrice(cycleId: string | undefined, from: string) {
 }
 
 /** Categoria que acompanha uma categoria de Organização: o nome não se edita; só o valor mensal (versionado: vale daqui para frente). */
-function CategoryRow({ item, current, canEdit, from, cycleId }: { item: CatalogItem; current: number | null; canEdit: boolean; from: string; cycleId?: string }) {
+function CategoryRow({ item, current, canEdit, from, cycleId, exempt, onExempt }: { item: CatalogItem; current: number | null; canEdit: boolean; from: string; cycleId?: string; /** Isento neste ciclo. */ exempt?: boolean; onExempt?: (on: boolean) => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const setPrice = useSetPrice(cycleId, from)
@@ -42,7 +42,8 @@ function CategoryRow({ item, current, canEdit, from, cycleId }: { item: CatalogI
     <Card className="flex flex-nowrap items-center gap-2 p-2 pl-3">
       <span className="min-w-0 flex-1"><span className="font-semibold">{item.name}</span><span className="text-muted-foreground">/mês</span>
         <span className="block break-words font-mono text-xs text-muted-foreground" title="Variável para usar nos textos dos formulários">{'{valor:' + item.name + '}'}</span></span>
-      <div className="w-28 shrink-0 sm:w-32"><MoneyInput value={value} onChange={setValue} onBlur={() => { if (canEdit && dirty && !save.isPending) save.mutate() }} /></div>
+      {onExempt && <label className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold"><input type="checkbox" className="h-4 w-4" checked={!!exempt} disabled={!canEdit} onChange={(e) => onExempt(e.target.checked)} /> Isento</label>}
+      <div className={cn('w-28 shrink-0 sm:w-32', exempt && 'opacity-50')}><MoneyInput value={exempt ? 0 : value} onChange={setValue} onBlur={() => { if (canEdit && dirty && !save.isPending) save.mutate() }} /></div>
     </Card>
   )
 }
@@ -85,11 +86,27 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
     onError: (e) => toast.error(friendlyError(e)),
   })
   const functions = (funcs.data ?? []).filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order)
-  const isExempt = (f: CatalogItem) => !!f.is_exempt || !!f.exempt_locked
+  // Isento por ciclo: sem escolha para o ciclo, vale o padrão da categoria; as fixas (remuneradas, direção, professor...) são sempre isentas.
+  const cycleExempt = useQuery({
+    queryKey: ['fee-exempt', orgId, cycle?.id ?? 'none'],
+    enabled: !!cycle,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('fee_cycle_exempt').select('function_id, is_exempt').eq('cycle_id', cycle!.id)
+      if (error) throw error
+      return Object.fromEntries((data ?? []).map((r) => [r.function_id as string, !!r.is_exempt]))
+    },
+  })
+  const isLocked = (f: CatalogItem) => !!f.exempt_locked || f.kind === 'paid'
+  const isExempt = (f: CatalogItem) => isLocked(f) || (cycleExempt.data && f.id in cycleExempt.data ? cycleExempt.data[f.id] : !!f.is_exempt)
+  const setExempt = useMutation({
+    mutationFn: async (v: { id: string; on: boolean }) => { const { error } = await supabase.rpc('set_cycle_exempt', { p_function: v.id, p_cycle: cycle!.id, p_exempt: v.on }); if (error) throw error },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fee-exempt', orgId] }); notifySaved('Isento atualizado para este ciclo. Cobranças já geradas não mudam.') },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   // Mesmo nome em duas seções (ex.: Monitor remunerado e Monitor colaborativo): mostra a seção entre parênteses.
   const dupNames = new Set(functions.map((f) => f.name.toLowerCase()).filter((n, i, all) => all.indexOf(n) !== i))
   const exemptNames = functions.filter(isExempt).map((f) => (dupNames.has(f.name.toLowerCase()) ? `${f.name} (${f.kind === 'paid' ? 'remunerado' : f.kind === 'artistic' ? 'artístico' : 'colaborativo'})` : f.name))
-  const payers = functions.filter((f) => !isExempt(f)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const payers = functions.filter((f) => !isLocked(f)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const byName = new Map((cats.data ?? []).map((c) => [c.name.toLowerCase(), c]))
 
   // Função que paga e ainda não tem categoria: cria (só quem pode mexer em contribuições consegue).
@@ -104,7 +121,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
     <div className="space-y-3">
       <h2>Valores{cycle ? ` · ${cycle.name}` : ''}</h2>
       <p className="text-sm text-muted-foreground">
-        O valor mensal de cada categoria <strong>vale para o ciclo escolhido</strong> (e é o que os formulários desse ciclo mostram nas variáveis <code className="font-mono">{'{valor}'}</code>). Cada ciclo pode ter valores diferentes; os de ciclos antigos também podem ser corrigidos.
+        O valor mensal de cada categoria <strong>vale para o ciclo escolhido</strong> (e é o que os formulários desse ciclo mostram nas variáveis <code className="font-mono">{'{valor}'}</code>). O mesmo vale para o <strong>Isento</strong>: marcar ou desmarcar vale só para o ciclo escolhido. Cada ciclo pode ter valores diferentes; os de ciclos antigos também podem ser corrigidos.
         As categorias acompanham as de <PageLink to="funcoes">Organização → Categorias</PageLink> e não se editam aqui; só o valor. Cobranças já geradas não mudam. Defina a categoria de cada pessoa na ficha do integrante.
       </p>
       {editable && noOwnPrices && previous && (
@@ -117,11 +134,11 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
       <div className="grid gap-2">
         <Card className="space-y-1 border-primary/30 bg-primary/5 p-3">
           <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-muted-foreground" aria-hidden /> Isento <span className="font-normal text-muted-foreground">· R$ 0,00 /mês</span></p>
-          <p className="text-sm text-muted-foreground">Quem tem uma categoria isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. Não é editável.</p>
+          <p className="text-sm text-muted-foreground">Quem tem uma categoria isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. As fixas (remuneradas, direção, professores…) são sempre isentas; nas demais, marque “Isento” na linha da categoria.</p>
         </Card>
         <ProgressiveList items={payers} render={(f) => {
           const c = byName.get(f.name.toLowerCase())
-          return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={editable} from={from} cycleId={cycle?.id} /> : (
+          return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={editable} from={from} cycleId={cycle?.id} exempt={isExempt(f)} onExempt={cycle ? (on) => setExempt.mutate({ id: f.id, on }) : undefined} /> : (
             <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</Card>
           )
         }} />

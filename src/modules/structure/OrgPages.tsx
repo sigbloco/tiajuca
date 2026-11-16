@@ -6,7 +6,7 @@ import { Lock, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { SaveInput } from '@/components/shared/ConfirmField'
-import { Badge, Button, Card, Input, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { requireFields } from '@/core/required'
 import { useOrgId } from '@/core/organization'
@@ -79,20 +79,12 @@ export function FunctionsPage() {
 
   const row = (f: CatalogItem) => {
     const locked = !!f.is_fixed
-    const paid = kindOf(f) === 'paid'
-    const exemptOn = !!f.is_exempt || !!f.exempt_locked
     return (
       <Card key={f.id} className="flex flex-wrap items-center gap-2 p-2">
         {locked ? (
           <span className="flex min-w-0 flex-1 items-center gap-2 pl-2 font-semibold"><Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />{f.name}<Badge>Fixa</Badge></span>
         ) : (
           <SaveInput value={f.name} disabled={!canEdit} aria-label={`Nome de ${f.name}`} onSave={(v) => patch.mutateAsync({ f, fields: { name: v } })} />
-        )}
-        {!paid && (
-          <label className={cn('inline-flex min-h-9 items-center gap-2 text-sm font-semibold', f.exempt_locked && 'text-muted-foreground')} title={f.exempt_locked ? 'Isenção fixa' : undefined}>
-            <input type="checkbox" className="h-4 w-4" checked={exemptOn} disabled={!canEdit || !!f.exempt_locked || patch.isPending}
-              onChange={(e) => patch.mutate({ f, fields: { is_exempt: e.target.checked } })} /> Isento{f.exempt_locked ? ' (fixo)' : ''}
-          </label>
         )}
         {canEdit && !locked && (
           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Mover ${f.name} para a lixeira`} title="Mover para a lixeira"
@@ -106,8 +98,7 @@ export function FunctionsPage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Integrantes podem acumular categorias (por exemplo, direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
-        O valor mensal de cada categoria, por ciclo, fica em <PageLink to="valores">Financeiro → Valores</PageLink>, que acompanha estas categorias.
+        Integrantes podem acumular categorias (por exemplo, direção e Regência). O <strong>Isento</strong> e o valor mensal de cada categoria são definidos por ciclo, em <PageLink to="valores">Financeiro → Valores</PageLink>, que acompanha estas categorias.
       </p>
       {SECTIONS.map((s) => {
         const items = all.filter((f) => f.is_active && kindOf(f) === s.kind)
@@ -121,7 +112,6 @@ export function FunctionsPage() {
             {canEdit && adding === s.kind && (
               <Card className="flex flex-wrap items-center gap-3 p-3">
                 <Input className="min-w-40 flex-1" autoFocus aria-label={`Nova categoria em ${s.title}`} placeholder="Nome da categoria" value={name} onChange={(e) => setName(e.target.value)} />
-                {s.kind !== 'paid' && <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-4 w-4" checked={exempt} onChange={(e) => setExempt(e.target.checked)} /> Isento</label>}
                 <Button disabled={add.isPending} onClick={() => { if (requireFields([['Nome', name.trim()]])) add.mutate(s.kind) }}><Plus className="h-4 w-4" /> Adicionar</Button>
               </Card>
             )}
