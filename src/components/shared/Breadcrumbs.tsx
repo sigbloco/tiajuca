@@ -48,7 +48,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
     const nav = navRef.current
     if (!nav) return
     // Passou de duas linhas: junta os itens do meio no menu.
-    const lh = (nav.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0
+    const lh = Math.max((nav.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0, parseFloat(getComputedStyle(nav).lineHeight) || 0, 18)
     if (canCollapse && !collapsed && lh > 0 && nav.offsetHeight > lh * 2 + 12) { setCollapsed(true); return }
     // Se o caminho quebrar de linha, esconde o "•" que ficaria sozinho no fim da linha (o item seguinte foi para a de baixo).
     nav.querySelectorAll<HTMLElement>('[data-bullet]').forEach((b) => {
