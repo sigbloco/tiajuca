@@ -34,7 +34,7 @@ import { byOrder, nextOrder, useOpenSet, useStructureMutations } from './Structu
 
 type Kind = 'professor' | 'monitor' | 'regente'
 type Scope = 'section' | 'instrument'
-interface Assignment { compensation: Compensation; id: string; member_id: string; staff_kind: Kind; section_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
+interface Assignment { compensation: Compensation | null; id: string; member_id: string; staff_kind: Kind; section_id: string | null; instrument_id: string | null; members: { full_name: string; display_name: string | null } | null }
 
 const COL: Record<Scope, string> = { section: 'section_id', instrument: 'instrument_id' }
 
@@ -63,7 +63,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
   const mine = (data ?? []).filter((a) => a[col] === id)
   const add = useMutation({
     mutationFn: async (v: { member: string; kind: Kind }) => {
-      const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: v.member, staff_kind: v.kind, [col]: id, compensation: v.kind === 'regente' ? 'collaborative' : comp, cycle_id: cycleId })
+      const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: v.member, staff_kind: v.kind, [col]: id, compensation: v.kind === 'regente' ? null : comp, cycle_id: cycleId })
       if (error) throw error
     },
     onSuccess: () => { refresh(); setAdding(null); setComp(null); toast.success('Pessoa designada.') },

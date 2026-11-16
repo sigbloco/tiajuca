@@ -52,11 +52,11 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
     queryKey: ['member-regencia', orgId, memberId, cycleId],
     enabled: !collab && Boolean(cycleId),
     queryFn: async () => {
-      let q = supabase.from('staff_assignments').select('id, section_id, compensation').eq('organization_id', orgId).eq('member_id', memberId).eq('staff_kind', 'regente').eq('cycle_id', cycleId!)
+      let q = supabase.from('staff_assignments').select('id, section_id').eq('organization_id', orgId).eq('member_id', memberId).eq('staff_kind', 'regente').eq('cycle_id', cycleId!)
       if (!byCycle) q = q.is('valid_to', null)
       const { data, error } = await q
       if (error) throw error
-      return (data ?? []) as { id: string; section_id: string | null; compensation: 'paid' | 'collaborative' }[]
+      return (data ?? []) as { id: string; section_id: string | null }[]
     },
   })
 
@@ -83,7 +83,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   const close = () => { setEditing(null); setF({ ...EMPTY, is_paid: paid }) }
   const refreshReg = () => { qc.invalidateQueries({ queryKey: ['member-regencia', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['staff-assignments'] }); qc.invalidateQueries({ queryKey: ['members', orgId] }) }
   const addReg = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: memberId, staff_kind: 'regente', section_id: f.instrument_id.slice(REGENCIA.length), compensation: 'collaborative', cycle_id: cycleId }); if (error) throw error },
+    mutationFn: async () => { const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: memberId, staff_kind: 'regente', section_id: f.instrument_id.slice(REGENCIA.length), compensation: null, cycle_id: cycleId }); if (error) throw error },
     onSuccess: () => { close(); refreshReg(); toast.success('Regência adicionada.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
