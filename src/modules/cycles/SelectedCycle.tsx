@@ -16,7 +16,8 @@ const SelectedCycleCtx = createContext<Ctx | null>(null)
 export function SelectedCycleProvider({ children }: { children: ReactNode }) {
   const cycles = useCycles()
   const [picked, setPicked] = useState('')
-  const cycleId = picked || pickDefaultCycle(cycles.data)
+  const exists = !picked || (cycles.data ?? []).some((c) => c.id === picked)
+  const cycleId = (exists && picked) || pickDefaultCycle(cycles.data)
   const value = useMemo<Ctx>(() => ({ cycleId, setCycleId: setPicked, cycle: (cycles.data ?? []).find((c) => c.id === cycleId) }), [cycleId, cycles.data])
   return <SelectedCycleCtx.Provider value={value}>{children}</SelectedCycleCtx.Provider>
 }
@@ -29,7 +30,7 @@ export function useSelectedCycle(): Ctx {
 
 /** Áreas que ficam sob um ciclo (o Calendário tem o seu próprio menu). */
 const CYCLE_AREAS = new Set([
-  '', 'oficina', 'alunos', 'presenca', 'vagas', 'lista-de-espera', 'formularios', 'relatorios',
+  'oficina', 'alunos', 'presenca', 'vagas', 'lista-de-espera', 'formularios', 'relatorios',
   'repertorio', 'naipes', 'eventos', 'membros',
   'financeiro', 'equipe', 'valores', 'cobrancas', 'mensalidades', 'bolsas',
 ])

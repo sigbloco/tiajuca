@@ -46,7 +46,10 @@ const NL = String.fromCharCode(10)
 
 /** Perfil do bloco: cada rede social é uma rede (menu) + o usuário; o link é montado sozinho. */
 interface NetRow { network: string; user: string }
-const rowsOf = (t: string | null): NetRow[] => { const l = (t ?? '').split(NL).map((x) => x.trim()).filter(Boolean); return l.length ? l.map(splitNetwork) : [{ network: 'instagram', user: '' }] }
+/** Marca de quem não tem/não usa redes sociais (o perfil deixa de pedir; o link é ignorado nas telas). */
+const NO_SOCIAL = 'Não uso'
+const isNoSocial = (t: string | null | undefined) => /^n[aã]o uso\.?$/i.test((t ?? '').trim())
+const rowsOf = (t: string | null): NetRow[] => { const l = (t ?? '').split(NL).map((x) => x.trim()).filter((x) => Boolean(x) && !isNoSocial(x)); return l.length ? l.map(splitNetwork) : [{ network: 'instagram', user: '' }] }
 const urlsOf = (rows: NetRow[]) => rows.map((r) => networkUrl(r.network, r.user)).filter((x): x is string => !!x)
 
 /** Dados cadastrais do próprio integrante: tudo editável, exceto a data de inscrição. Redes sociais: várias, uma por linha. */
@@ -74,7 +77,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   })
   const [foundedOn, setFoundedOn] = useState('')
   useEffect(() => { if (founded.data !== undefined) setFoundedOn(founded.data) }, [founded.data])
-  useEffect(() => { if (me.data) setRows(rowsOf(me.data.social_handle)) }, [me.data])
+  const [noSocial, setNoSocial] = useState(false)
+  useEffect(() => { if (me.data) { setRows(rowsOf(me.data.social_handle)); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data])
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
   const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone])
 
@@ -86,7 +90,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
           ? { email: f.email, phone: f.phone.replace(/[^0-9]/g, ''), social_handle: urlsOf(rows).join(NL) }
           : part === 'other'
           ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '' && !isNA(f.other_blocks), played_instrument: f.played_instrument }
-          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: urlsOf(rows).join(NL) },
+          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: noSocial ? NO_SOCIAL : urlsOf(rows).join(NL) },
       })
       if (error) throw error
       if (part === 'bloco' && foundedOn !== (founded.data ?? '')) { const r = await supabase.rpc('set_org_founded', { p_org: orgId, p_date: foundedOn || null }); if (r.error) throw r.error }
@@ -95,8 +99,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle)), founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(urlsOf(rowsOf(me.data.social_handle))))) : ''
-  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows), foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(urlsOf(rows)))
+  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle)), founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(urlsOf(rowsOf(me.data.social_handle))) + String(isNoSocial(me.data.social_handle)))) : ''
+  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows), foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(urlsOf(rows)) + String(noSocial))
   useUnsaved(!!me.data && curKey !== baseline, () => save.mutateAsync())
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
@@ -164,7 +168,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
           <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
           <div className="space-y-1.5"><Label htmlFor="my-user-0">Redes sociais</Label>
-            {rows.map((r, i) => (
+            {!noSocial && rows.map((r, i) => (
               <div key={i} className="flex gap-2">
                 <Select aria-label="Rede" className="w-36 shrink-0" value={r.network} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
                   {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
@@ -173,7 +177,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
                 {rows.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setRows(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
               </div>
             ))}
-            <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button></div>
+            {!noSocial && <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>}
+            <label className="flex min-h-9 items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> Não tenho / não uso redes sociais</label></div>
         </div>
         {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
       </form>

@@ -3,7 +3,7 @@ import { Cake, UserRound } from 'lucide-react'
 import { useParticipationLine } from '@/modules/profile/participationLine'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 import { useState } from 'react'
-import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
+import { useCycles } from '@/modules/cycles/service'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCurrency, formatDate, formatDayLong, todayIso } from '@/core/format'
@@ -78,7 +78,8 @@ function BirthdaysToday({ orgId, tz }: { orgId: string; tz: string }) {
 
 function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: string; memberId: string; slug: string; tz: string; filterByMine: boolean }) {
   const today = todayIso(tz)
-  const { cycleId } = useSelectedCycle()
+  const allCycles = useCycles()
+  const cycleId = (allCycles.data ?? []).find((c) => c.is_current)?.id
   const [shown, setShown] = useState(3)
   const [sheet, setSheet] = useState<{ activity: Activity; edit?: boolean } | null>(null)
   const my = useMySections(orgId, memberId, cycleId, filterByMine)
@@ -121,9 +122,13 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
   )
 }
 
-/** Situação pessoal: ciclo atual, status, frequência e mensalidade (qualquer integrante). */
-function MyStatus({ orgId, memberId, slug, staff }: { orgId: string; memberId: string; slug: string; staff: boolean }) {
-  const { cycle: sel } = useSelectedCycle()
+/**
+ * Situação pessoal no ciclo ATUAL (o Início mostra sempre "agora"): status, frequência e mensalidade — ou pagamento, para quem é remunerado.
+ * Quem é da direção/titular e não tem registro no ciclo não vê nada disso.
+ */
+function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; memberId: string; slug: string; staff: boolean; direction: boolean }) {
+  const cycles = useCycles()
+  const sel = (cycles.data ?? []).find((c) => c.is_current) ?? (cycles.data ?? []).find((c) => c.is_active)
   const { data } = useQuery({
     queryKey: ['my-status', orgId, memberId, sel?.id],
     enabled: Boolean(sel),
@@ -131,21 +136,34 @@ function MyStatus({ orgId, memberId, slug, staff }: { orgId: string; memberId: s
       const cycle = sel ? { id: sel.id, name: sel.name } : null
       const mc = cycle ? (await supabase.from('member_cycles').select('member_cycle_statuses(name)').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { member_cycle_statuses: { name: string } | null } | null : null
       const att = cycle ? (await supabase.from('v_attendance_member_cycle').select('pct_present, records').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data : null
-      const charge = (await supabase.from('monthly_charges').select('competence, final_amount, status, due_on').eq('member_id', memberId).in('status', ['pending']).order('competence').limit(1).maybeSingle()).data
+      const charge = (await supabase.from('monthly_charges').select('competence, final_amount, status, due_on').eq('member_id', memberId).in('status', ['pending']).order('competence').limit(1).maybeSingle()).data as { final_amount: number; due_on: string } | null
       const sch = cycle ? (await supabase.from('cycle_scholarships').select('percent').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { percent: number } | null : null
-      return { cycle, status: mc?.member_cycle_statuses?.name ?? null, att, charge, exempt: Number(sch?.percent ?? 0) >= 100 }
+      // Categorias do ciclo: remunerada (recebe) ou isenta (não paga mensalidade), com o Isento escolhido para o ciclo.
+      const parts = cycle ? ((await supabase.from('cycle_participations').select('function_id, artistic_functions(kind, is_exempt, exempt_locked)').eq('member_id', memberId).eq('cycle_id', cycle.id).not('function_id', 'is', null)).data ?? []) as unknown as { function_id: string; artistic_functions: { kind: string | null; is_exempt: boolean; exempt_locked: boolean } | null }[] : []
+      const ce = cycle ? Object.fromEntries(((await supabase.from('fee_cycle_exempt').select('function_id, is_exempt').eq('cycle_id', cycle.id)).data ?? []).map((r) => [r.function_id as string, !!r.is_exempt])) : {}
+      const fnExempt = parts.some((p) => !!p.artistic_functions && (p.artistic_functions.exempt_locked || (p.function_id in ce ? ce[p.function_id] : p.artistic_functions.is_exempt)))
+      const paidRole = parts.some((p) => p.artistic_functions?.kind === 'paid')
+      const pay = (await supabase.from('staff_payments').select('amount, due_on').eq('member_id', memberId).eq('status', 'pending').order('due_on').limit(1).maybeSingle()).data as { amount: number; due_on: string } | null
+      return { cycle, status: mc?.member_cycle_statuses?.name ?? null, att, charge, pay, paidRole, exempt: Number(sch?.percent ?? 0) >= 100 || fnExempt }
     },
   })
   if (!data) return <Skeleton className="h-24" />
+  // Direção/titular sem registro no ciclo: nada disto se aplica (a visão da direção, mais abaixo, já mostra o ciclo).
+  if (direction && !data.status && !data.paidRole) return null
+  const receives = data.paidRole || direction || staff
   return (
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
       <Stat label="Ciclo" value={data.cycle?.name ?? '—'} />
       <Stat label="Meu status" value={data.status ?? 'Sem registro'} />
-      {!staff && <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
-      {!staff && <Link to={`/${slug}/cobrancas`} className="block h-full">
-        <Stat label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
-          hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
-      </Link>}
+      {!staff && !direction && <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
+      <Link to={`/${slug}/cobrancas`} className="block h-full">
+        {receives ? (
+          <Stat label="Pagamento" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
+        ) : (
+          <Stat label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
+            hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
+        )}
+      </Link>
     </div>
   )
 }
@@ -253,7 +271,7 @@ export function HomePage() {
           </div>
         </Card>
       )}
-      <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} />
+      <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} direction={isDirection} />
       <BirthdaysToday orgId={membership.organization_id} tz={membership.timezone} />
       <UpcomingEvents orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} tz={membership.timezone} filterByMine={!isDirection} />
       {isStaff && !isDirection && <GroupCard orgId={membership.organization_id} slug={membership.slug} />}
