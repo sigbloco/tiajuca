@@ -71,6 +71,25 @@ function CapacityInput({ row, cycleId }: { row: Row; cycleId: string }) {
 }
 
 
+/** Nome que nunca quebra no meio da palavra: se não cabe, a fonte diminui até caber. */
+function FitName({ children }: { children: string }) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      el.style.fontSize = ''
+      let px = parseFloat(getComputedStyle(el).fontSize)
+      while (el.scrollWidth > el.clientWidth + 0.5 && px > 8) { px -= 0.5; el.style.fontSize = `${px}px` }
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [children])
+  return <p ref={ref} className="overflow-hidden whitespace-nowrap font-semibold">{children}</p>
+}
+
 /** Quadro "ocupadas/vagas": largura fixa e nunca quebra, igual nos cartões e nos títulos dos naipes (ficam alinhados). */
 const TOTAL_BOX = 'flex w-[4.75rem] shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-muted/60 px-1 font-display text-xl font-bold'
 
@@ -94,7 +113,7 @@ function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: strin
         <Card key={r.instrument_id} className={cn('flex items-stretch gap-2 p-2.5', r.is_full && 'border-destructive/50')}>
           {/* Esquerda: nome (quebra de linha se faltar espaço) e, embaixo, o número de vagas. Direita: ocupadas/vagas, que nunca quebra. */}
           <div className="min-w-0 space-y-1.5">
-            <p className="font-semibold">{r.instrument_name}</p>
+            <FitName>{r.instrument_name}</FitName>
             {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
           </div>
           <div className={cn(TOTAL_BOX, 'self-stretch')}
