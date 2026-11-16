@@ -178,7 +178,6 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
                 onPick={(o) => setF({ ...f, instrument_id: o.id })} />
             )}
           </div>
-          {!isReg && <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" checked={f.is_student} onChange={(e) => setF({ ...f, is_student: e.target.checked })} /> Aluno</label>}
         </>
       )}
       {!collab && (
@@ -200,7 +199,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         <div key={l.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
           <div className="min-w-0">
             <p className="break-words font-semibold">
-              {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :[l.instruments?.name, l.is_student ? 'Aluno' : null].filter(Boolean).join(' · ')}
+              {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :l.instruments?.name}
             </p>
             {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name ? `${l.skill_levels.name} (autodeclarado)` : null].filter(Boolean).join(' · ')}</p>}
           </div>
