@@ -20,11 +20,11 @@ import { invalidateCatalog, mirrorFunctionToFees, saveCatalogItem, type CatalogI
 /**
  * Categorias: tudo é editável. "Isento" garante a isenção de quem tem a função. O valor mensal de cada categoria fica em Financeiro → Valores.
  */
-type Kind = 'paid' | 'collab' | 'artistic'
+type Kind = 'paid' | 'collab' | 'payer'
 const SECTIONS: { kind: Kind; title: string; hint?: string }[] = [
   { kind: 'paid', title: 'Remuneradas', hint: 'Isentas automaticamente.' },
   { kind: 'collab', title: 'Colaborativas' },
-  { kind: 'artistic', title: 'Artística' },
+  { kind: 'payer', title: 'Contribuintes', hint: 'Têm valor mensal (definido por ciclo em Financeiro → Valores). A cobrança segue sempre a categoria principal.' },
 ]
 
 export function FunctionsPage() {
@@ -47,7 +47,7 @@ export function FunctionsPage() {
     mutationFn: async (kind: Kind) => {
       const nm = name.trim()
       const id = await saveCatalogItem('artistic_functions', orgId, { name: nm, kind, sort_order: (all.reduce((m, f) => Math.max(m, f.sort_order === 99 ? 10 : f.sort_order), 0)) + 1, is_exempt: kind === 'paid' || exempt, ...(kind === 'paid' ? { exempt_locked: true } : {}) })
-      await mirrorFunctionToFees(orgId, { fnId: id, created: nm })
+      if (kind === 'payer') await mirrorFunctionToFees(orgId, { fnId: id, created: nm })
       return id
     },
     onSuccess: () => { setName(''); setExempt(false); setAdding(null); refresh(); notifySaved('Categoria criada.') },

@@ -15,9 +15,14 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { Plus } from 'lucide-react'
 
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
-const MEMBER_CATEGORIES = ['aluno', 'musico', 'senior', 'professor', 'isento']
+const MEMBER_CATEGORIES = ['isento']
 /** Categoria escolhível na ficha: pela chave fixa (renomear "Músico" para "Músico convidado" não tira ela da lista). */
-const isMemberCategory = (c: { system_key?: string | null }) => MEMBER_CATEGORIES.includes(c.system_key ?? '')
+/** Escolhíveis: as categorias dos contribuintes (grupo Contribuintes em Organização → Categorias) e a fixa "Isento". */
+function useIsMemberCategory() {
+  const funcs = useCatalog('artistic_functions')
+  const payerFns = new Set((funcs.data ?? []).filter((f) => f.kind === 'payer').map((f) => f.id))
+  return (c: { system_key?: string | null; function_id?: string | null }) => (c.function_id ? payerFns.has(c.function_id) : false) || MEMBER_CATEGORIES.includes(c.system_key ?? '')
+}
 
 /** Categoria isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria. */
 function useExemptFunction(memberId: string, cycleId: string | undefined) {
@@ -38,6 +43,7 @@ function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; c
   const orgId = useOrgId()
   const qc = useQueryClient()
   const categories = useCatalog('fee_categories')
+  const isMemberCategory = useIsMemberCategory()
   const [adding, setAdding] = useState(false)
   const key = ['extra-categories', orgId, memberId, cycleId]
   const extras = useQuery({
@@ -158,6 +164,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   const canBilling = usePermission('billing.manage')
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
+  const isMemberCategory = useIsMemberCategory()
   const today = todayIso(membership?.timezone)
   const info = useQuery({
     queryKey: ['cycle-billing', orgId, memberId, cycle.id],
@@ -226,7 +233,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
     return (
       <MemberSection title="Categoria">
         <div className="space-y-1">
-          <Label htmlFor={'cc-cat-' + cycle.id} className="block">Categoria principal</Label>
+          <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => isMemberCategory(c) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -240,7 +247,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   return (
     <MemberSection title={<>Contribuição mensal{exemptBy ? <span className="font-normal text-muted-foreground"> • Isento</span> : price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
       <div className="space-y-1">
-        <Label htmlFor={'cc-cat-' + cycle.id} className="block">Categoria principal</Label>
+        <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => isMemberCategory(c) || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -271,6 +278,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   const canBilling = usePermission('billing.manage')
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
+  const isMemberCategory = useIsMemberCategory()
   const [livePct, setLivePct] = useState(0)
   const currentCycleId = useCycles().data?.find((c) => c.is_current)?.id ?? ''
   const exemptBy = useExemptFunction(memberId, currentCycleId || undefined)
@@ -326,7 +334,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
     return (
       <MemberSection title="Categoria">
         <div className="space-y-1">
-          <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
+          <Label htmlFor="fee-cat" className="block">Principal</Label>
           <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
             <option value="">Não contribui</option>
             {categories.data?.filter((c) => isMemberCategory(c) || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

@@ -17,8 +17,8 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { invalidateCatalog, mirrorFunctionToFees, type CatalogItem } from '@/modules/structure/service'
 
 /** Grava o valor: com ciclo, é o valor DO CICLO (não depende de datas); sem ciclo, vale daqui para frente. */
-/** Os mesmos grupos de Organização → Categorias (as remuneradas não têm valor mensal). */
-const GROUPS: { kind: 'collab' | 'artistic'; title: string }[] = [{ kind: 'collab', title: 'Colaborativas' }, { kind: 'artistic', title: 'Artística' }]
+/** Só os contribuintes têm valor mensal (os demais grupos de Organização → Categorias não entram aqui). */
+const GROUPS: { kind: 'payer'; title: string }[] = [{ kind: 'payer', title: 'Contribuintes' }]
 
 function useSetPrice(cycleId: string | undefined, from: string) {
   return async (category: string, amount: number) => {
@@ -89,7 +89,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
     onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['fee-prices', orgId] }); toast.success(`Valores copiados de ${previous?.name}: ${n} categoria(s).`) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['payer']))
   const functions = (funcs.data ?? []).filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order)
   // Isento por ciclo: sem escolha para o ciclo, vale o padrão da categoria; as fixas (remuneradas, direção, professor...) são sempre isentas.
   const cycleExempt = useQuery({
@@ -110,8 +110,8 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   })
   // Mesmo nome em duas seções (ex.: Monitor remunerado e Monitor colaborativo): mostra a seção entre parênteses.
   const dupNames = new Set(functions.map((f) => f.name.toLowerCase()).filter((n, i, all) => all.indexOf(n) !== i))
-  const exemptNames = functions.filter(isExempt).map((f) => (dupNames.has(f.name.toLowerCase()) ? `${f.name} (${f.kind === 'paid' ? 'remunerado' : f.kind === 'artistic' ? 'artístico' : 'colaborativo'})` : f.name))
-  const payers = functions.filter((f) => !isLocked(f)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const exemptNames = functions.filter(isExempt).map((f) => (dupNames.has(f.name.toLowerCase()) ? `${f.name} (${f.kind === 'paid' ? 'remunerado' : f.kind === 'payer' ? 'contribuinte' : 'colaborativo'})` : f.name))
+  const payers = functions.filter((f) => f.kind === 'payer' && !isLocked(f)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const byName = new Map((cats.data ?? []).map((c) => [c.name.toLowerCase(), c]))
 
   // Função que paga e ainda não tem categoria: cria (só quem pode mexer em contribuições consegue).
@@ -143,7 +143,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
         </Card>
         {/* Mesmos grupos de Organização → Categorias (fechados por padrão). Remuneradas e fixas não têm valor: estão no cartão Isento. */}
         {GROUPS.map((g) => {
-          const items = payers.filter((f) => (f.kind ?? 'collab') === g.kind)
+          const items = payers.filter((f) => f.kind === g.kind)
           if (items.length === 0) return null
           return (
             <Collapsible key={g.kind} open={openGroups.has(g.kind)} onToggle={() => setOpenGroups((cur) => { const n = new Set(cur); if (n.has(g.kind)) n.delete(g.kind); else n.add(g.kind); return n })} title={g.title} count={items.length}>
