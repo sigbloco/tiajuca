@@ -24,6 +24,7 @@ const SYSTEM: Record<string, { title: string; singular: string; hint: string }> 
   skill_levels: { title: 'Níveis', singular: 'Nível', hint: 'O nível é uma autodeclaração: a pessoa diz que nível acredita ter (ex.: Iniciante, Intermediário, Avançado).' },
   gender_options: { title: 'Como você se identifica?', singular: 'Opção', hint: 'Dado sensível: fica restrito à direção.' },
   race_options: { title: 'Como você identifica sua cor/raça?', singular: 'Opção', hint: 'Dado sensível: fica restrito à direção.' },
+  social_networks: { title: 'Redes sociais', singular: 'Rede', hint: 'Em cada rede, o endereço do perfil com {handle} no lugar do usuário (a pessoa só digita o usuário). Ex.: https://www.youtube.com/@{handle}. Em cada pergunta de rede social, você marca quais redes aparecem.' },
 }
 
 interface ListRow { id: string; name: string; kind: 'system' | 'custom'; source: string | null; sort_order: number; is_active: boolean; link: 'skill_level' | null }
@@ -158,8 +159,8 @@ export function FormListsPage() {
   const customItems = useFormListItems()
   const levelItems = useLevelItems()
   const itemsOf = (l: ListRow) => ((l.link ? levelItems.data : customItems.data) ?? []).filter((x) => x.list_id === l.id)
-  const levels = useCatalog('skill_levels'), genders = useCatalog('gender_options'), races = useCatalog('race_options')
-  const sys: Record<string, ReturnType<typeof useCatalog>> = { skill_levels: levels, gender_options: genders, race_options: races }
+  const levels = useCatalog('skill_levels'), genders = useCatalog('gender_options'), races = useCatalog('race_options'), networks = useCatalog('social_networks')
+  const sys: Record<string, ReturnType<typeof useCatalog>> = { skill_levels: levels, gender_options: genders, race_options: races, social_networks: networks }
   const [opened, setOpened] = useState<Set<string>>(new Set()) // começam todas recolhidas
   const [trashOpen, setTrashOpen] = useState(false)
   const drag = useHoldReorder()
@@ -272,7 +273,7 @@ export function FormListsPage() {
                 </div>
               )}>
               {sd && l.source
-                ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription withNaipes={l.source === 'skill_levels'} />
+                ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription withNaipes={l.source === 'skill_levels'} withUrl={l.source === 'social_networks'} />
                 : <CustomListBody list={l} items={itemsOf(l)} canEdit={canEdit} />}
             </Collapsible>
           )

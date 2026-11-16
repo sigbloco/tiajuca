@@ -6,7 +6,7 @@ import { RichText } from '@/components/shared/RichText'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react'
-import { SOCIAL_NETWORKS, networkUrl, splitNetwork } from '@/core/social'
+import { SOCIAL_NETWORKS, networkUrl, splitNetwork, type Network } from '@/core/social'
 import { useAuth } from '@/core/auth'
 import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
@@ -24,16 +24,17 @@ const MAX_BYTES = 5 * 1024 * 1024
 const OK_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 
 /** Redes sociais: escolher a rede (padrão Instagram) e, embaixo, o nome de usuário. Dá para adicionar mais de uma. O valor guardado são os links, um por linha. */
-function SocialInput({ id, value, onChange, networks }: { id: string; value: string; onChange: (v: string) => void; networks?: string[] }) {
-  const options = SOCIAL_NETWORKS.filter((n) => !networks?.length || networks.includes(n.key))
-  const first = (options[0] ?? SOCIAL_NETWORKS[0]).key
+function SocialInput({ id, value, onChange, networks, defs }: { id: string; value: string; onChange: (v: string) => void; networks?: string[]; defs?: Network[] }) {
+  const known = defs?.length ? defs : SOCIAL_NETWORKS
+  const options = known.filter((n) => !networks?.length || networks.includes(n.key))
+  const first = (options[0] ?? known[0]).key
   const [rows, setRows] = useState<{ network: string; user: string }[]>(() => {
-    const parsed = value.split('\n').map((l) => l.trim()).filter(Boolean).map(splitNetwork)
+    const parsed = value.split('\n').map((l) => l.trim()).filter(Boolean).map((u) => splitNetwork(u, known))
     return parsed.length > 0 ? parsed : [{ network: first, user: '' }]
   })
   const update = (next: { network: string; user: string }[]) => {
     setRows(next)
-    onChange(next.map((r) => networkUrl(r.network, r.user)).filter(Boolean).join('\n'))
+    onChange(next.map((r) => networkUrl(r.network, r.user, known)).filter(Boolean).join('\n'))
   }
   return (
     <div className="space-y-3">
@@ -97,7 +98,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
 }) {
   const id = `f-${f.key}`
   const str = typeof value === 'string' ? value : ''
-  if (f.type === 'long_text' && f.validation.social) return <SocialInput id={id} value={str} onChange={onChange} networks={f.validation.networks} />
+  if (f.type === 'long_text' && f.validation.social) return <SocialInput id={id} value={str} onChange={onChange} networks={f.validation.networks} defs={f.validation.networkDefs} />
   switch (f.type) {
     case 'short_text': return <Input id={id} value={str} maxLength={f.validation.maxLength ?? 255} onChange={(e) => onChange(e.target.value)} />
     case 'long_text':

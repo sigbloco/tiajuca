@@ -1,7 +1,7 @@
 import { supabase } from '@/core/supabase'
 
 // Naipe (sections) → Instrumento (instruments)
-export type CatalogTable = 'sections' | 'instruments' | 'artistic_functions' | 'skill_levels' | 'gender_options' | 'race_options' | 'activity_types' | 'fee_categories' | 'section_names'
+export type CatalogTable = 'sections' | 'instruments' | 'artistic_functions' | 'skill_levels' | 'gender_options' | 'race_options' | 'activity_types' | 'fee_categories' | 'section_names' | 'social_networks'
 
 export interface CatalogItem {
   id: string
@@ -17,6 +17,9 @@ export interface CatalogItem {
   section_id?: string | null
   /** Níveis: naipes em que o nível vale (vazio = todos). */
   section_ids?: string[]
+  /** Redes sociais: modelo do endereço ({handle} = o usuário) e chave fixa. */
+  url_template?: string
+  key?: string
   color?: string
   tuning?: string | null
   has_tuning?: boolean

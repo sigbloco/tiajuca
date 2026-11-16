@@ -6,7 +6,8 @@ import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useUnsaved } from '@/core/unsaved'
 import { ReadMore } from '@/components/shared/ReadMore'
-import { SOCIAL_NETWORKS, networkUrl, splitNetwork } from '@/core/social'
+import { SOCIAL_NETWORKS, networkUrl, splitNetwork, type Network } from '@/core/social'
+import { useSocialNetworks } from '@/modules/forms/socialNetworks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Lock, Plus, Save, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -50,8 +51,8 @@ interface NetRow { network: string; user: string }
 /** Marca de quem não tem/não usa redes sociais (o perfil deixa de pedir; o link é ignorado nas telas). */
 const NO_SOCIAL = 'Não uso'
 const isNoSocial = (t: string | null | undefined) => /^n[aã]o uso\.?$/i.test((t ?? '').trim())
-const rowsOf = (t: string | null): NetRow[] => { const l = (t ?? '').split(NL).map((x) => x.trim()).filter((x) => Boolean(x) && !isNoSocial(x)); return l.length ? l.map(splitNetwork) : [{ network: 'instagram', user: '' }] }
-const urlsOf = (rows: NetRow[]) => rows.map((r) => networkUrl(r.network, r.user)).filter((x): x is string => !!x)
+const rowsOf = (t: string | null, nets: Network[] = SOCIAL_NETWORKS): NetRow[] => { const l = (t ?? '').split(NL).map((x) => x.trim()).filter((x) => Boolean(x) && !isNoSocial(x)); return l.length ? l.map((u) => splitNetwork(u, nets)) : [{ network: nets[0]?.key ?? 'instagram', user: '' }] }
+const urlsOf = (rows: NetRow[], nets: Network[] = SOCIAL_NETWORKS) => rows.map((r) => networkUrl(r.network, r.user, nets)).filter((x): x is string => !!x)
 
 /** Dados cadastrais do próprio integrante: tudo editável, exceto a data de inscrição. Redes sociais: várias, uma por linha. */
 export function MyData({ memberId, bind, part = 'contact' }: { memberId: string; bind?: SaveBinder; /** `contact`: dados e contato. `other`: "Outras informações" (vai por último no perfil). */ part?: 'contact' | 'other' | 'bloco' }) {
@@ -70,6 +71,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   const [f, setF] = useState(() => toF({ full_name: '', display_name: null, email: null, phone: null, social_handle: null, birth_date: null, joined_at: null, affective_relation: null, played_other_blocks: false, other_blocks: null, played_instrument: null }))
   useEffect(() => { if (me.data) setF(toF(me.data)) }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
   // Cada bloco só olha e grava os seus campos.
+  const nets = useSocialNetworks()
   const [rows, setRows] = useState<NetRow[]>([{ network: 'instagram', user: '' }])
   // Data de fundação do bloco (perfil do bloco): aparece nos aniversários do Calendário.
   const founded = useQuery({
@@ -85,7 +87,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     queryKey: ['me-linked', orgId, memberId], enabled: part !== 'bloco',
     queryFn: async () => { const { data, error } = await supabase.from('members').select('user_id').eq('id', memberId).single(); if (error) throw error; return Boolean((data as { user_id: string | null }).user_id) },
   })
-  useEffect(() => { if (me.data) { setRows(rowsOf(me.data.social_handle)); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data])
+  useEffect(() => { if (me.data) { setRows(rowsOf(me.data.social_handle, nets)); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data])
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
   const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone])
 
@@ -94,10 +96,10 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
       const { error } = await supabase.rpc('update_my_profile', {
         p_member: memberId,
         p_patch: part === 'bloco'
-          ? { email: f.email, phone: f.phone.replace(/[^0-9]/g, ''), social_handle: urlsOf(rows).join(NL) }
+          ? { email: f.email, phone: f.phone.replace(/[^0-9]/g, ''), social_handle: urlsOf(rows, nets).join(NL) }
           : part === 'other'
           ? { affective_relation: f.affective_relation, other_blocks: f.other_blocks, played_other_blocks: f.other_blocks.trim() !== '' && !isNA(f.other_blocks), played_instrument: f.played_instrument }
-          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: noSocial ? NO_SOCIAL : urlsOf(rows).join(NL) },
+          : { full_name: f.full_name, email: f.email, birth_date: f.birth_date, display_name: f.display_name, phone: f.phone.replace(/\D/g, ''), social_handle: noSocial ? NO_SOCIAL : urlsOf(rows, nets).join(NL) },
       })
       if (error) throw error
       if (part === 'bloco' && foundedOn !== (founded.data ?? '')) { const r = await supabase.rpc('set_org_founded', { p_org: orgId, p_date: foundedOn || null }); if (r.error) throw r.error }
@@ -106,8 +108,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle)), founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(urlsOf(rowsOf(me.data.social_handle))) + String(isNoSocial(me.data.social_handle)))) : ''
-  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows), foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(urlsOf(rows)) + String(noSocial))
+  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle, nets), nets), founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(urlsOf(rowsOf(me.data.social_handle))) + String(isNoSocial(me.data.social_handle)))) : ''
+  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows, nets), foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(urlsOf(rows, nets)) + String(noSocial))
   useUnsaved(!!me.data && curKey !== baseline, () => save.mutateAsync())
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
@@ -131,7 +133,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
           {rows.map((r, i) => (
             <div key={i} className="flex gap-2">
               <Select aria-label="Rede" className="w-36 shrink-0" value={r.network} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
-                {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
+                {nets.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
               </Select>
               <Input id={`bl-user-${i}`} aria-label="Usuário" placeholder="usuário" value={r.user} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
               {rows.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setRows(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
@@ -185,7 +187,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
             {rows.map((r, i) => (
               <div key={i} className={cn('flex gap-2', noSocial && 'opacity-50')}>
                 <Select aria-label="Rede" className="w-36 shrink-0" disabled={noSocial} value={r.network} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
-                  {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
+                  {nets.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
                 </Select>
                 <Input id={`my-user-${i}`} aria-label="Usuário" placeholder="usuário" disabled={noSocial} value={r.user} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
                 {rows.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" disabled={noSocial} onClick={() => setRows(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}

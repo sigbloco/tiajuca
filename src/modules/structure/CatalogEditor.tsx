@@ -39,6 +39,8 @@ interface Props {
   withDescription?: boolean
   /** Níveis: escolher em quais naipes cada item vale. */
   withNaipes?: boolean
+  /** Redes sociais: modelo do endereço de cada item. */
+  withUrl?: boolean
 }
 
 export function useCatalog(table: CatalogTable) {
@@ -47,13 +49,14 @@ export function useCatalog(table: CatalogTable) {
 }
 
 /** Editor genérico de catálogo configurável: criar, renomear, reordenar, ativar/desativar (nunca excluir). */
-export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash, withDescription, withNaipes }: Props) {
+export function CatalogEditor({ table, title, singular, withSection, withColor, hint, canEdit, alphabetical, noFilter, mirrorFees, trashMode, externalTrash, withDescription, withNaipes, withUrl }: Props) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const { data: items, isLoading } = useCatalog(table)
   const sections = useCatalog('sections')
   const [name, setName] = useState('')
   const [sectionId, setSectionId] = useState('')
+  const [urlTpl, setUrlTpl] = useState('')
   const [filter, setFilter] = useState<FilterValue>(EMPTY_FILTER)
   const visible = (items ?? []).filter((i) => (trashMode ? i.is_active : matchesStatus(i.is_active, filter.status)) && matchesText(i.name, filter.search))
     .sort((a, b) => (alphabetical ? a.name.localeCompare(b.name, 'pt-BR') : 0))
@@ -68,10 +71,11 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
         name: name.trim(),
         sort_order: (items?.reduce((m, i) => Math.max(m, i.sort_order), 0) ?? 0) + 1,
         ...(withSection ? { section_id: sectionId } : {}),
+        ...(withUrl ? { url_template: urlTpl.trim() } : {}),
       }),
     onSuccess: (id) => {
       if (mirrorFees) void mirrorFunctionToFees(orgId, { fnId: id, created: name.trim() }).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
-      setName('')
+      setName(''); setUrlTpl('')
       refresh()
       notifySaved(`${singular} criado.`, id ? async () => { await saveCatalogItem(table, orgId, { id, name: name.trim(), is_active: false }); refresh() } : undefined)
     },
@@ -105,7 +109,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
   })
 
   const nameOf = (list: CatalogItem[] | undefined, id?: string | null) => list?.find((x) => x.id === id)?.name
-  const canAdd = name.trim() && (!withSection || sectionId)
+  const canAdd = name.trim() && (!withSection || sectionId) && (!withUrl || urlTpl.includes('{handle}'))
 
   return (
     <div className="space-y-3">
@@ -114,6 +118,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
       {canEdit && (
         <Card className="flex flex-wrap items-end gap-2 p-3">
           <Input className="min-w-40 flex-1" placeholder={`Novo(a) ${singular.toLowerCase()}`} value={name} onChange={(e) => setName(e.target.value)} />
+          {withUrl && <Input className="min-w-56 flex-1" placeholder="Endereço, ex.: https://www.instagram.com/{handle}" aria-label="Endereço do perfil" value={urlTpl} onChange={(e) => setUrlTpl(e.target.value)} />}
           {withSection && (
             <Select className="w-44" value={sectionId} aria-label="Naipe" onChange={(e) => setSectionId(e.target.value)}>
               <option value="">Naipe</option>
@@ -153,6 +158,12 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
                   {item.is_active ? 'Desativar' : 'Ativar'}
                 </Button>
               ))}
+            {withUrl && (
+              <div className="basis-full">
+                <SaveInput value={item.url_template ?? ''} disabled={!canEdit} aria-label={`Endereço de ${item.name}`} placeholder="https://www.exemplo.com/{handle}"
+                  onSave={(v) => { if (!v.includes('{handle}')) { toast.error('O endereço precisa ter {handle} no lugar do usuário.'); return } return save.mutateAsync({ id: item.id, name: item.name, url_template: v.trim() }) }} />
+              </div>
+            )}
             {withNaipes && (
               <div className="flex basis-full flex-wrap items-center gap-1.5" role="group" aria-label={`Naipes em que ${item.name} vale`}>
                 {(() => {
