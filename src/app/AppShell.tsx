@@ -191,12 +191,12 @@ export function AppShell() {
       <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         {/* Celular: Site e Sair no topo da página, além do menu. */}
-        <div className="-mx-4 -mt-4 grid grid-cols-2 gap-2 border-b border-border bg-background px-4 py-2 md:hidden">
+        <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 grid h-12 grid-cols-2 items-center gap-2 border-b border-border bg-background px-4 md:hidden">
           <Link to="/site"><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
           <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
-        <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-3 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
+        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-3 md:top-[var(--viewas-h,0px)] md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
           <CycleBar base={base} />
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"

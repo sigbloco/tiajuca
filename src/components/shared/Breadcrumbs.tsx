@@ -14,7 +14,7 @@ type Item = Crumb & { close?: () => void }
 export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   const extra = useExtraCrumbs()
   const navRef = useRef<HTMLElement>(null)
-  const [collapsed, setCollapsed] = useState(false)
+  const [stage, setStage] = useState(0) // 0 = tudo · 1 = primeiro e dois últimos · 2 = primeiro e último
   const [open, setOpen] = useState(false)
   const width = useRef(0)
   const all: Item[] = [...crumbs]
@@ -24,15 +24,15 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
     all.push({ label: e.title })
   }
   const key = all.map((c) => c.label).join('|')
-  const canCollapse = all.length > 3
+  const canCollapse = all.length > 2
 
   // Caminho novo: volta a tentar mostrar inteiro.
-  useEffect(() => { setCollapsed(false); setOpen(false) }, [key])
+  useEffect(() => { setStage(0); setOpen(false) }, [key])
   // Mudou a largura (girar o celular, redimensionar): tenta mostrar inteiro de novo.
   useEffect(() => {
     const nav = navRef.current
     if (!nav) return
-    const ro = new ResizeObserver(() => { if (Math.abs(nav.clientWidth - width.current) > 1) { width.current = nav.clientWidth; setCollapsed(false) } })
+    const ro = new ResizeObserver(() => { if (Math.abs(nav.clientWidth - width.current) > 1) { width.current = nav.clientWidth; setStage(0) } })
     ro.observe(nav)
     return () => ro.disconnect()
   }, [])
@@ -49,7 +49,10 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
     if (!nav) return
     // Passou de duas linhas: junta os itens do meio no menu.
     const lh = Math.max((nav.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0, parseFloat(getComputedStyle(nav).lineHeight) || 0, 18)
-    if (canCollapse && !collapsed && lh > 0 && nav.offsetHeight > lh * 2 + 12) { setCollapsed(true); return }
+    if (canCollapse && nav.offsetHeight > lh + 10) {
+      if (stage === 0 && all.length > 3) { setStage(1); return }
+      if (stage <= 1) { setStage(2); return }
+    }
     // Se o caminho quebrar de linha, esconde o "•" que ficaria sozinho no fim da linha (o item seguinte foi para a de baixo).
     nav.querySelectorAll<HTMLElement>('[data-bullet]').forEach((b) => {
       const next = b.nextElementSibling as HTMLElement | null
@@ -59,8 +62,9 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   if (crumbs.length === 0 && extra.length === 0) return null
   if (all.length <= 1 && !all[0]?.solo) return null
 
-  const hidden = collapsed && canCollapse ? all.slice(1, all.length - 2) : []
-  const shown = all.map((c, i) => ({ c, i })).filter(({ i }) => !(hidden.length && i >= 1 && i <= all.length - 3))
+  const keepLast = stage >= 2 ? 1 : 2
+  const hidden = stage > 0 && canCollapse ? all.slice(1, all.length - keepLast) : []
+  const shown = all.map((c, i) => ({ c, i })).filter(({ i }) => !(hidden.length && i >= 1 && i <= all.length - keepLast - 1))
   const cls = 'font-semibold text-primary hover:underline'
   const link = (c: Item, onDone?: () => void) => c.close ? <button type="button" onClick={() => { c.close!(); onDone?.() }} className={`${cls} text-left`}>{c.label}</button>
     : c.to ? <Link to={c.to} onClick={onDone} className={cls}>{c.label}</Link>
@@ -73,7 +77,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
         return (
           <Fragment key={`${c.label}-${i}`}>
             {n > 0 && <span aria-hidden data-bullet className="text-muted-foreground">•</span>}
-            {hidden.length > 0 && i === all.length - 2 && (
+            {hidden.length > 0 && i === all.length - keepLast && (
               <>
                 <button type="button" aria-label="Mostrar o caminho completo" aria-expanded={open} onClick={() => setOpen((o) => !o)}
                   className="inline-flex h-6 items-center rounded-md border border-border px-1.5 text-primary hover:bg-primary/10"><MoreHorizontal className="h-4 w-4" aria-hidden /></button>
