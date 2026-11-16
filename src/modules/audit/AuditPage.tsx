@@ -14,7 +14,7 @@ const PAGE = 25
 const ENTITY_LABEL: Record<string, string> = {
   members: 'Cadastro de integrante', member_sensitive_data: 'Dados sensíveis', member_access_roles: 'Papel de acesso', role_permissions: 'Permissões do papel',
   classifications: 'Classificação', member_classifications: 'Classificação do integrante', organizations: 'Organização', org_settings: 'Configuração',
-  sections: 'Naipe', instruments: 'Instrumento', artistic_functions: 'Categoria', skill_levels: 'Nível', gender_options: 'Gênero (lista)', race_options: 'Cor/raça (lista)', member_artistic_links: 'Vínculo artístico',
+  sections: 'Naipe', instruments: 'Instrumento', artistic_functions: 'Categoria', skill_levels: 'Nível', gender_options: 'Como você se identifica? (lista)', race_options: 'Como você identifica sua cor/raça? (lista)', member_artistic_links: 'Vínculo artístico',
   cycles: 'Ciclo', cycle_types: 'Tipo de ciclo', member_cycles: 'Status no ciclo', member_cycle_statuses: 'Status de ciclo', instrument_cycle_capacity: 'Limite de vagas',
   staff_assignments: 'Atribuição da equipe', activities: 'Evento', activity_types: 'Tipo de evento', recurrence_rules: 'Recorrência', activity_audiences: 'Público do evento',
   event_attendance: 'Presença', attendance_statuses: 'Status de presença', activity_checklist_items: 'Checklist do evento', checklist_templates: 'Modelo de checklist',

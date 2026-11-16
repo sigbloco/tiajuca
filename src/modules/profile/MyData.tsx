@@ -284,7 +284,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
                   <Select id="s-gender" value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}><option value="">Não informar</option>{withCurrent(GENDERS, f.gender)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-trans">Você se considera trans?</Label>
                   <Select id="s-trans" value={f.is_trans} onChange={(e) => setF({ ...f, is_trans: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
-                <div className="space-y-1.5"><Label htmlFor="s-race">Cor/raça</Label>
+                <div className="space-y-1.5"><Label htmlFor="s-race">Como você identifica sua cor/raça?</Label>
                   <Select id="s-race" value={f.race_color} onChange={(e) => setF({ ...f, race_color: e.target.value })}><option value="">Não informar</option>{withCurrent(RACES, f.race_color)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-pcd">É PCD (pessoa com deficiência)?</Label>
                   <Select id="s-pcd" value={f.is_pcd} onChange={(e) => setF({ ...f, is_pcd: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
