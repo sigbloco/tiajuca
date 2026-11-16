@@ -12,6 +12,7 @@ export interface Charge {
   id: string
   member_id: string
   competence: string
+  /** Ciclo a que a cobrança pertence (independe das datas do ciclo). */ cycle_id?: string | null
   base_amount: number
   scholarship_percent: number
   scholarship_discount: number
@@ -27,7 +28,7 @@ export interface Charge {
 }
 
 const SELECT =
-  'id, member_id, competence, base_amount, scholarship_percent, scholarship_discount, final_amount, status, due_on, paid_on, payment_method, manual_adjustment, notes, members!inner(full_name, display_name), fee_categories(name)'
+  'id, member_id, competence, cycle_id, base_amount, scholarship_percent, scholarship_discount, final_amount, status, due_on, paid_on, payment_method, manual_adjustment, notes, members!inner(full_name, display_name), fee_categories(name)'
 
 export async function listCharges(p: {
   orgId: string; competence: string; status: ChargeStatus | ''; search: string; page: number; pageSize: number

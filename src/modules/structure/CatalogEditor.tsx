@@ -1,7 +1,7 @@
 import { usePurge } from '@/core/purge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useProgressive } from '@/components/shared/LoadMore'
@@ -107,16 +107,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
 
   return (
     <div className="space-y-3">
-      {(title || (trashMode && !externalTrash)) && (
-        <div className="flex items-center justify-between gap-2">
-          {title ? <h2>{title}</h2> : <span />}
-          {trashMode && !externalTrash && canEdit && (
-            <TrashDrawer iconOnly entries={(items ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))}
-              onRestore={(id) => { const it = items?.find((x) => x.id === id); if (it) save.mutate({ id, name: it.name, is_active: true }) }}
-              onPurge={['skill_levels', 'gender_options', 'race_options'].includes(table) ? (id) => purge.mutate(id) : undefined} />
-          )}
-        </div>
-      )}
+      {title && <h2>{title}</h2>}
       {hint && <p className="text-muted-foreground">{hint}</p>}
       {canEdit && (
         <Card className="flex flex-wrap items-end gap-2 p-3">
@@ -171,6 +162,11 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
       </div>
       {prog.button}
       <p className="text-xs text-muted-foreground">{trashMode ? 'Itens na lixeira somem das novas escolhas, mas o histórico é preservado.' : 'Itens desativados somem das novas escolhas, mas o histórico é preservado.'}</p>
+      {trashMode && !externalTrash && canEdit && (
+        <TrashGroup entries={(items ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.name }))}
+          onRestore={(id) => { const it = items?.find((x) => x.id === id); if (it) save.mutate({ id, name: it.name, is_active: true }) }}
+          onPurge={['skill_levels', 'gender_options', 'race_options'].includes(table) ? (id) => purge.mutate(id) : undefined} />
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { Pager } from '@/components/shared/Pager'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -145,8 +145,7 @@ export function AlbumsTab() {
   return (
     <Card className="space-y-3 p-4">
       <div className="flex items-center justify-end gap-2">
-        <TrashDrawer iconOnly entries={trashed.map((a) => ({ id: a.id, name: a.title || a.url }))}
-          onRestore={(id) => patch.mutate({ id, fields: { is_active: true } })} onPurge={(id) => purge.mutate(id)} />
+
       </div>
       <p className="text-xs text-muted-foreground">Cole o link público de compartilhamento do álbum (photos.app.goo.gl ou photos.google.com/share…). O sistema lê o título e a capa. Nomes no padrão “250608 Aniversário do Museu Nacional (@brunosarlas)” viram data, título e autor.</p>
       <div className="flex items-center gap-2">
@@ -188,6 +187,8 @@ export function AlbumsTab() {
           }} />
       ))}
       <Pager page={cur} pages={pages} onChange={setPage} />
+      <TrashGroup entries={trashed.map((a) => ({ id: a.id, name: a.title || a.url }))}
+      onRestore={(id) => patch.mutate({ id, fields: { is_active: true } })} onPurge={(id) => purge.mutate(id)} />
     </Card>
   )
 }

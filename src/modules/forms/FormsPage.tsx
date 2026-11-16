@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, CopyPlus, Eye, Plus, Settings, Trash2 } from 'lucide-react'
 import { LabelFitRow } from '@/components/shared/LabelFitRow'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { notifyChange } from '@/core/undo'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -97,8 +97,7 @@ export function FormsPage() {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <h1 className="whitespace-nowrap">Formulários</h1>
-          <TrashDrawer iconOnly entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: `${f.form_submissions?.[0]?.count ?? 0} resposta(s)` }))}
-            onRestore={(id) => setStatus.mutate({ id, status: 'draft', prev: 'draft' })} onPurge={(id) => purge.mutate(id)} />
+
         </div>
         <LabelFitRow>
           <Button asChild variant="outline" aria-label="Configurações" title="Configurações"><Link to="configuracoes"><Settings className="h-4 w-4 shrink-0" /><span className="fit-label">Configurações</span></Link></Button>
@@ -139,6 +138,8 @@ export function FormsPage() {
         }} />
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <NewFormSheet />}</Sheet>
+      <TrashGroup entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: `${f.form_submissions?.[0]?.count ?? 0} resposta(s)` }))}
+      onRestore={(id) => setStatus.mutate({ id, status: 'draft', prev: 'draft' })} onPurge={(id) => purge.mutate(id)} />
     </div>
   )
 }

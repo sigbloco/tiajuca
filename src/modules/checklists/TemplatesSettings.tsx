@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { Button, Card, EmptyState, Input, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
@@ -76,12 +76,7 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2>Modelos de checklist</h2>
-        {canEdit && (
-          <TrashDrawer groups={[
-            { label: 'Modelos', entries: (templates.data ?? []).filter((t) => !t.is_active).map((t) => ({ id: t.id, name: t.name })), onRestore: (id) => patchTemplate.mutate({ id, patch: { is_active: true } }), onPurge: (id) => purgeTemplate.mutate(id) },
-            { label: 'Tarefas', entries: (items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.title, detail: templates.data?.find((t) => t.id === i.template_id)?.name })), onRestore: (id) => patchItem.mutate({ id, patch: { is_active: true } }), onPurge: (id) => purgeTask.mutate(id) },
-          ]} />
-        )}
+
       </div>
       <p className="text-muted-foreground">Ao usar um modelo num evento, as tarefas são copiadas para ele. Depois, cada evento pode ter tarefas próprias.</p>
       {canEdit && (
@@ -118,6 +113,10 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
           )
         })}
       </div>
+      {canEdit && <TrashGroup groups={[
+      { label: 'Modelos', entries: (templates.data ?? []).filter((t) => !t.is_active).map((t) => ({ id: t.id, name: t.name })), onRestore: (id) => patchTemplate.mutate({ id, patch: { is_active: true } }), onPurge: (id) => purgeTemplate.mutate(id) },
+      { label: 'Tarefas', entries: (items.data ?? []).filter((i) => !i.is_active).map((i) => ({ id: i.id, name: i.title, detail: templates.data?.find((t) => t.id === i.template_id)?.name })), onRestore: (id) => patchItem.mutate({ id, patch: { is_active: true } }), onPurge: (id) => purgeTask.mutate(id) },
+      ]} />}
     </div>
   )
 }

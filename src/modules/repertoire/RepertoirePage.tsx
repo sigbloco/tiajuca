@@ -9,7 +9,7 @@ import { ArrowDown, ArrowUp, Music2, Pencil, Plus, Save } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { Badge, Button, Card, EmptyState, Input, Label, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -98,10 +98,7 @@ export function RepertoirePage() {
       <div className="flex items-center justify-between">
         <h1>Repertório</h1>
         <ButtonRow>
-          {canManage && (
-            <TrashDrawer entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
-              onRestore={(id) => restoreRep.mutate(id)} onPurge={(id) => purgeRep.mutate(id)} />
-          )}
+
           {canManage && <Button variant="add" onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
         </ButtonRow>
       </div>
@@ -134,6 +131,8 @@ export function RepertoirePage() {
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <RepertoireSheet key={sheet.rep?.id ?? 'new'} rep={sheet.rep} onClose={() => setSheet(null)} />}
       </Sheet>
+      {canManage && <TrashGroup entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
+      onRestore={(id) => restoreRep.mutate(id)} onPurge={(id) => purgeRep.mutate(id)} />}
     </div>
   )
 }

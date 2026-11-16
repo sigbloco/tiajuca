@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
 import { ProgressiveList } from '@/components/shared/LoadMore'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
+import { TrashGroup } from '@/components/shared/TrashGroup'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, FilterBar, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { friendlyError } from '@/core/errors'
@@ -205,12 +205,7 @@ export function SuppliersPage() {
         <h1>Fornecedores</h1>
         <div className="flex gap-2">
           <FilterBar value={filter} onChange={setFilter} />
-          {canManage && (
-            <TrashDrawer groups={[
-              { label: 'Fornecedores', entries: (sups.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.name, detail: catName.get(s.category_id) })), onRestore: (id) => trashOp.mutate({ table: 'suppliers', id }), onPurge: (id) => trashOp.mutate({ table: 'suppliers', id, purge: true }) },
-              { label: 'Categorias', entries: (cats.data ?? []).filter((c) => !c.is_active).map((c) => ({ id: c.id, name: c.name })), onRestore: (id) => trashOp.mutate({ table: 'supplier_categories', id }), onPurge: (id) => trashOp.mutate({ table: 'supplier_categories', id, purge: true }) },
-            ]} />
-          )}
+
           {canManage && <Button variant="outline" onClick={() => setCatSheet(true)}><Tags className="h-4 w-4" /> Categorias</Button>}
           {canManage && <Button variant="add" onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo</Button>}
         </div>
@@ -231,6 +226,10 @@ export function SuppliersPage() {
       <Sheet open={catSheet} onOpenChange={setCatSheet}>
         {catSheet && <CategoriesSheet categories={cats.data ?? []} onClose={() => setCatSheet(false)} />}
       </Sheet>
+      {canManage && <TrashGroup groups={[
+      { label: 'Fornecedores', entries: (sups.data ?? []).filter((s) => !s.is_active).map((s) => ({ id: s.id, name: s.name, detail: catName.get(s.category_id) })), onRestore: (id) => trashOp.mutate({ table: 'suppliers', id }), onPurge: (id) => trashOp.mutate({ table: 'suppliers', id, purge: true }) },
+      { label: 'Categorias', entries: (cats.data ?? []).filter((c) => !c.is_active).map((c) => ({ id: c.id, name: c.name })), onRestore: (id) => trashOp.mutate({ table: 'supplier_categories', id }), onPurge: (id) => trashOp.mutate({ table: 'supplier_categories', id, purge: true }) },
+      ]} />}
     </div>
   )
 }
