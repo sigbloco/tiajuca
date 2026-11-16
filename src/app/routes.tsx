@@ -51,6 +51,7 @@ import { LandingPage } from '@/modules/site/LandingPage'
 import { AlbumsPage } from '@/modules/site/AlbumsPage'
 import { AppShell } from './AppShell'
 import { FinanceHome, HubHome, HubLayout } from './Hub'
+import { PaymentsPage } from '@/modules/finance/PaymentsPage'
 import { TeamPage } from '@/modules/finance/TeamPage'
 import { ValuesPage } from '@/modules/billing/ValuesPage'
 
@@ -183,6 +184,7 @@ export const router = createBrowserRouter(
                   element: <HubLayout hub="financeiro" />,
                   children: [
                     { path: 'equipe', element: <TeamPage /> },
+                    { path: 'pagamentos', element: <PaymentsPage /> },
                     { path: 'valores', element: <ValuesPage /> },
                     { path: 'cobrancas', element: <BillingPage /> },
                     { path: 'mensalidades', element: <Navigate to="../cobrancas" replace relative="path" /> },

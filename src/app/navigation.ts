@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, CircleDollarSign, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
-  Globe, Home, Hourglass, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Globe, HandCoins, Home, Hourglass, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -48,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'relatorios', label: 'Relatórios de presença', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
   { to: 'equipe', label: 'Equipe', icon: Users, group: 'financeiro', permission: 'finance.read', description: 'Quem recebe no ciclo e como: fixo e/ou porcentagem.' },
+  { to: 'pagamentos', label: 'Pagamentos', icon: HandCoins, group: 'financeiro', permission: 'finance.read', description: 'Pagamentos da equipe, mês a mês.' },
   { to: 'valores', label: 'Valores', icon: CircleDollarSign, group: 'financeiro', permission: 'finance.read', description: 'Valor mensal de cada categoria, por ciclo.' },
   { to: 'cobrancas', label: 'Cobranças', icon: Wallet, group: 'financeiro', permission: 'billing.read', description: 'Cobranças do mês e pagamentos.' },
   { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'financeiro', permission: 'scholarships.manage', description: 'Quem tem bolsa e quanto isso pesa.' },

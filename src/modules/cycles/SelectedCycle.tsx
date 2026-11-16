@@ -32,7 +32,7 @@ export function useSelectedCycle(): Ctx {
 const CYCLE_AREAS = new Set([
   'oficina', 'alunos', 'presenca', 'vagas', 'lista-de-espera', 'formularios', 'relatorios',
   'repertorio', 'naipes', 'eventos', 'membros',
-  'financeiro', 'equipe', 'valores', 'cobrancas', 'mensalidades', 'bolsas',
+  'financeiro', 'equipe', 'pagamentos', 'valores', 'cobrancas', 'mensalidades', 'bolsas',
 ])
 
 /** Para quem não é da direção, o ciclo só pode ser trocado no Perfil, no Calendário e no Repertório. */
