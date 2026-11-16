@@ -36,7 +36,11 @@ function Header() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link to={basePath} className="flex min-w-0 flex-1 items-center gap-2">
           <OrgLogo name={store.org.name} logoPath={store.org.logo_path} className="h-10 w-10 shrink-0" />
-          <span className="min-w-0 text-balance font-display text-lg font-extrabold leading-[1.05]">{shopLabel}</span>
+          <span className="min-w-0 font-display text-lg font-extrabold leading-[1.05]" aria-label={shopLabel}>
+            {/* Celular: primeira palavra numa linha e o resto na de baixo ("Boutique" / "da Tia"). */}
+            <span className="block sm:inline" aria-hidden>{shopLabel.split(' ')[0]}</span>
+            {shopLabel.includes(' ') && <span className="block sm:ml-1 sm:inline" aria-hidden>{shopLabel.slice(shopLabel.indexOf(' ') + 1)}</span>}
+          </span>
         </Link>
         <nav className="flex shrink-0 items-center gap-3 text-sm">
           <Link to={`${basePath}/consultar`} className="font-semibold text-primary hover:underline">Pedidos</Link>
@@ -69,7 +73,7 @@ function Shell() {
       <Header />
       <LoginDialog />
       <main className="mx-auto max-w-5xl px-4 pb-6 pt-3">
-        {pathname.replace(/\/$/, '') === basePath ? <BackButton to="/site" name="a página inicial" /> : <BackButton to={basePath} name={shopLabel} />}
+        {pathname.replace(/\/$/, '') === basePath ? <BackButton to="/site" name="o site" /> : <BackButton to={basePath} name={shopLabel} />}
         {/* Na página de privacidade o aviso de preço não faz sentido. */}
         {!pathname.replace(/\/$/, '').endsWith('/privacidade') && <MemberNotice />}
         {notices.length > 0 && (
