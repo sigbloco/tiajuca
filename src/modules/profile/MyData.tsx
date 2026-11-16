@@ -200,7 +200,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   )
 }
 
-const GENDERS = [['feminino', 'Feminino'], ['masculino', 'Masculino'], ['nao_binario', 'Não-binário'], ['outro', 'Outro'], ['prefiro_nao_informar', 'Prefiro não informar']]
+const GENDERS = [['Homem', 'Homem'], ['Mulher', 'Mulher'], ['Pessoa não binária', 'Pessoa não binária'], ['Outro', 'Outro']]
 const RACES = [['branca', 'Branca'], ['preta', 'Preta'], ['parda', 'Parda'], ['amarela', 'Amarela'], ['indigena', 'Indígena'], ['prefiro_nao_informar', 'Prefiro não informar']]
 /** Opções da lista + o valor já gravado quando vem de outra grafia (ex.: "Mulher", "Branca" da planilha importada). */
 const withCurrent = (opts: string[][], current: string) => [
@@ -280,7 +280,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
             <form onSubmit={(e) => { e.preventDefault(); if (!readOnly) save.mutate(false) }} className="space-y-3">
               <fieldset disabled={readOnly} className="min-w-0 space-y-3 border-0 p-0">
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="space-y-1.5"><Label htmlFor="s-gender">Gênero</Label>
+                <div className="space-y-1.5"><Label htmlFor="s-gender">Como você se identifica?</Label>
                   <Select id="s-gender" value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}><option value="">Não informar</option>{withCurrent(GENDERS, f.gender)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-trans">Você se considera trans?</Label>
                   <Select id="s-trans" value={f.is_trans} onChange={(e) => setF({ ...f, is_trans: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>

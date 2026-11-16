@@ -51,8 +51,8 @@ export function useMemberPrefill(memberId: string | undefined) {
       by['link.skill_level'] = lvl?.skill_level_id; names['link.skill_level'] = lvl?.skill_levels?.name
       // A planilha importada grava "Mulher"/"Homem"; as opções do formulário são Feminino/Masculino.
       const gk = norm(String(by['sensitive.gender'] ?? ''))
-      const gAlias = ({ mulher: 'Feminino', homem: 'Masculino' } as Record<string, string>)[gk]
-      if (gAlias) { by['sensitive.gender'] = gAlias.toLowerCase(); names['sensitive.gender'] = gAlias }
+      const gAlias = ({ feminino: 'Mulher', masculino: 'Homem', naobinario: 'Pessoa não binária' } as Record<string, string>)[gk]
+      if (gAlias) { by['sensitive.gender'] = gAlias; names['sensitive.gender'] = gAlias }
       const staff = ((st.data ?? []) as unknown as { section_id: string | null; instruments: { section_id: string | null } | null }[])[0]
       return { by, names, sectionId: inst?.instruments?.section_id ?? staff?.section_id ?? staff?.instruments?.section_id ?? null }
     },
