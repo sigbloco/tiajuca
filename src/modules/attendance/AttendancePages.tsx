@@ -269,9 +269,9 @@ export function AttendanceListPage() {
       {data && days.length === 0 && <EmptyState>Nenhuma atividade neste ciclo.</EmptyState>}
       {current && (
         <div className="flex items-center justify-between gap-2">
-          <Button size="icon" variant="ghost" aria-label="Dia anterior" disabled={idx <= 0} onClick={() => setPicked(days[idx - 1])}><ChevronLeft className="h-5 w-5" /></Button>
-          <p className="font-display text-lg font-bold">{formatDayShort(current)}{current === today && <Badge className="ml-2 bg-primary text-primary-foreground">Hoje</Badge>}</p>
-          <Button size="icon" variant="ghost" aria-label="Próximo dia" disabled={idx >= days.length - 1} onClick={() => setPicked(days[idx + 1])}><ChevronRight className="h-5 w-5" /></Button>
+          <Button size="icon" variant="outline" className="h-10 w-auto min-w-0 flex-1" aria-label="Dia anterior" disabled={idx <= 0} onClick={() => setPicked(days[idx - 1])}><ChevronLeft className="h-5 w-5" /></Button>
+          <p className="shrink-0 text-center font-display text-lg font-bold">{formatDayShort(current)}{current === today && <Badge className="ml-2 bg-primary text-primary-foreground">Hoje</Badge>}</p>
+          <Button size="icon" variant="outline" className="h-10 w-auto min-w-0 flex-1" aria-label="Próximo dia" disabled={idx >= days.length - 1} onClick={() => setPicked(days[idx + 1])}><ChevronRight className="h-5 w-5" /></Button>
         </div>
       )}
       <div className="grid gap-2">
