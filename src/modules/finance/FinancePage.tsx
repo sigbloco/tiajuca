@@ -7,13 +7,11 @@ import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/Mont
 import { cn } from '@/components/ui/primitives'
 import { todayIso } from '@/core/format'
 import { useOrganization } from '@/core/organization'
-import { DistributionTab } from './DistributionTab'
 import { LedgerTab } from './LedgerTab'
 
 const TABS = [
   { key: 'income', label: 'Receitas' },
   { key: 'expense', label: 'Despesas' },
-  { key: 'distribution', label: 'Distribuição' },
 ] as const
 
 /** Financeiro (somente direção — o banco recusa para os demais). */
@@ -39,7 +37,6 @@ export function FinancePage() {
         ))}
       </ButtonRow>
       {(tab === 'income' || tab === 'expense') && <LedgerTab key={tab} kind={tab} competence={competence} />}
-      {tab === 'distribution' && <DistributionTab competence={competence} />}
     </div>
   )
 }

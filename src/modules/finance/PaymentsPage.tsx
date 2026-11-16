@@ -4,7 +4,7 @@ import { todayIso } from '@/core/format'
 import { useOrganization } from '@/core/organization'
 import { StaffTab } from './StaffTab'
 
-/** Financeiro → Pagamentos: os pagamentos da equipe, mês a mês (o que cada pessoa recebe é definido em Equipe). */
+/** Financeiro → Pagamentos: os pagamentos da equipe, mês a mês (o que cada pessoa recebe é definido em Distribuição). */
 export function PaymentsPage() {
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)

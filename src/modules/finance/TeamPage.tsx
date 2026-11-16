@@ -49,6 +49,7 @@ const hoursOf = (l: Lesson) => {
 }
 
 /** Grupos da lista, na ordem em que aparecem. */
+const CAIXA = 'Caixa do bloco'
 const GROUPS: { key: string; label: string }[] = [
   { key: 'Direção', label: 'Direção' }, { key: 'Professor', label: 'Professores' }, { key: 'Monitor', label: 'Monitores' }, { key: 'Regência', label: 'Regência' }, { key: '', label: 'Outros' },
 ]
@@ -173,7 +174,7 @@ function RuleLine({ rule, memberId, cycleId, canEdit, summary, detail, hours }: 
 }
 
 /** Divisão do grupo: `%` + "do todo" ou um naipe; grava ao sair do campo. */
-function GroupRuleEditor({ groupKey, rule, cycleId, canEdit, count, total }: { groupKey: string; rule?: GroupRule; cycleId: string; canEdit: boolean; count: number; total: number }) {
+function GroupRuleEditor({ groupKey, rule, cycleId, canEdit, count, total, label = 'Divisão do grupo', simple = false }: { groupKey: string; rule?: GroupRule; cycleId: string; canEdit: boolean; count: number; total: number; label?: string; /** Só a % (caixa do bloco). */ simple?: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
@@ -196,13 +197,13 @@ function GroupRuleEditor({ groupKey, rule, cycleId, canEdit, count, total }: { g
   const each = count > 0 ? total / count : 0
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
-      <span className="font-semibold">Divisão do grupo</span>
+      <span className="font-semibold">{label}</span>
       <div className="flex items-center gap-1"><Input className="h-8 w-16 px-2 text-center" inputMode="decimal" placeholder="0" disabled={!canEdit} aria-label={`Porcentagem de ${groupKey}`} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={() => commit()} /><span className="font-semibold">%</span></div>
-      <Select className="h-8 w-auto min-w-0 py-0 text-sm" disabled={!canEdit} aria-label="Sobre" value={sectionId} onChange={(e) => { setSectionId(e.target.value); commit({ pct, section: e.target.value }) }}>
+      {!simple && <Select className="h-8 w-auto min-w-0 py-0 text-sm" disabled={!canEdit} aria-label="Sobre" value={sectionId} onChange={(e) => { setSectionId(e.target.value); commit({ pct, section: e.target.value }) }}>
         <option value="">do todo</option>
         {(sections.data ?? []).filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>naipe {x.name}</option>)}
-      </Select>
-      {rule && <span className="text-sm text-muted-foreground">= {formatCurrency(total)}{count > 0 ? ` · ${formatCurrency(each)} para cada (${count})` : ''}</span>}
+      </Select>}
+      {rule && <span className="text-sm text-muted-foreground">= {formatCurrency(total)}{simple ? ' (do que resta depois de hora-aula e % exclusivas)' : ''}{count > 0 ? ` · ${formatCurrency(each)} para cada (${count})` : ''}</span>}
     </div>
   )
 }
@@ -358,13 +359,23 @@ export function TeamPage() {
   // Receita do mês: tudo que os contribuintes pagaram em cobranças.
   const revenue = (paid.data ?? []).reduce((n, c) => n + Number(c.final_amount), 0)
   const cents = (n: number) => Math.round(n * 100) / 100
-  // Ordem: 1) fixo, por hora e % individuais; 2) divisões de grupo de um naipe (sobre a receita do naipe menos o que foi pago nele); 3) divisões "do todo" sobre o que sobra.
+  // Ordem: 1) hora-aula (e fixo) tabelados; 2) % exclusivas; 3) caixa do bloco, sobre o que resta; 4) o que sobra é dividido entre os grupos, igualmente entre as pessoas.
+  // Uma coisa não anula a outra: a pessoa recebe tudo o que lhe cabe.
   const totalIndividual = people.reduce((n, p) => n + individualOf(p.id), 0)
-  const naipeBase = (sectionId: string | null) => Math.max(0, revenueOf({ ...EMPTY_RULE, scope: 'section', section_id: sectionId }) - (rules.data ?? []).filter((r) => r.scope === 'section' && r.section_id === sectionId).reduce((n, r) => n + amountOf(r), 0))
-  const sectionShares = (groupRules.data ?? []).filter((g) => g.scope === 'section').reduce((n, g) => n + cents(naipeBase(g.section_id) * g.percent / 100), 0)
-  const rawPool = revenue - totalIndividual - sectionShares
-  const allPool = Math.max(0, rawPool)
+  const allRules = rules.data ?? []
+  const hourFixedTotal = allRules.filter((r) => r.kind !== 'percent').reduce((n, r) => n + amountOf(r), 0)
+  const exclusiveTotal = allRules.filter((r) => r.kind === 'percent').reduce((n, r) => n + amountOf(r), 0)
+  const caixaPct = (groupRules.data ?? []).find((g) => g.group_key === CAIXA)?.percent ?? 0
+  const rawNet = revenue - totalIndividual
+  const net = Math.max(0, rawNet)
+  const caixaAmount = cents(net * caixaPct / 100)
+  const pool = net - caixaAmount
+  const naipeBase = (sectionId: string | null) => Math.max(0, revenueOf({ ...EMPTY_RULE, scope: 'section', section_id: sectionId }) - allRules.filter((r) => r.scope === 'section' && r.section_id === sectionId).reduce((n, r) => n + amountOf(r), 0)) * (1 - caixaPct / 100)
+  const sectionShares = (groupRules.data ?? []).filter((g) => g.group_key !== CAIXA && g.scope === 'section').reduce((n, g) => n + cents(naipeBase(g.section_id) * g.percent / 100), 0)
+  const allPool = Math.max(0, pool - sectionShares)
   const shareOfGroup = (g: GroupRule) => cents((g.scope === 'section' ? naipeBase(g.section_id) : allPool) * g.percent / 100)
+  const groupsTotal = (groupRules.data ?? []).filter((g) => g.group_key !== CAIXA).reduce((n, g) => n + shareOfGroup(g), 0)
+  const notDistributed = cents(pool - groupsTotal)
   const membersOfGroup = (key: string) => people.filter((p) => p.kinds.includes(key))
   const groupShareOf = (memberId: string) => (groupRules.data ?? []).reduce((n, g) => {
     const mem = membersOfGroup(g.group_key)
@@ -432,11 +443,10 @@ export function TeamPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Equipe</h1>
         <div className="flex flex-wrap items-center gap-2"><MonthNav value={ym} onChange={setYm} /></div>
       </div>
-      <p className="text-sm text-muted-foreground">Quem recebe no ciclo {cycle?.name ?? ''} e como. Primeiro saem os valores fixos, por hora e as % individuais; o que sobra das mensalidades dos contribuintes é dividido entre os grupos, igualmente entre as pessoas de cada um.</p>
-      {rawPool < 0 && <Card role="alert" className="border-destructive p-3 text-destructive">Os valores fixos, por hora e as divisões passam das mensalidades pagas no mês ({formatCurrency(revenue)}). A divisão "do todo" fica zerada.</Card>}
+      <p className="text-sm text-muted-foreground">Cada pessoa pode receber hora-aula, % exclusiva (do todo ou de um naipe) e a divisão do grupo: uma não anula a outra. A conta vai nessa ordem: hora-aula, % exclusivas, caixa do bloco; o que sobra é dividido entre os grupos, igualmente entre as pessoas.</p>
+      {rawNet < 0 && <Card role="alert" className="border-destructive p-3 text-destructive">Hora-aula e % exclusivas passam das mensalidades pagas no mês ({formatCurrency(revenue)}). Caixa e divisão dos grupos ficam zerados.</Card>}
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
       {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
       {GROUPS.map((g) => {
@@ -463,6 +473,17 @@ export function TeamPage() {
           <MemberPicker value="" onlyActive onChange={(id) => void addExtra(id)} />
         </Card>
       )}
+      <Card className="space-y-2 p-3">
+        <GroupRuleEditor key={`caixa-${(groupRules.data ?? []).find((g) => g.group_key === CAIXA)?.id ?? 'novo'}-${caixaPct}`} groupKey={CAIXA} label="Caixa do bloco" simple rule={(groupRules.data ?? []).find((g) => g.group_key === CAIXA)} cycleId={cycleId} canEdit={canEdit} count={0} total={caixaAmount} />
+        <div className="grid gap-1 text-sm sm:grid-cols-2">
+          <p className="flex justify-between gap-2"><span className="text-muted-foreground">Mensalidades pagas no mês</span><strong>{formatCurrency(revenue)}</strong></p>
+          <p className="flex justify-between gap-2"><span className="text-muted-foreground">Hora-aula e fixos</span><strong>− {formatCurrency(hourFixedTotal)}</strong></p>
+          <p className="flex justify-between gap-2"><span className="text-muted-foreground">% exclusivas</span><strong>− {formatCurrency(exclusiveTotal)}</strong></p>
+          <p className="flex justify-between gap-2"><span className="text-muted-foreground">Caixa do bloco</span><strong>− {formatCurrency(caixaAmount)}</strong></p>
+          <p className="flex justify-between gap-2"><span className="text-muted-foreground">Divisão dos grupos</span><strong>− {formatCurrency(groupsTotal)}</strong></p>
+          <p className="flex justify-between gap-2"><span className="text-muted-foreground">Não distribuído (fica no caixa)</span><strong>{formatCurrency(notDistributed)}</strong></p>
+        </div>
+      </Card>
       <Card className="flex flex-wrap items-center justify-between gap-2 p-3">
         <p className="font-semibold">Total previsto no mês: {formatCurrency(grand)}</p>
         {canEdit && <Button disabled={generate.isPending || grand <= 0} onClick={() => generate.mutate()}>Gerar pagamentos do mês</Button>}

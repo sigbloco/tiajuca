@@ -183,7 +183,8 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="financeiro" />,
                   children: [
-                    { path: 'equipe', element: <TeamPage /> },
+                    { path: 'distribuicao', element: <TeamPage /> },
+                    { path: 'equipe', element: <Navigate to="../distribuicao" replace /> },
                     { path: 'pagamentos', element: <PaymentsPage /> },
                     { path: 'valores', element: <ValuesPage /> },
                     { path: 'cobrancas', element: <BillingPage /> },
