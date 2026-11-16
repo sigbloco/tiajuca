@@ -114,10 +114,6 @@ export function ProfilePage() {
         <h1>Meu perfil</h1>
         {head.data?.joined_at && <p className="text-sm text-muted-foreground">Inscrição em {formatDate(head.data.joined_at)}</p>}
       </div>
-      <Card className="p-4">
-        <p className="font-display text-lg font-bold">{head.data?.full_name ?? membership.display_name}</p>
-        {head.data?.display_name?.trim() && head.data.display_name.trim() !== head.data.full_name && <p className="text-muted-foreground">{head.data.display_name.trim()}</p>}
-      </Card>
       <MyData memberId={memberId} bind={bindData} />
       <MySensitiveData memberId={memberId} bind={bindSens} />
       <MyParticipation memberId={memberId} />

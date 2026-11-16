@@ -149,20 +149,19 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   // E-mail do Google (gmail) é o que liga o login ao cadastro: trocar por conta própria quebraria o acesso.
   const googleEmail = /@(gmail|googlemail)[.]com$/i.test(d.email ?? '')
   return (
-    <Card className="space-y-3 p-4">
-      <h3>Meus dados</h3>
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <p className="font-semibold">E-mail</p>
-            <div className="flex items-baseline gap-1.5"><Label htmlFor="my-email">Principal</Label>
-              {googleEmail && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Conta Google: só a direção altera.</span>}</div>
-            <Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
-          </div>
-          <ExtraEmails memberId={memberId} self />
-          <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
+    <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-4">
+      <Card className="space-y-3 p-4">
+        <h3>E-mail</h3>
+        <div className="space-y-1.5">
+          <div className="flex items-baseline gap-1.5"><Label htmlFor="my-email">Principal</Label>
+            {googleEmail && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Conta Google: só a direção altera.</span>}</div>
+          <Input id="my-email" type="email" value={f.email} disabled={googleEmail} onChange={(e) => setF({ ...f, email: e.target.value })} />
         </div>
+        <ExtraEmails memberId={memberId} self />
+      </Card>
+      <Card className="space-y-3 p-4">
+        <h3>Meus dados</h3>
+        <div className="space-y-1.5"><Label htmlFor="my-full" required>Nome completo</Label><Input id="my-full" required value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="my-display">Como prefere ser chamado(a)</Label><Input id="my-display" value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} /></div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
@@ -180,9 +179,10 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
             {!noSocial && <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>}
             <label className="flex min-h-9 items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> Não tenho / não uso redes sociais</label></div>
         </div>
-        {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
-      </form>
-    </Card>
+        <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
+      </Card>
+      {!bind && <StickySave><SaveButton type="submit" className="w-full" disabled={save.isPending} hint="Salvar meus dados" /></StickySave>}
+    </form>
   )
 }
 
@@ -268,10 +268,10 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor="s-gender">Gênero</Label>
                   <Select id="s-gender" value={f.gender} onChange={(e) => setF({ ...f, gender: e.target.value })}><option value="">Não informar</option>{withCurrent(GENDERS, f.gender)}</Select></div>
-                <div className="space-y-1.5"><Label htmlFor="s-race">Cor/raça</Label>
-                  <Select id="s-race" value={f.race_color} onChange={(e) => setF({ ...f, race_color: e.target.value })}><option value="">Não informar</option>{withCurrent(RACES, f.race_color)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-trans">Você se considera trans?</Label>
                   <Select id="s-trans" value={f.is_trans} onChange={(e) => setF({ ...f, is_trans: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
+                <div className="space-y-1.5"><Label htmlFor="s-race">Cor/raça</Label>
+                  <Select id="s-race" value={f.race_color} onChange={(e) => setF({ ...f, race_color: e.target.value })}><option value="">Não informar</option>{withCurrent(RACES, f.race_color)}</Select></div>
                 <div className="space-y-1.5"><Label htmlFor="s-pcd">É PCD (pessoa com deficiência)?</Label>
                   <Select id="s-pcd" value={f.is_pcd} onChange={(e) => setF({ ...f, is_pcd: e.target.value })}><option value="">Não informar</option><option value="yes">Sim</option><option value="no">Não</option></Select></div>
               </div>
