@@ -89,7 +89,9 @@ function CrumbRegistrar({ title, extra, close }: { title: string; extra?: string
   return null
 }
 
-export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer, onCrumbClick, crumbExtra }: {
+export function SheetContent({ title, titleExtra, titleAction, description, children, className, drawer, onCrumbClick, crumbExtra, headSlot }: {
+  /** No lugar do título visível (que fica só para leitores de tela): o conteúdo do topo, ao lado do fechar. */
+  headSlot?: React.ReactNode
   /** Segundo item do caminho de navegação (ex.: "Editar seção • Introdução"). */
   crumbExtra?: string
   /** Ao clicar no item da página no caminho de navegação (breadcrumb): troca o "fechar" padrão (ex.: ficar na lista em vez de voltar de onde veio). */
@@ -138,7 +140,8 @@ export function SheetContent({ title, titleExtra, titleAction, description, chil
         )}
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
+          {headSlot && <div className="min-w-0 flex-1">{headSlot}</div>}
+          <div className={headSlot ? 'sr-only' : undefined}>
             <DialogPrimitive.Title className="font-display text-xl font-bold">{title}{titleExtra && <span className="font-normal text-muted-foreground"> • {titleExtra}</span>}{titleAction && <span className="ml-1.5 inline-flex align-middle">{titleAction}</span>}</DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-muted-foreground">{description ?? ''}</DialogPrimitive.Description>
           </div>
