@@ -108,16 +108,16 @@ export function CycleBar({ base }: { base: string }) {
   if (isDirection ? !CYCLE_AREAS.has(first) : !MEMBER_CYCLE_AREAS.has(first)) return null
   if (isCycleIndependent(rest)) {
     return (
-      <div className="mb-1.5 flex min-h-10 items-center gap-2 text-sm text-muted-foreground" role="note">
+      <div className="mb-1 flex min-h-8 items-center gap-2 text-sm text-muted-foreground" role="note">
         <CalendarRange className="h-4 w-4 shrink-0" aria-hidden />
         <span>Vale para todos os ciclos</span>
       </div>
     )
   }
   return (
-    <div className="mb-1.5 flex items-center gap-2">
+    <div className="mb-1 flex items-center gap-2">
       <span className="shrink-0 whitespace-nowrap font-semibold text-muted-foreground">Ciclo</span>
-      <CycleSelect className="w-auto min-w-0 sm:w-auto" value={cycleId} onChange={setCycleId} onlyIds={allowed ?? undefined} />
+      <CycleSelect className="h-8 w-auto min-w-0 sm:w-auto" value={cycleId} onChange={setCycleId} onlyIds={allowed ?? undefined} />
     </div>
   )
 }

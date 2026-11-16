@@ -196,7 +196,7 @@ export function AppShell() {
           <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
-        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-3 md:top-[var(--viewas-h,0px)] md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
+        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[var(--viewas-h,0px)] md:-mx-8 md:-mt-8 md:px-8 md:pt-4">
           <CycleBar base={base} />
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
