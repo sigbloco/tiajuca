@@ -14,14 +14,8 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
-import { TemplatesSettings } from '@/modules/checklists/TemplatesSettings'
 import { useCatalog } from './CatalogEditor'
 import { invalidateCatalog, mirrorFunctionToFees, saveCatalogItem, type CatalogItem } from './service'
-
-export function ChecklistsPage() {
-  const canEvents = usePermission('events.manage')
-  return <TemplatesSettings canEdit={canEvents} />
-}
 
 /**
  * Categorias: tudo é editável. "Isento" garante a isenção de quem tem a função. O valor mensal de cada categoria fica em Financeiro → Valores.

@@ -83,6 +83,7 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
               </button>
               <div className="min-w-0 flex-1">
                 <p className={cn('font-semibold', i.status === 'done' && 'text-muted-foreground line-through')}>{i.title}</p>
+                {i.description && <p className="text-sm text-muted-foreground">{i.description}</p>}
                 <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                   <span>{ITEM_STATUS_LABEL[i.status]}</span>
                   <span>·</span>

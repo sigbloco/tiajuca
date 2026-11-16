@@ -1,6 +1,6 @@
 import { usePurge } from '@/core/purge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
@@ -32,7 +32,7 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
   const items = useQuery({
     queryKey: ['tpl', orgId, 'items'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('checklist_template_items').select('id, template_id, title, sort_order, is_active').eq('organization_id', orgId).order('sort_order')
+      const { data, error } = await supabase.from('checklist_template_items').select('id, template_id, title, description, sort_order, is_active').eq('organization_id', orgId).order('sort_order')
       if (error) throw error
       return (data ?? []) as TemplateItem[]
     },
@@ -74,10 +74,6 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>Modelos de checklist</h2>
-
-      </div>
       <p className="text-muted-foreground">Ao usar um modelo num evento, as tarefas são copiadas para ele. Depois, cada evento pode ter tarefas próprias.</p>
       {canEdit && (
         <Card className="flex gap-2 p-3">
@@ -91,16 +87,20 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
           const list = (items.data ?? []).filter((i) => i.template_id === t.id && i.is_active)
           return (
             <Collapsible key={t.id} open={open.has(t.id)} onToggle={() => toggle(t.id)} title={<span className={cn(!t.is_active && 'opacity-60')}>{t.name}</span>} count={list.length}
-              right={canEdit ? <Button size="sm" variant="outline" onClick={() => patchTemplate.mutate({ id: t.id, patch: { is_active: !t.is_active } })}>Mover para a lixeira</Button> : undefined}>
+              right={canEdit ? <Button size="icon" variant="outline" className="h-8 w-8 border-destructive/60 text-destructive hover:bg-destructive/10" aria-label={`Mover o checklist ${t.name} inteiro para a lixeira`} title="Mover o checklist inteiro, com todas as tarefas, para a lixeira" onClick={() => patchTemplate.mutate({ id: t.id, patch: { is_active: !t.is_active } })}><Trash2 className="h-4 w-4" /></Button> : undefined}>
               {list.map((i, idx) => (
                 <div key={i.id} className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !i.is_active && 'opacity-60')}>
                   <div className="flex flex-col">
                     <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx === 0} onClick={() => swap.mutate({ a: i, b: list[idx - 1] })}><ArrowUp className="h-3.5 w-3.5" /></Button>
                     <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={!canEdit || idx === list.length - 1} onClick={() => swap.mutate({ a: i, b: list[idx + 1] })}><ArrowDown className="h-3.5 w-3.5" /></Button>
                   </div>
-                  <Input className="h-9 flex-1 border-transparent bg-transparent font-semibold" defaultValue={i.title} disabled={!canEdit}
-                    onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== i.title) patchItem.mutate({ id: i.id, patch: { title: v } }); else e.target.value = i.title }} />
-                  {canEdit && <Button size="sm" variant="outline" onClick={() => patchItem.mutate({ id: i.id, patch: { is_active: !i.is_active } })}>Mover para a lixeira</Button>}
+                  <div className="min-w-0 flex-1">
+                    <Input className="h-9 border-transparent bg-transparent font-semibold" defaultValue={i.title} disabled={!canEdit}
+                      onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== i.title) patchItem.mutate({ id: i.id, patch: { title: v } }); else e.target.value = i.title }} />
+                    <Input className="h-8 border-transparent bg-transparent text-sm text-muted-foreground" placeholder="descrição" aria-label={`Descrição de ${i.title}`} defaultValue={i.description ?? ''} disabled={!canEdit}
+                      onBlur={(e) => { const v = e.target.value.trim(); if (v !== (i.description ?? '')) patchItem.mutate({ id: i.id, patch: { description: v || null } }) }} />
+                  </div>
+                  {canEdit && <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-destructive" aria-label={`Mover a tarefa ${i.title} para a lixeira`} title="Mover a tarefa para a lixeira" onClick={() => patchItem.mutate({ id: i.id, patch: { is_active: !i.is_active } })}><Trash2 className="h-4 w-4" /></Button>}
                 </div>
               ))}
               {canEdit && (
