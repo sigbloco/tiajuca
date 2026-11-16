@@ -68,7 +68,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
   const head = (title: string, kind?: 'artistic' | 'collab') => (
     <div className="flex items-center gap-1.5">
       <h4 className="font-semibold">{title}</h4>
-      {kind && adding !== kind && <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={`Pedir mudança em ${title}`} title="Pedir mudança" onClick={() => { setAdding(kind); setPick('') }}><Plus className="h-3.5 w-3.5" /></button>}
+      {kind && adding !== kind && <button type="button" className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-card px-1.5 text-xs font-semibold text-foreground hover:bg-muted" aria-label={`Pedir mudança em ${title}`} title="Pedir mudança" onClick={() => { setAdding(kind); setPick('') }}><Plus className="h-3.5 w-3.5" /> Pedir mudança</button>}
     </div>
   )
   return (
@@ -83,7 +83,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
             <p className="min-w-0 break-words">{a.name}{a.section ? <span className="text-muted-foreground"> · {a.section}</span> : null}{a.level ? <span className="text-muted-foreground"> · {a.level}</span> : null}</p>
             {pending('artistic', 'remove', a.name)
               ? <Badge className={REQ_CLASS.pending}>Saída pedida</Badge>
-              : <button type="button" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-card text-muted-foreground hover:text-destructive" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-3.5 w-3.5" /></button>}
+              : <button type="button" className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-card px-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive" aria-label={`Pedir para sair de ${a.name}`} title="Pedir para sair" onClick={async () => { if (await confirmBox(`Pedir à direção para sair de “${a.name}”?`)) request.mutate({ kind: 'artistic', action: 'remove', link: a.id }) }}><X className="h-3.5 w-3.5" /> Pedir para sair</button>}
           </div>
         ))}
         {addForm('artistic')}
@@ -93,10 +93,9 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {head('Colaborativa', 'collab')}
         {d.collab.length === 0 && <p className="text-muted-foreground">Você não colabora em nenhuma frente.</p>}
         {d.collab.map((c) => (
-          <div key={c.id} className="flex items-center justify-between gap-2">
+          <div key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <div className="min-w-0"><p className="break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>{descOf(c.name) && <p className="text-sm text-muted-foreground">{descOf(c.name)}</p>}</div>
-            <Button size="sm" variant="outline" className="text-destructive" disabled={giveUp.isPending}
-              onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-4 w-4" /> Abrir mão</Button>
+            <button type="button" className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-card px-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10" disabled={giveUp.isPending} onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-3.5 w-3.5" /> Abrir mão</button>
           </div>
         ))}
         {addForm('collab')}
