@@ -464,7 +464,7 @@ export function TeamPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex justify-center">
         <div className="flex flex-wrap items-center gap-2"><MonthNav value={ym} onChange={setYm} /></div>
       </div>
       {rawNet < 0 && <Card role="alert" className="border-destructive p-3 text-destructive">Hora-aula e % exclusivas passam das mensalidades pagas no mês ({formatCurrency(revenue)}). Caixa e divisão dos grupos ficam zerados.</Card>}

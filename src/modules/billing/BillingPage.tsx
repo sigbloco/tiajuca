@@ -221,8 +221,7 @@ function AdminBilling() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Cobranças</h1>
+      <div className="flex justify-center">
         <div className="flex flex-wrap items-center gap-2">
           <Button size="icon" variant="outline" aria-label="Mês anterior" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
           <span className="min-w-40 text-center font-display text-lg font-bold">{formatCompetence(competence)}</span>
