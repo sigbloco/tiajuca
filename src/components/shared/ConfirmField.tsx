@@ -1,25 +1,14 @@
-import { Save, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useUnsaved } from '@/core/unsaved'
-import { Button, Input, Select, cn } from '@/components/ui/primitives'
+import { Input, Select, cn } from '@/components/ui/primitives'
 
-/** Botões que só aparecem quando há algo a confirmar. */
-function Confirm({ label, busy, onConfirm, onCancel }: { label: string; busy: boolean; onConfirm: () => void; onCancel: () => void }) {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1">
-      <Button type="button" size="icon" className="h-8 w-8" aria-label={label} title={label} disabled={busy} onClick={onConfirm}><Save className="h-4 w-4" /><span className="sr-only">{label}</span></Button>
-      <Button type="button" size="icon" variant="outline" className="h-8 w-8" aria-label="Cancelar" disabled={busy} onClick={onCancel}><X className="h-4 w-4" /></Button>
-    </span>
-  )
-}
-
-/** Texto editável: nada é gravado até clicar em "Salvar" (ou Enter). Esc volta ao valor anterior. */
-export function SaveInput({ value, onSave, disabled, className, inputClassName, numeric, autoSave, allowEmpty, 'aria-label': ariaLabel, placeholder }: {
+/** Texto editável: grava sozinho ao sair do campo ou apertar Enter (regra do app: salvar é automático ou pelo botão fixo da página). Esc volta ao valor anterior. */
+export function SaveInput({ value, onSave, disabled, className, inputClassName, numeric, allowEmpty, 'aria-label': ariaLabel, placeholder }: {
   /** Deixa gravar o campo vazio (ex.: "sem limite"). */
   allowEmpty?: boolean
   /** Só aceita dígitos (teclado numérico no celular). */
   numeric?: boolean
-  /** Grava sozinho ao sair do campo ou apertar Enter (sem botão de confirmar). */
+  /** Mantido por compatibilidade: agora todo campo grava sozinho. */
   autoSave?: boolean
   /** Classes do campo em si (ex.: largura fixa). */
   inputClassName?: string
@@ -37,21 +26,20 @@ export function SaveInput({ value, onSave, disabled, className, inputClassName, 
   const commit = async () => {
     if (!dirty || busy) return
     setBusy(true)
-    try { await onSave(text.trim()) } finally { setBusy(false) }
+    try { await onSave(text.trim()) } catch { setText(value) } finally { setBusy(false) }
   }
   useUnsaved(dirty, commit)
   return (
     <span className={cn('flex min-w-0 flex-1 items-center gap-1.5', className)}>
       <Input className={cn('min-w-0 flex-1 font-semibold', inputClassName)} inputMode={numeric ? 'numeric' : undefined} value={text} disabled={disabled || busy} aria-label={ariaLabel} placeholder={placeholder}
-        onBlur={() => { if (autoSave) void commit() }}
+        onBlur={() => void commit()}
         onChange={(e) => setText(numeric ? e.target.value.replace(/\D/g, '') : e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commit() } if (e.key === 'Escape') setText(value) }} />
-      {dirty && !autoSave && <Confirm label="Salvar" busy={busy} onConfirm={() => void commit()} onCancel={() => setText(value)} />}
     </span>
   )
 }
 
-/** Lista de escolha: a troca só vale depois de clicar em "OK". */
+/** Lista de escolha: a troca é gravada na hora (sem botão de confirmar). */
 export function OkSelect({ value, onSave, disabled, className, children, 'aria-label': ariaLabel, id }: {
   value: string
   onSave: (v: string) => Promise<unknown> | unknown
@@ -64,16 +52,15 @@ export function OkSelect({ value, onSave, disabled, className, children, 'aria-l
   const [v, setV] = useState(value)
   const [busy, setBusy] = useState(false)
   useEffect(() => setV(value), [value])
-  const dirty = v !== value
-  const commit = async () => {
+  const change = async (next: string) => {
+    if (next === value) return
+    setV(next)
     setBusy(true)
-    try { await onSave(v) } finally { setBusy(false) }
+    try { await onSave(next) } catch { setV(value) } finally { setBusy(false) }
   }
-  useUnsaved(dirty, commit)
   return (
     <span className="inline-flex items-center gap-1.5">
-      <Select id={id} className={className} value={v} disabled={disabled || busy} aria-label={ariaLabel} onChange={(e) => setV(e.target.value)}>{children}</Select>
-      {dirty && <Confirm label="OK" busy={busy} onConfirm={() => void commit()} onCancel={() => setV(value)} />}
+      <Select id={id} className={className} value={v} disabled={disabled || busy} aria-label={ariaLabel} onChange={(e) => void change(e.target.value)}>{children}</Select>
     </span>
   )
 }

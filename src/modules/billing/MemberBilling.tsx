@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { SaveButton } from '@/components/shared/SaveButton'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Input, Label, Select, cn } from '@/components/ui/primitives'
@@ -133,7 +132,7 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
   })
 
   const changed = valid && (n !== Math.round(Number(current?.percent ?? 0)) || reason.trim() !== (current?.reason ?? ''))
-  const autoSave = () => { if (auto && changed && !save.isPending) save.mutate() }
+  const autoSave = () => { if (changed && !save.isPending) save.mutate() }
   return (
     <div className="space-y-2">
       <div className="flex items-end gap-2">
@@ -144,7 +143,6 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
         <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
       </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
-      {!auto && <SaveButton disabled={!valid || save.isPending} onClick={() => save.mutate()} className="h-9 px-3" hint="Salvar bolsa" />}
     </div>
   )
 }
