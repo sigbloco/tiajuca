@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, CircleDollarSign, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
-  Globe, HandCoins, Home, PieChart, Hourglass, Music2, Palette, ShieldCheck, Store, Tags, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
+  Globe, HandCoins, Home, PieChart, Hourglass, Music2, Palette, ShieldCheck, Store, Tags, TrendingDown, TrendingUp, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import type { PermissionKey, PermissionScope } from '@/core/permissions'
 
@@ -8,7 +8,7 @@ import type { PermissionKey, PermissionScope } from '@/core/permissions'
 export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
 export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
   oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, lista de espera e relatórios.' },
-  financeiro: { label: 'Financeiro', icon: Banknote, description: 'Distribuição, pagamentos, valores, cobranças e bolsas, por ciclo.', homePermission: 'finance.read' },
+  financeiro: { label: 'Financeiro', icon: Banknote, description: 'Receitas, despesas, distribuição, pagamentos, valores, cobranças e bolsas.', homePermission: 'finance.read' },
   organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, categorias e Google Drive.' },
 }
 export const HUB_ORDER: HubKey[] = ['oficina', 'financeiro', 'organizacao']
@@ -47,6 +47,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'lista-de-espera', label: 'Lista de espera', icon: Hourglass, group: 'oficina', permission: 'member_cycles.read', minScope: 'group', description: 'Quem espera uma vaga e pode ser promovido.' },
   { to: 'relatorios', label: 'Relatórios de presença', icon: BarChart3, group: 'oficina', permission: 'attendance.read', minScope: 'group', description: 'Presença por pessoa, instrumento e mês.' },
 
+  { to: 'receitas', label: 'Receitas', icon: TrendingUp, group: 'financeiro', permission: 'finance.read', description: 'Mensalidades e outras receitas, mês a mês.' },
+  { to: 'despesas', label: 'Despesas', icon: TrendingDown, group: 'financeiro', permission: 'finance.read', description: 'Despesas e pagamentos da equipe, mês a mês.' },
   { to: 'distribuicao', label: 'Distribuição', icon: PieChart, group: 'financeiro', permission: 'finance.read', description: 'Como as mensalidades são divididas: hora-aula, % e grupos.' },
   { to: 'pagamentos', label: 'Pagamentos', icon: HandCoins, group: 'financeiro', permission: 'finance.read', description: 'Pagamentos da equipe, mês a mês.' },
   { to: 'valores', label: 'Valores', icon: CircleDollarSign, group: 'financeiro', permission: 'finance.read', description: 'Valor mensal de cada categoria, por ciclo.' },

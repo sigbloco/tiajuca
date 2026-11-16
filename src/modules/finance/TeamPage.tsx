@@ -18,7 +18,6 @@ import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { useCycles } from '@/modules/cycles/service'
 import { PageLink } from '@/components/shared/PageLink'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
 type Scope = 'all' | 'section' | 'instrument'
@@ -241,7 +240,6 @@ export function TeamPage() {
   const cycles = useCycles()
   const cycle = (cycles.data ?? []).find((c) => c.id === cycleId)
   const [drafts, setDrafts] = useState<Record<string, number[]>>({})
-  const [extra, setExtra] = useState<Person[]>([])
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
   const instruments = useCatalog('instruments')
   const sections = useCatalog('sections')
@@ -339,9 +337,8 @@ export function TeamPage() {
       map.set(s.member_id, p)
     }
     for (const r of rules.data ?? []) if (!map.has(r.member_id)) map.set(r.member_id, { id: r.member_id, name: shortName(r.members?.full_name, r.members?.display_name), kinds: [] })
-    for (const e of extra) if (!map.has(e.id)) map.set(e.id, e)
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-  }, [staff.data, rules.data, extra])
+  }, [staff.data, rules.data])
   const groupOf = (p: Person) => GROUPS.find((g) => g.key && p.kinds.includes(g.key))?.key ?? ''
 
   const revenueOf = useMemo(() => {
@@ -433,12 +430,6 @@ export function TeamPage() {
     onSuccess: (n) => { toast.success(n ? `${n} pagamento(s) criado(s).` : 'Nenhum pagamento novo a criar.'); qc.invalidateQueries({ queryKey: ['staff-payments'] }); qc.invalidateQueries({ queryKey: ['staff-payments-month', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const addExtra = async (id: string) => {
-    if (!id) return
-    const { data } = await supabase.from('members').select('id, full_name, display_name').eq('id', id).maybeSingle()
-    if (data) setExtra((x) => [...x, { id, name: shortName(data.full_name, data.display_name), kinds: [] }])
-    setDrafts((d) => ({ ...d, [id]: [...(d[id] ?? []), Date.now()] }))
-  }
 
   /** Divisão do grupo: uma % (do todo ou de um naipe) repartida igualmente entre as pessoas do grupo. */
   const groupRuleEditor = (key: string, count: number) => {
@@ -473,7 +464,6 @@ export function TeamPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2"><MonthNav value={ym} onChange={setYm} /></div>
       </div>
-      <p className="text-sm text-muted-foreground">Cada pessoa pode receber hora-aula, % exclusiva (do todo ou de um naipe) e a divisão do grupo: uma não anula a outra. A conta vai nessa ordem: hora-aula, % exclusivas, caixa do bloco; o que sobra é dividido entre os grupos, igualmente entre as pessoas.</p>
       {rawNet < 0 && <Card role="alert" className="border-destructive p-3 text-destructive">Hora-aula e % exclusivas passam das mensalidades pagas no mês ({formatCurrency(revenue)}). Caixa e divisão dos grupos ficam zerados.</Card>}
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
       {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
@@ -495,12 +485,6 @@ export function TeamPage() {
           </section>
         )
       })}
-      {canEdit && (
-        <Card className="space-y-2 p-3">
-          <h3>Adicionar pessoa à equipe do ciclo</h3>
-          <MemberPicker value="" onlyActive onChange={(id) => void addExtra(id)} />
-        </Card>
-      )}
       <Card className="space-y-2 p-3">
         <GroupRuleEditor key={`caixa-${(groupRules.data ?? []).find((g) => g.group_key === CAIXA)?.id ?? 'novo'}-${caixaPct}`} groupKey={CAIXA} label="Caixa do bloco" simple rule={(groupRules.data ?? []).find((g) => g.group_key === CAIXA)} cycleId={cycleId} canEdit={canEdit} count={0} total={caixaAmount} />
         <div className="grid gap-1 text-sm sm:grid-cols-2">

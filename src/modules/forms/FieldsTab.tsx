@@ -5,7 +5,7 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { RichTextarea } from '@/components/shared/RichText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
-import { ArrowDown, ArrowUp, Ban, BookmarkPlus, CopyPlus, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, BookmarkPlus, CopyPlus, RotateCcw, LogIn, ChevronDown, ChevronRight, GitBranch, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { promptBox } from '@/components/shared/DialogHost'
 import { SendSection } from './SendSection'
 import { useSectionTemplates } from './SectionTemplatesPage'
@@ -427,6 +427,11 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
     onSuccess: (_, x) => { toast.success(isSection(x) ? 'Seção duplicada.' : 'Campo duplicado.'); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const resetFromTemplate = useMutation({
+    mutationFn: async (sectionId: string) => { const { data, error } = await supabase.rpc('reset_section_from_template', { p_section: sectionId }); if (error) throw error; return data as { fields: number; unlinked: number } },
+    onSuccess: (r) => { refresh(); toast.success(`Seção restaurada do modelo: ${r.fields} campo(s).${r.unlinked > 0 ? ` ${r.unlinked} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.` : ''}`) },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const drag = useHoldReorder()
   const hasLogin = fields.some(isLoginSection)
   const addLogin = useMutation({
@@ -450,7 +455,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
     },
     onSuccess: (r) => {
       refresh(); setPickOpen(false)
-      toast.success(r.unlinked > 0 ? `Seção inserida com ${r.fields} pergunta(s). ${r.unlinked} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.` : `Seção inserida com ${r.fields} pergunta(s).`)
+      toast.success(r.unlinked > 0 ? `Seção inserida com ${r.fields} campo(s). ${r.unlinked} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.` : `Seção inserida com ${r.fields} campo(s).`)
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -540,6 +545,10 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                   {!isLoginSection(x) && !(templateMode && sec) && (
                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0" aria-label={`Duplicar ${x.label}`} title={sec ? 'Duplicar a seção com os campos dela' : 'Duplicar o campo'} disabled={duplicate.isPending} onClick={() => duplicate.mutate(x)}><CopyPlus className="h-4 w-4" /></Button>
                   )}
+                  {sec && !templateMode && x.source_template_id && (
+                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0" aria-label={`Restaurar ${x.label} do modelo`} title="Restaurar do modelo (os campos desta seção voltam ao modelo)" disabled={resetFromTemplate.isPending}
+                      onClick={async () => { if (await confirmBox(`Restaurar a seção “${x.label}” como está no modelo? Os campos dela voltam ao modelo e o que você mudou aqui nela se perde. Respostas já enviadas não mudam.`)) resetFromTemplate.mutate(x.id) }}><RotateCcw className="h-4 w-4" /></Button>
+                  )}
                 </div>
                 <button className="w-full text-left" onClick={() => setSheet({ field: x, section: sec })}>
                   <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -580,7 +589,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                 <Card key={t.id} className="flex items-center justify-between gap-3 p-3">
                   <div className="min-w-0">
                     <p className="break-words font-semibold">{t.name}</p>
-                    <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'pergunta' : 'perguntas'}</p>
+                    <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'campo' : 'campos'}</p>
                   </div>
                   <Button size="sm" disabled={insertTemplate.isPending} onClick={() => insertTemplate.mutate(t.id)}><Plus className="h-4 w-4" /> Adicionar</Button>
                 </Card>
