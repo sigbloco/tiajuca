@@ -231,15 +231,30 @@ export function NaipesPage() {
     enabled: Boolean(cur?.id),
     queryFn: async () => {
       const [s, i] = await Promise.all([
-        supabase.from('section_cycles').select('section_id').eq('organization_id', orgId).eq('cycle_id', cur!.id).limit(5000),
-        supabase.from('instrument_cycles').select('instrument_id').eq('organization_id', orgId).eq('cycle_id', cur!.id).limit(5000),
+        supabase.from('section_cycles').select('section_id, cycle_id').eq('organization_id', orgId).limit(20000),
+        supabase.from('instrument_cycles').select('instrument_id, cycle_id').eq('organization_id', orgId).limit(20000),
       ])
       if (s.error) throw s.error
       if (i.error) throw i.error
-      return { sections: new Set((s.data ?? []).map((r) => r.section_id as string)), instruments: new Set((i.data ?? []).map((r) => r.instrument_id as string)) }
+      // Neste ciclo, e em quais OUTROS ciclos cada item existe (o que não está aqui mas existe lá não é lixo).
+      const others = (rows: Record<string, string>[], key: string) => {
+        const m = new Map<string, string[]>()
+        for (const r of rows) if (r.cycle_id !== cur!.id) m.set(r[key], [...(m.get(r[key]) ?? []), r.cycle_id])
+        return m
+      }
+      const sRows = (s.data ?? []) as unknown as Record<string, string>[]
+      const iRows = (i.data ?? []) as unknown as Record<string, string>[]
+      return {
+        sections: new Set(sRows.filter((r) => r.cycle_id === cur!.id).map((r) => r.section_id)), instruments: new Set(iRows.filter((r) => r.cycle_id === cur!.id).map((r) => r.instrument_id)),
+        secElsewhere: others(sRows, 'section_id'), instElsewhere: others(iRows, 'instrument_id'),
+      }
     },
   })
   const loaded = !!inCycle.data
+  const cycleNames = (ids: string[] | undefined) => (ids ?? []).map((id) => (cycles.data ?? []).find((c) => c.id === id)?.name).filter(Boolean).join(', ')
+  // Existe em outros ciclos (e continua ativo): não é lixo, só está fora deste ciclo.
+  const secElsewhere = (s: CatalogItem) => s.is_active && !secOn(s) && (inCycle.data?.secElsewhere.get(s.id)?.length ?? 0) > 0
+  const instElsewhere = (i: CatalogItem) => i.is_active && !instOn(i) && (inCycle.data?.instElsewhere.get(i.id)?.length ?? 0) > 0
   const secOn = (s: CatalogItem) => s.is_active && (inCycle.data?.sections.has(s.id) ?? false)
   const instOn = (i: CatalogItem) => i.is_active && (inCycle.data?.instruments.has(i.id) ?? false)
   const instMut = useStructureMutations('instruments')
@@ -277,13 +292,27 @@ export function NaipesPage() {
       const link = v.table === 'sections' ? { table: 'section_cycles', col: 'section_id' } : { table: 'instrument_cycles', col: 'instrument_id' }
       const r = await supabase.from(link.table).upsert({ organization_id: orgId, [link.col]: v.id, cycle_id: cur!.id }, { onConflict: `${link.col},cycle_id`, ignoreDuplicates: true })
       if (r.error) throw r.error
+      // Um instrumento precisa do naipe dele neste ciclo.
+      if (v.table === 'instruments') {
+        const secId = (instruments.data ?? []).find((x) => x.id === v.id)?.section_id
+        if (secId) {
+          const a = await supabase.from('sections').update({ is_active: true }).eq('id', secId).eq('organization_id', orgId)
+          if (a.error) throw a.error
+          const b = await supabase.from('section_cycles').upsert({ organization_id: orgId, section_id: secId, cycle_id: cur!.id }, { onConflict: 'section_id,cycle_id', ignoreDuplicates: true })
+          if (b.error) throw b.error
+        }
+      }
     },
-    onSuccess: () => { notifySaved('Restaurado neste ciclo.'); invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
+    onSuccess: () => { notifySaved('Adicionado a este ciclo.'); invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const purge = useMutation({
     mutationFn: async (v: { table: CatalogTable; id: string }) => {
       const link = v.table === 'sections' ? { table: 'section_cycles', col: 'section_id' } : { table: 'instrument_cycles', col: 'instrument_id' }
+      // Excluir de vez só o que não é usado em ciclo nenhum: o que existe em outros ciclos fica como está.
+      const used = await supabase.from(link.table).select('cycle_id', { count: 'exact', head: true }).eq(link.col, v.id).eq('organization_id', orgId)
+      if (used.error) throw used.error
+      if ((used.count ?? 0) > 0) throw new Error('Este item é usado em outros ciclos e não pode ser excluído de vez. Para ele sumir deste ciclo, basta não adicioná-lo aqui.')
       const r = await supabase.from(link.table).delete().eq(link.col, v.id).eq('organization_id', orgId)
       if (r.error) throw r.error
       const { error } = await supabase.from(v.table).delete().eq('id', v.id).eq('organization_id', orgId)
@@ -299,7 +328,7 @@ export function NaipesPage() {
       const { error } = await supabase.from(link.table).delete().eq(link.col, v.id).eq('cycle_id', cur!.id)
       if (error) throw error
     },
-    onSuccess: () => { notifySaved('Movido para a lixeira.'); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
+    onSuccess: () => { notifySaved('Tirado deste ciclo.'); qc.invalidateQueries({ queryKey: ['structure-cycle', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const copyFromPrev = useMutation({
@@ -309,7 +338,7 @@ export function NaipesPage() {
   })
   /** A lixeira move para a Lixeira (menu): dá para restaurar ou excluir de vez por lá. */
   const confirmDelete = async (table: CatalogTable, item: CatalogItem, what: string) => {
-    if (await confirmBox(`Tirar ${what} “${item.name}” do ciclo ${cur?.name ?? ''} e mover para a Lixeira? Os outros ciclos não mudam e você pode restaurar depois.`)) leave.mutate({ table, id: item.id })
+    if (await confirmBox(`Tirar ${what} “${item.name}” do ciclo ${cur?.name ?? ''} e tirar deste ciclo? Ele continua nos outros ciclos (se estava em algum) e você pode adicioná-lo de volta quando quiser.`)) leave.mutate({ table, id: item.id })
   }
 
   /** Arrastar um instrumento sobre outro do mesmo naipe reordena. */
@@ -385,10 +414,18 @@ export function NaipesPage() {
         })}
       </div>
       <p className="text-xs text-muted-foreground">Itens desativados somem das novas escolhas, mas o histórico é preservado. Só dá para excluir o que nunca foi usado.</p>
-      {canEdit && <TrashGroup groups={[
-      { label: 'Naipes', entries: (sections.data ?? []).filter((s) => loaded && !secOn(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
-      { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => loaded && !instOn(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
-      ]} />}
+      {canEdit && loaded && (
+        <>
+          <TrashGroup title="Em outros ciclos" groups={[
+            { label: 'Naipes', restoreLabel: 'Adicionar a este ciclo', entries: (sections.data ?? []).filter(secElsewhere).map((s) => ({ id: s.id, name: s.name, detail: 'Em ' + cycleNames(inCycle.data?.secElsewhere.get(s.id)) })), onRestore: (id) => restore.mutate({ table: 'sections', id }) },
+            { label: 'Instrumentos', restoreLabel: 'Adicionar a este ciclo', entries: (instruments.data ?? []).filter(instElsewhere).map((i) => ({ id: i.id, name: i.name, detail: [i.section_id ? secName.get(i.section_id)?.name : undefined, 'em ' + cycleNames(inCycle.data?.instElsewhere.get(i.id))].filter(Boolean).join(' · ') })), onRestore: (id) => restore.mutate({ table: 'instruments', id }) },
+          ]} />
+          <TrashGroup groups={[
+            { label: 'Naipes', entries: (sections.data ?? []).filter((s) => !secOn(s) && !secElsewhere(s)).map((s) => ({ id: s.id, name: s.name })), onRestore: (id) => restore.mutate({ table: 'sections', id }), onPurge: (id) => purge.mutate({ table: 'sections', id }) },
+            { label: 'Instrumentos', entries: (instruments.data ?? []).filter((i) => !instOn(i) && !instElsewhere(i)).map((i) => ({ id: i.id, name: i.name, detail: i.section_id ? secName.get(i.section_id)?.name : undefined })), onRestore: (id) => restore.mutate({ table: 'instruments', id }), onPurge: (id) => purge.mutate({ table: 'instruments', id }) },
+          ]} />
+        </>
+      )}
     </div>
   )
 }
