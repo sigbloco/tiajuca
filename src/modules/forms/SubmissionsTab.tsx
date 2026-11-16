@@ -1,6 +1,5 @@
 import { RichTextarea } from '@/components/shared/RichText'
 import { PageLink } from '@/components/shared/PageLink'
-import { SaveButton } from '@/components/shared/SaveButton'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -107,8 +106,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
       <p className="text-xs text-muted-foreground">Consentimento: {sub.consent_given ? 'concedido' : 'não registrado'}</p>
 
       <div className="space-y-2">
-        <Input placeholder="Observações da análise" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <SaveButton disabled={saveNotes.isPending} onClick={() => saveNotes.mutate()} className="h-9 px-3" hint="Salvar observação" />
+        <Input placeholder="Observações da análise" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => { if (notes.trim() !== (sub.reviewer_notes ?? '') && !saveNotes.isPending) saveNotes.mutate() }} />
       </div>
 
       {sub.status === 'pending' && !purged && form.kind === 'general' && (
