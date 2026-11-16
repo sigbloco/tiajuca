@@ -215,14 +215,19 @@ function GroupRuleEditor({ groupKey, rule, cycleId, canEdit, count, total, label
   const commit = (v = { pct, section: sectionId }) => { if (canEdit && !save.isPending) save.mutate(v) }
   const each = count > 0 ? total / count : 0
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
-      <span className="font-semibold">{label}</span>
-      <div className="flex items-center gap-1"><Input className="h-8 w-16 px-2 text-center" inputMode="decimal" placeholder="0" disabled={!canEdit} aria-label={`Porcentagem de ${groupKey}`} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={() => commit()} /><span className="font-semibold">%</span></div>
-      {!simple && <Select className="h-8 w-auto min-w-0 py-0 text-sm" disabled={!canEdit} aria-label="Sobre" value={sectionId} onChange={(e) => { setSectionId(e.target.value); commit({ pct, section: e.target.value }) }}>
-        <option value="">do todo</option>
-        {(sections.data ?? []).filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>naipe {x.name}</option>)}
-      </Select>}
-      {rule && <span className="text-sm text-muted-foreground">= {formatCurrency(total)}{simple ? ' (do que resta depois de hora-aula e % exclusivas)' : ''}{count > 0 ? ` · ${formatCurrency(each)} para cada (${count})` : rule && !simple ? ' · ninguém na divisão ainda: adicione a regra "Divisão do grupo" em cada pessoa' : ''}</span>}
+    <div className="space-y-1 rounded-lg bg-muted/50 p-2">
+      <div className="flex items-center gap-1.5">
+        <span className="whitespace-nowrap font-semibold">{label}</span>
+        <Input className="h-8 w-12 shrink-0 px-1 text-center" inputMode="decimal" maxLength={5} placeholder="00" disabled={!canEdit} aria-label={`Porcentagem de ${groupKey}`} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={() => commit()} />
+        <span className="font-semibold">%</span>
+        {!simple && (
+          <Select className="h-8 min-w-0 flex-1 py-0 pl-2 pr-7 text-sm" disabled={!canEdit} aria-label="Sobre" value={sectionId} onChange={(e) => { setSectionId(e.target.value); commit({ pct, section: e.target.value }) }}>
+            <option value="">Tudo</option>
+            {(sections.data ?? []).filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </Select>
+        )}
+      </div>
+      {rule && <p className="text-sm text-muted-foreground">= {formatCurrency(total)}{simple ? ' (do que resta depois de hora-aula e % exclusivas)' : ''}{count > 0 ? ` · ${formatCurrency(each)} para cada (${count})` : rule && !simple ? ' · ninguém na divisão ainda: adicione a regra "Divisão do grupo" em cada pessoa' : ''}</p>}
     </div>
   )
 }
