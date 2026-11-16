@@ -23,7 +23,8 @@ export function BulletTrail({ items, className, maxLines }: { items: string[]; c
   useLayoutEffect(() => {
     const box = ref.current
     if (!box) return
-    const lh = (box.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0
+    // Os itens ficam em <span class="contents"> (sem caixa): a altura de uma linha é a do texto dentro dele.
+    const lh = box.querySelector<HTMLElement>(':scope > span > span')?.offsetHeight ?? 0
     if (maxLines && items.length > 3 && !collapsed && lh > 0 && box.offsetHeight > lh * maxLines + 4) { setCollapsed(true); return }
     box.querySelectorAll<HTMLElement>('[data-bullet]').forEach((b) => {
       const next = b.nextElementSibling as HTMLElement | null
