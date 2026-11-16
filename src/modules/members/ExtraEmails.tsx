@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Input, Label } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { useOrgId } from '@/core/organization'
+import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 
@@ -18,6 +18,9 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
   const orgId = useOrgId()
   const qc = useQueryClient()
   const manage = usePermission('members.manage')
+  const { viewAs } = useOrganization()
+  // Quem não gerencia (ou está "visualizando como" um integrante) vê o aviso de que o e-mail depende da direção.
+  const needsApproval = !manage || (self && !!viewAs)
   const can = manage || self
   const [adding, setAdding] = useState(false)
   const [value, setValue] = useState('')
@@ -66,10 +69,10 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
   return (
     <div className="space-y-1.5 sm:col-span-2">
       <div className="flex items-center gap-1.5">
-        <Label>{self && !manage ? 'Adicionais' : 'E-mails adicionais'}</Label>
+        <Label>{self ? 'Adicionais' : 'E-mails adicionais'}</Label>
         <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar e-mail" title="Adicionar e-mail"
           onClick={() => setAdding((a) => !a)}><Plus className="h-3.5 w-3.5" /></button>
-        {!manage && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Sujeito à aprovação da direção.</span>}
+        {needsApproval && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">Sujeito à aprovação da direção.</span>}
       </div>
       {(pending.data ?? []).length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
