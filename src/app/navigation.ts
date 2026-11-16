@@ -53,7 +53,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'bolsas', label: 'Bolsas', icon: Award, group: 'financeiro', permission: 'scholarships.manage', description: 'Quem tem bolsa e quanto isso pesa.' },
 
   { to: 'ciclos', label: 'Ciclos', icon: CalendarRange, group: 'organizacao', permission: 'cycles.manage', description: 'Períodos do bloco (ex.: Carnaval 2026/27).' },
-  { to: 'funcoes', label: 'Categorias', icon: Tags, group: 'organizacao', permission: 'structure.manage', description: 'Produção, Apoio e outras categorias; refletem em Contribuições.' },
+  { to: 'funcoes', label: 'Categorias', icon: Tags, group: 'organizacao', permission: 'structure.manage', description: 'Produção, Apoio e outras categorias; refletem em Valores.' },
   { to: 'checklists', label: 'Checklists', icon: ListChecks, group: 'organizacao', permission: 'events.manage', description: 'Modelos de checklist para os eventos.' },
   { to: 'fornecedores', label: 'Fornecedores', icon: Truck, group: 'organizacao', permission: 'suppliers.read', description: 'Contatos de som, tenda, banheiro e mais.' },
   { to: 'drive', label: 'Google Drive', icon: FolderOpen, group: 'organizacao', permission: 'drive.read', description: 'Pastas do Drive e quem pode vê-las.' },

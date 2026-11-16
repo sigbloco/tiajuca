@@ -19,7 +19,7 @@ export function VarsHint({ onInsert, valueVars = true }: { /** Clicar numa vari�
   const names = (cats.data ?? []).filter((c) => c.is_active && !c.is_exempt && c.name !== 'Isento' && !(c.function_id && exemptIds.has(c.function_id)) && !exemptNames.has(c.name.toLowerCase())).map((c) => c.name)
   return (
     <div className="space-y-0.5 text-xs text-muted-foreground">
-      <p>Inserir variável {TEXT_VARS.filter((v) => valueVars || v.key !== 'valor').map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
+      <p>Inserir variável {TEXT_VARS.filter((v) => valueVars || !v.needsCycle).map((v, i) => <span key={v.key}>{i > 0 && ' '}<Chip text={`{${v.key}}`} help={v.help} onInsert={onInsert} /></span>)}.</p>
       {valueVars && names.length > 0 && <p>{names.map((n, i) => <span key={n}>{i > 0 && ' '}<Chip text={`{valor:${n}}`} help={`valor atual de ${n}`} onInsert={onInsert} /></span>)}.</p>}
     </div>
   )
