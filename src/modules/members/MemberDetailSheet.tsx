@@ -61,7 +61,7 @@ async function copyFromPrevious(orgId: string, memberId: string, target: CycleLi
   if ((has.count ?? 0) > 0 || (hasFee.count ?? 0) > 0) return null
   const prevs = all.filter((c) => c.starts_on < target.starts_on).sort((a, b) => b.starts_on.localeCompare(a.starts_on))
   for (const prev of prevs) {
-    const parts = await supabase.from('cycle_participations').select('instrument_id, function_id, skill_level_id, is_student, is_paid, is_primary').eq('member_id', memberId).eq('cycle_id', prev.id)
+    const parts = await supabase.from('cycle_participations').select('instrument_id, function_id, skill_level_id, is_paid, is_primary').eq('member_id', memberId).eq('cycle_id', prev.id)
     const fee = await supabase.from('cycle_fee_assignments').select('fee_category_id').eq('member_id', memberId).eq('cycle_id', prev.id).maybeSingle()
     const sch = await supabase.from('cycle_scholarships').select('percent, reason, scholarship_type_id').eq('member_id', memberId).eq('cycle_id', prev.id).maybeSingle()
     if (parts.error) throw parts.error
