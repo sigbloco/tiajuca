@@ -93,9 +93,12 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {head('Colaborativa', 'collab')}
         {d.collab.length === 0 && <p className="text-muted-foreground">Você não colabora em nenhuma frente.</p>}
         {d.collab.map((c) => (
-          <div key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <div className="min-w-0"><p className="break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>{descOf(c.name) && <p className="text-sm text-muted-foreground">{descOf(c.name)}</p>}</div>
-            <button type="button" className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-card px-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10" disabled={giveUp.isPending} onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-3.5 w-3.5" /> Abrir mão</button>
+          <div key={c.id} className="space-y-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="min-w-0 break-words">{c.name}{c.exempt && <span className="text-muted-foreground"> · com isenção</span>}</p>
+              <button type="button" className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-card px-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10" disabled={giveUp.isPending} onClick={async () => { if (await confirmBox(`Abrir mão de “${c.name}”? Você deixa de colaborar${c.exempt ? ' e volta a pagar a mensalidade da sua categoria' : ''}. Para voltar, será preciso pedir à direção.`)) giveUp.mutate(c.id) }}><HeartHandshake className="h-3.5 w-3.5" /> Abrir mão</button>
+            </div>
+            {descOf(c.name) && <p className="text-sm text-muted-foreground">{descOf(c.name)}</p>}
           </div>
         ))}
         {addForm('collab')}
