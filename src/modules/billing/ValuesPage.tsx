@@ -8,7 +8,6 @@ export function ValuesPage() {
   const { cycle } = useSelectedCycle()
   return (
     <div className="space-y-4">
-      <h1>Valores</h1>
       <ContributionsEditor canEdit={canBilling} cycle={cycle} />
     </div>
   )
