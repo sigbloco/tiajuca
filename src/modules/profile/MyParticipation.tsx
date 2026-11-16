@@ -7,6 +7,8 @@ import { Badge, Button, Card, Select } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId } from '@/core/organization'
+import { usePermission } from '@/core/permissions'
+import { ArtisticLinks } from '@/modules/members/ArtisticLinks'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
@@ -28,6 +30,7 @@ export function MyParticipation({ memberId }: { memberId: string }) {
   const instruments = useCatalog('instruments')
   const functions = useCatalog('artistic_functions')
   const [adding, setAdding] = useState<'artistic' | 'collab' | null>(null)
+  const manager = usePermission('members.manage')
   const [pick, setPick] = useState('')
   const key = ['my-participation', orgId, memberId]
   const data = useQuery({
@@ -75,6 +78,14 @@ export function MyParticipation({ memberId }: { memberId: string }) {
     <Card className="space-y-4 p-4">
       <h3>Minha participação</h3>
 
+      {manager ? (
+        <div className="space-y-3">
+          <ArtisticLinks memberId={memberId} mode="artistic" />
+          <ArtisticLinks memberId={memberId} mode="collab" />
+          <ArtisticLinks memberId={memberId} mode="paid" />
+        </div>
+      ) : (
+        <>
       <section className="space-y-2">
         {head('Artística', 'artistic')}
         {d.artistic.length === 0 && <p className="text-muted-foreground">Nenhuma atividade artística.</p>}
@@ -109,6 +120,9 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {d.paid.length === 0 ? <p className="text-muted-foreground">Nenhuma atividade remunerada.</p> : <p>{d.paid.map((p) => p.name).join(', ')}</p>}
         <p className="text-xs text-muted-foreground">Mudanças nesta só pela direção.</p>
       </section>
+
+        </>
+      )}
 
       <section className="space-y-1 border-t border-border pt-3">
         {head('Categoria e mensalidade')}

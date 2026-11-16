@@ -24,7 +24,7 @@ export interface CatalogItem {
   is_fixed?: boolean
   is_exempt?: boolean
   /** Categorias: seção a que pertence. */
-  kind?: 'paid' | 'collab' | 'artistic'
+  kind?: 'paid' | 'collab' | 'payer'
   exempt_locked?: boolean
   /** Altura do naipe: definida (tem afinação), indefinida ou não se aplica. */
   pitch_mode?: 'defined' | 'undefined' | 'na'
