@@ -22,14 +22,14 @@ interface LinkRow {
   instrument_id: string | null
   function_id: string | null
   skill_level_id: string | null
-  is_student: boolean
+ 
   is_paid: boolean
   instruments: { name: string; section_id: string; sections: { name: string } | null } | null
   artistic_functions: { name: string } | null
   skill_levels: { name: string } | null
 }
-interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_student: boolean; is_paid: boolean }
-const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_student: false, is_paid: false }
+interface Draft { instrument_id: string; function_id: string; skill_level_id: string; is_paid: boolean }
+const EMPTY: Draft = { instrument_id: '', function_id: '', skill_level_id: '', is_paid: false }
 
 /** Vínculos artísticos do integrante: naipe → instrumento e/ou categoria. Editáveis. */
 export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId: string; mode?: 'artistic' | 'collab' | 'paid'; /** Ciclo mostrado. Ciclo atual: vínculos vigentes hoje. Outro ciclo (passado ou futuro): os do próprio ciclo, editáveis. */ cycle?: { id: string; starts_on: string; ends_on: string; is_current: boolean } }) {
@@ -65,7 +65,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
     queryFn: async () => {
       const base = supabase
         .from(table)
-        .select('id, instrument_id, function_id, skill_level_id, is_student, is_paid, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
+        .select('id, instrument_id, function_id, skill_level_id, is_paid, instruments(name, section_id, sections(name)), artistic_functions(name), skill_levels(name)')
         .eq('member_id', memberId)
         .order('created_at')
       const { data, error } = await (byCycle ? base.eq('cycle_id', cycle!.id) : base.is('ended_at', null))
@@ -96,7 +96,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
 
   const save = useMutation({
     mutationFn: async () => {
-      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id), is_student: f.is_student }
+      const row = collab ? { function_id: nn(f.function_id), is_paid: f.is_paid } : { instrument_id: nn(f.instrument_id) }
       if (editing === 'new') {
         const { data: ins, error } = await supabase.from(table).insert({
           organization_id: orgId, member_id: memberId, ...(byCycle ? { cycle_id: cycle!.id } : {}), ...row, is_primary: (data?.length ?? 0) === 0,
@@ -105,7 +105,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         return { kind: 'new' as const, id: (ins as { id: string }).id, prev: null }
       }
       const old = data?.find((l) => l.id === editing)
-      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, is_student: old.is_student, is_paid: old.is_paid } : null
+      const prev = old ? { instrument_id: old.instrument_id, function_id: old.function_id, skill_level_id: old.skill_level_id, is_paid: old.is_paid } : null
       const { error } = await supabase.from(table).update(row).eq('id', editing!)
       if (error) throw error
       return { kind: 'edit' as const, id: editing, prev }
@@ -133,7 +133,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
       refresh()
       notifyChange(byCycle ? 'Participação removida do ciclo.' : 'Vínculo encerrado.', async () => {
         const { error } = byCycle && gone
-          ? await supabase.from(table).insert({ organization_id: orgId, member_id: memberId, cycle_id: cycle!.id, instrument_id: gone.instrument_id, function_id: gone.function_id, skill_level_id: gone.skill_level_id, is_student: gone.is_student, is_paid: gone.is_paid })
+          ? await supabase.from(table).insert({ organization_id: orgId, member_id: memberId, cycle_id: cycle!.id, instrument_id: gone.instrument_id, function_id: gone.function_id, skill_level_id: gone.skill_level_id, is_paid: gone.is_paid })
           : await supabase.from(table).update({ ended_at: null }).eq('id', id)
         if (error) throw error
         refresh()
@@ -149,7 +149,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   }
   const startEdit = (l: LinkRow) => {
     setEditing(l.id)
-    setF({ instrument_id: l.instrument_id ?? '', function_id: l.function_id ?? '', skill_level_id: l.skill_level_id ?? '', is_student: l.is_student, is_paid: l.is_paid })
+    setF({ instrument_id: l.instrument_id ?? '', function_id: l.function_id ?? '', skill_level_id: l.skill_level_id ?? '', is_paid: l.is_paid })
   }
 
   const form = (
@@ -199,9 +199,9 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
         <div key={l.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>
           <div className="min-w-0">
             <p className="break-words font-semibold">
-              {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :l.instruments?.name}
+              {collab ? (l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) :(l.skill_levels?.name ? `${l.instruments?.name} · ${l.skill_levels.name}` : l.instruments?.name)}
             </p>
-            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name ? `${l.skill_levels.name} (autodeclarado)` : null].filter(Boolean).join(' · ')}</p>}
+            {!collab && <p className="text-muted-foreground">{[l.instruments?.sections?.name, l.skill_levels?.name  ? null : null].filter(Boolean).join(' · ')}</p>}
           </div>
           {canManage && (
             <div className="flex shrink-0 gap-1">

@@ -27,13 +27,14 @@ export function useMemberPrefill(memberId: string | undefined) {
     queryKey: ['form-prefill', memberId],
     enabled: !!memberId,
     queryFn: async (): Promise<Prefill> => {
-      const [m, s, l, st] = await Promise.all([
+      const [m, s, l, st, fa] = await Promise.all([
         supabase.from('members').select('full_name, display_name, email, phone, social_handle, birth_date, affective_relation, other_blocks').eq('id', memberId!).maybeSingle(),
         supabase.from('member_sensitive_data').select('gender, is_trans, race_color, is_pcd, pcd_description').eq('member_id', memberId!).maybeSingle(),
         supabase.from('member_artistic_links').select('instrument_id, function_id, skill_level_id, is_primary, instruments(name, section_id), artistic_functions(name), skill_levels(name)').eq('member_id', memberId!).is('ended_at', null).order('is_primary', { ascending: false }),
         supabase.from('staff_assignments').select('section_id, instruments(section_id)').eq('member_id', memberId!).is('valid_to', null).limit(1),
+        supabase.from('member_fee_assignments').select('fee_categories(name, function_id)').eq('member_id', memberId!).is('valid_to', null).limit(1),
       ])
-      for (const r of [m, s, l, st]) if (r.error) throw r.error
+      for (const r of [m, s, l, st, fa]) if (r.error) throw r.error
       const by: Record<string, Raw> = {}
       const names: Record<string, string | undefined> = {}
       for (const [k, v] of Object.entries(m.data ?? {})) by[`member.${k}`] = v as Raw
@@ -45,7 +46,8 @@ export function useMemberPrefill(memberId: string | undefined) {
       const fn = rows.find((r) => r.function_id)
       const lvl = inst?.skill_level_id ? inst : rows.find((r) => r.skill_level_id)
       by['link.instrument'] = inst?.instrument_id; names['link.instrument'] = inst?.instruments?.name
-      by['link.function'] = fn?.function_id; names['link.function'] = fn?.artistic_functions?.name
+      const cat = ((fa.data ?? []) as unknown as { fee_categories: { name: string; function_id: string | null } | null }[])[0]?.fee_categories
+      by['link.function'] = cat?.function_id ?? fn?.function_id; names['link.function'] = cat?.name ?? fn?.artistic_functions?.name
       by['link.skill_level'] = lvl?.skill_level_id; names['link.skill_level'] = lvl?.skill_levels?.name
       const staff = ((st.data ?? []) as unknown as { section_id: string | null; instruments: { section_id: string | null } | null }[])[0]
       return { by, names, sectionId: inst?.instruments?.section_id ?? staff?.section_id ?? staff?.instruments?.section_id ?? null }
