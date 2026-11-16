@@ -242,8 +242,8 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
 
   const form = preview ? { data: preview, isLoading: false, isError: false } : live
   const fields = form.data?.form?.fields ?? []
-  const fill = (t: string) => fillVars(t, form.data?.form?.vars, answers)
   const viewer = form.data?.viewer ?? null
+  const fill = (t: string) => fillVars(t, { ...(form.data?.form?.vars ?? {}), titulo: form.data?.form?.title, prazo: form.data?.form?.closes_at, nome: viewer?.name }, answers)
   // Seções por naipe: "_naipe" é uma resposta virtual (o naipe do integrante que entrou). Seção oculta esconde também as perguntas dela.
   const visAnswers = useMemo<Answers>(() => ({ ...answers, _naipe: viewer?.section_id ?? undefined }), [answers, viewer?.section_id])
   const visible = useMemo(() => {

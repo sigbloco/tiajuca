@@ -2,12 +2,10 @@ import { Collapsible } from '@/components/shared/Collapsible'
 import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ReadMore } from '@/components/shared/ReadMore'
-import { Lock, Plus, Trash2 } from 'lucide-react'
+import { Lock, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { SaveInput } from '@/components/shared/ConfirmField'
-import { TrashDrawer } from '@/components/shared/TrashDrawer'
 import { Badge, Button, Card, Input, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { requireFields } from '@/core/required'
@@ -25,7 +23,7 @@ export function ChecklistsPage() {
 }
 
 /**
- * Categorias: tudo é editável. "Isento" garante a isenção de quem tem a função. As categorias de Financeiro → Contribuições refletem estas funções.
+ * Categorias: tudo é editável. "Isento" garante a isenção de quem tem a função. O valor mensal de cada categoria fica em Financeiro → Valores.
  */
 type Kind = 'paid' | 'collab' | 'artistic'
 const SECTIONS: { kind: Kind; title: string; hint?: string }[] = [
@@ -41,11 +39,13 @@ export function FunctionsPage() {
   const funcs = useCatalog('artistic_functions')
   const [adding, setAdding] = useState<Kind | null>(null)
   const [opened, setOpened] = useState<Set<Kind>>(new Set()) // os grupos carregam fechados
+  const [trashOpen, setTrashOpen] = useState(false)
   const toggle = (k: Kind) => setOpened((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })
   const [name, setName] = useState('')
   const [exempt, setExempt] = useState(false)
   const all = (funcs.data ?? []).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const kindOf = (f: CatalogItem): Kind => f.kind ?? 'collab'
+  const trash = all.filter((f) => !f.is_active && !f.is_fixed)
   const refresh = () => { invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }) }
   const onError = (e: unknown) => toast.error(friendlyError(e))
 
@@ -105,18 +105,10 @@ export function FunctionsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>Categorias</h2>
-        {canEdit && (
-          <TrashDrawer entries={all.filter((f) => !f.is_active && !f.is_fixed).map((f) => ({ id: f.id, name: `${f.name} (${SECTIONS.find((s) => s.kind === kindOf(f))?.title})` }))}
-            onRestore={(id) => { const f = all.find((x) => x.id === id); if (f) patch.mutate({ f, fields: { is_active: true } }) }}
-            onPurge={(id) => { const f = all.find((x) => x.id === id); if (f) del.mutate(f) }} />
-        )}
-      </div>
-      <ReadMore>
+      <p className="text-sm text-muted-foreground">
         Integrantes podem acumular categorias (por exemplo, direção e Regência). Nas colaborativas e artísticas, marque <strong>Isento</strong> para garantir a isenção de quem a tem.
-        As categorias de <PageLink to="valores">Financeiro → Contribuições</PageLink> refletem estas.
-      </ReadMore>
+        O valor mensal de cada categoria, por ciclo, fica em <PageLink to="valores">Financeiro → Valores</PageLink>, que acompanha estas categorias.
+      </p>
       {SECTIONS.map((s) => {
         const items = all.filter((f) => f.is_active && kindOf(f) === s.kind)
         return (
@@ -137,6 +129,20 @@ export function FunctionsPage() {
           </Collapsible>
         )
       })}
+      {canEdit && (
+        <Collapsible open={trashOpen} onToggle={() => setTrashOpen((o) => !o)} tone="muted" title="Lixeira" count={trash.length}>
+          {trash.length === 0 && <p className="text-sm text-muted-foreground">A lixeira está vazia.</p>}
+          <div className="grid gap-1.5">
+            {trash.map((f) => (
+              <Card key={f.id} className="flex items-center gap-2 p-2">
+                <span className="min-w-0 flex-1 break-words pl-2 font-semibold">{f.name} <span className="font-normal text-muted-foreground">({SECTIONS.find((x) => x.kind === kindOf(f))?.title})</span></span>
+                <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Restaurar ${f.name}`} title="Restaurar" onClick={() => patch.mutate({ f, fields: { is_active: true } })}><RotateCcw className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${f.name} de vez`} title="Excluir de vez" onClick={async () => { if (await confirmBox(`Excluir “${f.name}” de vez? Isso não pode ser desfeito.`)) del.mutate(f) }}><Trash2 className="h-4 w-4" /></Button>
+              </Card>
+            ))}
+          </div>
+        </Collapsible>
+      )}
     </div>
   )
 }
