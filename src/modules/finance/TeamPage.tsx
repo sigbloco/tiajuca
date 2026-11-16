@@ -42,11 +42,12 @@ const SCOPE_LABEL: Record<Scope, string> = { all: 'Mensalidades dos contribuinte
 interface GroupRule { id: string; group_key: string; percent: number; scope: 'all' | 'section'; section_id: string | null }
 const EMPTY_RULE: Rule = { kind: 'percent', fixed_amount: null, percent: null, hourly_rate: null, scope: 'all', section_id: null, instrument_id: null, group_key: null }
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+/** Horas de um dia de aula: a aula e a meia hora final de ensaio contam juntas (2 h), ou mais, se o evento for mais longo. */
 const hoursOf = (l: Lesson) => {
-  if (!l.start_time || !l.end_time) return 2 // aula/ensaio sem horário: 2 h
+  if (!l.start_time || !l.end_time) return 2 // sem horário: 2 h
   const [h1, m1] = l.start_time.split(':').map(Number), [h2, m2] = l.end_time.split(':').map(Number)
   const h = (h2 * 60 + m2 - (h1 * 60 + m1)) / 60
-  return h > 0 ? h : 2
+  return h > 2 ? h : 2
 }
 
 /** Grupos da lista, na ordem em que aparecem. */
@@ -136,7 +137,7 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys, haveG
             <option value="all">Todas as oficinas</option><option value="section">Oficinas de um naipe</option>
           </Select>
           {r.scope === 'section' && naipeSelect}
-          <p className="text-sm text-muted-foreground">Vale as horas das aulas do mês que não foram canceladas (feriado e chuva ficam de fora ao cancelar a aula no Calendário).</p>
+          <p className="text-sm text-muted-foreground">Cada dia de aula conta 2 h: a aula e a meia hora final de ensaio. Dia cancelado (feriado, chuva) fica de fora, ao cancelar a aula no Calendário.</p>
         </>
       )}
       {canEdit && (
@@ -367,7 +368,9 @@ export function TeamPage() {
       return false
     })
   }
-  const autoHoursFor = (rule: Rule) => lessonsOf(rule).reduce((n, l) => n + hoursOf(l), 0)
+  // Por dia de aula: duas oficinas no mesmo dia (sopro e percussão ao mesmo tempo) contam uma vez.
+  const daysOf = (rule: Rule) => { const m = new Map<string, number>(); for (const l of lessonsOf(rule)) m.set(l.activity_date, Math.max(m.get(l.activity_date) ?? 0, hoursOf(l))); return m }
+  const autoHoursFor = (rule: Rule) => [...daysOf(rule).values()].reduce((n, h) => n + h, 0)
   const hoursFor = (rule: Rule) => (rule.id ? hoursOverride.data?.get(rule.id) : undefined) ?? autoHoursFor(rule)
   const amountOf = (r: Rule) => (r.kind === 'fixed' ? Number(r.fixed_amount ?? 0)
     : r.kind === 'hourly' ? Math.round(hoursFor(r) * Number(r.hourly_rate ?? 0) * 100) / 100
@@ -413,7 +416,7 @@ export function TeamPage() {
     return `${num(Number(r.percent ?? 0))}% ${of}`
   }
   const detailOf = (r: Rule) => r.kind === 'hourly'
-    ? `${lessonsOf(r).length} aula(s) no mês · rende ${formatCurrency(amountOf(r))}`
+    ? `${daysOf(r).size} dia(s) de aula no mês · rende ${formatCurrency(amountOf(r))}`
     : r.kind === 'group' ? `rende ${formatCurrency(groupShareOf((r as RuleRow).member_id))}`
     : r.kind === 'percent' ? `Mensalidades pagas no mês: ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
 
