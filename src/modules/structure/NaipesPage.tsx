@@ -63,7 +63,7 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
   const mine = (data ?? []).filter((a) => a[col] === id)
   const add = useMutation({
     mutationFn: async (v: { member: string; kind: Kind }) => {
-      const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: v.member, staff_kind: v.kind, [col]: id, compensation: comp, cycle_id: cycleId })
+      const { error } = await supabase.from('staff_assignments').insert({ organization_id: orgId, member_id: v.member, staff_kind: v.kind, [col]: id, compensation: v.kind === 'regente' ? 'collaborative' : comp, cycle_id: cycleId })
       if (error) throw error
     },
     onSuccess: () => { refresh(); setAdding(null); setComp(null); toast.success('Pessoa designada.') },
@@ -89,8 +89,8 @@ function StaffBlock({ scope, id, canEdit }: { scope: Scope; id: string; canEdit:
       )}
       {adding && (
         <div className="max-w-sm space-y-1.5">
-          <CompensationPick value={comp} onChange={setComp} />
-          {comp ? <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou colaborativa.</p>}
+          {adding !== 'regente' && <CompensationPick value={comp} onChange={setComp} />}
+          {(comp || adding === 'regente') ? <MemberPicker onlyActive value="" onChange={(m) => { if (m) add.mutate({ member: m, kind: adding }) }} /> : <p className="text-sm text-muted-foreground">Marque se a colaboração é remunerada ou colaborativa.</p>}
         </div>
       )}
       {mine.length > 0 && (

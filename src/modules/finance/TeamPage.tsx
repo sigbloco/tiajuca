@@ -53,11 +53,11 @@ const hoursOf = (l: Lesson) => {
 /** Grupos da lista, na ordem em que aparecem. */
 const CAIXA = 'Caixa do bloco'
 const GROUPS: { key: string; label: string }[] = [
-  { key: 'Direção', label: 'Direção' }, { key: 'Professor', label: 'Professores' }, { key: 'Monitor', label: 'Monitores' }, { key: 'Regência', label: 'Regência' }, { key: '', label: 'Outros' },
+  { key: 'Direção', label: 'Direção' }, { key: 'Professor', label: 'Professores' }, { key: 'Monitor', label: 'Monitores' }, { key: '', label: 'Outros' },
 ]
 
 /** Formulário de uma regra: fixo, % (de tudo, naipe ou instrumento) ou valor por hora de aula. */
-function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys }: { rule: Rule; memberId: string; cycleId: string; canEdit: boolean; onDone: () => void; /** Grupos da pessoa (para a regra "Divisão do grupo"). */ groupKeys: string[] }) {
+function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys, haveGroups = [] }: { rule: Rule; memberId: string; cycleId: string; canEdit: boolean; onDone: () => void; /** Grupos da pessoa (Direção, Professor…): a "Divisão do grupo" é a deles. */ groupKeys: string[]; /** Grupos em que ela já tem a regra. */ haveGroups?: string[] }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const sections = useCatalog('sections')
@@ -66,13 +66,20 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys }: { r
   const [pct, setPct] = useState(rule.percent === null ? '' : String(rule.percent).replace('.', ','))
   const percent = Number(pct.replace(',', '.'))
   const target = r.scope === 'section' ? r.section_id : r.instrument_id
-  const valid = r.kind === 'group' ? !!r.group_key
+  const newGroups = groupKeys.filter((k) => !haveGroups.includes(k))
+  const valid = r.kind === 'group' ? (rule.id ? !!r.group_key : newGroups.length > 0)
     : r.kind === 'fixed' ? r.fixed_amount !== null && r.fixed_amount >= 0
     : r.kind === 'hourly' ? r.hourly_rate !== null && r.hourly_rate >= 0 && (r.scope === 'all' || !!r.section_id)
       : Number.isFinite(percent) && percent > 0 && percent <= 100 && (r.scope === 'all' || !!target)
   const refresh = () => qc.invalidateQueries({ queryKey: ['staff-pay-rules', orgId] })
   const save = useMutation({
     mutationFn: async () => {
+      if (r.kind === 'group' && !rule.id) {
+        const rows = newGroups.map((k) => ({ kind: 'group', group_key: k, scope: 'all', fixed_amount: null, percent: null, hourly_rate: null, section_id: null, instrument_id: null, organization_id: orgId, cycle_id: cycleId, member_id: memberId }))
+        const { error } = await supabase.from('staff_pay_rules').insert(rows)
+        if (error) throw error
+        return
+      }
       const pctRule = r.kind === 'percent'
       const row = {
         kind: r.kind, group_key: r.kind === 'group' ? r.group_key : null, scope: r.kind === 'fixed' || r.kind === 'group' ? 'all' : r.kind === 'hourly' ? (r.scope === 'section' ? 'section' : 'all') : r.scope,
@@ -95,18 +102,13 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys }: { r
   )
   return (
     <div className="space-y-2 rounded-lg bg-muted/50 p-2">
-      <Select aria-label="Tipo" disabled={!canEdit} value={r.kind} onChange={(e) => { const k = e.target.value as Kind; setR({ ...r, kind: k, scope: 'all', section_id: null, instrument_id: null, group_key: k === 'group' && groupKeys.length === 1 ? groupKeys[0] : null }) }}>
+      <Select aria-label="Tipo" disabled={!canEdit} value={r.kind} onChange={(e) => { const k = e.target.value as Kind; setR({ ...r, kind: k, scope: 'all', section_id: null, instrument_id: null, group_key: k === 'group' ? (rule.group_key ?? groupKeys[0] ?? null) : null }) }}>
         <option value="percent">% exclusiva</option><option value="hourly">Por hora de aula</option><option value="group">Divisão do grupo</option><option value="fixed">Valor fixo</option>
       </Select>
       {r.kind === 'group' && (
         groupKeys.length === 0
           ? <p className="text-sm text-muted-foreground">Esta pessoa não tem categoria remunerada (Direção, Professor, Monitor…). Marque na ficha dela.</p>
-          : <>
-              <Select aria-label="Grupo" disabled={!canEdit} value={r.group_key ?? ''} onChange={(e) => setR({ ...r, group_key: e.target.value || null })}>
-                <option value="">Escolha o grupo</option>{groupKeys.map((k) => <option key={k} value={k}>{k}</option>)}
-              </Select>
-              <p className="text-sm text-muted-foreground">Recebe uma parte igual da % do grupo (definida no cabeçalho do grupo).</p>
-            </>
+          : <p className="text-sm text-muted-foreground">Recebe uma parte igual da % do {(rule.id ? [r.group_key ?? ''] : newGroups.length ? newGroups : groupKeys).join(' e do ')} (a % fica no cabeçalho do grupo).</p>
       )}
       {r.kind === 'fixed' && (
         <div className="flex items-center gap-2"><div className="w-40 shrink-0"><MoneyInput value={r.fixed_amount} onChange={(v) => setR({ ...r, fixed_amount: v })} /></div><span className="font-semibold">por mês</span></div>
@@ -141,7 +143,7 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys }: { r
       {canEdit && (
         <div className="grid grid-cols-2 gap-2">
           <SaveButton className="w-full" disabled={!valid || save.isPending} onClick={() => save.mutate()} hint="Salvar regra" />
-          <Button className="w-full" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onDone}><X className="h-4 w-4" /></Button>
+          <Button className="w-full" variant="outline" aria-label="Cancelar" title="Cancelar" onClick={onDone}><X className="h-4 w-4" /> Cancelar</Button>
         </div>
       )}
     </div>
@@ -271,11 +273,7 @@ export function TeamPage() {
         if (error) throw error
         rows = (data ?? []) as unknown as R[]
       }
-      // Regência é atribuição de regente (Naipes): quem rege como remunerado entra no grupo "Regência".
-      const reg = await supabase.from('staff_assignments').select('member_id, members!inner(full_name, display_name)').eq('organization_id', orgId).eq('cycle_id', cycleId).eq('staff_kind', 'regente').eq('compensation', 'paid').is('valid_to', null).is('members.archived_at', null)
-      if (reg.error) throw reg.error
-      const regRows = ((reg.data ?? []) as unknown as { member_id: string; members: { full_name: string; display_name: string | null } | null }[]).map((r) => ({ member_id: r.member_id, staff_kind: 'Regência', members: r.members }))
-      return [...rows.map((r) => ({ member_id: r.member_id, staff_kind: r.artistic_functions?.name ?? '', members: r.members })), ...regRows]
+      return rows.map((r) => ({ member_id: r.member_id, staff_kind: r.artistic_functions?.name ?? '', members: r.members }))
     },
   })
   // Base do %: cobranças pagas no mês, por pessoa, e o instrumento de cada uma no ciclo.
@@ -464,7 +462,7 @@ export function TeamPage() {
         {mine.length === 0 && (drafts[p.id] ?? []).length === 0 && <p className="text-sm text-muted-foreground">nenhuma</p>}
         {mine.map((r) => <RuleLine key={r.id} rule={r} memberId={p.id} cycleId={cycleId} canEdit={canEdit} summary={summaryOf(r)} detail={detailOf(r)} groupKeys={groupKeysOf(p)} hours={r.kind === 'hourly' ? { auto: autoHoursFor(r), value: hoursFor(r), competence } : undefined} />)}
         {(drafts[p.id] ?? []).map((k) => (
-          <RuleEditor key={k} rule={EMPTY_RULE} memberId={p.id} groupKeys={groupKeysOf(p)} cycleId={cycleId} canEdit={canEdit} onDone={() => setDrafts((d) => ({ ...d, [p.id]: (d[p.id] ?? []).filter((x) => x !== k) }))} />
+          <RuleEditor key={k} rule={EMPTY_RULE} memberId={p.id} groupKeys={groupKeysOf(p)} haveGroups={mine.filter((r) => r.kind === 'group').map((r) => r.group_key ?? '')} cycleId={cycleId} canEdit={canEdit} onDone={() => setDrafts((d) => ({ ...d, [p.id]: (d[p.id] ?? []).filter((x) => x !== k) }))} />
         ))}
       </Card>
     )
