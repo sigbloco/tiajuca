@@ -108,7 +108,7 @@ export function AppShell() {
         <p className="max-w-sm text-muted-foreground">A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.</p>
         <div className="flex w-full max-w-sm flex-col gap-2">
           <Link to={`/${membership.slug}/loja`}><Button className="w-full"><Store className="h-4 w-4" /> Ir para a loja</Button></Link>
-          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Ver o site</Button></Link>
+          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
           <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
       </div>
@@ -180,7 +180,7 @@ export function AppShell() {
         </div>
         <nav className="space-y-1">{renderEntries(entries)}</nav>
         <div className="mt-2 border-t border-border pt-3">
-          <Link to="/site" className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Ver o site</Link>
+          <Link to="/site" className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Site</Link>
           <p className="mt-2 break-words px-1 font-semibold">{membership.display_name}</p>
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
             <LogOut className="h-4 w-4" /> Sair
@@ -190,8 +190,13 @@ export function AppShell() {
 
       <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
+        {/* Celular: Site e Sair no topo da página, além do menu. */}
+        <div className="-mx-4 -mt-4 grid grid-cols-2 gap-2 border-b border-border bg-background px-4 py-2 md:hidden">
+          <Link to="/site"><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
+          <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+        </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
-        <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
+        <div ref={topRef} className="sticky top-[var(--viewas-h,0px)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-3 md:-mx-8 md:-mt-8 md:px-8 md:pt-8">
           <CycleBar base={base} />
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
@@ -238,7 +243,7 @@ export function AppShell() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent drawer title="Menu" description={membership.display_name} headSlot={(
           <div className="grid grid-cols-2 gap-2">
-            <Link to="/site" onClick={() => setMoreOpen(false)}><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Ver o site</Button></Link>
+            <Link to="/site" onClick={() => setMoreOpen(false)}><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
             <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
           </div>
         )}>

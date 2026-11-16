@@ -20,7 +20,9 @@ import { keyify, useForm, useFormFields, type FormFieldRow } from './service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import type { CatalogItem } from '@/modules/structure/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
-import { SOCIAL_NETWORKS, parseNetworks } from '@/core/social'
+import { type Network } from '@/core/social'
+import { PageLink } from '@/components/shared/PageLink'
+import { useSocialNetworks } from './socialNetworks'
 import { FIELD_TYPE_LABEL, MAPPING_LABEL, isLoginSection, isSection, type FieldOption, type FieldType } from './types'
 
 const OPTION_TYPES: FieldType[] = ['single_select', 'multi_select']
@@ -56,7 +58,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const [f, setF] = useState({
     label: field?.label ?? '', description: field?.description ?? '',
     type: (asSection ? 'info' : field?.field_type === 'long_text' && field.validation.social ? 'social' : field?.field_type ?? 'short_text') as TypeChoice,
-    networks: (field?.validation.networks?.length ? SOCIAL_NETWORKS.filter((n) => field.validation.networks!.includes(n.key)) : SOCIAL_NETWORKS).map((n) => n.label).join(', '),
+    netKeys: (field?.validation.networks?.length ? field.validation.networks : null) as string[] | null,
     other: !!field?.validation.other, required: field?.required ?? false,
     options: (field?.options ?? []).map((o) => o.label).join('\n'),
     min: field?.validation.min?.toString() ?? '', max: field?.validation.max?.toString() ?? '',
@@ -66,6 +68,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   const sections = fields.filter((x) => isSection(x) && !isLoginSection(x))
   const instruments = useCatalog('instruments')
   const levels = useCatalog('skill_levels')
+  const nets: Network[] = useSocialNetworks()
   const functions = useCatalog('artistic_functions')
   const genders = useCatalog('gender_options')
   const races = useCatalog('race_options')
@@ -169,10 +172,10 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
       const validation: Record<string, unknown> = Object.fromEntries(Object.entries({ min: num(f.min), max: num(f.max) }).filter(([, v]) => v !== undefined && !Number.isNaN(v)))
       if (f.type === 'social') {
         validation.social = true
-        const { keys, unknown } = parseNetworks(f.networks)
-        if (unknown.length > 0) throw new Error(`Rede não reconhecida: ${unknown.join(', ')}. Use: ${SOCIAL_NETWORKS.map((n) => n.label).join(', ')}.`)
-        if (keys.length === 0) throw new Error('Escolha ao menos uma rede.')
-        if (keys.length < SOCIAL_NETWORKS.length) validation.networks = keys
+        const picked = nets.filter((n) => f.netKeys === null || f.netKeys.includes(n.key))
+        if (picked.length === 0) throw new Error('Escolha ao menos uma rede.')
+        if (picked.length < nets.length) validation.networks = picked.map((n) => n.key)
+        validation.networkDefs = picked
       }
       if (f.other && OPTION_TYPES.includes(f.type as FieldType) && !f.mapping.startsWith('link.')) validation.other = true
       if (listMapped && showDesc) validation.descriptions = true
@@ -252,9 +255,18 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
           )}
         </div>}
         {f.type === 'social' && (
-          <div className="space-y-1.5"><Label htmlFor="fl-networks">Redes no menu</Label>
-            <Input id="fl-networks" value={f.networks} onChange={(e) => setF({ ...f, networks: e.target.value })} />
-            <p className="text-xs text-muted-foreground">Escreva as redes que vão aparecer para escolher, separadas por vírgula. Disponíveis: {SOCIAL_NETWORKS.map((n) => n.label).join(', ')}. A primeira é a padrão.</p></div>
+          <fieldset className="space-y-1.5"><legend className="text-sm font-semibold">Redes que aparecem</legend>
+            <div className="flex flex-wrap gap-2">
+              {nets.map((n) => {
+                const on = f.netKeys === null || f.netKeys.includes(n.key)
+                return (
+                  <label key={n.key} className={cn('flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-semibold', on ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>
+                    <input type="checkbox" className="h-4 w-4" checked={on} onChange={(e) => { const cur = f.netKeys ?? nets.map((x) => x.key); setF({ ...f, netKeys: e.target.checked ? [...cur, n.key] : cur.filter((k) => k !== n.key) }) }} /> {n.label}
+                  </label>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">A pessoa escolhe a rede e digita só o usuário. A primeira marcada é a padrão. As redes e seus endereços ficam em <PageLink to="formularios/configuracoes/listas">Formulários → Listas</PageLink>.</p></fieldset>
         )}
         <div className="space-y-1.5"><Label htmlFor="fl-label" required>{asSection ? 'Nome da seção' : f.type === 'info' ? 'Título' : 'Pergunta'}</Label><Input id="fl-label" required value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
         {f.type === 'info'

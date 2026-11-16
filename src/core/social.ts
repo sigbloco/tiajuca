@@ -17,7 +17,13 @@ export function socialLabel(url: string): string {
 }
 
 /** Redes para escolher no formulário: nome e o começo do endereço do perfil. */
-export const SOCIAL_NETWORKS: { key: string; label: string; base: string; at: boolean }[] = [
+export interface Network { key: string; label: string; base: string; at: boolean }
+/** Uma rede da lista "Redes sociais": o modelo do endereço tem {handle} no lugar do usuário. */
+export function toNetwork(r: { key: string; name: string; url_template: string }): Network {
+  const base = r.url_template.split('{handle}')[0]
+  return { key: r.key, label: r.name, base, at: base.endsWith('@') }
+}
+export const SOCIAL_NETWORKS: Network[] = [
   { key: 'instagram', label: 'Instagram', base: 'https://instagram.com/', at: true },
   { key: 'tiktok', label: 'TikTok', base: 'https://www.tiktok.com/@', at: true },
   { key: 'facebook', label: 'Facebook', base: 'https://facebook.com/', at: false },
@@ -26,20 +32,20 @@ export const SOCIAL_NETWORKS: { key: string; label: string; base: string; at: bo
   { key: 'linkedin', label: 'LinkedIn', base: 'https://linkedin.com/in/', at: false },
 ]
 /** Link do perfil a partir da rede e do usuário digitado ("@nome", "nome" ou link completo). */
-export function networkUrl(network: string, user: string): string | null {
+export function networkUrl(network: string, user: string, nets: Network[] = SOCIAL_NETWORKS): string | null {
   const u = user.trim()
   if (!u) return null
   if (/^https?:\/\//i.test(u)) return u
-  const n = SOCIAL_NETWORKS.find((x) => x.key === network) ?? SOCIAL_NETWORKS[0]
+  const n = nets.find((x) => x.key === network) ?? nets[0] ?? SOCIAL_NETWORKS[0]
   const clean = u.replace(/^[@#]+/, '').replace(/\s+/g, '')
   return clean ? n.base + clean : null
 }
 /** Separa um link guardado em rede + usuário (para reabrir o que já foi digitado). */
-export function splitNetwork(url: string): { network: string; user: string } {
+export function splitNetwork(url: string, nets: Network[] = SOCIAL_NETWORKS): { network: string; user: string } {
   const strip = (u: string) => u.replace(/^(https?:\/\/)www\./i, '$1') // com ou sem www dá no mesmo
   const clean = strip(url)
-  const n = SOCIAL_NETWORKS.find((x) => clean.toLowerCase().startsWith(strip(x.base).toLowerCase()))
-  return n ? { network: n.key, user: clean.slice(strip(n.base).length) } : { network: 'instagram', user: url }
+  const n = nets.find((x) => clean.toLowerCase().startsWith(strip(x.base).toLowerCase()))
+  return n ? { network: n.key, user: clean.slice(strip(n.base).length) } : { network: nets[0]?.key ?? 'instagram', user: url }
 }
 
 /** Lê o que foi digitado ("Instagram, TikTok, x") e devolve as chaves das redes conhecidas, mais o que não foi reconhecido. */
