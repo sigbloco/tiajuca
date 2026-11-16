@@ -272,7 +272,7 @@ export function FormListsPage() {
                 </div>
               )}>
               {sd && l.source
-                ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription />
+                ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription withNaipes={l.source === 'skill_levels'} />
                 : <CustomListBody list={l} items={itemsOf(l)} canEdit={canEdit} />}
             </Collapsible>
           )

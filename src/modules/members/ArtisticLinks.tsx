@@ -11,6 +11,7 @@ import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
+import { levelsForSection } from '@/modules/structure/service'
 import { MemberSection } from './MemberSection'
 
 /** Regência é uma atividade artística (atribuição de regente de um naipe, a mesma de Naipes): "Regência (Sopro)", "Regência (Percussão)"… aparecem ao lado dos instrumentos. Não é remunerada. */
@@ -184,7 +185,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
               <Label>Nível</Label>
               <Select value={f.skill_level_id} aria-label="Nível" onChange={(e) => setF({ ...f, skill_level_id: e.target.value })}>
                 <option value="">Sem nível</option>
-                {active(levels.data).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                {levelsForSection(levels.data, instruments.data?.find((x) => x.id === f.instrument_id)?.section_id, f.skill_level_id).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
               </Select>
             </div>
           )}

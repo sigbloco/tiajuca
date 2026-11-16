@@ -15,6 +15,8 @@ export interface CatalogItem {
   /** Descrição opcional (listas do cadastro e categorias): explica o item onde ele é escolhido. */
   description?: string | null
   section_id?: string | null
+  /** Níveis: naipes em que o nível vale (vazio = todos). */
+  section_ids?: string[]
   color?: string
   tuning?: string | null
   has_tuning?: boolean
@@ -28,6 +30,11 @@ export interface CatalogItem {
   exempt_locked?: boolean
   /** Altura do naipe: definida (tem afinação), indefinida ou não se aplica. */
   pitch_mode?: 'defined' | 'undefined' | 'na'
+}
+
+/** Níveis que a pessoa pode escolher no naipe dela: os ativos que valem para ele (ou para todos) e, se já tiver um nível de fora, ele também aparece. */
+export function levelsForSection(levels: CatalogItem[] | undefined, sectionId: string | null | undefined, currentId?: string | null): CatalogItem[] {
+  return (levels ?? []).filter((l) => l.id === currentId || (l.is_active && (!l.section_ids || l.section_ids.length === 0 || (!!sectionId && l.section_ids.includes(sectionId)))))
 }
 
 export const PITCH_LABEL = { defined: 'Altura definida', undefined: 'Altura indefinida', na: 'Não se aplica' } as const
