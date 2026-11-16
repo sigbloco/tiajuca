@@ -27,6 +27,7 @@ export interface FormFieldRow {
   id: string; form_id: string; field_key: string; label: string; description: string | null; field_type: FieldType; required: boolean
   sort_order: number; options: FieldOption[]; default_value: string | null; validation: FieldValidation
   condition: FieldCondition | null; member_mapping: string | null; is_active: boolean
+  /** Seção que nasceu de um modelo: de qual (permite restaurar). */ source_template_id?: string | null
 }
 export interface SubmissionRow {
   id: string; form_id: string; form_version_id: string; answers: Record<string, unknown>; consent_given: boolean

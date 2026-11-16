@@ -103,7 +103,7 @@ export function SectionTemplatesPage() {
                 <Link to={`${base}/configuracoes/modelos/${t.id}`} className="min-w-0 break-words font-display text-lg font-bold leading-tight hover:underline">{t.name}</Link>
                 <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" aria-label={`Duplicar ${t.name}`} title="Duplicar" disabled={duplicate.isPending} onClick={async () => { const n = await promptBox({ title: 'Duplicar modelo', message: 'Nome do novo modelo:', initial: `${t.name} (cópia)`, confirmLabel: 'Duplicar' }); if (n && n.trim()) duplicate.mutate({ t, name: n.trim() }) }}><CopyPlus className="h-4 w-4" /></Button>
               </div>
-              <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'pergunta' : 'perguntas'}</p>
+              <p className="text-sm text-muted-foreground">{t.count} {t.count === 1 ? 'campo' : 'campos'}</p>
             </div>
             <div className="grid w-full grid-cols-3 gap-1.5 sm:w-auto">
               <Button asChild size="sm" variant="outline"><Link to={`${base}/configuracoes/modelos/${t.id}`}><Pencil className="h-4 w-4" /> Editar</Link></Button>
