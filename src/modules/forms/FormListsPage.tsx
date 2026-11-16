@@ -1,6 +1,6 @@
 import { purgeErrorMessage, purgeTrashed } from '@/core/purge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Copy, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Collapsible } from '@/components/shared/Collapsible'
@@ -196,6 +196,25 @@ export function FormListsPage() {
     mutationFn: async (name: string) => { const { error } = await supabase.from('form_lists').insert({ organization_id: orgId, name, kind: 'custom', sort_order: all.reduce((m, l) => Math.max(m, l.sort_order), 0) + 1 }); if (error) throw error },
     onSuccess: () => { toast.success('Lista criada.'); refreshLists() }, onError,
   })
+  // Duplicar: cria uma lista nova (sua) com os mesmos itens. Cópia de uma lista de níveis continua sendo lista de níveis.
+  const duplicate = useMutation({
+    mutationFn: async (v: { l: ListRow; name: string }) => {
+      const src = v.l.source ? (sys[v.l.source]?.data ?? []).filter((i) => i.is_active).map((i) => ({ name: i.name, description: (i as { description?: string | null }).description ?? null })) : itemsOf(v.l).filter((i) => i.is_active).map((i) => ({ name: i.name, description: i.description ?? null }))
+      const levelType = v.l.source === 'skill_levels' || v.l.link === 'skill_level'
+      const { data: created, error } = await supabase.from('form_lists').insert({ organization_id: orgId, name: v.name, kind: 'custom', sort_order: all.reduce((m, x) => Math.max(m, x.sort_order), 0) + 1 }).select('id').single()
+      if (error) throw error
+      const id = (created as { id: string }).id
+      if (src.length > 0) {
+        const { error: e2 } = await supabase.from('form_list_items').insert(src.map((x, i) => ({ organization_id: orgId, list_id: id, name: x.name, description: x.description, sort_order: i + 1 })))
+        if (e2) throw e2
+      }
+      if (levelType) {
+        const { error: e3 } = await supabase.rpc('link_list_to_levels', { p_list: id }); if (e3) throw e3
+        const { error: e4 } = await supabase.from('form_list_items').delete().eq('list_id', id); if (e4) throw e4
+      }
+    },
+    onSuccess: () => { toast.success('Lista duplicada.'); void qc.invalidateQueries() }, onError,
+  })
   const setListActive = useMutation({
     mutationFn: async (v: { id: string; on: boolean }) => { const { error } = await supabase.from('form_lists').update({ is_active: v.on }).eq('id', v.id); if (error) throw error },
     onSuccess: refreshLists, onError,
@@ -246,7 +265,12 @@ export function FormListsPage() {
                   <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === active.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
               )}
-              right={canEdit && l.kind === 'custom' && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover a lista ${l.name} para a lixeira`} title="Mover para a lixeira" onClick={() => setListActive.mutate({ id: l.id, on: false })}><Trash2 className="h-4 w-4" /></Button>}>
+              right={canEdit && (
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="outline" aria-label={`Duplicar ${sd?.title ?? l.name}`} title="Duplicar" disabled={duplicate.isPending} onClick={async () => { const n = await promptBox({ title: 'Duplicar lista', message: 'Nome da nova lista:', initial: `${sd?.title ?? l.name} (cópia)`, confirmLabel: 'Duplicar', required: true }); if (n && n.trim()) duplicate.mutate({ l, name: n.trim() }) }}><Copy className="h-4 w-4" /></Button>
+                  {l.kind === 'custom' && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover a lista ${l.name} para a lixeira`} title="Mover para a lixeira" onClick={() => setListActive.mutate({ id: l.id, on: false })}><Trash2 className="h-4 w-4" /></Button>}
+                </div>
+              )}>
               {sd && l.source
                 ? <CatalogEditor table={l.source as CatalogTable} title="" singular={sd.singular} canEdit={canEdit} hint={sd.hint} noFilter trashMode externalTrash withDescription />
                 : <CustomListBody list={l} items={itemsOf(l)} canEdit={canEdit} />}
