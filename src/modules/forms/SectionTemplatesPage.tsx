@@ -66,6 +66,9 @@ export function SectionTemplatesPage() {
       if (a.error) throw a.error
       const b = await supabase.from('forms').update({ title: v.name }).eq('id', v.t.form_id)
       if (b.error) throw b.error
+      // O nome do modelo é o nome da seção dele.
+      const c = await supabase.from('form_fields').update({ label: v.name }).eq('id', v.t.section_id)
+      if (c.error) throw c.error
     },
     onSuccess: () => { toast.success('Modelo renomeado.'); refresh() },
     onError: (e) => toast.error(/23505|duplicate/i.test(JSON.stringify(e)) ? 'Já existe um modelo com esse nome.' : friendlyError(e)),
