@@ -6,7 +6,6 @@ import { ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
-import { ReadMore } from '@/components/shared/ReadMore'
 import { MoneyInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -38,14 +37,15 @@ interface RuleRow extends Rule { id: string; member_id: string; members: { full_
 interface Person { id: string; name: string; kinds: string[] }
 interface Lesson { id: string; title: string; activity_date: string; start_time: string | null; end_time: string | null; status: string; activity_types: { name: string } | null }
 
-const SCOPE_LABEL: Record<Scope, string> = { all: 'Receita total das oficinas', section: 'Um naipe', instrument: 'Um instrumento' }
+const SCOPE_LABEL: Record<Scope, string> = { all: 'Mensalidades dos contribuintes', section: 'Mensalidades de um naipe', instrument: 'Mensalidades de um instrumento' }
+interface GroupRule { id: string; group_key: string; percent: number; scope: 'all' | 'section'; section_id: string | null }
 const EMPTY_RULE: Rule = { kind: 'percent', fixed_amount: null, percent: null, hourly_rate: null, scope: 'all', section_id: null, instrument_id: null }
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 const hoursOf = (l: Lesson) => {
-  if (!l.start_time || !l.end_time) return 1
+  if (!l.start_time || !l.end_time) return 2 // aula/ensaio sem horário: 2 h
   const [h1, m1] = l.start_time.split(':').map(Number), [h2, m2] = l.end_time.split(':').map(Number)
   const h = (h2 * 60 + m2 - (h1 * 60 + m1)) / 60
-  return h > 0 ? h : 1
+  return h > 0 ? h : 2
 }
 
 /** Grupos da lista, na ordem em que aparecem. */
@@ -130,7 +130,7 @@ function RuleEditor({ rule, memberId, cycleId, canEdit, onDone }: { rule: Rule; 
 }
 
 /** Regra pronta: uma linha curta ("3,5% da receita total das oficinas") com editar e apagar. */
-function RuleLine({ rule, memberId, cycleId, canEdit, summary, detail }: { rule: RuleRow; memberId: string; cycleId: string; canEdit: boolean; summary: string; detail: string }) {
+function RuleLine({ rule, memberId, cycleId, canEdit, summary, detail, hours }: { rule: RuleRow; memberId: string; cycleId: string; canEdit: boolean; summary: string; detail: string; /** Regra por hora: horas do mês (automáticas pelas aulas ou corrigidas à mão). */ hours?: { auto: number; value: number; competence: string } }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
@@ -139,12 +139,28 @@ function RuleLine({ rule, memberId, cycleId, canEdit, summary, detail }: { rule:
     onSuccess: () => { notifySaved('Regra removida.'); qc.invalidateQueries({ queryKey: ['staff-pay-rules', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const saveHours = useMutation({
+    mutationFn: async (v: number | null) => {
+      if (v === null || v === hours?.auto) { const { error } = await supabase.from('staff_pay_hours').delete().eq('rule_id', rule.id).eq('competence', hours!.competence); if (error) throw error }
+      else { const { error } = await supabase.from('staff_pay_hours').upsert({ organization_id: orgId, rule_id: rule.id, competence: hours!.competence, hours: v }, { onConflict: 'rule_id,competence' }); if (error) throw error }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-pay-hours', orgId] }),
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   if (editing) return <RuleEditor rule={rule} memberId={memberId} cycleId={cycleId} canEdit={canEdit} onDone={() => setEditing(false)} />
   return (
     <div className="flex items-start justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5">
       <div className="min-w-0">
         <p className="font-semibold">{summary}</p>
         <p className="text-sm text-muted-foreground">{detail}</p>
+        {hours && (
+          <label className="mt-1 flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">horas no mês</span>
+            <Input key={`${hours.value}-${hours.auto}`} className="h-8 w-20 px-2 text-center" inputMode="decimal" disabled={!canEdit} defaultValue={String(hours.value).replace('.', ',')} aria-label="Horas trabalhadas no mês"
+              onBlur={(e) => { const t = e.target.value.trim().replace(',', '.'); const n = t === '' ? null : Number(t); if (n !== null && !(n >= 0)) return; if ((n ?? hours.auto) !== hours.value) saveHours.mutate(n) }} />
+            {hours.value !== hours.auto && <span className="text-xs text-muted-foreground">pelas aulas: {String(hours.auto).replace('.', ',')} h</span>}
+          </label>
+        )}
       </div>
       {canEdit && (
         <div className="flex shrink-0">
@@ -152,6 +168,41 @@ function RuleLine({ rule, memberId, cycleId, canEdit, summary, detail }: { rule:
           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label="Remover regra" title="Remover regra" onClick={async () => { if (await confirmBox('Remover esta regra de pagamento?')) del.mutate() }}><Trash2 className="h-4 w-4" /></Button>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Divisão do grupo: `%` + "do todo" ou um naipe; grava ao sair do campo. */
+function GroupRuleEditor({ groupKey, rule, cycleId, canEdit, count, total }: { groupKey: string; rule?: GroupRule; cycleId: string; canEdit: boolean; count: number; total: number }) {
+  const orgId = useOrgId()
+  const qc = useQueryClient()
+  const sections = useCatalog('sections')
+  const [pct, setPct] = useState(rule ? String(rule.percent).replace('.', ',') : '')
+  const [sectionId, setSectionId] = useState(rule?.section_id ?? '')
+  const save = useMutation({
+    mutationFn: async (v: { pct: string; section: string }) => {
+      const n = Number(v.pct.trim().replace(',', '.'))
+      if (v.pct.trim() === '' || n === 0) { if (rule) { const { error } = await supabase.from('staff_group_rules').delete().eq('id', rule.id); if (error) throw error } return }
+      if (!(n > 0 && n <= 100)) throw new Error('Informe uma porcentagem entre 0 e 100.')
+      const row = { percent: n, scope: v.section ? 'section' : 'all', section_id: v.section || null }
+      const { error } = rule ? await supabase.from('staff_group_rules').update(row).eq('id', rule.id)
+        : await supabase.from('staff_group_rules').insert({ ...row, organization_id: orgId, cycle_id: cycleId, group_key: groupKey })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-group-rules', orgId] }),
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const commit = (v = { pct, section: sectionId }) => { if (canEdit && !save.isPending) save.mutate(v) }
+  const each = count > 0 ? total / count : 0
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
+      <span className="font-semibold">Divisão do grupo</span>
+      <div className="flex items-center gap-1"><Input className="h-8 w-16 px-2 text-center" inputMode="decimal" placeholder="0" disabled={!canEdit} aria-label={`Porcentagem de ${groupKey}`} value={pct} onChange={(e) => setPct(e.target.value)} onBlur={() => commit()} /><span className="font-semibold">%</span></div>
+      <Select className="h-8 w-auto min-w-0 py-0 text-sm" disabled={!canEdit} aria-label="Sobre" value={sectionId} onChange={(e) => { setSectionId(e.target.value); commit({ pct, section: e.target.value }) }}>
+        <option value="">do todo</option>
+        {(sections.data ?? []).filter((x) => x.is_active).map((x) => <option key={x.id} value={x.id}>naipe {x.name}</option>)}
+      </Select>
+      {rule && <span className="text-sm text-muted-foreground">= {formatCurrency(total)}{count > 0 ? ` · ${formatCurrency(each)} para cada (${count})` : ''}</span>}
     </div>
   )
 }
@@ -233,6 +284,23 @@ export function TeamPage() {
       return ((data ?? []) as unknown as Lesson[]).filter((l) => l.activity_types?.name === 'Oficina')
     },
   })
+  const groupRules = useQuery({
+    queryKey: ['staff-group-rules', orgId, cycleId],
+    enabled: Boolean(cycleId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('staff_group_rules').select('id, group_key, percent, scope, section_id').eq('organization_id', orgId).eq('cycle_id', cycleId)
+      if (error) throw error
+      return ((data ?? []) as GroupRule[]).map((r) => ({ ...r, percent: Number(r.percent) }))
+    },
+  })
+  const hoursOverride = useQuery({
+    queryKey: ['staff-pay-hours', orgId, competence],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('staff_pay_hours').select('rule_id, hours').eq('organization_id', orgId).eq('competence', competence)
+      if (error) throw error
+      return new Map((data ?? []).map((r) => [r.rule_id as string, Number(r.hours)]))
+    },
+  })
   const payments = useQuery({
     queryKey: ['staff-payments-month', orgId, competence],
     queryFn: async () => {
@@ -281,26 +349,41 @@ export function TeamPage() {
       return false
     })
   }
-  const hoursFor = (rule: Rule) => lessonsOf(rule).reduce((n, l) => n + hoursOf(l), 0)
+  const autoHoursFor = (rule: Rule) => lessonsOf(rule).reduce((n, l) => n + hoursOf(l), 0)
+  const hoursFor = (rule: Rule) => (rule.id ? hoursOverride.data?.get(rule.id) : undefined) ?? autoHoursFor(rule)
   const amountOf = (r: Rule) => (r.kind === 'fixed' ? Number(r.fixed_amount ?? 0)
     : r.kind === 'hourly' ? Math.round(hoursFor(r) * Number(r.hourly_rate ?? 0) * 100) / 100
       : Math.round(revenueOf(r) * Number(r.percent ?? 0)) / 100)
-  const totalOf = (memberId: string) => (rules.data ?? []).filter((r) => r.member_id === memberId).reduce((n, r) => n + amountOf(r), 0)
-  const grand = people.reduce((n, p) => n + totalOf(p.id), 0)
-  // Receita do mês: tudo que foi pago em cobranças; cada grupo mostra quanto leva dela.
+  const individualOf = (memberId: string) => (rules.data ?? []).filter((r) => r.member_id === memberId).reduce((n, r) => n + amountOf(r), 0)
+  // Receita do mês: tudo que os contribuintes pagaram em cobranças.
   const revenue = (paid.data ?? []).reduce((n, c) => n + Number(c.final_amount), 0)
+  const cents = (n: number) => Math.round(n * 100) / 100
+  // Ordem: 1) fixo, por hora e % individuais; 2) divisões de grupo de um naipe (sobre a receita do naipe menos o que foi pago nele); 3) divisões "do todo" sobre o que sobra.
+  const totalIndividual = people.reduce((n, p) => n + individualOf(p.id), 0)
+  const naipeBase = (sectionId: string | null) => Math.max(0, revenueOf({ ...EMPTY_RULE, scope: 'section', section_id: sectionId }) - (rules.data ?? []).filter((r) => r.scope === 'section' && r.section_id === sectionId).reduce((n, r) => n + amountOf(r), 0))
+  const sectionShares = (groupRules.data ?? []).filter((g) => g.scope === 'section').reduce((n, g) => n + cents(naipeBase(g.section_id) * g.percent / 100), 0)
+  const rawPool = revenue - totalIndividual - sectionShares
+  const allPool = Math.max(0, rawPool)
+  const shareOfGroup = (g: GroupRule) => cents((g.scope === 'section' ? naipeBase(g.section_id) : allPool) * g.percent / 100)
+  const membersOfGroup = (key: string) => people.filter((p) => p.kinds.includes(key))
+  const groupShareOf = (memberId: string) => (groupRules.data ?? []).reduce((n, g) => {
+    const mem = membersOfGroup(g.group_key)
+    return mem.some((m) => m.id === memberId) ? n + cents(shareOfGroup(g) / mem.length) : n
+  }, 0)
+  const totalOf = (memberId: string) => cents(individualOf(memberId) + groupShareOf(memberId))
+  const grand = people.reduce((n, p) => n + totalOf(p.id), 0)
 
   const targetName = (r: Rule) => r.scope === 'section' ? sections.data?.find((s) => s.id === r.section_id)?.name
     : instruments.data?.find((i) => i.id === r.instrument_id)?.name
   const summaryOf = (r: Rule) => {
     if (r.kind === 'fixed') return `${formatCurrency(Number(r.fixed_amount ?? 0))} fixo por mês`
     if (r.kind === 'hourly') return `${formatCurrency(Number(r.hourly_rate ?? 0))} por hora de aula${r.scope === 'section' ? ` · oficinas de ${targetName(r) ?? ''}` : ''}`
-    const of = r.scope === 'all' ? 'da receita total das oficinas' : r.scope === 'section' ? `da receita do naipe ${targetName(r) ?? ''}` : `da receita do instrumento ${targetName(r) ?? ''}`
+    const of = r.scope === 'all' ? 'das mensalidades dos contribuintes' : r.scope === 'section' ? `das mensalidades do naipe ${targetName(r) ?? ''}` : `das mensalidades do instrumento ${targetName(r) ?? ''}`
     return `${num(Number(r.percent ?? 0))}% ${of}`
   }
   const detailOf = (r: Rule) => r.kind === 'hourly'
-    ? `${lessonsOf(r).length} aula(s) · ${num(hoursFor(r))} h no mês · rende ${formatCurrency(amountOf(r))}`
-    : r.kind === 'percent' ? `Receita recebida no mês ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
+    ? `${lessonsOf(r).length} aula(s) no mês · rende ${formatCurrency(amountOf(r))}`
+    : r.kind === 'percent' ? `Mensalidades pagas no mês: ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -322,6 +405,12 @@ export function TeamPage() {
     setDrafts((d) => ({ ...d, [id]: [...(d[id] ?? []), Date.now()] }))
   }
 
+  /** Divisão do grupo: uma % (do todo ou de um naipe) repartida igualmente entre as pessoas do grupo. */
+  const groupRuleEditor = (key: string, count: number) => {
+    const gr = (groupRules.data ?? []).find((x) => x.group_key === key)
+    return <GroupRuleEditor key={`${key}-${gr?.id ?? 'novo'}-${gr?.percent ?? ''}-${gr?.section_id ?? ''}`} groupKey={key} rule={gr} cycleId={cycleId} canEdit={canEdit} count={count} total={gr ? shareOfGroup(gr) : 0} />
+  }
+
   const card = (p: Person) => {
     const mine = (rules.data ?? []).filter((r) => r.member_id === p.id)
     return (
@@ -330,7 +419,8 @@ export function TeamPage() {
           <p className="font-semibold"><MemberLink id={p.id}>{p.name}</MemberLink> {p.kinds.map((k) => <Badge key={k} className="ml-1">{k}</Badge>)}</p>
           <p className="font-display text-lg font-bold">{formatCurrency(totalOf(p.id))} <span className="text-sm font-normal text-muted-foreground">previsto no mês</span></p>
         </div>
-        {mine.map((r) => <RuleLine key={r.id} rule={r} memberId={p.id} cycleId={cycleId} canEdit={canEdit} summary={summaryOf(r)} detail={detailOf(r)} />)}
+        {mine.map((r) => <RuleLine key={r.id} rule={r} memberId={p.id} cycleId={cycleId} canEdit={canEdit} summary={summaryOf(r)} detail={detailOf(r)} hours={r.kind === 'hourly' ? { auto: autoHoursFor(r), value: hoursFor(r), competence } : undefined} />)}
+        {groupShareOf(p.id) > 0 && <p className="rounded-lg bg-muted/40 px-2.5 py-1.5 text-sm"><span className="font-semibold">Divisão do grupo</span> <span className="text-muted-foreground">· rende {formatCurrency(groupShareOf(p.id))}</span></p>}
         {(drafts[p.id] ?? []).map((k) => (
           <RuleEditor key={k} rule={EMPTY_RULE} memberId={p.id} cycleId={cycleId} canEdit={canEdit} onDone={() => setDrafts((d) => ({ ...d, [p.id]: (d[p.id] ?? []).filter((x) => x !== k) }))} />
         ))}
@@ -345,10 +435,8 @@ export function TeamPage() {
         <h1>Equipe</h1>
         <div className="flex flex-wrap items-center gap-2"><MonthNav value={ym} onChange={setYm} /></div>
       </div>
-      <ReadMore>
-        Quem recebe no ciclo {cycle?.name ?? ''} e como: valor fixo, porcentagem ou valor por hora de aula. A porcentagem incide sobre a receita recebida no mês (cobranças pagas)
-        de todas as oficinas, de um naipe ou de um instrumento. No pagamento por hora, só contam as aulas que não foram canceladas. Os valores podem mudar de um ciclo para o seguinte.
-      </ReadMore>
+      <p className="text-sm text-muted-foreground">Quem recebe no ciclo {cycle?.name ?? ''} e como. Primeiro saem os valores fixos, por hora e as % individuais; o que sobra das mensalidades dos contribuintes é dividido entre os grupos, igualmente entre as pessoas de cada um.</p>
+      {rawPool < 0 && <Card role="alert" className="border-destructive p-3 text-destructive">Os valores fixos, por hora e as divisões passam das mensalidades pagas no mês ({formatCurrency(revenue)}). A divisão "do todo" fica zerada.</Card>}
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
       {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
       {GROUPS.map((g) => {
@@ -365,7 +453,7 @@ export function TeamPage() {
               <span className="font-display text-lg font-bold">{g.label}</span>
               <span className="min-w-0 flex-1 text-right text-muted-foreground">{formatCurrency(total)} / {formatCurrency(revenue)} ({num(pct)}%)</span>
             </button>
-            {open && <div className="space-y-2 p-2 pt-0">{list.map(card)}</div>}
+            {open && <div className="space-y-2 p-2 pt-0">{g.key && groupRuleEditor(g.key, list.length)}{list.map(card)}</div>}
           </section>
         )
       })}
