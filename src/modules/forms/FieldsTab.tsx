@@ -226,7 +226,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
   return (
     <SheetContent crumbExtra={field?.label} title={asSection ? (field ? 'Editar seção' : 'Nova seção') : field ? 'Editar campo' : 'Novo campo'} description={asSection ? 'Agrupa as perguntas que vêm depois, até a próxima seção.' : field ? `Identificador: ${field.field_key}` : 'Pergunta ou bloco do formulário.'}>
       <form onSubmit={(e) => { e.preventDefault(); if (requireFields([[asSection ? 'Nome da seção' : 'Nome do campo', f.label.trim()], ['Opções', !needsOptions || optionsOk]])) save.mutate() }} className="space-y-3">
-        {!asSection && sections.length > 0 && (
+        {!asSection && !templateMode && sections.length > 0 && (
           <div className="space-y-1.5"><Label htmlFor="fl-section">Seção</Label>
             <Select id="fl-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
               {currentSection === '' && <option value="">Sem seção</option>}
