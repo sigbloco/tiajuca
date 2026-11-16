@@ -50,11 +50,10 @@ const hoursOf = (l: Lesson) => {
   return h > 2 ? h : 2
 }
 
-/** Grupos da lista, na ordem em que aparecem. */
 const CAIXA = 'Caixa do bloco'
-const GROUPS: { key: string; label: string }[] = [
-  { key: 'Direção', label: 'Direção' }, { key: 'Professor', label: 'Professores' }, { key: 'Monitor', label: 'Monitores' }, { key: '', label: 'Outros' },
-]
+/** Nome do grupo no plural, para as categorias remuneradas mais comuns (as outras usam o próprio nome). */
+const PLURAL: Record<string, string> = { Direção: 'Direção', Professor: 'Professores', Monitor: 'Monitores' }
+type Group = { key: string; label: string; /** Grupo de uma categoria remunerada: aparece mesmo sem ninguém ainda (para definir a %). */ always?: boolean }
 
 /** Formulário de uma regra: fixo, % (de tudo, naipe ou instrumento) ou valor por hora de aula. */
 function RuleEditor({ rule, memberId, cycleId, canEdit, onDone, groupKeys, haveGroups = [] }: { rule: Rule; memberId: string; cycleId: string; canEdit: boolean; onDone: () => void; /** Grupos da pessoa (Direção, Professor…): a "Divisão do grupo" é a deles. */ groupKeys: string[]; /** Grupos em que ela já tem a regra. */ haveGroups?: string[] }) {
@@ -340,6 +339,12 @@ export function TeamPage() {
     for (const r of rules.data ?? []) if (!map.has(r.member_id)) map.set(r.member_id, { id: r.member_id, name: shortName(r.members?.full_name, r.members?.display_name), kinds: [] })
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   }, [staff.data, rules.data])
+  // Cada categoria remunerada (Organização → Categorias) é um grupo, criado sozinho.
+  const funcs = useCatalog('artistic_functions')
+  const GROUPS: Group[] = [
+    ...(funcs.data ?? []).filter((f) => f.is_active && f.kind === 'paid').sort((a, b) => a.sort_order - b.sort_order).map((f) => ({ key: f.name, label: PLURAL[f.name] ?? f.name, always: true })),
+    { key: '', label: 'Outros' },
+  ]
   const groupOf = (p: Person) => GROUPS.find((g) => g.key && p.kinds.includes(g.key))?.key ?? ''
 
   const revenueOf = useMemo(() => {
@@ -469,10 +474,10 @@ export function TeamPage() {
       </div>
       {rawNet < 0 && <Card role="alert" className="border-destructive p-3 text-destructive">Hora-aula e % exclusivas passam das mensalidades pagas no mês ({formatCurrency(revenue)}). Caixa e divisão dos grupos ficam zerados.</Card>}
       {(rules.isLoading || staff.isLoading) && <Skeleton className="h-24" />}
-      {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa, ou adicione alguém abaixo.</EmptyState>}
+      {!rules.isLoading && people.length === 0 && <EmptyState>Ninguém na equipe deste ciclo ainda. Marque a participação como remunerada na ficha da pessoa.</EmptyState>}
       {GROUPS.map((g) => {
         const list = people.filter((p) => groupOf(p) === g.key)
-        if (list.length === 0) return null
+        if (list.length === 0 && !g.always) return null
         const open = openGroups.has(g.label)
         const total = list.reduce((n, p) => n + totalOf(p.id), 0)
         const pct = revenue > 0 ? Math.round((total / revenue) * 1000) / 10 : 0

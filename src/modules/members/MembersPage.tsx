@@ -152,17 +152,20 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   })
   // Os tipos vêm da chave fixa da categoria, não do nome: renomear "Músico" para "Músico convidado" mantém os filtros e os chips (que passam a usar o nome novo).
   const feeCats = useCatalog('fee_categories')
+  // Categorias com qualificador, como "Aluno (sopro)" e "Aluno (percussão)", são o mesmo tipo ("Aluno"): vale o nome sem o parêntese.
+  const baseName = (n: string) => n.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  const baseKey = (n: string) => { const w = baseName(n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()); return w === 'aluno' ? 'aluno' : w === 'senior' ? 'senior' : w.startsWith('musico') ? 'musico' : undefined }
   const keyByName = new Map((feeCats.data ?? []).filter((c) => c.system_key).map((c) => [c.name, c.system_key as string]))
   const typesOf = (memberId: string) => {
     const out = new Set<string>(staffKinds.data?.get(memberId) ?? [])
     for (const cat of allCategories(memberId)) {
-      const k = keyByName.get(cat)
+      const k = keyByName.get(cat) ?? baseKey(cat)
       if (k === 'aluno' || k === 'senior' || k === 'musico' || k === 'monitor') out.add(k)
     }
     return out
   }
   const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  const catName = (k: string) => (feeCats.data ?? []).find((c) => c.system_key === k)?.name
+  const catName = (k: string) => { const n = (feeCats.data ?? []).find((c) => c.system_key === k)?.name; return n ? baseName(n) : n }
   /** Nome mostrado: o padrão se a categoria ainda tem o nome de fábrica; senão, o nome que a Direção deu. */
   const typeName = (k: string, fallback: string, factory: string[]) => { const n = catName(k); return n && !factory.some((f) => norm(f) === norm(n)) ? n : fallback }
   const typeBadge = (k: string) => (k === 'musico' ? typeName(k, TYPE_LABEL[k], ['Músico']) : k === 'senior' ? typeName(k, TYPE_LABEL[k], ['Senior', 'Sênior']) : k === 'aluno' ? typeName(k, TYPE_LABEL[k], ['Aluno']) : TYPE_LABEL[k] ?? k)
