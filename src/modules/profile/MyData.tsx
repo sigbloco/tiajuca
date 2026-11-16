@@ -12,7 +12,7 @@ import { ChevronRight, Lock, Plus, Save, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { DateInput, maskPhone, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -78,6 +78,10 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   const [foundedOn, setFoundedOn] = useState('')
   useEffect(() => { if (founded.data !== undefined) setFoundedOn(founded.data) }, [founded.data])
   const [noSocial, setNoSocial] = useState(false)
+  const linked = useQuery({
+    queryKey: ['me-linked', orgId, memberId], enabled: part !== 'bloco',
+    queryFn: async () => { const { data, error } = await supabase.from('members').select('user_id').eq('id', memberId).single(); if (error) throw error; return Boolean((data as { user_id: string | null }).user_id) },
+  })
   useEffect(() => { if (me.data) { setRows(rowsOf(me.data.social_handle)); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data])
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
   const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone])
@@ -147,7 +151,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     )
   }
   // E-mail do Google (gmail) é o que liga o login ao cadastro: trocar por conta própria quebraria o acesso.
-  const googleEmail = /@(gmail|googlemail)[.]com$/i.test(d.email ?? '')
+  // Conta Google pode ter qualquer e-mail (não só gmail): vale estar vinculada a um login.
+  const googleEmail = Boolean(linked.data) || /@(gmail|googlemail)[.]com$/i.test(d.email ?? '')
   return (
     <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Telefone válido (DDD + número)', phoneOk]])) save.mutate() }} className="space-y-4">
       <Card className="space-y-3 p-4">
@@ -166,18 +171,23 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="my-phone">Celular</Label><PhoneInput id="my-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
             {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>
-          <div className="space-y-1.5"><Label htmlFor="my-user-0">Redes sociais</Label>
-            {!noSocial && rows.map((r, i) => (
-              <div key={i} className="flex gap-2">
-                <Select aria-label="Rede" className="w-36 shrink-0" value={r.network} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Label htmlFor="my-user-0">Redes sociais</Label>
+              <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar rede social" title="Adicionar rede social" disabled={noSocial}
+                onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-3.5 w-3.5" /></button>
+              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> Não tenho / não uso</label>
+            </div>
+            {rows.map((r, i) => (
+              <div key={i} className={cn('flex gap-2', noSocial && 'opacity-50')}>
+                <Select aria-label="Rede" className="w-36 shrink-0" disabled={noSocial} value={r.network} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, network: e.target.value } : x)))}>
                   {SOCIAL_NETWORKS.map((n) => <option key={n.key} value={n.key}>{n.label}</option>)}
                 </Select>
-                <Input id={`my-user-${i}`} aria-label="Usuário" placeholder="usuário" value={r.user} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
-                {rows.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" onClick={() => setRows(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
+                <Input id={`my-user-${i}`} aria-label="Usuário" placeholder="usuário" disabled={noSocial} value={r.user} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
+                {rows.length > 1 && <Button type="button" variant="ghost" size="sm" aria-label="Remover rede social" disabled={noSocial} onClick={() => setRows(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
               </div>
             ))}
-            {!noSocial && <Button type="button" size="sm" variant="outline" onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>}
-            <label className="flex min-h-9 items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> Não tenho / não uso redes sociais</label></div>
+          </div>
         </div>
         <div className="space-y-1.5"><Label htmlFor="my-birth">Data de nascimento</Label><Input id="my-birth" type="date" value={f.birth_date} onChange={(e) => setF({ ...f, birth_date: e.target.value })} /></div>
       </Card>
