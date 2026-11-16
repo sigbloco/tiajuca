@@ -116,15 +116,16 @@ function AddInline({ placeholder, label, onAdd, pending }: { placeholder: string
 }
 
 /** Lápis e lixeira em cima; setas de ordem embaixo. A alça de arrastar fica à esquerda (prop `left` do Collapsible). */
-export function Actions({ item, label, idx, total, onUp, onDown, onEdit, onDelete }: {
+export function Actions({ item, label, idx, total, onUp, onDown, onEdit, onDelete, locked }: {
   item: CatalogItem; label: string; idx: number; total: number
+  /** Tem (ou teve) integrante neste ciclo: não pode ser tirado dele. */ locked?: boolean
   onUp: () => void; onDown: () => void; onEdit: () => void; onDelete: () => void
 }) {
   return (
     <div className="flex flex-col items-end">
       <div className="flex items-center">
         <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar ${item.name}`} title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${label} ${item.name}`} title="Excluir" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Excluir ${label} ${item.name}`} title={locked ? 'Tem (ou teve) integrantes neste ciclo: não pode ser tirado dele' : 'Excluir'} disabled={locked} onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
       </div>
       <div className="flex items-center">
         <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Subir ${item.name}`} disabled={idx <= 0} onClick={onUp}><ArrowUp className="h-4 w-4" /></Button>
@@ -251,6 +252,17 @@ export function NaipesPage() {
     },
   })
   const loaded = !!inCycle.data
+  // Itens com integrantes (hoje ou no passado do ciclo) não podem ser tirados nem excluídos.
+  const inUse = useQuery({
+    queryKey: ['structure-in-use', orgId, cur?.id],
+    enabled: Boolean(cur?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('structure_in_use', { p_cycle: cur!.id })
+      if (error) throw error
+      const d = data as { instruments: string[]; sections: string[] }
+      return { instruments: new Set(d.instruments), sections: new Set(d.sections) }
+    },
+  })
   const cycleNames = (ids: string[] | undefined) => (ids ?? []).map((id) => (cycles.data ?? []).find((c) => c.id === id)?.name).filter(Boolean).join(', ')
   // Existe em outros ciclos (e continua ativo): não é lixo, só está fora deste ciclo.
   const secElsewhere = (s: CatalogItem) => s.is_active && !secOn(s) && (inCycle.data?.secElsewhere.get(s.id)?.length ?? 0) > 0
@@ -355,7 +367,7 @@ export function NaipesPage() {
       <div key={i.id} {...(canEdit ? drag.row(i.id, onMove, scope) : {})} className={drag.cls(i.id)}>
         <Collapsible below={<StaffBlock scope="instrument" id={i.id} canEdit={canEdit && isEditing(i.id)} />} left={canEdit ? drag.handle(i.id, onMove, scope) : undefined} level={1} expandable={isEditing(i.id)} open={searching || open.isOpen(i.id)} onToggle={() => open.toggle(i.id)} title={<span className={cn(!i.is_active && 'opacity-60')}>{i.name}{hasTuning(i.tuning) ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{i.tuning}</span> : null}</span>}
           right={canEdit && (
-            <Actions item={i} label={lbl} idx={idx} total={group.length}
+            <Actions item={i} label={lbl} idx={idx} total={group.length} locked={inUse.data?.instruments.has(i.id)}
               onUp={() => instMut.move.mutate({ a: i, b: group[idx - 1], list: group })} onDown={() => instMut.move.mutate({ a: i, b: group[idx + 1], list: group })}
               onEdit={() => { toggleEdit(i.id); if (!open.isOpen(i.id) && !isEditing(i.id)) open.toggle(i.id) }}
               onDelete={() => confirmDelete('instruments', i, `o item (${lbl})`)} />
@@ -396,7 +408,7 @@ export function NaipesPage() {
             <div key={s.id} {...(canEdit ? drag.row(s.id, onMoveSec, 'sections') : {})} className={drag.cls(s.id)}>
               <Collapsible below={<StaffBlock scope="section" id={s.id} canEdit={canEdit && isEditing(s.id)} />} left={canEdit ? drag.handle(s.id, onMoveSec, 'sections') : undefined} countFirst expandable={insts.length > 0 || isEditing(s.id)} open={searching || open.isOpen(s.id)} onToggle={() => open.toggle(s.id)} title={<span className={cn(!s.is_active && 'opacity-60')}>{s.name}</span>} count={insts.length}
                 right={canEdit && (
-                  <Actions item={s} label="naipe" idx={idx} total={ordered.length}
+                  <Actions item={s} label="naipe" idx={idx} total={ordered.length} locked={inUse.data?.sections.has(s.id)}
                     onUp={() => secMut.move.mutate({ a: s, b: ordered[idx - 1], list: ordered })} onDown={() => secMut.move.mutate({ a: s, b: ordered[idx + 1], list: ordered })}
                     onEdit={() => { toggleEdit(s.id); if (!open.isOpen(s.id) && !isEditing(s.id)) open.toggle(s.id) }}
                     onDelete={() => confirmDelete('sections', s, 'o naipe')} />
