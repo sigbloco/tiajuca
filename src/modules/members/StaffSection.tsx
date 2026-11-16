@@ -57,7 +57,7 @@ export function StaffSection({ memberId }: { memberId: string }) {
     enabled: Boolean(cycle),
     queryFn: async () => {
       const { data, error } = await supabase.from('staff_assignments').select('id, staff_kind, compensation, section_id, instrument_id')
-        .eq('organization_id', orgId).eq('member_id', memberId).eq('cycle_id', cycle!.id).is('valid_to', null)
+        .eq('organization_id', orgId).eq('member_id', memberId).eq('cycle_id', cycle!.id).is('valid_to', null).neq('staff_kind', 'regente')
       if (error) throw error
       return (data ?? []) as Row[]
     },
@@ -108,7 +108,7 @@ export function StaffSection({ memberId }: { memberId: string }) {
         {canManage && adding && (
           <div className="space-y-2 rounded-lg border border-border p-2">
             <Select aria-label="Função" value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
-              {(Object.keys(KIND_LABEL) as Kind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+              {(Object.keys(KIND_LABEL) as Kind[]).filter((k) => k !== 'regente').map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
             </Select>
             <Select aria-label="Naipe ou instrumento" value={target} onChange={(e) => setTarget(e.target.value)}>
               <option value="">Escolha o naipe ou instrumento</option>

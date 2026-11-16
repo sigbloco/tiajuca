@@ -14,6 +14,7 @@ import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventCard } from './EventCard'
 import { EventSheet } from './EventSheet'
 import { EventsArchive } from './EventsArchive'
+import { RecurrenceDay } from './RecurrenceDay'
 import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
@@ -183,6 +184,7 @@ export function EventsPage() {
       </Card>
 
       {selectedDay && holidayOf(selectedDay) && <Badge className="bg-destructive/15 text-destructive">Feriado: {holidayOf(selectedDay)}</Badge>}
+      {canManage && selectedDay && raw && <RecurrenceDay day={selectedDay} existing={raw.filter((a) => a.activity_date === selectedDay)} />}
       {selectedDay && isLoading && <Skeleton className="h-24" />}
       {selectedDay && birthdaysOn(selectedDay).length > 0 && (
         <Card className="space-y-1 p-3">
