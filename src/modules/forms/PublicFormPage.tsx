@@ -114,14 +114,14 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
       return f.options.length + (other ? 1 : 0) <= 5 ? (
         <div className="grid gap-2" role="radiogroup" aria-labelledby={`${id}-l`}>
           {f.options.map((o) => (
-            <button key={o.value} type="button" role="radio" aria-checked={str === o.value} onClick={() => onChange(o.value)}
+            <button key={o.value} type="button" role="radio" aria-checked={str === o.value} onClick={() => onChange(str === o.value ? '' : o.value)}
               className={cn('min-h-11 rounded-lg border px-3 py-2 text-left font-semibold', str === o.value ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>
               {o.label}
               {o.description && <span className="mt-0.5 block text-sm font-normal text-muted-foreground">{o.description}</span>}
             </button>
           ))}
           {other && (
-            <button type="button" role="radio" aria-checked={isOther} onClick={() => onChange(OTHER)}
+            <button type="button" role="radio" aria-checked={isOther} onClick={() => onChange(isOther ? '' : OTHER)}
               className={cn('min-h-11 rounded-lg border px-3 text-left font-semibold', isOther ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>Outro</button>
           )}
           {otherInput}
@@ -170,7 +170,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
       return (
         <div className="grid grid-cols-2 gap-2" role="radiogroup">
           {[['yes', 'Sim'], ['no', 'Não']].map(([v, l]) => (
-            <button key={v} type="button" role="radio" aria-checked={str === v} onClick={() => onChange(v)}
+            <button key={v} type="button" role="radio" aria-checked={str === v} onClick={() => onChange(str === v ? '' : v)}
               className={cn('h-11 rounded-lg border font-semibold', str === v ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card')}>{l}</button>
           ))}
         </div>
@@ -180,7 +180,7 @@ function FieldInput({ f, value, onChange, files, onFiles }: {
       return (
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: mx - mn + 1 }, (_, i) => mn + i).map((n) => (
-            <button key={n} type="button" aria-pressed={value === n} onClick={() => onChange(n)}
+            <button key={n} type="button" aria-pressed={value === n} onClick={() => onChange(value === n ? '' : n)}
               className={cn('h-11 w-11 rounded-lg border font-semibold', value === n ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card')}>{n}</button>
           ))}
         </div>
@@ -414,7 +414,7 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
 
   // Função (não componente): um componente declarado aqui dentro seria recriado a cada renderização e remontaria o formulário inteiro.
   const shell = (children: React.ReactNode) => (
-    <main className="mx-auto min-h-screen max-w-xl px-4 py-8">
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pt-8">
       {preview ? <p role="status" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-center text-sm font-semibold text-secondary-foreground">{initialAnswers ? 'Pré-visualização com os dados do integrante já preenchidos: é assim que a renovação aparece para ele. Nada é enviado.' : 'Pré-visualização: é assim que o formulário aparece para quem se inscreve. Nada é enviado.'}</p> : <BackButton to="/site" name="a página inicial" />}
       <header ref={headerRef} className="sticky top-[var(--viewas-h,0px)] z-20 -mx-4 mb-4 bg-background/95 px-4 pb-2 pt-2 shadow-[0_6px_14px_-6px_rgba(0,0,0,0.3)] backdrop-blur">
         <HeaderBand frame={f0?.header ?? DEFAULT_FRAME} logo={org ? <OrgLogo name={org.name} logoPath={org.logo_path} className="drop-shadow-[0_3px_6px_rgba(0,0,0,0.5)]" style={{ width: f0?.header?.logo ?? 80, height: f0?.header?.logo ?? 80 }} /> : null} />
@@ -459,7 +459,7 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
 
   return shell(
     <>
-      <form onSubmit={(e) => { e.preventDefault(); if (isLast) finish(); else next() }} className="space-y-4" noValidate>
+      <form onSubmit={(e) => { e.preventDefault(); if (isLast) finish(); else next() }} className="flex flex-1 flex-col gap-4" noValidate>
         {stepIdx === 0 && (
           <div ref={setTitleEl}><Card className="space-y-1 p-5 text-center">
             <h1>{f0?.title}</h1>
@@ -541,11 +541,11 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
           <label>Não preencha este campo<input tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} /></label>
         </div>
 
-        <div className="flex gap-2">
-          {stepIdx > 0 && <Button type="button" size="lg" variant="outline" className="flex-1" onClick={() => go(stepIdx - 1)}><ArrowLeft className="h-4 w-4" /> Voltar</Button>}
+        <div className="sticky bottom-0 z-20 -mx-4 mt-auto flex gap-2 bg-background/95 px-4 py-2 shadow-[0_-6px_14px_-6px_rgba(0,0,0,0.3)] backdrop-blur">
+          {stepIdx > 0 && <Button type="button" variant="outline" className="h-10 flex-1" onClick={() => go(stepIdx - 1)}><ArrowLeft className="h-4 w-4" /> Voltar</Button>}
           {isLast
-            ? <Button type="submit" size="lg" className="flex-1" disabled={submit.isPending || uploading}>{submit.isPending ? 'Enviando' : uploading ? 'Enviando arquivo' : 'Enviar inscrição'}</Button>
-            : <Button type="submit" size="lg" className="flex-1" disabled={uploading}>Próximo <ArrowRight className="h-4 w-4" /></Button>}
+            ? <Button type="submit" className="h-10 flex-1" disabled={submit.isPending || uploading}>{submit.isPending ? 'Enviando' : uploading ? 'Enviando arquivo' : 'Enviar inscrição'}</Button>
+            : <Button type="submit" className="h-10 flex-1" disabled={uploading}>Próximo <ArrowRight className="h-4 w-4" /></Button>}
         </div>
       </form>
     </>
