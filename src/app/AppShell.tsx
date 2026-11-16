@@ -179,24 +179,18 @@ export function AppShell() {
           <p className="font-display text-xl font-extrabold leading-[1.05] text-primary"><OrgName name={membership.name} /></p>
         </div>
         <nav className="space-y-1">{renderEntries(entries)}</nav>
-        <div className="mt-2 border-t border-border pt-3">
-          <Link to="/site" className="flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted"><Globe className="h-5 w-5" /> Site</Link>
-          <p className="mt-2 break-words px-1 font-semibold">{membership.display_name}</p>
-          <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => signOut()}>
-            <LogOut className="h-4 w-4" /> Sair
-          </Button>
-        </div>
       </aside>
 
       <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
-        {/* Celular: Site e Sair no topo da página, além do menu. */}
-        <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 grid h-12 grid-cols-2 items-center gap-2 border-b border-border bg-background px-4 md:hidden">
-          <Link to="/site"><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
-          <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+        {/* Site, nome e Sair: fixos no topo da página (no celular, também dentro do menu). */}
+        <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 flex h-12 items-center gap-2 border-b border-border bg-background px-4 md:-mx-8 md:-mt-8 md:px-8">
+          <Link to="/site" className="flex-1 md:flex-none"><Button variant="outline" size="sm" className="w-full md:w-auto"><Globe className="h-4 w-4" /> Site</Button></Link>
+          <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
+          <Button variant="outline" size="sm" className="flex-1 md:flex-none" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
-        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[var(--viewas-h,0px)] md:-mx-8 md:-mt-8 md:px-8 md:pt-4">
+        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 mt-0 mb-3 border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+3rem)] md:-mx-8 md:mt-0 md:px-8 md:pt-3">
           <CycleBar base={base} />
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
