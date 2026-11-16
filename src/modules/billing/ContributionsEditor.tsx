@@ -1,4 +1,5 @@
 import { PageLink } from '@/components/shared/PageLink'
+import { Collapsible } from '@/components/shared/Collapsible'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, Lock } from 'lucide-react'
@@ -16,6 +17,9 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { invalidateCatalog, mirrorFunctionToFees, type CatalogItem } from '@/modules/structure/service'
 
 /** Grava o valor: com ciclo, é o valor DO CICLO (não depende de datas); sem ciclo, vale daqui para frente. */
+/** Os mesmos grupos de Organização → Categorias (as remuneradas não têm valor mensal). */
+const GROUPS: { kind: 'collab' | 'artistic'; title: string }[] = [{ kind: 'collab', title: 'Colaborativas' }, { kind: 'artistic', title: 'Artística' }]
+
 function useSetPrice(cycleId: string | undefined, from: string) {
   return async (category: string, amount: number) => {
     const { error } = cycleId
@@ -85,6 +89,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
     onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['fee-prices', orgId] }); toast.success(`Valores copiados de ${previous?.name}: ${n} categoria(s).`) },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
   const functions = (funcs.data ?? []).filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order)
   // Isento por ciclo: sem escolha para o ciclo, vale o padrão da categoria; as fixas (remuneradas, direção, professor...) são sempre isentas.
   const cycleExempt = useQuery({
@@ -136,12 +141,23 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
           <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-muted-foreground" aria-hidden /> Isento <span className="font-normal text-muted-foreground">· R$ 0,00 /mês</span></p>
           <p className="text-sm text-muted-foreground">Quem tem uma categoria isenta não paga: {exemptNames.length ? exemptNames.join(', ') : 'nenhuma ainda'}. As fixas (remuneradas, direção, professores…) são sempre isentas; nas demais, marque “Isento” na linha da categoria.</p>
         </Card>
-        <ProgressiveList items={payers} render={(f) => {
-          const c = byName.get(f.name.toLowerCase())
-          return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={editable} from={from} cycleId={cycle?.id} exempt={isExempt(f)} onExempt={cycle ? (on) => setExempt.mutate({ id: f.id, on }) : undefined} /> : (
-            <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</Card>
+        {/* Mesmos grupos de Organização → Categorias (fechados por padrão). Remuneradas e fixas não têm valor: estão no cartão Isento. */}
+        {GROUPS.map((g) => {
+          const items = payers.filter((f) => (f.kind ?? 'collab') === g.kind)
+          if (items.length === 0) return null
+          return (
+            <Collapsible key={g.kind} open={openGroups.has(g.kind)} onToggle={() => setOpenGroups((cur) => { const n = new Set(cur); if (n.has(g.kind)) n.delete(g.kind); else n.add(g.kind); return n })} title={g.title} count={items.length}>
+              <div className="grid gap-1.5">
+                <ProgressiveList items={items} render={(f) => {
+                  const c = byName.get(f.name.toLowerCase())
+                  return c ? <CategoryRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={editable} from={from} cycleId={cycle?.id} exempt={isExempt(f)} onExempt={cycle ? (on) => setExempt.mutate({ id: f.id, on }) : undefined} /> : (
+                    <Card key={f.id} className="p-2 pl-3 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</Card>
+                  )
+                }} />
+              </div>
+            </Collapsible>
           )
-        }} />
+        })}
       </div>
     </div>
   )
