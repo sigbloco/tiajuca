@@ -14,24 +14,23 @@ export async function invokeShop<T>(name: string, body: Record<string, unknown>)
   return data as T
 }
 
-export interface CreatedOrder {
-  code: string; status: string; payment_method: 'pix' | 'infinitepay'
-  subtotal_cents: number; discount_cents: number; total_cents: number; expires_at: string | null; is_member_price: boolean
-  pickup: { name: string; address: string; opening_hours: string }
-  items: { name: string; variant: string; quantity: number; unit_final_cents: number; kind: 'stock' | 'made_to_order' }[]
-  kinds: string[]
+export interface CreatedOrder { code: string; status: string }
+
+const LOOKUP_KEY = 'shop:lookup'
+/** Guarda código + telefone nesta aba para "Meus pedidos" abrir o pedido de visitante sozinho (também ao voltar do pagamento). */
+export function rememberOrder(code: string, phone: string) {
+  try { sessionStorage.setItem(LOOKUP_KEY, JSON.stringify({ code, phone })) } catch { /* sem armazenamento: o visitante informa código e telefone */ }
 }
 
-/** Dados do pedido recém-criado, guardados só nesta aba para a tela de confirmação sobreviver a um F5. */
-export interface OrderSnapshot { order: CreatedOrder; customerName: string; phone: string; paymentUrl?: string }
-const key = (code: string) => `shop:order:${code}`
-
-export function saveSnapshot(s: OrderSnapshot) {
-  try { sessionStorage.setItem(key(s.order.code), JSON.stringify(s)) } catch { /* sem armazenamento: a confirmação some ao recarregar */ }
-}
-export function loadSnapshot(code: string): OrderSnapshot | null {
+/** Uma chave por tentativa de compra: cliques repetidos e F5 devolvem o mesmo pedido em vez de criar outro. Troca depois do sucesso. */
+export function attemptId(slug: string, renew = false): string {
+  const k = `shop:attempt:${slug}`
   try {
-    const raw = sessionStorage.getItem(key(code))
-    return raw ? (JSON.parse(raw) as OrderSnapshot) : null
-  } catch { return null }
+    if (renew) { sessionStorage.removeItem(k); return '' }
+    const cur = sessionStorage.getItem(k)
+    if (cur) return cur
+    const id = crypto.randomUUID()
+    sessionStorage.setItem(k, id)
+    return id
+  } catch { return crypto.randomUUID() }
 }

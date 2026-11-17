@@ -51,7 +51,7 @@ const providers: Record<string, Provider> = {
       const digits = ctx.customer.phone.replace(/\D/g, '')
       const payload = buildLinkPayload({
         handle: ctx.settings.infinitepay_handle!, orderCode: String(order.code), items: order.items as LinkItemInput[],
-        redirectUrl: `${site}/${ctx.orgSlug}/loja/pedido/${order.code}`,
+        redirectUrl: `${site}/${ctx.orgSlug}/loja/consultar?codigo=${order.code}`,
         webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/shop-infinitepay-webhook`,
         customer: { name: ctx.customer.name, email: ctx.customer.email, phone: digits.length <= 11 ? `55${digits}` : digits },
       })
@@ -99,6 +99,13 @@ Deno.serve(async (req) => {
   if (orgErr) { console.error('shop_org_id', orgErr.message); return json({ error: 'Não foi possível finalizar agora. Tente novamente.' }, 500) }
   if (!orgId) return json({ error: 'Loja não encontrada.' }, 404)
 
+  // Idempotência: a mesma tentativa de compra (client_request_id) devolve o pedido já criado, em vez de criar outro.
+  const requestId = UUID.test(String(body.client_request_id)) ? String(body.client_request_id) : null
+  if (requestId) {
+    const { data: existing } = await admin.rpc('shop_order_by_request', { p_org: orgId, p_request: requestId })
+    if (existing) return json({ order: { code: existing.code, status: existing.status }, payment: existing.payment_url ? { url: existing.payment_url } : {}, duplicate: true })
+  }
+
   const { data: settings, error: setErr } = await admin.rpc('shop_get_settings', { p_org: orgId })
   if (setErr || !settings) { console.error('shop_get_settings', setErr?.message); return json({ error: 'Não foi possível finalizar agora. Tente novamente.' }, 500) }
   const provider = providers[method]
@@ -124,6 +131,15 @@ Deno.serve(async (req) => {
     if (error.code === 'P0001') return json({ error: error.message }, 400)
     console.error('shop_create_order', error.code, error.message)
     return json({ error: 'Não foi possível finalizar o pedido. Tente novamente.' }, 500)
+  }
+
+  // Liga o pedido à conta (Meus pedidos sem código) e à tentativa de compra. Se outra requisição igual venceu a corrida, descarta este.
+  const { data: owned } = await admin.rpc('shop_set_order_owner', { p_code: (order as Order).code, p_user: userId, p_request: requestId })
+  if (owned === false && requestId) {
+    const { data: info } = await admin.rpc('shop_order_for_payment', { p_code: (order as Order).code })
+    if (info?.id) await admin.rpc('shop_cancel_order', { p_order: info.id, p_reason: 'Pedido duplicado', p_actor_member: null, p_actor_label: 'sistema' })
+    const { data: existing } = await admin.rpc('shop_order_by_request', { p_org: orgId, p_request: requestId })
+    if (existing) return json({ order: { code: existing.code, status: existing.status }, payment: existing.payment_url ? { url: existing.payment_url } : {}, duplicate: true })
   }
 
   try {

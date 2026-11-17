@@ -1,6 +1,7 @@
 import { KitChip } from '@/modules/shop/KitChip'
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
+import { Copy } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
@@ -10,11 +11,15 @@ import { formatCurrency } from '@/core/format'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
-import { METHOD_LABELS, availableMethods, checkoutBlockers } from '../payments/pix'
-import { invokeShop, saveSnapshot, type CreatedOrder } from './api'
+import { METHOD_LABELS, availableMethods, checkoutBlockers, pickupWhatsAppLinks } from '../payments/pix'
+import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
 const money = (cents: number) => formatCurrency(fromCents(cents))
+
+async function copy(text: string, what: string) {
+  try { await navigator.clipboard.writeText(text); toast.success(`${what} copiado.`) } catch { toast.error('Não foi possível copiar. Selecione e copie manualmente.') }
+}
 
 export function CheckoutPage() {
   const { store, cart, basePath, clear, isMember, index } = useStore()
@@ -27,6 +32,8 @@ export function CheckoutPage() {
     pickup: '', method: methods[0] ?? '',
   })
   const [accepted, setAccepted] = useState(false)
+  // Depois de criar o pedido o carrinho esvazia: sem isto a tela cairia no "carrinho vazio" antes de abrir Meus pedidos.
+  const finished = useRef(false)
   const blockers = f.method ? checkoutBlockers(f.method as 'pix', store) : ['Esta loja ainda não tem forma de pagamento ativa.']
   const noPickup = store.pickup_points.length === 0
   // Só os pontos que servem a TODOS os itens do carrinho (cada produto pode ter os seus).
@@ -39,21 +46,22 @@ export function CheckoutPage() {
   const submit = useMutation({
     mutationFn: async () => {
       return invokeShop<{ order: CreatedOrder; payment: { url?: string } }>('shop-checkout', {
-        org_slug: store.org.slug, name: f.name, phone: f.phone, email: f.email, pickup_point_id: pickup, payment_method: f.method, accept_privacy: accepted,
+        org_slug: store.org.slug, client_request_id: attemptId(store.org.slug), name: f.name, phone: f.phone, email: f.email, pickup_point_id: pickup, payment_method: f.method, accept_privacy: accepted,
         items: cart.lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity })),
       })
     },
-    onSuccess: ({ order, payment }) => {
-      saveSnapshot({ order, customerName: f.name.trim(), phone: f.phone, paymentUrl: payment?.url })
+    onSuccess: ({ order }) => {
+      finished.current = true
+      rememberOrder(order.code, f.phone)
+      attemptId(store.org.slug, true)
       clear()
-      // InfinitePay: vai direto para a página de pagamento; ao terminar, ela devolve o cliente para esta confirmação.
-      if (payment?.url) { window.location.assign(payment.url); return }
-      navigate(`${basePath}/pedido/${order.code}`, { replace: true })
+      // Pix e InfinitePay: o pedido, a chave Pix e o link de pagamento ficam em Meus pedidos (dá para retomar a qualquer momento).
+      navigate(`${basePath}/consultar?codigo=${order.code}`, { replace: true })
     },
     onError: (e) => toast.error((e as Error).message), // já vem em português do servidor (invokeShop)
   })
 
-  if (cart.lines.length === 0) return <Navigate to={`${basePath}/carrinho`} replace />
+  if (cart.lines.length === 0 && !finished.current) return <Navigate to={`${basePath}/carrinho`} replace />
   const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || noCommon || !pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
 
   return (
@@ -66,7 +74,7 @@ export function CheckoutPage() {
             <Input id="ck-name" autoComplete="name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ck-phone" required>Telefone (WhatsApp)</Label>
             <PhoneInput id="ck-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
-            <p className="text-sm text-muted-foreground">Você vai precisar do telefone e do código do pedido para consultá-lo depois.</p></div>
+            <p className="text-sm text-muted-foreground">Se não estiver logado, você vai precisar do telefone e do código do pedido para consultá-lo depois.</p></div>
           <div className="space-y-1.5"><Label htmlFor="ck-email" required>E-mail</Label>
             <Input id="ck-email" type="email" autoComplete="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
         </Card>
@@ -114,6 +122,22 @@ export function CheckoutPage() {
               </button>
             ))}
           </div>
+          {f.method === 'pix' && store.pix && (() => {
+            const links = pickupWhatsAppLinks(store.pickup_points, { firstId: pickup })
+            return (
+              <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+                <p className="font-semibold">Chave Pix ({store.pix.beneficiary})</p>
+                <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
+                  <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
+                <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
+                {links.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {links.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
           <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
           {(f.method === 'infinitepay' || f.method === 'pix') && <p className="rounded-lg bg-muted p-3 text-sm">No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>}
         </Card>

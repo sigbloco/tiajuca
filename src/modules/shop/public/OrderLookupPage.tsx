@@ -1,15 +1,16 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Copy, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, cn } from '@/components/ui/primitives'
+import { useAuth } from '@/core/auth'
 import { formatCurrency, formatDateTime } from '@/core/format'
 import { fromCents, type ProductKind } from '../catalog'
 import { CUSTOMER_STATUS_LABEL, nextStepText, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
-import { directorLinks, pixInstructions } from '../payments/pix'
+import { directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -18,7 +19,7 @@ const KEY = 'shop:lookup'
 
 interface LookupResult {
   order: {
-    code: string; status: OrderStatus; payment_method: 'pix' | 'infinitepay'; customer_name: string
+    code: string; status: OrderStatus; payment_method: 'pix' | 'infinitepay'; customer_name: string; pickup_point_id?: string
     subtotal_cents: number; discount_cents: number; total_cents: number; created_at: string; expires_at: string | null; paid_at: string | null
     payment_url: string | null; cancel_reason: string | null
   }
@@ -56,7 +57,7 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
   const [status, setStatus] = useState(order.status)
   useEffect(() => setStatus(order.status), [order.status])
   const report = useMutation({
-    mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'report_payment', code: order.code, phone }),
+    mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'report_payment', org_slug: store.org.slug, code: order.code, phone }),
     onSuccess: (r) => { setStatus(r.status); toast.success('Avisamos a loja. Vamos conferir o seu pagamento.'); onRefresh() },
     onError: (e) => toast.error((e as Error).message),
   })
@@ -64,6 +65,7 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
     ? pixInstructions({ pix: store.pix, contact: store.contact, orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name })
     : null
   const directors = directorLinks(store.contact, order.code)
+  const pickupLinks = pickupWhatsAppLinks(store.pickup_points, { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
   return (
     <div className="space-y-4">
@@ -99,8 +101,10 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
                 <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></dd></div>
             <div><dt className="text-muted-foreground">Referência</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
           </dl>
+          <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada (ou por e-mail) com o código <strong>{order.code}</strong>. O pedido só é confirmado quando a loja conferir o pagamento.</p>
           <div className="flex flex-wrap gap-2">
-            {pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar comprovante pelo WhatsApp</a>}
+            {pickupLinks.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener">Comprovante no WhatsApp: {w.name}</a>)}
+            {pickupLinks.length === 0 && pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar comprovante pelo WhatsApp</a>}
             {pix.mailtoUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.mailtoUrl}>Enviar por e-mail</a>}
           </div>
           <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
@@ -109,6 +113,8 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
       )}
       {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && order.payment_url && (
         <Card className="space-y-2 p-5">
+          <h2 className="text-lg font-bold">Pague com cartão de crédito ou Pix</h2>
+          <p className="text-sm">Fechou a janela de pagamento? Use o botão abaixo para retomar de onde parou.</p>
           <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · {money(order.total_cents)}</a>
           {order.expires_at && <p className="text-sm text-muted-foreground">Itens reservados até {formatDateTime(order.expires_at)}.</p>}
         </Card>
@@ -150,21 +156,48 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
   )
 }
 
-/** "Meus pedidos": cliente sem conta consulta pelo código do pedido + telefone da compra. Nada de outros pedidos aparece. */
+const PAGE = 5
+
+/** Logado: lista dos próprios pedidos, sem pedir código nem telefone. */
+function MyOrders({ highlight }: { highlight: string }) {
+  const { store } = useStore()
+  const { session } = useAuth()
+  const [shown, setShown] = useState(PAGE)
+  const q = useQuery({
+    queryKey: ['shop', 'my-orders', store.org.slug, session?.user.id],
+    queryFn: async () => (await invokeShop<{ orders: LookupResult[] }>('shop-order-public', { action: 'mine', org_slug: store.org.slug })).orders,
+    refetchInterval: (query) => (query.state.data?.some((o) => o.order.status === 'awaiting_payment' || o.order.status === 'payment_review') ? 20_000 : false),
+  })
+  if (q.isPending) return <p className="text-center text-muted-foreground">Carregando seus pedidos</p>
+  if (q.isError) return <Card className="space-y-2 p-5"><p role="alert" className="text-destructive">{(q.error as Error).message}</p><Button onClick={() => void q.refetch()}>Tentar de novo</Button></Card>
+  const orders = [...q.data].sort((a, b) => Number(b.order.code === highlight) - Number(a.order.code === highlight))
+  if (orders.length === 0) return <Card className="p-5"><p>Você ainda não fez pedidos nesta loja.</p></Card>
+  return (
+    <div className="space-y-4">
+      {orders.slice(0, shown).map((o) => <OrderView key={o.order.code} data={o} phone="" onRefresh={() => void q.refetch()} refreshing={q.isFetching} />)}
+      {orders.length > shown && <Button variant="outline" className="w-full" onClick={() => setShown(shown + PAGE)}>Ver mais {Math.min(PAGE, orders.length - shown)}</Button>}
+    </div>
+  )
+}
+
+/** "Meus pedidos": logado vê os próprios pedidos; visitante consulta pelo código do pedido + telefone da compra. */
 export function OrderLookupPage() {
-  const { basePath } = useStore()
+  const { basePath, store } = useStore()
+  const { session } = useAuth()
   const location = useLocation()
+  const [params] = useSearchParams()
   const fromState = location.state as { code?: string; phone?: string } | null
   const saved = useRef<{ code: string; phone: string } | null>(null)
   if (saved.current === null) {
     try { saved.current = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') } catch { saved.current = null }
   }
-  const [code, setCode] = useState(fromState?.code ?? saved.current?.code ?? '')
-  const [phone, setPhone] = useState(fromState?.phone ?? saved.current?.phone ?? '')
+  const urlCode = (params.get('codigo') ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const [code, setCode] = useState(fromState?.code ?? (urlCode || saved.current?.code || ''))
+  const [phone, setPhone] = useState(fromState?.phone ?? (saved.current && (!urlCode || saved.current.code === urlCode) ? saved.current.phone : ''))
   const [data, setData] = useState<LookupResult | null>(null)
 
   const search = useMutation({
-    mutationFn: () => invokeShop<LookupResult>('shop-order-public', { action: 'lookup', code: code.trim().toUpperCase(), phone }),
+    mutationFn: () => invokeShop<LookupResult>('shop-order-public', { action: 'lookup', org_slug: store.org.slug, code: code.trim().toUpperCase(), phone }),
     onSuccess: (r) => {
       setData(r)
       try { sessionStorage.setItem(KEY, JSON.stringify({ code: code.trim().toUpperCase(), phone })) } catch { /* sem armazenamento: só não lembra */ }
@@ -172,27 +205,45 @@ export function OrderLookupPage() {
     onError: (e) => { setData(null); toast.error((e as Error).message) },
   })
 
-  // Veio da confirmação da compra (ou recarregou a página): consulta sozinho.
+  // Veio da compra (ou recarregou/voltou do pagamento): consulta sozinho e acompanha o pagamento até ser confirmado.
   const auto = useRef(false)
   useEffect(() => {
-    if (!auto.current && code && phone.replace(/\D/g, '').length >= 10 && (fromState?.code || saved.current)) { auto.current = true; search.mutate() }
+    if (!session && !auto.current && code && phone.replace(/\D/g, '').length >= 10) { auto.current = true; search.mutate() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  const waiting = data?.order.status === 'awaiting_payment' || data?.order.status === 'payment_review'
+  useEffect(() => {
+    if (!waiting) return
+    const t = setInterval(() => search.mutate(), 20_000)
+    return () => clearInterval(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting])
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <h1>Meus pedidos</h1>
-      <Card className="p-5">
-        <form onSubmit={(e) => { e.preventDefault(); if (code.trim() && phone) search.mutate() }} className="space-y-3">
-          <p className="text-sm text-muted-foreground">Informe o código do pedido (está no e-mail e na tela de confirmação) e o telefone usado na compra.</p>
-          <div className="space-y-1.5"><Label htmlFor="lk-code">Código do pedido</Label>
-            <Input id="lk-code" autoCapitalize="characters" autoComplete="off" maxLength={12} className="uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} /></div>
-          <div className="space-y-1.5"><Label htmlFor="lk-phone">Telefone</Label><PhoneInput id="lk-phone" value={phone} onChange={setPhone} /></div>
-          <Button type="submit" className="w-full" disabled={search.isPending || code.trim().length < 6 || phone.replace(/\D/g, '').length < 10}>{search.isPending ? 'Buscando' : 'Consultar pedido'}</Button>
-        </form>
-      </Card>
-      {data && <OrderView data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
+      {session ? <MyOrders highlight={code.trim().toUpperCase()} /> : (
+        <>
+          <Card className="p-5">
+            <form onSubmit={(e) => { e.preventDefault(); if (code.trim() && phone) search.mutate() }} className="space-y-3">
+              <p className="text-sm text-muted-foreground">Informe o código do pedido (está no e-mail e na tela de confirmação) e o telefone usado na compra. Ou entre na sua conta para ver todos os seus pedidos.</p>
+              <div className="space-y-1.5"><Label htmlFor="lk-code">Código do pedido</Label>
+                <Input id="lk-code" autoCapitalize="characters" autoComplete="off" maxLength={12} className="uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="lk-phone">Telefone</Label><PhoneInput id="lk-phone" value={phone} onChange={setPhone} /></div>
+              <Button type="submit" className="w-full" disabled={search.isPending || code.trim().length < 6 || phone.replace(/\D/g, '').length < 10}>{search.isPending ? 'Buscando' : 'Consultar pedido'}</Button>
+            </form>
+          </Card>
+          {data && <OrderView data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
+        </>
+      )}
       <Link className="block text-center font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
     </div>
   )
+}
+
+/** Links antigos (/pedido/CÓDIGO, inclusive o retorno da InfinitePay) levam para "Meus pedidos" com o código. */
+export function OrderCodeRedirect() {
+  const { code = '' } = useParams()
+  const { basePath } = useStore()
+  return <Navigate to={`${basePath}/consultar?codigo=${encodeURIComponent(code)}`} replace />
 }
