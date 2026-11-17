@@ -2,6 +2,7 @@ import { KitChip } from '@/modules/shop/KitChip'
 import { useMutation } from '@tanstack/react-query'
 import { Copy } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { CreditFeeTable } from './CreditFeeTable'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
@@ -137,10 +138,11 @@ export function CheckoutPage() {
                 <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
                   <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
                   <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
-                  {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">Taxa do cartão: {money(creditFeeCents(cart.totalCents))} · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
+                  {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">À vista: taxa de 4,20% (+ {money(creditFeeCents(cart.totalCents))}) · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
                   {m === 'pix' && <span className="mt-1 block text-sm font-semibold">Sem taxa · você paga {money(cart.totalCents)}</span>}
                 </button>
                 {m === 'pix' && pixBox}
+                {m === 'infinitepay' && f.method === 'infinitepay' && <div className="p-3 pt-0"><CreditFeeTable cents={cart.totalCents} /></div>}
               </div>
             ))}
           </div>
@@ -166,7 +168,7 @@ export function CheckoutPage() {
           </ul>
           <hr className="border-border" />
           {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(cart.discountCents)}</span></div>}
-          {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão (estimada)</span><span>{money(creditFeeCents(cart.totalCents))}</span></div>}
+          {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span>{money(creditFeeCents(cart.totalCents))}</span></div>}
           <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span>{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
           {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
         </Card>

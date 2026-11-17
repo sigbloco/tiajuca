@@ -11,8 +11,9 @@ import { fromCents, type ProductKind } from '../catalog'
 import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
+import { CreditFeeTable } from './CreditFeeTable'
 import { PixQr } from './PixQr'
-import { METHOD_LABELS, availableMethods, creditFeeCents, creditTotalCents, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, CREDIT_FEES_PCT, creditTotalCents, formatPct, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -57,11 +58,14 @@ const METHOD_NAME = { pix: 'Pix', infinitepay: 'Cartão de crédito (InfinitePay
 const METHOD_SHORT = { pix: 'Pix', infinitepay: 'Cartão de crédito' } as const
 const linkBtn = 'inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted'
 
-function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: LookupResult; phone: string; onRefresh: () => void; refreshing?: boolean; defaultOpen?: boolean }) {
+function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp, onToggle }: { data: LookupResult; phone: string; onRefresh: () => void; refreshing?: boolean; defaultOpen?: boolean; open?: boolean; onToggle?: () => void }) {
   const { store } = useStore()
   const { order } = data
   const [status, setStatus] = useState(order.status)
-  const [open, setOpen] = useState(defaultOpen)
+  const [localOpen, setLocalOpen] = useState(defaultOpen)
+  const open = openProp ?? localOpen
+  const toggle = onToggle ?? (() => setLocalOpen(!localOpen))
+  const [confirmCancel, setConfirmCancel] = useState(false)
   useEffect(() => setStatus(order.status), [order.status])
   const report = useMutation({
     mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'report_payment', org_slug: store.org.slug, code: order.code, phone }),
@@ -72,6 +76,11 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
     ? pixInstructions({ pix: store.pix, contact: store.contact, orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name })
     : null
   const directors = directorLinks(store.contact, order.code)
+  const cancel = useMutation({
+    mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'cancel', org_slug: store.org.slug, code: order.code, phone }),
+    onSuccess: () => { setConfirmCancel(false); toast.success('Pedido cancelado.'); onRefresh() },
+    onError: (e) => toast.error((e as Error).message),
+  })
   const change = useMutation({
     mutationFn: (m: string) => invokeShop('shop-checkout', { action: 'change_method', org_slug: store.org.slug, code: order.code, phone, payment_method: m }),
     onSuccess: () => { toast.success('Forma de pagamento alterada.'); onRefresh() },
@@ -87,8 +96,8 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
   const pickupLinks = pickupWhatsAppLinks(store.pickup_points.filter((p) => p.id === order.pickup_point_id), { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
   return (
-    <div className="space-y-4">
-      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left hover:bg-muted">
+    <Card className="overflow-hidden p-0">
+      <button type="button" aria-expanded={open} onClick={toggle} className="flex w-full items-center gap-3 bg-card p-4 text-left hover:bg-muted">
         <span className="min-w-0 flex-1 space-y-1">
           <span className="flex flex-wrap items-center gap-2"><span className="font-display text-xl font-extrabold tracking-widest">{order.code}</span><Badge>{CUSTOMER_STATUS_LABEL[status]}</Badge></span>
           <span className="block text-sm text-muted-foreground">{formatDateTime(order.created_at)} · {itemCount} {itemCount === 1 ? 'item' : 'itens'} · {METHOD_LABELS[order.payment_method].label}</span>
@@ -96,8 +105,8 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
         <span className="shrink-0 text-lg font-extrabold">{money(order.total_cents)}</span>
         <ChevronDown className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
-      {open && <>
-      <Card className="space-y-3 p-5">
+      {open && <div className="divide-y divide-border border-t border-border">
+      <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Itens</h2>
         <ul className="space-y-1 text-sm">
           {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-2"><span>{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span>{money(i.unit_final_cents * i.quantity)}</span></li>)}
@@ -125,10 +134,10 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
           </div>
         )}
         {order.expires_at && status === 'awaiting_payment' && <p className="text-sm text-muted-foreground">Itens reservados até {formatDate(order.expires_at)}.</p>}
-      </Card>
+      </section>
 
       {status !== 'cancelled' && (
-        <Card className="space-y-3 p-5">
+        <section className="space-y-3 p-5">
           <h2 className="text-lg font-bold">Forma de pagamento: {METHOD_NAME[order.payment_method]}</h2>
           {status === 'paid' && <p className="text-sm">Pagamento confirmado. Obrigado!</p>}
           {status === 'payment_review' && <p className="text-sm">Recebemos o seu aviso. Assim que a loja conferir o comprovante, o pedido é marcado como pago.</p>}
@@ -137,7 +146,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
               ? <>
                   <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · {money(order.total_cents)}</a>
                   <p className="text-sm">Conclua o pagamento no link da InfinitePay. A confirmação é automática.</p>
-                  <p className="rounded-lg bg-muted p-3 text-sm"><strong>Atenção à taxa:</strong> no cartão de crédito a InfinitePay cobra uma taxa de quem paga (cerca de {money(creditFeeCents(order.total_cents))} neste pedido). O valor com a taxa é de aproximadamente <strong>{money(creditTotalCents(order.total_cents))}</strong>. Parcelando, a taxa é maior. No Pix não há taxa.</p>
+                  <CreditFeeTable cents={order.total_cents} />
                 </>
               : <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>
           )}
@@ -160,29 +169,40 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
               <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
             </>
           )}
-          {others.map((m) => <Button key={m} variant="outline" className="w-full" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{m === 'infinitepay' ? ` (≈ ${money(creditTotalCents(order.total_cents))} com a taxa)` : order.payment_method === 'infinitepay' ? ` (${money(order.total_cents)}, sem taxa)` : ''}</Button>)}
-        </Card>
+          {others.map((m) => <Button key={m} variant="outline" className="w-full" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{m === 'infinitepay' ? ` (à vista ≈ ${money(creditTotalCents(order.total_cents))} com a taxa de ${formatPct(CREDIT_FEES_PCT[0])})` : order.payment_method === 'infinitepay' ? ` (${money(order.total_cents)}, sem taxa)` : ''}</Button>)}
+          {status === 'awaiting_payment' && (confirmCancel
+            ? (
+              <div className="space-y-2 rounded-lg border border-destructive p-3">
+                <p className="text-sm font-semibold">Cancelar este pedido? Os itens reservados serão liberados.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => setConfirmCancel(false)}>Voltar</Button>
+                  <Button variant="destructive" disabled={cancel.isPending} onClick={() => cancel.mutate()}>{cancel.isPending ? 'Cancelando' : 'Sim, cancelar'}</Button>
+                </div>
+              </div>
+            )
+            : <Button variant="outline" className="w-full text-destructive" onClick={() => setConfirmCancel(true)}>Cancelar pedido</Button>)}
+        </section>
       )}
 
-      <Card className="space-y-2 p-5">
+      <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Retirada</h2>
         <p className="font-semibold">{data.pickup.name}</p>
         <p className="text-sm">{data.pickup.address}</p>
         {data.pickup.opening_hours && <p className="text-sm text-muted-foreground">{data.pickup.opening_hours}</p>}
         <p className="text-sm">A retirada é combinada: avisaremos quando estiver pronta.</p>
         {pickupZap && <a className={linkBtn} href={pickupZap} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Falar pelo WhatsApp</a>}
-      </Card>
+      </section>
 
       {directors.length > 0 && (
-        <Card className="space-y-2 p-5">
+        <section className="space-y-3 p-5">
           <h2 className="text-lg font-bold">Precisa de ajuda?</h2>
           <div className="flex flex-wrap gap-2">
             {directors.map((d) => <a key={d.name} className={linkBtn} href={d.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {d.name}</a>)}
           </div>
-        </Card>
+        </section>
       )}
-      </>}
-    </div>
+      </div>}
+    </Card>
   )
 }
 
@@ -193,6 +213,7 @@ function MyOrders({ highlight }: { highlight: string }) {
   const { store } = useStore()
   const { session } = useAuth()
   const [shown, setShown] = useState(PAGE)
+  const [openCode, setOpenCode] = useState<string | null>(highlight || null)
   const q = useQuery({
     queryKey: ['shop', 'my-orders', store.org.slug, session?.user.id],
     queryFn: async () => (await invokeShop<{ orders: LookupResult[] }>('shop-order-public', { action: 'mine', org_slug: store.org.slug })).orders,
@@ -204,7 +225,7 @@ function MyOrders({ highlight }: { highlight: string }) {
   if (orders.length === 0) return <Card className="p-5"><p>Você ainda não fez pedidos nesta loja.</p></Card>
   return (
     <div className="space-y-4">
-      {orders.slice(0, shown).map((o) => <OrderView key={o.order.code} data={o} defaultOpen={o.order.code === highlight} phone="" onRefresh={() => void q.refetch()} refreshing={q.isFetching} />)}
+      {orders.slice(0, shown).map((o) => <OrderView key={o.order.code} data={o} open={openCode === o.order.code} onToggle={() => setOpenCode(openCode === o.order.code ? null : o.order.code)} phone="" onRefresh={() => void q.refetch()} refreshing={q.isFetching} />)}
       {orders.length > shown && <Button variant="outline" className="w-full" onClick={() => setShown(shown + PAGE)}>Ver mais {Math.min(PAGE, orders.length - shown)}</Button>}
     </div>
   )

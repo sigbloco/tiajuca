@@ -108,7 +108,7 @@ export function AppShell() {
         <p className="max-w-sm text-muted-foreground">A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.</p>
         <div className="flex w-full max-w-sm flex-col gap-2">
           <Link to={`/${membership.slug}/loja`}><Button className="w-full"><Store className="h-4 w-4" /> Ir para a loja</Button></Link>
-          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
+          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Ir para o site</Button></Link>
           <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
       </div>
@@ -185,7 +185,7 @@ export function AppShell() {
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         {/* Site, nome e Sair: fixos no topo da página (no celular, também dentro do menu). */}
         <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 mb-3 flex h-12 items-center gap-2 border-b border-border bg-background px-4 md:-mx-8 md:-mt-8 md:px-8">
-          <Link to="/site" className="flex-1 md:flex-none"><Button variant="outline" size="sm" className="w-full md:w-auto"><Globe className="h-4 w-4" /> Site</Button></Link>
+          <Link to="/site" className="flex-1 md:flex-none"><Button variant="outline" size="sm" className="w-full md:w-auto"><Globe className="h-4 w-4" /> Ir para o site</Button></Link>
           <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
           <Button variant="outline" size="sm" className="flex-1 md:flex-none" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
@@ -237,7 +237,7 @@ export function AppShell() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent drawer title="Menu" description={membership.display_name} headSlot={(
           <div className="grid grid-cols-2 gap-2">
-            <Link to="/site" onClick={() => setMoreOpen(false)}><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Site</Button></Link>
+            <Link to="/site" onClick={() => setMoreOpen(false)}><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Ir para o site</Button></Link>
             <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
           </div>
         )}>

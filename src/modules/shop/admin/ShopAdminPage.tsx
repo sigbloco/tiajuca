@@ -21,7 +21,7 @@ const TABS = [
   { key: 'products', label: 'Produtos' },
   { key: 'kits', label: 'Kits' },
   { key: 'stock', label: 'Estoque' },
-  { key: 'pickup', label: 'Pontos de retirada' },
+  { key: 'pickup', label: 'Retiradas' },
 ] as const
 type TabKey = (typeof TABS)[number]['key'] | 'payments'
 const TAB_LABEL: Record<TabKey, string> = { orders: 'Pedidos', products: 'Produtos', kits: 'Kits', stock: 'Estoque', pickup: 'Pontos de retirada', payments: 'Configurações' }
