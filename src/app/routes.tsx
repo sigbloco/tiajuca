@@ -74,8 +74,8 @@ function RootRedirect() {
 
 function RequireAuth() {
   const { session, loading } = useAuth()
+  const { pathname, search } = useLocation() // hook ANTES de qualquer return: com o login ainda carregando, a ordem dos hooks mudava e a tela ficava em branco
   if (loading) return <Loading />
-  const { pathname, search } = useLocation()
   return session ? <Outlet /> : <Navigate to={`/?entrar=1&voltar=${encodeURIComponent(pathname + search)}`} replace />
 }
 
