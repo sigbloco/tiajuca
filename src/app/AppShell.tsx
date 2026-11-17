@@ -96,7 +96,7 @@ export function AppShell() {
   // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0
-  if (!membership) return null
+  if (!membership) return <div className="p-8 text-muted-foreground">Carregando</div>
   // Área dos integrantes em construção: só Titular e direção entram (vale pelo acesso real, não pela simulação).
   const realRoles = (realMembership ?? membership).roles
   if (!realRoles.includes('titular') && !realRoles.includes('direcao')) {
