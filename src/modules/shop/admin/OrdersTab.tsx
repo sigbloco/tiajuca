@@ -1,3 +1,4 @@
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -49,15 +50,15 @@ export function OrdersTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {toCheck > 0 && filters.status === 'all' && <Badge className="bg-secondary text-secondary-foreground">{toCheck} pagamento(s) para conferir</Badge>}
+      {toCheck > 0 && filters.status === 'all' && <Badge className="bg-secondary text-secondary-foreground">{toCheck} pagamento(s) para conferir</Badge>}
+      <ButtonRow>
         <Button size="sm" variant="outline" disabled={exporting || !orders.data} onClick={() => void exportPdf()}>
           <FileDown className="h-4 w-4" /> {exporting ? 'Gerando' : 'Exportar PDF'}
         </Button>
         <Button size="sm" variant="outline" disabled={bulk.isPending} onClick={async () => await confirmBox('Arquivar todos os pedidos cancelados ou já totalmente retirados? Eles saem desta lista, mas nada é apagado (veja em "Arquivados").') && bulk.mutate()}>
           <Archive className="h-4 w-4" /> Arquivar encerrados
         </Button>
-      </div>
+      </ButtonRow>
       <div className="grid gap-2 sm:grid-cols-5">
         <Select aria-label="Mostrar pedidos arquivados" value={filters.archive} onChange={(e) => setFilters({ ...filters, archive: e.target.value as OrderFilters['archive'] })}>
           <option value="active">Pedidos ativos</option>

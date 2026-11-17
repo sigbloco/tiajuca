@@ -49,7 +49,7 @@ export const IMPLEMENTED_METHODS: readonly PaymentMethodKey[] = ['pix', 'infinit
 
 export const METHOD_LABELS: Record<PaymentMethodKey, { label: string; hint: string }> = {
   pix: { label: 'Pix', hint: 'Você paga pelo seu banco e envia o comprovante. Confirmamos manualmente.' },
-  infinitepay: { label: 'Cartão de crédito ou Pix (InfinitePay)', hint: 'Você paga em uma página segura da InfinitePay.' },
+  infinitepay: { label: 'Cartão de crédito (InfinitePay)', hint: 'Você paga em uma página segura da InfinitePay.' },
 }
 
 /** Dos métodos que a loja habilitou (painel → Pagamentos), os que o sistema sabe executar. */
