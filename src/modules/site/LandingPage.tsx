@@ -162,7 +162,7 @@ export function LandingPage() {
 
         <footer className="pt-4 text-center text-xs text-muted-foreground">{org.name}</footer>
       </div>
-      <LoginPopup open={loginOpen} onOpenChange={closeLogin} onSignedIn={() => { const b = params.get('voltar'); if (b) navigate(safeBack(b), { replace: true }) }} />
+      <LoginPopup open={loginOpen} onOpenChange={closeLogin} returnTo={params.get('voltar') ? safeBack(params.get('voltar')) : `/${slug}`} onSignedIn={() => { const b = params.get('voltar'); if (b) navigate(safeBack(b), { replace: true }) }} />
     </main>
   )
 }
