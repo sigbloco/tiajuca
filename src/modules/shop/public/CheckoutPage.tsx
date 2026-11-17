@@ -205,7 +205,7 @@ export function CheckoutPage() {
           <span>Li e concordo com o <Link className="font-semibold text-primary hover:underline" to={`${basePath}/privacidade`} target="_blank">aviso de privacidade</Link>: usaremos seu nome, telefone e e-mail só para este pedido.</span>
         </label>
         {blockers.map((b) => <p key={b} role="alert" className="text-sm text-destructive">{b}</p>)}
-        <Button type="submit" className="w-full" disabled={submit.isPending}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
+        <Button type="submit" className="w-full" disabled={submit.isPending}>{submit.isPending ? 'Enviando' : `Avançar para o pagamento · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
       </form>
 
       <aside className="hidden space-y-2 md:sticky md:top-20 md:block md:self-start">
