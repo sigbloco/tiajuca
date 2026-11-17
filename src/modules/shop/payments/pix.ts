@@ -87,7 +87,7 @@ export function pickupWhatsAppLinks(
   for (const p of points) {
     const d = (p.contact_phone ?? '').replace(/\D/g, '')
     if (d.length < 10) continue
-    out.push({ id: p.id, name: `Enviar para ${p.contact_name?.trim().split(/\s+/)[0] || p.name.replace(/^combinar com\s+/i, '')}`, url: `https://wa.me/${d.startsWith('55') ? d : '55' + d}?text=${encodeURIComponent(text)}` })
+    out.push({ id: p.id, name: `Enviar para ${p.name.replace(/^combinar com\s+/i, '').replace(/^(a|o)\s+/i, '') || p.contact_name?.trim().split(/\s+/)[0] || p.name}`, url: `https://wa.me/${d.startsWith('55') ? d : '55' + d}?text=${encodeURIComponent(text)}` })
   }
   return opts.firstId ? [...out.filter((o) => o.id === opts.firstId), ...out.filter((o) => o.id !== opts.firstId)] : out
 }
