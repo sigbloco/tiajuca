@@ -67,18 +67,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
   const open = openProp ?? localOpen
   const toggle = onToggle ?? (() => setLocalOpen(!localOpen))
   const [confirmCancel, setConfirmCancel] = useState(false)
-  const [confirmReport, setConfirmReport] = useState(false)
   useEffect(() => setStatus(order.status), [order.status])
-  const report = useMutation({
-    mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'report_payment', org_slug: store.org.slug, code: order.code, phone }),
-    onSuccess: (r) => { setConfirmReport(false); setStatus(r.status); toast.success('Avisamos a loja. Vamos conferir o seu pagamento.'); onRefresh() },
-    onError: (e) => toast.error((e as Error).message),
-  })
-  const unreport = useMutation({
-    mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'unreport_payment', org_slug: store.org.slug, code: order.code, phone }),
-    onSuccess: (r) => { setStatus(r.status); toast.success('Aviso desfeito. O pedido voltou a aguardar o pagamento.'); onRefresh() },
-    onError: (e) => toast.error((e as Error).message),
-  })
   const pix = order.payment_method === 'pix' && status === 'awaiting_payment' && store.pix
     ? pixInstructions({ pix: store.pix, contact: store.contact, orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name })
     : null
@@ -153,14 +142,10 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
 
       {status !== 'cancelled' && (
         <section className="space-y-3 p-5">
-          <h2 className="text-lg font-bold">Forma de pagamento:<br />{METHOD_NAME[order.payment_method]}</h2>
+          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
+          <h2 className="flex flex-wrap gap-x-2 text-lg font-bold"><span>Forma de pagamento:</span><span>{METHOD_NAME[order.payment_method]}</span></h2>
           {status === 'paid' && <p className="text-sm">Pagamento confirmado. Obrigado!</p>}
-          {status === 'payment_review' && (
-            <>
-              <p className="text-sm">Recebemos o seu aviso. Assim que a loja conferir o comprovante, o pedido é marcado como pago.</p>
-              <Button variant="outline" className="w-full" disabled={unreport.isPending} onClick={() => unreport.mutate()}>{unreport.isPending ? 'Desfazendo' : 'Avisei sem querer: ainda não paguei'}</Button>
-            </>
-          )}
+          {status === 'payment_review' && <p className="text-sm">Recebemos o seu aviso. Assim que a loja conferir o comprovante, o pedido é marcado como pago.</p>}
           {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
             <>
               {!order.payment_url && <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>}
@@ -183,20 +168,8 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
                 {pickupLinks.length === 0 && pix.whatsappUrl && <a className={`${linkBtn} justify-center`} href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4 shrink-0" /> WhatsApp</a>}
                 {pix.mailtoUrl && <a className={`${linkBtn} justify-center`} href={pix.mailtoUrl}><Mail className="h-4 w-4 shrink-0" /> E-mail</a>}
               </ButtonRow>
-              {confirmReport
-                ? (
-                  <div className="space-y-2 rounded-lg border border-primary p-3">
-                    <p className="text-sm font-semibold">Já pagou o Pix? Marque só depois de pagar. Se marcou sem querer, dá para desfazer em seguida.</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" onClick={() => setConfirmReport(false)}>Voltar</Button>
-                      <Button disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Sim, já paguei'}</Button>
-                    </div>
-                  </div>
-                )
-                : <Button className="w-full" onClick={() => setConfirmReport(true)}>Já fiz o pagamento</Button>}
             </>
           )}
-          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
         </section>
       )}
 
