@@ -150,7 +150,7 @@ export function proofLinks(a: {
   const dir = a.directors.find((d) => d.name.toLowerCase().includes(first))
   if (dir) {
     const msg = a.orderCode ? `Olá! Já fiz o Pix do pedido ${a.orderCode}${a.totalCents ? ` (${brl(a.totalCents)})` : ''}${a.customerName ? `, em nome de ${a.customerName}` : ''}. Segue o comprovante.` : 'Olá! Já fiz o Pix da minha compra na loja. Segue o comprovante.'
-    out.push({ id: 'beneficiary', name: `Enviar para ${dir.name.trim().split(/\\s+/)[0]}`, url: `https://wa.me/${dir.whatsapp}?text=${encodeURIComponent(msg)}` })
+    out.push({ id: 'beneficiary', name: `Enviar para ${dir.name.trim().split(/\s+/)[0]}`, url: `https://wa.me/${dir.whatsapp}?text=${encodeURIComponent(msg)}` })
   }
   return out
 }
