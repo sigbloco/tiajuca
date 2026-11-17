@@ -72,7 +72,7 @@ export function RandomSuggestions({ exclude }: { exclude: string[] }) {
   return (
     <section className="space-y-2" aria-label="Que tal levar também">
       <h2 className="text-sm font-semibold text-muted-foreground">Que tal levar também?</h2>
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <ul className="grid max-w-md grid-cols-4 gap-1.5">
         {items.map((p) => {
           const options = p.variants.filter((v) => v.available !== 0)
           return (
@@ -83,12 +83,12 @@ export function RandomSuggestions({ exclude }: { exclude: string[] }) {
                     ? <img src={imageUrl(p.images[0])} alt="" loading="lazy" className="aspect-square w-full object-contain bg-muted" />
                     : <div aria-hidden className="aspect-square w-full bg-muted" />}
                 </Link>
-                <div className="flex flex-1 flex-col gap-1 p-2">
-                  <p className="text-xs font-semibold leading-tight">{p.is_kit && <KitChip />}{p.name}</p>
-                  <div className="text-xs [&_strong]:text-sm"><Price product={p} isMember={isMember} /></div>
+                <div className="flex flex-1 flex-col gap-1 p-1.5">
+                  <p className="line-clamp-2 text-[11px] font-semibold leading-tight">{p.is_kit && <KitChip />}{p.name}</p>
+                  <div className="text-[11px] [&_strong]:text-xs"><Price product={p} isMember={isMember} /></div>
                   {options.length === 1 && p.variants.length === 1
-                    ? <Button size="sm" className="mt-auto w-full" onClick={() => { add(options[0].id, 1); toast.success(`${p.name} adicionado.`) }}>Adicionar</Button>
-                    : <Link to={`${basePath}/produto/${p.slug}`} className="mt-auto inline-flex min-h-9 w-full items-center justify-center rounded-lg border border-border px-2 text-sm font-semibold hover:bg-muted">Escolher opção</Link>}
+                    ? <Button size="sm" className="mt-auto h-7 w-full px-1 text-xs" onClick={() => { add(options[0].id, 1); toast.success(`${p.name} adicionado.`) }}>Adicionar</Button>
+                    : <Link to={`${basePath}/produto/${p.slug}`} className="mt-auto inline-flex h-7 w-full items-center justify-center rounded-lg border border-border px-1 text-xs font-semibold hover:bg-muted">Opções</Link>}
                 </div>
               </Card>
             </li>
