@@ -158,7 +158,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
           )}
           {pix && (
             <>
-              <PixQr pixKey={pix.key} beneficiary={pix.beneficiary} amountCents={order.total_cents} orderCode={order.code} />
+              <PixQr pixKey={pix.key} beneficiary={pix.beneficiary} amountCents={order.total_cents} orderCode={order.code} sideBySide />
               <div className="text-sm">
                 <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{pix.key}
                   <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>

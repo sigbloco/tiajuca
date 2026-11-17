@@ -1,9 +1,6 @@
 import { KitChip } from '@/modules/shop/KitChip'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { CreditFeeTable } from './CreditFeeTable'
-import { PixQr } from './PixQr'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
@@ -14,15 +11,11 @@ import { formatCurrency } from '@/core/format'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
-import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents, proofLinks } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents } from '../payments/pix'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
 const money = (cents: number) => formatCurrency(fromCents(cents))
-
-async function copy(text: string, what: string) {
-  try { await navigator.clipboard.writeText(text); toast.success(`${what} copiado.`) } catch { toast.error('Não foi possível copiar. Selecione e copie manualmente.') }
-}
 
 export function CheckoutPage() {
   const { store, cart, basePath, clear, isMember, index } = useStore()
@@ -116,25 +109,22 @@ export function CheckoutPage() {
     submit.mutate()
   }
 
-    const pixBox = f.method === 'pix' && store.pix ? (() => {
-      const links = proofLinks({ points: pickup ? points.filter((p) => p.id === pickup) : points, allPoints: store.pickup_points, directors: store.contact.directors, beneficiary: store.pix.beneficiary })
-      return (
-        <div className="space-y-3 border-t border-primary/30 p-3 text-sm">
-          <PixQr pixKey={store.pix.key} beneficiary={store.pix.beneficiary} amountCents={cart.totalCents} orderCode="" />
-          <div>
-            <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
-              <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
-            <p className="text-muted-foreground">Em nome de {store.pix.beneficiary}</p>
-          </div>
-          <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
-          {links.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {links.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
-            </div>
-          )}
-        </div>
-      )
-    })() : null
+
+  const summary = (
+      <Card className="space-y-2 p-4">
+        <h2 className="text-lg font-bold">Resumo</h2>
+        <ul className="space-y-1 text-sm">
+          {cart.lines.map((l) => (
+            <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span className="shrink-0 whitespace-nowrap">{money(l.lineTotalCents)}</span></li>
+          ))}
+        </ul>
+        <hr className="border-border" />
+        {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents)}</span></div>}
+        {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents))}</span></div>}
+        <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
+        {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
+      </Card>
+  )
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_20rem]">
@@ -162,18 +152,16 @@ export function CheckoutPage() {
           </Card>
         )}
 
+        <div className="md:hidden">{summary}</div>
+
         <Card className="space-y-3 p-4">
           <h2 className="text-lg font-bold">Pagamento</h2>
           <div role="radiogroup" aria-label="Forma de pagamento" className="grid gap-2">
             {methods.map((m) => (
               <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
                 <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
-                  <span className="block font-semibold">{METHOD_LABELS[m].label}{m === 'pix' && <> · <span className="whitespace-nowrap">{money(cart.totalCents)}</span></>}</span>
-                  {m !== 'pix' && <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>}
-                  {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">À vista: taxa de 4,20% (+ {money(creditFeeCents(cart.totalCents))}) · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
+                  <span className="block font-semibold">{METHOD_LABELS[m].label} · <span className="whitespace-nowrap">{m === 'infinitepay' ? '≈ ' : ''}{money(m === 'infinitepay' ? creditTotalCents(cart.totalCents) : cart.totalCents)}</span></span>
                 </button>
-                {m === 'pix' && pixBox}
-                {m === 'infinitepay' && f.method === 'infinitepay' && <div className="p-3 pt-0"><CreditFeeTable cents={cart.totalCents} /></div>}
               </div>
             ))}
           </div>
@@ -220,20 +208,8 @@ export function CheckoutPage() {
         <Button type="submit" className="w-full" disabled={submit.isPending}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
       </form>
 
-      <aside className="space-y-2 md:sticky md:top-20 md:self-start">
-        <Card className="space-y-2 p-4">
-          <h2 className="text-lg font-bold">Resumo</h2>
-          <ul className="space-y-1 text-sm">
-            {cart.lines.map((l) => (
-              <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span className="shrink-0 whitespace-nowrap">{money(l.lineTotalCents)}</span></li>
-            ))}
-          </ul>
-          <hr className="border-border" />
-          {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents)}</span></div>}
-          {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents))}</span></div>}
-          <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
-          {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
-        </Card>
+      <aside className="hidden space-y-2 md:sticky md:top-20 md:block md:self-start">
+        {summary}
         <Link className="text-sm font-semibold text-primary hover:underline" to={`${basePath}/carrinho`}>← Voltar ao carrinho</Link>
       </aside>
     </div>
