@@ -8,9 +8,11 @@ import { router } from '@/app/routes'
 import { AuthProvider } from '@/core/auth'
 import { startGlueConnectives } from '@/core/glueConnectives'
 import { applyCachedTheme } from '@/core/theme'
+import { startTrace } from '@/core/trace'
 import '@/styles/index.css'
 
 applyCachedTheme()
+startTrace()
 // Depois de uma publicação nova, um arquivo antigo pode sumir: recarrega uma vez em vez de deixar a tela em branco.
 window.addEventListener('vite:preloadError', () => {
   try { if (sessionStorage.getItem('sigbloco:reloaded')) return; sessionStorage.setItem('sigbloco:reloaded', '1') } catch { /* segue */ }
