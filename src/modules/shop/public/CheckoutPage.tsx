@@ -1,11 +1,13 @@
 import { KitChip } from '@/modules/shop/KitChip'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Copy } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CreditFeeTable } from './CreditFeeTable'
+import { PixQr } from './PixQr'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { PhoneInput } from '@/components/ui/masked-inputs'
+import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
+import { supabase } from '@/core/supabase'
 import { Button, Card, Input, Label, Select, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
 import { formatCurrency } from '@/core/format'
@@ -35,6 +37,29 @@ export function CheckoutPage() {
   const [accepted, setAccepted] = useState(false)
   // Depois de criar o pedido o carrinho esvazia: sem isto a tela cairia no "carrinho vazio" antes de abrir Meus pedidos.
   const finished = useRef(false)
+  const [bad, setBad] = useState<string[]>([])
+  const [editing, setEditing] = useState(false)
+  const badCls = 'rounded-lg border border-destructive bg-destructive/10 p-2'
+  // Logado: nome, e-mail e WhatsApp vêm do cadastro (ou do último pedido); sobra só escolher o ponto de retirada.
+  const contact = useQuery({
+    queryKey: ['shop', 'my-contact', store.org.id, session?.user.id],
+    enabled: !!session,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('shop_my_contact', { p_org: store.org.id })
+      if (error) throw error
+      return data as { name: string | null; email: string | null; phone: string | null } | null
+    },
+  })
+  useEffect(() => {
+    const c = contact.data
+    if (!c) return
+    setF((prev) => ({
+      ...prev,
+      name: prev.name.trim() ? prev.name : c.name ?? prev.name,
+      email: prev.email.trim() ? prev.email : c.email ?? prev.email,
+      phone: prev.phone.replace(/\D/g, '').length >= 10 ? prev.phone : c.phone ? maskPhone(c.phone) : prev.phone,
+    }))
+  }, [contact.data])
   const blockers = f.method ? checkoutBlockers(f.method as 'pix', store) : ['Esta loja ainda não tem forma de pagamento ativa.']
   const noPickup = store.pickup_points.length === 0
   // Só os pontos que servem a TODOS os itens do carrinho (cada produto pode ter os seus).
@@ -64,7 +89,32 @@ export function CheckoutPage() {
 
   if (cart.lines.length === 0 && !finished.current) return <Navigate to={`${basePath}/carrinho`} replace />
   const payCents = f.method === 'infinitepay' ? creditTotalCents(cart.totalCents) : cart.totalCents
-  const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || noCommon || !pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
+  const dataOk = !!f.name.trim() && !!f.email.trim() && f.phone.replace(/\D/g, '').length >= 10
+  const compactData = !!session && dataOk && !editing
+  // O botão está sempre clicável: se faltar algo, rola até o campo e o pinta de vermelho.
+  const tryConfirm = () => {
+    if (submit.isPending) return
+    const block = blockers[0] ?? (noPickup ? 'A loja ainda não tem pontos de retirada disponíveis.' : noCommon ? 'Os itens do carrinho não têm um ponto de retirada em comum.' : !f.method ? 'Escolha a forma de pagamento.' : '')
+    if (block) { toast.error(block); return }
+    const missing: [string, string][] = []
+    if (!f.name.trim()) missing.push(['ck-name', 'Nome completo'])
+    if (f.phone.replace(/\D/g, '').length < 10) missing.push(['ck-phone', 'Telefone (WhatsApp)'])
+    if (!f.email.trim()) missing.push(['ck-email', 'E-mail'])
+    if (!pickup) missing.push(['ck-pickup', 'Ponto de retirada'])
+    if (!accepted) missing.push(['ck-accept', 'Aceite do aviso de privacidade'])
+    setBad(missing.map((m) => m[0]))
+    if (missing.length > 0) {
+      toast.error(`Preencha: ${missing.map((m) => m[1]).join(', ')}.`)
+      if (compactData && missing.some((m) => ['ck-name', 'ck-phone', 'ck-email'].includes(m[0]))) setEditing(true)
+      setTimeout(() => {
+        const el = document.getElementById(`f-${missing[0][0]}`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        document.getElementById(missing[0][0])?.focus({ preventScroll: true })
+      }, 50)
+      return
+    }
+    submit.mutate()
+  }
 
     const pixBox = f.method === 'pix' && store.pix ? (() => {
       const links = pickupWhatsAppLinks(pickup ? points.filter((p) => p.id === pickup) : points)
@@ -73,6 +123,7 @@ export function CheckoutPage() {
           <p className="font-semibold">Chave Pix (Em nome de {store.pix.beneficiary})</p>
           <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
             <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
+          <PixQr pixKey={store.pix.key} beneficiary={store.pix.beneficiary} amountCents={cart.totalCents} orderCode="" />
           <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
           {links.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -85,17 +136,48 @@ export function CheckoutPage() {
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_20rem]">
-      <form onSubmit={(e) => { e.preventDefault(); if (!disabled) submit.mutate() }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); tryConfirm() }} noValidate className="space-y-4">
         <h1>Finalizar compra</h1>
+        {compactData ? (
+          <Card className="space-y-1 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-lg font-bold">Seus dados</h2>
+              <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>Alterar</Button>
+            </div>
+            <p className="font-semibold">{f.name}</p>
+            <p className="text-sm">{f.phone} (WhatsApp) · {f.email}</p>
+          </Card>
+        ) : (
+          <Card className="space-y-3 p-4">
+            <h2 className="text-lg font-bold">Seus dados</h2>
+            <div id="f-ck-name" className={cn('space-y-1.5', bad.includes('ck-name') && badCls)}><Label htmlFor="ck-name" required>Nome completo</Label>
+              <Input id="ck-name" autoComplete="name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+            <div id="f-ck-phone" className={cn('space-y-1.5', bad.includes('ck-phone') && badCls)}><Label htmlFor="ck-phone" required>Telefone (WhatsApp)</Label>
+              <PhoneInput id="ck-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
+              <p className="text-sm text-muted-foreground">Se não estiver logado, você vai precisar do telefone e do código do pedido para consultá-lo depois.</p></div>
+            <div id="f-ck-email" className={cn('space-y-1.5', bad.includes('ck-email') && badCls)}><Label htmlFor="ck-email" required>E-mail</Label>
+              <Input id="ck-email" type="email" autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+          </Card>
+        )}
+
         <Card className="space-y-3 p-4">
-          <h2 className="text-lg font-bold">Seus dados</h2>
-          <div className="space-y-1.5"><Label htmlFor="ck-name" required>Nome completo</Label>
-            <Input id="ck-name" autoComplete="name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="ck-phone" required>Telefone (WhatsApp)</Label>
-            <PhoneInput id="ck-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
-            <p className="text-sm text-muted-foreground">Se não estiver logado, você vai precisar do telefone e do código do pedido para consultá-lo depois.</p></div>
-          <div className="space-y-1.5"><Label htmlFor="ck-email" required>E-mail</Label>
-            <Input id="ck-email" type="email" autoComplete="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+          <h2 className="text-lg font-bold">Pagamento</h2>
+          <div role="radiogroup" aria-label="Forma de pagamento" className="grid gap-2">
+            {methods.map((m) => (
+              <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
+                <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
+                  <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
+                  <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
+                  {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">À vista: taxa de 4,20% (+ {money(creditFeeCents(cart.totalCents))}) · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
+                  {m === 'pix' && <span className="mt-1 block text-sm font-semibold">Sem taxa · você paga {money(cart.totalCents)}</span>}
+                </button>
+                {m === 'pix' && pixBox}
+                {m === 'infinitepay' && f.method === 'infinitepay' && <div className="p-3 pt-0"><CreditFeeTable cents={cart.totalCents} /></div>}
+              </div>
+            ))}
+          </div>
+          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
+          {(f.method === 'infinitepay' || f.method === 'pix') && <p className="rounded-lg bg-muted p-3 text-sm">No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>}
         </Card>
 
         <Card className="space-y-3 p-4">
@@ -105,8 +187,8 @@ export function CheckoutPage() {
             : noCommon
             ? <p role="alert" className="text-destructive">Os itens do carrinho não têm um ponto de retirada em comum. Faça um pedido para cada grupo de itens.</p>
             : (
-              <div className="space-y-1.5"><Label htmlFor="ck-pickup" required>Ponto de retirada</Label>
-                <Select id="ck-pickup" required value={pickup} onChange={(e) => setF({ ...f, pickup: e.target.value })}>
+              <div id="f-ck-pickup" className={cn('space-y-1.5', bad.includes('ck-pickup') && badCls)}><Label htmlFor="ck-pickup" required>Ponto de retirada</Label>
+                <Select id="ck-pickup" value={pickup} onChange={(e) => setF({ ...f, pickup: e.target.value })}>
                   <option value="" disabled>Escolha</option>
                   {points.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>
@@ -130,32 +212,12 @@ export function CheckoutPage() {
           <p className="rounded-lg bg-muted p-3 text-sm">A <strong>retirada é combinada</strong>: não há entrega. O dia e o horário são combinados depois que o pedido estiver pronto.</p>
         </Card>
 
-        <Card className="space-y-3 p-4">
-          <h2 className="text-lg font-bold">Pagamento</h2>
-          <div role="radiogroup" aria-label="Forma de pagamento" className="grid gap-2">
-            {methods.map((m) => (
-              <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
-                <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
-                  <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
-                  <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
-                  {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">À vista: taxa de 4,20% (+ {money(creditFeeCents(cart.totalCents))}) · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
-                  {m === 'pix' && <span className="mt-1 block text-sm font-semibold">Sem taxa · você paga {money(cart.totalCents)}</span>}
-                </button>
-                {m === 'pix' && pixBox}
-                {m === 'infinitepay' && f.method === 'infinitepay' && <div className="p-3 pt-0"><CreditFeeTable cents={cart.totalCents} /></div>}
-              </div>
-            ))}
-          </div>
-          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
-          {(f.method === 'infinitepay' || f.method === 'pix') && <p className="rounded-lg bg-muted p-3 text-sm">No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>}
-        </Card>
-
-        <label className="flex items-start gap-3 text-sm">
-          <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
+        <label id="f-ck-accept" className={cn('flex items-start gap-3 text-sm', bad.includes('ck-accept') && badCls)}>
+          <input id="ck-accept" type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
           <span>Li e concordo com o <Link className="font-semibold text-primary hover:underline" to={`${basePath}/privacidade`} target="_blank">aviso de privacidade</Link>: usaremos seu nome, telefone e e-mail só para este pedido.</span>
         </label>
         {blockers.map((b) => <p key={b} role="alert" className="text-sm text-destructive">{b}</p>)}
-        <Button type="submit" className="w-full" disabled={disabled}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
+        <Button type="submit" className="w-full" disabled={submit.isPending}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
       </form>
 
       <aside className="space-y-2 md:sticky md:top-20 md:self-start">
