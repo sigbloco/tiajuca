@@ -1,4 +1,5 @@
 import { DirectionOnly } from '@/core/permissions'
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/primitives'
 import { isSigningOut, takePostLoginPath, useAuth } from '@/core/auth'
@@ -55,7 +56,23 @@ import { PaymentsPage } from '@/modules/finance/PaymentsPage'
 import { TeamPage } from '@/modules/finance/TeamPage'
 import { ValuesPage } from '@/modules/billing/ValuesPage'
 
-const Loading = () => <div className="p-8"><Skeleton className="h-10 w-64" /></div>
+/** Carregando: nunca deixa a tela em branco. Se demorar demais, mostra uma saída (recarregar ou sair). */
+function Loading() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 8000); return () => clearTimeout(t) }, [])
+  return (
+    <div className="space-y-4 p-8">
+      <Skeleton className="h-10 w-64" />
+      <p className="text-muted-foreground">Carregando</p>
+      {slow && (
+        <div className="space-y-2">
+          <p>Está demorando mais que o normal.</p>
+          <button type="button" className="rounded-lg border border-border px-4 py-2 font-semibold hover:bg-muted" onClick={() => window.location.reload()}>Recarregar a página</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /** "/" → primeira organização do usuário (ou tela de aguardando vínculo). */
 function RootRedirect() {
