@@ -83,9 +83,10 @@ function RootRedirect() {
   if (loading || (session && isLoading)) return <Loading />
   if (!session) return <LandingPage />
   const wanted = new URLSearchParams(window.location.search).get('voltar')
-  if (wanted && wanted.startsWith('/') && !wanted.startsWith('//')) return <Navigate to={wanted} replace />
+  if (wanted && wanted.startsWith('/') && wanted !== '/' && !wanted.startsWith('//')) return <Navigate to={wanted} replace />
   const back = takePostLoginPath() // ex.: voltou da loja depois do login com Google
-  if (back) return <Navigate to={back} replace />
+  // Voltar para '/' estando em '/' não muda nada: o Navigate não renderiza nada e a tela ficava em branco até a próxima atualização.
+  if (back && back !== '/') return <Navigate to={back} replace />
   // Logado, "/" abre o site (a página do bloco); o sistema fica no botão do site.
   if (!data?.length) return <NoOrganizationPage />
   return <LandingPage />
