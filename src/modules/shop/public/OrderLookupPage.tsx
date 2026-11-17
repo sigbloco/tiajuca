@@ -1,15 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ChevronDown, Copy, RefreshCw } from 'lucide-react'
+import { ChevronDown, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
-import { formatCurrency, formatDateTime } from '@/core/format'
+import { formatCurrency, formatDate, formatDateTime } from '@/core/format'
 import { fromCents, type ProductKind } from '../catalog'
-import { CUSTOMER_STATUS_LABEL, nextStepText, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
+import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
+import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { METHOD_LABELS, availableMethods, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
@@ -51,11 +52,15 @@ function Progress({ kind, status }: { kind: ProductKind; status: FulfillmentStat
   )
 }
 
-function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult; phone: string; onRefresh: () => void; refreshing: boolean }) {
+const METHOD_NAME = { pix: 'Pix', infinitepay: 'Cartão de crédito (InfinitePay)' } as const
+const METHOD_SHORT = { pix: 'Pix', infinitepay: 'Cartão de crédito' } as const
+const linkBtn = 'inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted'
+
+function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: LookupResult; phone: string; onRefresh: () => void; refreshing?: boolean; defaultOpen?: boolean }) {
   const { store } = useStore()
   const { order } = data
   const [status, setStatus] = useState(order.status)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   useEffect(() => setStatus(order.status), [order.status])
   const report = useMutation({
     mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'report_payment', org_slug: store.org.slug, code: order.code, phone }),
@@ -72,6 +77,11 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
     onError: (e) => toast.error((e as Error).message),
   })
   const others = status === 'awaiting_payment' ? availableMethods(store.payment_methods).filter((m) => m !== order.payment_method && (m !== 'pix' || !!store.pix)) : []
+  const pickupZap = (() => {
+    const pp = store.pickup_points.find((p) => p.id === order.pickup_point_id)
+    const d = (pp?.contact_phone ?? '').replace(/\D/g, '')
+    return d.length >= 10 ? `https://wa.me/${d.startsWith('55') ? d : '55' + d}` : null
+  })()
   const itemCount = data.items.reduce((n, i) => n + i.quantity, 0)
   const pickupLinks = pickupWhatsAppLinks(store.pickup_points.filter((p) => p.id === order.pickup_point_id), { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
@@ -86,63 +96,68 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
         <ChevronDown className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
       {open && <>
-      <Card className="space-y-2 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-display text-2xl font-extrabold tracking-widest">{order.code}</p>
-          <Badge>{CUSTOMER_STATUS_LABEL[status]}</Badge>
-        </div>
-        <p className="text-sm">{nextStepText(status, order.payment_method)}</p>
+      <Card className="space-y-3 p-5">
+        <h2 className="text-lg font-bold">Itens</h2>
+        <ul className="space-y-1 text-sm">
+          {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-2"><span>{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span>{money(i.unit_final_cents * i.quantity)}</span></li>)}
+        </ul>
+        {order.discount_cents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents)}</span></div>}
+        <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(order.total_cents)}</span></div>
         {status === 'cancelled' && order.cancel_reason && <p className="text-sm text-muted-foreground">Motivo: {order.cancel_reason}</p>}
-        <Button size="sm" variant="outline" onClick={onRefresh} disabled={refreshing}><RefreshCw className="h-4 w-4" /> Atualizar</Button>
+        {status === 'paid' && data.fulfillments.length > 0 && (
+          <div className="space-y-3 border-t border-border pt-3">
+            <h3 className="font-bold">Andamento</h3>
+            {data.fulfillments.map((f) => (
+              <div key={f.kind} className="space-y-1.5">
+                <p className="text-sm font-semibold">{KIND_NAME[f.kind]}</p>
+                <Progress kind={f.kind} status={f.status} />
+              </div>
+            ))}
+          </div>
+        )}
+        {data.timeline.length > 0 && (
+          <div className="space-y-1 border-t border-border pt-3">
+            <h3 className="font-bold">Histórico</h3>
+            <ul className="space-y-1 text-sm">
+              {data.timeline.map((e, i) => <li key={i} className="text-muted-foreground"><span className="text-foreground">{timelineLabel(e)}</span> · {formatDateTime(e.at)}</li>)}
+            </ul>
+          </div>
+        )}
+        {order.expires_at && status === 'awaiting_payment' && <p className="text-sm text-muted-foreground">Itens reservados até {formatDate(order.expires_at)}.</p>}
       </Card>
 
-      {status === 'paid' && data.fulfillments.length > 0 && (
+      {status !== 'cancelled' && (
         <Card className="space-y-3 p-5">
-          <h2 className="text-lg font-bold">Andamento</h2>
-          {data.fulfillments.map((f) => (
-            <div key={f.kind} className="space-y-1.5">
-              <p className="text-sm font-semibold">{KIND_NAME[f.kind]}</p>
-              <Progress kind={f.kind} status={f.status} />
-            </div>
-          ))}
-        </Card>
-      )}
-
-      {others.length > 0 && (
-        <Card className="space-y-2 p-5">
-          <h2 className="text-lg font-bold">Forma de pagamento: {METHOD_LABELS[order.payment_method].label}</h2>
-          <p className="text-sm text-muted-foreground">Enquanto não for pago, você pode trocar.</p>
-          <div className="flex flex-wrap gap-2">
-            {others.map((m) => <Button key={m} variant="outline" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar para {METHOD_LABELS[m].label}</Button>)}
-          </div>
-        </Card>
-      )}
-      {pix && (
-        <Card className="space-y-3 p-5">
-          <h2 className="text-lg font-bold">Pague com Pix</h2>
-          <dl className="space-y-2 text-sm">
-            <div><dt className="text-muted-foreground">Valor exato</dt><dd className="text-xl font-extrabold">{pix.amountText}</dd></div>
-            <div><dt className="text-muted-foreground">Chave Pix (Em nome de {pix.beneficiary})</dt>
-              <dd className="flex flex-wrap items-center gap-2 break-all font-semibold">{pix.key}
-                <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></dd></div>
-            <div><dt className="text-muted-foreground">Referência</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
-          </dl>
-          <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada (ou por e-mail) com o código <strong>{order.code}</strong>. O pedido só é confirmado quando a loja conferir o pagamento.</p>
-          <div className="flex flex-wrap gap-2">
-            {pickupLinks.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener">{w.name}</a>)}
-            {pickupLinks.length === 0 && pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar comprovante pelo WhatsApp</a>}
-            {pix.mailtoUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.mailtoUrl}>Enviar por e-mail</a>}
-          </div>
-          <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
-          {order.expires_at && <p className="text-sm text-muted-foreground">Itens reservados até {formatDateTime(order.expires_at)}.</p>}
-        </Card>
-      )}
-      {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && order.payment_url && (
-        <Card className="space-y-2 p-5">
-          <h2 className="text-lg font-bold">Pague com cartão de crédito ou Pix</h2>
-          <p className="text-sm">Fechou a janela de pagamento? Use o botão abaixo para retomar de onde parou.</p>
-          <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · {money(order.total_cents)}</a>
-          {order.expires_at && <p className="text-sm text-muted-foreground">Itens reservados até {formatDateTime(order.expires_at)}.</p>}
+          <h2 className="text-lg font-bold">Forma de pagamento: {METHOD_NAME[order.payment_method]}</h2>
+          {status === 'paid' && <p className="text-sm">Pagamento confirmado. Obrigado!</p>}
+          {status === 'payment_review' && <p className="text-sm">Recebemos o seu aviso. Assim que a loja conferir o comprovante, o pedido é marcado como pago.</p>}
+          {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
+            order.payment_url
+              ? <>
+                  <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · {money(order.total_cents)}</a>
+                  <p className="text-sm">Conclua o pagamento no link da InfinitePay. A confirmação é automática.</p>
+                </>
+              : <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>
+          )}
+          {pix && (
+            <>
+              <dl className="space-y-2 text-sm">
+                <div><dt className="text-muted-foreground">Valor exato</dt><dd className="text-xl font-extrabold">{pix.amountText}</dd></div>
+                <div><dt className="text-muted-foreground">Chave Pix (Em nome de {pix.beneficiary})</dt>
+                  <dd className="flex flex-wrap items-center gap-2 break-all font-semibold">{pix.key}
+                    <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></dd></div>
+                <div><dt className="text-muted-foreground">Referência</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
+              </dl>
+              <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> pelo WhatsApp (ou por e-mail) com o código <strong>{order.code}</strong>. O pedido só é confirmado quando a loja conferir o pagamento.</p>
+              <div className="flex flex-wrap gap-2">
+                {pickupLinks.map((w) => <a key={w.id} className={linkBtn} href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
+                {pickupLinks.length === 0 && pix.whatsappUrl && <a className={linkBtn} href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Enviar comprovante pelo WhatsApp</a>}
+                {pix.mailtoUrl && <a className={linkBtn} href={pix.mailtoUrl}>Enviar por e-mail</a>}
+              </div>
+              <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
+            </>
+          )}
+          {others.map((m) => <Button key={m} variant="outline" className="w-full" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}</Button>)}
         </Card>
       )}
 
@@ -152,29 +167,14 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
         <p className="text-sm">{data.pickup.address}</p>
         {data.pickup.opening_hours && <p className="text-sm text-muted-foreground">{data.pickup.opening_hours}</p>}
         <p className="text-sm">A retirada é combinada: avisaremos quando estiver pronta.</p>
-      </Card>
-
-      <Card className="space-y-2 p-5">
-        <h2 className="text-lg font-bold">Itens</h2>
-        <ul className="space-y-1 text-sm">
-          {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-2"><span>{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span>{money(i.unit_final_cents * i.quantity)}</span></li>)}
-        </ul>
-        {order.discount_cents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents)}</span></div>}
-        <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(order.total_cents)}</span></div>
-      </Card>
-
-      <Card className="space-y-2 p-5">
-        <h2 className="text-lg font-bold">Histórico</h2>
-        <ul className="space-y-1 text-sm">
-          {data.timeline.map((e, i) => <li key={i} className="text-muted-foreground"><span className="text-foreground">{timelineLabel(e)}</span> · {formatDateTime(e.at)}</li>)}
-        </ul>
+        {pickupZap && <a className={linkBtn} href={pickupZap} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Falar pelo WhatsApp</a>}
       </Card>
 
       {directors.length > 0 && (
         <Card className="space-y-2 p-5">
           <h2 className="text-lg font-bold">Precisa de ajuda?</h2>
           <div className="flex flex-wrap gap-2">
-            {directors.map((d) => <a key={d.name} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={d.url} target="_blank" rel="noreferrer noopener">{d.name}</a>)}
+            {directors.map((d) => <a key={d.name} className={linkBtn} href={d.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {d.name}</a>)}
           </div>
         </Card>
       )}
@@ -201,7 +201,7 @@ function MyOrders({ highlight }: { highlight: string }) {
   if (orders.length === 0) return <Card className="p-5"><p>Você ainda não fez pedidos nesta loja.</p></Card>
   return (
     <div className="space-y-4">
-      {orders.slice(0, shown).map((o) => <OrderView key={o.order.code} data={o} phone="" onRefresh={() => void q.refetch()} refreshing={q.isFetching} />)}
+      {orders.slice(0, shown).map((o) => <OrderView key={o.order.code} data={o} defaultOpen={o.order.code === highlight} phone="" onRefresh={() => void q.refetch()} refreshing={q.isFetching} />)}
       {orders.length > shown && <Button variant="outline" className="w-full" onClick={() => setShown(shown + PAGE)}>Ver mais {Math.min(PAGE, orders.length - shown)}</Button>}
     </div>
   )
@@ -260,7 +260,7 @@ export function OrderLookupPage() {
               <Button type="submit" className="w-full" disabled={search.isPending || code.trim().length < 6 || phone.replace(/\D/g, '').length < 10}>{search.isPending ? 'Buscando' : 'Consultar pedido'}</Button>
             </form>
           </Card>
-          {data && <OrderView data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
+          {data && <OrderView key={data.order.code} defaultOpen data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
         </>
       )}
       <Link className="block text-center font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>
