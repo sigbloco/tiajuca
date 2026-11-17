@@ -14,7 +14,7 @@ import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { CreditFeeTable } from './CreditFeeTable'
 import { PixQr } from './PixQr'
-import { availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
+import { availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pixInstructions, proofLinks } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -99,7 +99,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
   const payCents = order.total_cents + feeCents
   const payUrl = order.payment_method === 'infinitepay' && status === 'awaiting_payment' ? order.payment_url : null
   const itemCount = data.items.reduce((n, i) => n + i.quantity, 0)
-  const pickupLinks = pickupWhatsAppLinks(store.pickup_points.filter((p) => p.id === order.pickup_point_id), { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
+  const pickupLinks = proofLinks({ points: store.pickup_points.filter((p) => p.id === order.pickup_point_id), allPoints: store.pickup_points, directors: store.contact.directors, beneficiary: store.pix?.beneficiary ?? '', orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
   return (
     <Card className="overflow-hidden p-0">
@@ -156,15 +156,15 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
           )}
           {pix && (
             <>
-              <dl className="space-y-2 text-sm">
-                <div><dt className="text-muted-foreground">Valor exato</dt><dd className="text-xl font-extrabold">{pix.amountText}</dd></div>
-                <div><dt className="text-muted-foreground">Chave Pix (Em nome de {pix.beneficiary})</dt>
-                  <dd className="flex flex-wrap items-center gap-2 break-all font-semibold">{pix.key}
-                    <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></dd></div>
-                <div><dt className="text-muted-foreground">Referência</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
-              </dl>
-              <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> pelo WhatsApp (ou por e-mail) com o código <strong>{order.code}</strong>. O pedido só é confirmado quando a loja conferir o pagamento.</p>
               <PixQr pixKey={pix.key} beneficiary={pix.beneficiary} amountCents={order.total_cents} orderCode={order.code} />
+              <div className="text-sm">
+                <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{pix.key}
+                  <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
+                <p className="text-muted-foreground">Em nome de {pix.beneficiary}</p>
+              </div>
+              <p className="text-sm">Pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
+              <p className="flex items-center gap-2 font-display text-lg font-extrabold tracking-widest">{order.code}
+                <Button size="sm" variant="outline" onClick={() => copy(order.code, 'Código')}><Copy className="h-4 w-4" /> Copiar</Button></p>
               <div className="flex flex-wrap gap-2">
                 {pickupLinks.map((w) => <a key={w.id} className={linkBtn} href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
                 {pickupLinks.length === 0 && pix.whatsappUrl && <a className={linkBtn} href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Enviar comprovante pelo WhatsApp</a>}
