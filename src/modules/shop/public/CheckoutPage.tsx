@@ -163,13 +163,13 @@ export function CheckoutPage() {
           <h2 className="text-lg font-bold">Resumo</h2>
           <ul className="space-y-1 text-sm">
             {cart.lines.map((l) => (
-              <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span>{money(l.lineTotalCents)}</span></li>
+              <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span className="shrink-0 whitespace-nowrap">{money(l.lineTotalCents)}</span></li>
             ))}
           </ul>
           <hr className="border-border" />
-          {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(cart.discountCents)}</span></div>}
-          {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span>{money(creditFeeCents(cart.totalCents))}</span></div>}
-          <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span>{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
+          {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents)}</span></div>}
+          {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents))}</span></div>}
+          <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
           {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
         </Card>
         <Link className="text-sm font-semibold text-primary hover:underline" to={`${basePath}/carrinho`}>← Voltar ao carrinho</Link>

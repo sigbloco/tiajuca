@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { ChevronDown, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
@@ -13,7 +14,7 @@ import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { CreditFeeTable } from './CreditFeeTable'
 import { PixQr } from './PixQr'
-import { METHOD_LABELS, availableMethods, CREDIT_FEES_PCT, creditTotalCents, formatPct, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -92,6 +93,10 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
     const d = (pp?.contact_phone ?? '').replace(/\D/g, '')
     return d.length >= 10 ? `https://wa.me/${d.startsWith('55') ? d : '55' + d}` : null
   })()
+  // Cartão de crédito: a taxa da InfinitePay entra no valor a pagar (à vista) enquanto o pedido espera pagamento.
+  const withFee = order.payment_method === 'infinitepay' && status === 'awaiting_payment'
+  const feeCents = withFee ? creditFeeCents(order.total_cents) : 0
+  const payCents = order.total_cents + feeCents
   const itemCount = data.items.reduce((n, i) => n + i.quantity, 0)
   const pickupLinks = pickupWhatsAppLinks(store.pickup_points.filter((p) => p.id === order.pickup_point_id), { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
@@ -102,17 +107,18 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
           <span className="flex flex-wrap items-center gap-2"><span className="font-display text-xl font-extrabold tracking-widest">{order.code}</span><Badge>{CUSTOMER_STATUS_LABEL[status]}</Badge></span>
           <span className="block text-sm text-muted-foreground">{formatDateTime(order.created_at)} · {itemCount} {itemCount === 1 ? 'item' : 'itens'} · {METHOD_LABELS[order.payment_method].label}</span>
         </span>
-        <span className="shrink-0 text-lg font-extrabold">{money(order.total_cents)}</span>
+        <span className="shrink-0 whitespace-nowrap text-lg font-extrabold">{money(payCents)}</span>
         <ChevronDown className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
       {open && <div className="divide-y divide-border border-t border-border">
       <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Itens</h2>
         <ul className="space-y-1 text-sm">
-          {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-2"><span>{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span>{money(i.unit_final_cents * i.quantity)}</span></li>)}
+          {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-3"><span className="min-w-0">{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span className="shrink-0 whitespace-nowrap">{money(i.unit_final_cents * i.quantity)}</span></li>)}
         </ul>
-        {order.discount_cents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents)}</span></div>}
-        <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(order.total_cents)}</span></div>
+        {order.discount_cents > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(order.discount_cents)}</span></div>}
+        {withFee && <div className="flex justify-between gap-3 text-sm"><span className="min-w-0">Taxa do cartão de crédito à vista ({formatPct(CREDIT_FEES_PCT[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(feeCents)}</span></div>}
+        <div className="flex justify-between gap-3 text-lg font-extrabold"><span>Total</span><span className="shrink-0 whitespace-nowrap">{money(payCents)}</span></div>
         {status === 'cancelled' && order.cancel_reason && <p className="text-sm text-muted-foreground">Motivo: {order.cancel_reason}</p>}
         {status === 'paid' && data.fulfillments.length > 0 && (
           <div className="space-y-3 border-t border-border pt-3">
@@ -144,7 +150,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
           {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
             order.payment_url
               ? <>
-                  <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · {money(order.total_cents)}</a>
+                  <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · <span className="whitespace-nowrap">{money(payCents)}</span></a>
                   <p className="text-sm">Conclua o pagamento no link da InfinitePay. A confirmação é automática.</p>
                   <CreditFeeTable cents={order.total_cents} />
                 </>
@@ -169,7 +175,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
               <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
             </>
           )}
-          {others.map((m) => <Button key={m} variant="outline" className="w-full" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{m === 'infinitepay' ? ` (à vista ≈ ${money(creditTotalCents(order.total_cents))} com a taxa de ${formatPct(CREDIT_FEES_PCT[0])})` : order.payment_method === 'infinitepay' ? ` (${money(order.total_cents)}, sem taxa)` : ''}</Button>)}
+          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
           {status === 'awaiting_payment' && (confirmCancel
             ? (
               <div className="space-y-2 rounded-lg border border-destructive p-3">
@@ -196,9 +202,9 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
       {directors.length > 0 && (
         <section className="space-y-3 p-5">
           <h2 className="text-lg font-bold">Precisa de ajuda?</h2>
-          <div className="flex flex-wrap gap-2">
-            {directors.map((d) => <a key={d.name} className={linkBtn} href={d.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {d.name}</a>)}
-          </div>
+          <ButtonRow>
+            {directors.map((d) => <a key={d.name} className={`${linkBtn} justify-center`} href={d.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4 shrink-0" /> {d.name}</a>)}
+          </ButtonRow>
         </section>
       )}
       </div>}
