@@ -11,7 +11,7 @@ import { formatCurrency } from '@/core/format'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
-import { METHOD_LABELS, availableMethods, checkoutBlockers, pickupWhatsAppLinks } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents, pickupWhatsAppLinks } from '../payments/pix'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
@@ -62,6 +62,7 @@ export function CheckoutPage() {
   })
 
   if (cart.lines.length === 0 && !finished.current) return <Navigate to={`${basePath}/carrinho`} replace />
+  const payCents = f.method === 'infinitepay' ? creditTotalCents(cart.totalCents) : cart.totalCents
   const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || noCommon || !pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
 
     const pixBox = f.method === 'pix' && store.pix ? (() => {
@@ -136,6 +137,8 @@ export function CheckoutPage() {
                 <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
                   <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
                   <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
+                  {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">Taxa do cartão: {money(creditFeeCents(cart.totalCents))} · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
+                  {m === 'pix' && <span className="mt-1 block text-sm font-semibold">Sem taxa · você paga {money(cart.totalCents)}</span>}
                 </button>
                 {m === 'pix' && pixBox}
               </div>
@@ -150,7 +153,7 @@ export function CheckoutPage() {
           <span>Li e concordo com o <Link className="font-semibold text-primary hover:underline" to={`${basePath}/privacidade`} target="_blank">aviso de privacidade</Link>: usaremos seu nome, telefone e e-mail só para este pedido.</span>
         </label>
         {blockers.map((b) => <p key={b} role="alert" className="text-sm text-destructive">{b}</p>)}
-        <Button type="submit" className="w-full" disabled={disabled}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${money(cart.totalCents)}`}</Button>
+        <Button type="submit" className="w-full" disabled={disabled}>{submit.isPending ? 'Enviando' : `Confirmar pedido · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
       </form>
 
       <aside className="space-y-2 md:sticky md:top-20 md:self-start">
@@ -163,7 +166,8 @@ export function CheckoutPage() {
           </ul>
           <hr className="border-border" />
           {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span>− {money(cart.discountCents)}</span></div>}
-          <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(cart.totalCents)}</span></div>
+          {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão (estimada)</span><span>{money(creditFeeCents(cart.totalCents))}</span></div>}
+          <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span>{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
           {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
         </Card>
         <Link className="text-sm font-semibold text-primary hover:underline" to={`${basePath}/carrinho`}>← Voltar ao carrinho</Link>

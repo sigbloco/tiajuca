@@ -6,7 +6,7 @@ import { formatCurrency } from '@/core/format'
 import { fromCents } from '../catalog'
 import { maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
-import { SuggestedProducts } from './Suggestions'
+import { RandomSuggestions, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
 const money = (cents: number) => formatCurrency(fromCents(cents))
@@ -64,6 +64,7 @@ export function CartPage() {
       )}
       <p className="text-sm text-muted-foreground">A retirada é combinada e o pagamento é antecipado e integral. Os valores são confirmados na finalização.</p>
       <SuggestedProducts from={cart.lines.map((l) => index.get(l.variantId)?.product).filter((p): p is NonNullable<typeof p> => !!p)} exclude={cart.lines.map((l) => index.get(l.variantId)?.product.id ?? '')} />
+      <RandomSuggestions exclude={cart.lines.map((l) => index.get(l.variantId)?.product.id ?? '')} />
       <Link to={`${basePath}/finalizar`} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90">Finalizar compra</Link>
     </div>
   )

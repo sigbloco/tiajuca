@@ -91,3 +91,36 @@ export function pickupWhatsAppLinks(
   }
   return opts.firstId ? [...out.filter((o) => o.id === opts.firstId), ...out.filter((o) => o.id !== opts.firstId)] : out
 }
+
+/**
+ * Taxa do cartão de crédito à vista na InfinitePay, repassada ao cliente na página de pagamento (R$ 48,00 virou R$ 50,11 num pedido real).
+ * É uma estimativa: parcelando, a taxa é maior e o valor final aparece na página da InfinitePay.
+ */
+export const CREDIT_FEE_RATE = 0.0421
+export const creditTotalCents = (cents: number): number => Math.round(cents / (1 - CREDIT_FEE_RATE))
+export const creditFeeCents = (cents: number): number => creditTotalCents(cents) - cents
+
+const tlv = (id: string, value: string) => `${id}${String(value.length).padStart(2, '0')}${value}`
+
+/** CRC16/CCITT-FALSE exigido pelo BR Code do Pix. */
+export function crc16(text: string): string {
+  let crc = 0xffff
+  for (let i = 0; i < text.length; i++) {
+    crc ^= text.charCodeAt(i) << 8
+    for (let b = 0; b < 8; b++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0')
+}
+
+const clean = (s: string, max: number) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9 ]/g, '').toUpperCase().trim().slice(0, max)
+
+/** Pix "copia e cola" (BR Code estático) com o valor já preenchido. `txid` = código do pedido (só letras e números, até 25). */
+export function pixCopyPaste(a: { key: string; beneficiary: string; amountCents: number; txid: string; city?: string }): string {
+  const body =
+    tlv('00', '01') +
+    tlv('26', tlv('00', 'br.gov.bcb.pix') + tlv('01', a.key.trim())) +
+    tlv('52', '0000') + tlv('53', '986') + tlv('54', (a.amountCents / 100).toFixed(2)) + tlv('58', 'BR') +
+    tlv('59', clean(a.beneficiary, 25) || 'LOJA') + tlv('60', clean(a.city ?? 'Rio de Janeiro', 15) || 'BRASIL') +
+    tlv('62', tlv('05', a.txid.replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***')) + '6304'
+  return body + crc16(body)
+}
