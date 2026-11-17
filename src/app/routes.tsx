@@ -5,7 +5,6 @@ import { Skeleton } from '@/components/ui/primitives'
 import { isSigningOut, takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
-import { trace } from '@/core/trace'
 import { ClaimInvitePage, NoOrganizationPage } from '@/modules/auth/pages'
 import { HomePage } from '@/modules/dashboard/HomePage'
 import { CapacityPage } from '@/modules/capacity/CapacityPage'
@@ -79,7 +78,6 @@ function Loading() {
 function RootRedirect() {
   const { session, loading } = useAuth()
   const { data, isLoading } = useMemberships()
-  trace(`root loading=${loading} sessao=${!!session} memb=${isLoading ? 'carregando' : data?.length ?? '-'}`)
   if (loading || (session && isLoading)) return <Loading />
   if (!session) return <LandingPage />
   const wanted = new URLSearchParams(window.location.search).get('voltar')
@@ -95,7 +93,6 @@ function RootRedirect() {
 function RequireAuth() {
   const { session, loading } = useAuth()
   const { pathname, search } = useLocation() // hook ANTES de qualquer return: com o login ainda carregando, a ordem dos hooks mudava e a tela ficava em branco
-  trace(`requireAuth loading=${loading} sessao=${!!session}`)
   if (loading) return <Loading />
   // Saiu de propósito: vai para a página inicial, sem abrir o login.
   if (!session && isSigningOut()) return <Navigate to="/" replace />
@@ -132,7 +129,6 @@ function PreviewGate() {
 
 function OrgGate() {
   const { membership, loading } = useOrganization()
-  trace(`orgGate loading=${loading} membership=${!!membership}`)
   if (loading) return <Loading />
   // Slug inexistente OU organização da qual o usuário não faz parte: mesmo comportamento (sem vazar existência).
   if (!membership) return <Navigate to="/" replace />

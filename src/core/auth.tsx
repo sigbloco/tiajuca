@@ -1,7 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
-import { trace } from './trace'
 
 interface AuthContextValue {
   session: Session | null
@@ -35,11 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      trace(`getSession sessao=${!!data.session}`)
       setSession(data.session)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => { trace(`auth ${_event} sessao=${!!s}`); if (s) signingOut = false; setSession(s) })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => { if (s) signingOut = false; setSession(s) })
     return () => sub.subscription.unsubscribe()
   }, [])
 
