@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Copy, RefreshCw } from 'lucide-react'
+import { ChevronDown, Copy, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -10,7 +10,7 @@ import { formatCurrency, formatDateTime } from '@/core/format'
 import { fromCents, type ProductKind } from '../catalog'
 import { CUSTOMER_STATUS_LABEL, nextStepText, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
-import { directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -55,6 +55,7 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
   const { store } = useStore()
   const { order } = data
   const [status, setStatus] = useState(order.status)
+  const [open, setOpen] = useState(false)
   useEffect(() => setStatus(order.status), [order.status])
   const report = useMutation({
     mutationFn: () => invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'report_payment', org_slug: store.org.slug, code: order.code, phone }),
@@ -65,10 +66,26 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
     ? pixInstructions({ pix: store.pix, contact: store.contact, orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name })
     : null
   const directors = directorLinks(store.contact, order.code)
-  const pickupLinks = pickupWhatsAppLinks(store.pickup_points, { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
+  const change = useMutation({
+    mutationFn: (m: string) => invokeShop('shop-checkout', { action: 'change_method', org_slug: store.org.slug, code: order.code, phone, payment_method: m }),
+    onSuccess: () => { toast.success('Forma de pagamento alterada.'); onRefresh() },
+    onError: (e) => toast.error((e as Error).message),
+  })
+  const others = status === 'awaiting_payment' ? availableMethods(store.payment_methods).filter((m) => m !== order.payment_method && (m !== 'pix' || !!store.pix)) : []
+  const itemCount = data.items.reduce((n, i) => n + i.quantity, 0)
+  const pickupLinks = pickupWhatsAppLinks(store.pickup_points.filter((p) => p.id === order.pickup_point_id), { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
   return (
     <div className="space-y-4">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left hover:bg-muted">
+        <span className="min-w-0 flex-1 space-y-1">
+          <span className="flex flex-wrap items-center gap-2"><span className="font-display text-xl font-extrabold tracking-widest">{order.code}</span><Badge>{CUSTOMER_STATUS_LABEL[status]}</Badge></span>
+          <span className="block text-sm text-muted-foreground">{formatDateTime(order.created_at)} · {itemCount} {itemCount === 1 ? 'item' : 'itens'} · {METHOD_LABELS[order.payment_method].label}</span>
+        </span>
+        <span className="shrink-0 text-lg font-extrabold">{money(order.total_cents)}</span>
+        <ChevronDown className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+      {open && <>
       <Card className="space-y-2 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-display text-2xl font-extrabold tracking-widest">{order.code}</p>
@@ -91,19 +108,28 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
         </Card>
       )}
 
+      {others.length > 0 && (
+        <Card className="space-y-2 p-5">
+          <h2 className="text-lg font-bold">Forma de pagamento: {METHOD_LABELS[order.payment_method].label}</h2>
+          <p className="text-sm text-muted-foreground">Enquanto não for pago, você pode trocar.</p>
+          <div className="flex flex-wrap gap-2">
+            {others.map((m) => <Button key={m} variant="outline" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar para {METHOD_LABELS[m].label}</Button>)}
+          </div>
+        </Card>
+      )}
       {pix && (
         <Card className="space-y-3 p-5">
           <h2 className="text-lg font-bold">Pague com Pix</h2>
           <dl className="space-y-2 text-sm">
             <div><dt className="text-muted-foreground">Valor exato</dt><dd className="text-xl font-extrabold">{pix.amountText}</dd></div>
-            <div><dt className="text-muted-foreground">Chave Pix ({pix.beneficiary})</dt>
+            <div><dt className="text-muted-foreground">Chave Pix (Em nome de {pix.beneficiary})</dt>
               <dd className="flex flex-wrap items-center gap-2 break-all font-semibold">{pix.key}
                 <Button size="sm" variant="outline" onClick={() => copy(pix.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></dd></div>
             <div><dt className="text-muted-foreground">Referência</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
           </dl>
           <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada (ou por e-mail) com o código <strong>{order.code}</strong>. O pedido só é confirmado quando a loja conferir o pagamento.</p>
           <div className="flex flex-wrap gap-2">
-            {pickupLinks.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener">Comprovante no WhatsApp: {w.name}</a>)}
+            {pickupLinks.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener">{w.name}</a>)}
             {pickupLinks.length === 0 && pix.whatsappUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener">Enviar comprovante pelo WhatsApp</a>}
             {pix.mailtoUrl && <a className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={pix.mailtoUrl}>Enviar por e-mail</a>}
           </div>
@@ -152,6 +178,7 @@ function OrderView({ data, phone, onRefresh, refreshing }: { data: LookupResult;
           </div>
         </Card>
       )}
+      </>}
     </div>
   )
 }

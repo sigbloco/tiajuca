@@ -64,6 +64,23 @@ export function CheckoutPage() {
   if (cart.lines.length === 0 && !finished.current) return <Navigate to={`${basePath}/carrinho`} replace />
   const disabled = submit.isPending || !accepted || blockers.length > 0 || noPickup || !f.method || noCommon || !pickup || !f.name.trim() || !f.email.trim() || f.phone.replace(/\D/g, '').length < 10
 
+    const pixBox = f.method === 'pix' && store.pix ? (() => {
+      const links = pickupWhatsAppLinks(pickup ? points.filter((p) => p.id === pickup) : points)
+      return (
+        <div className="space-y-2 border-t border-primary/30 p-3 text-sm">
+          <p className="font-semibold">Chave Pix (Em nome de {store.pix.beneficiary})</p>
+          <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
+            <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
+          <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
+          {links.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {links.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
+            </div>
+          )}
+        </div>
+      )
+    })() : null
+
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_20rem]">
       <form onSubmit={(e) => { e.preventDefault(); if (!disabled) submit.mutate() }} className="space-y-4">
@@ -115,29 +132,15 @@ export function CheckoutPage() {
           <h2 className="text-lg font-bold">Pagamento</h2>
           <div role="radiogroup" aria-label="Forma de pagamento" className="grid gap-2">
             {methods.map((m) => (
-              <button key={m} type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })}
-                className={cn('min-h-11 rounded-lg border px-3 py-2 text-left', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
-                <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
-                <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
-              </button>
+              <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
+                <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
+                  <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
+                  <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
+                </button>
+                {m === 'pix' && pixBox}
+              </div>
             ))}
           </div>
-          {f.method === 'pix' && store.pix && (() => {
-            const links = pickupWhatsAppLinks(store.pickup_points, { firstId: pickup })
-            return (
-              <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
-                <p className="font-semibold">Chave Pix ({store.pix.beneficiary})</p>
-                <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
-                  <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
-                <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
-                {links.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {links.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
           <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
           {(f.method === 'infinitepay' || f.method === 'pix') && <p className="rounded-lg bg-muted p-3 text-sm">No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>}
         </Card>

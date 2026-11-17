@@ -69,12 +69,60 @@ const providers: Record<string, Provider> = {
   },
 }
 
+/** Troca a forma de pagamento de um pedido ainda não pago (dono = conta logada, ou código + telefone). */
+async function changeMethod(req: Request, body: Record<string, unknown>) {
+  const method = String(body.payment_method ?? '')
+  if (!providers[method]) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+  const orgSlug = String(body.org_slug ?? '')
+  const { data: orgId } = await admin.rpc('shop_org_id', { p_slug: orgSlug })
+  if (!orgId) return json({ error: 'Loja não encontrada.' }, 404)
+  const { data: settings } = await admin.rpc('shop_get_settings', { p_org: orgId })
+  if (!settings || !providers[method].available(settings as Settings)) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
+
+  const ip = (req.headers.get('x-forwarded-for') ?? 'desconhecido').split(',')[0].trim()
+  const { data: allowed } = await admin.rpc('shop_rate_limit', { p_bucket: `change:${await sha256(ip)}`, p_max: 30, p_window: '1 hour' })
+  if (!allowed) return json({ error: 'Muitas tentativas. Aguarde um pouco e tente de novo.' }, 429)
+
+  let user: { id: string; email?: string | null } | null = null
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (token) { const { data } = await admin.auth.getUser(token); user = data.user ?? null }
+  const phone = String(body.phone ?? '')
+  if (!user && !phone) return json({ error: 'Entre na sua conta ou informe o telefone do pedido.' }, 401)
+
+  const code = String(body.code ?? '')
+  const { data: r, error } = await admin.rpc('shop_change_method', {
+    p_org: orgId, p_user: user?.id ?? null, p_email: user?.email ?? null, p_code: code, p_phone: phone, p_method: method,
+  })
+  if (error) { console.error('shop_change_method', error.message); return json({ error: 'Não foi possível trocar agora.' }, 500) }
+  if (!r?.ok) {
+    if (r?.reason === 'locked') return json({ error: 'Este pedido não está mais aguardando pagamento, então a forma de pagamento não pode ser trocada.' }, 409)
+    return json({ error: 'Pedido não encontrado.' }, 404)
+  }
+  const order = r.order as Order
+  if (method === 'infinitepay' && !order.payment_url) {
+    try {
+      await providers.infinitepay.start(order, {
+        orgSlug, settings: settings as Settings,
+        customer: { name: String(order.customer_name), email: String(order.customer_email), phone: String(order.customer_phone) },
+      }, admin)
+    } catch (e) {
+      console.error('change_method provider.start', (e as Error).message)
+      // Volta ao método anterior: o pedido não pode ficar em InfinitePay sem link.
+      await admin.rpc('shop_change_method', { p_org: orgId, p_user: user?.id ?? null, p_email: user?.email ?? null, p_code: code, p_phone: phone, p_method: r.previous })
+      return json({ error: 'Não foi possível gerar o link de pagamento agora. Tente novamente.' }, 502)
+    }
+  }
+  return json({ ok: true })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Método não permitido.' }, 405)
 
   let body: Record<string, unknown>
   try { body = await req.json() } catch { return json({ error: 'Requisição inválida.' }, 400) }
+  if (body.action === 'change_method') return await changeMethod(req, body)
 
   const orgSlug = String(body.org_slug ?? '')
   const method = String(body.payment_method ?? '')
