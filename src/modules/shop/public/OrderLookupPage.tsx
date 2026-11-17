@@ -11,7 +11,8 @@ import { fromCents, type ProductKind } from '../catalog'
 import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
-import { METHOD_LABELS, availableMethods, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
+import { PixQr } from './PixQr'
+import { METHOD_LABELS, availableMethods, creditFeeCents, creditTotalCents, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -136,6 +137,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
               ? <>
                   <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · {money(order.total_cents)}</a>
                   <p className="text-sm">Conclua o pagamento no link da InfinitePay. A confirmação é automática.</p>
+                  <p className="rounded-lg bg-muted p-3 text-sm"><strong>Atenção à taxa:</strong> no cartão de crédito a InfinitePay cobra uma taxa de quem paga (cerca de {money(creditFeeCents(order.total_cents))} neste pedido). O valor com a taxa é de aproximadamente <strong>{money(creditTotalCents(order.total_cents))}</strong>. Parcelando, a taxa é maior. No Pix não há taxa.</p>
                 </>
               : <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>
           )}
@@ -149,6 +151,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
                 <div><dt className="text-muted-foreground">Referência</dt><dd className="font-bold tracking-widest">{pix.reference}</dd></div>
               </dl>
               <p className="rounded-lg bg-muted p-3 text-sm">Depois de pagar, envie o <strong>comprovante</strong> pelo WhatsApp (ou por e-mail) com o código <strong>{order.code}</strong>. O pedido só é confirmado quando a loja conferir o pagamento.</p>
+              <PixQr pixKey={pix.key} beneficiary={pix.beneficiary} amountCents={order.total_cents} orderCode={order.code} />
               <div className="flex flex-wrap gap-2">
                 {pickupLinks.map((w) => <a key={w.id} className={linkBtn} href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
                 {pickupLinks.length === 0 && pix.whatsappUrl && <a className={linkBtn} href={pix.whatsappUrl} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Enviar comprovante pelo WhatsApp</a>}
@@ -157,7 +160,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false }: { data: Look
               <Button className="w-full" disabled={report.isPending} onClick={() => report.mutate()}>{report.isPending ? 'Enviando' : 'Já fiz o pagamento'}</Button>
             </>
           )}
-          {others.map((m) => <Button key={m} variant="outline" className="w-full" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}</Button>)}
+          {others.map((m) => <Button key={m} variant="outline" className="w-full" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{m === 'infinitepay' ? ` (≈ ${money(creditTotalCents(order.total_cents))} com a taxa)` : order.payment_method === 'infinitepay' ? ` (${money(order.total_cents)}, sem taxa)` : ''}</Button>)}
         </Card>
       )}
 

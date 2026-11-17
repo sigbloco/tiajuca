@@ -56,3 +56,16 @@ describe('contato com a Direção', () => {
     expect(directorLinks(contact)).toEqual([])
   })
 })
+
+import { crc16, creditTotalCents, pixCopyPaste } from './pix'
+describe('Pix copia e cola e taxa do cartão', () => {
+  it('CRC16 confere com o vetor padrão', () => expect(crc16('123456789')).toBe('29B1'))
+  it('payload tem valor, chave e termina com CRC válido', () => {
+    const p = pixCopyPaste({ key: 'pix@tiajuca.com.br', beneficiary: 'Marcelo Steimback dos Santos Liuzzi', amountCents: 4800, txid: 'U73V7FG2' })
+    expect(p).toContain('540548.00')
+    expect(p).toContain('pix@tiajuca.com.br')
+    expect(p).toContain('MARCELO STEIMBACK DOS')
+    expect(crc16(p.slice(0, -4))).toBe(p.slice(-4))
+  })
+  it('R$ 48,00 no crédito vira R$ 50,11', () => expect(creditTotalCents(4800)).toBe(5011))
+})
