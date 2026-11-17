@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   const phone = String(body.phone ?? '')
 
   // Usuário logado: vê os próprios pedidos sem código/telefone. Token de visitante (chave anon) não resolve usuário.
-  if (body.action === 'mine' || (!phone && (body.action === 'lookup' || body.action === 'report_payment' || body.action === 'cancel' || body.action === 'unreport_payment'))) {
+  if (body.action === 'mine' || (!phone && (body.action === 'lookup' || body.action === 'report_payment' || body.action === 'cancel'))) {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
     const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
     const { data: u } = token ? await admin.auth.getUser(token) : { data: { user: null } }
@@ -57,13 +57,6 @@ Deno.serve(async (req) => {
       if (error) { console.error('shop_report_payment_owned', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
       if (!data?.ok) return json({ error: 'Pedido não encontrado.' }, 404)
       flushMail()
-      return json({ status: data.status })
-    }
-    if (body.action === 'unreport_payment') {
-      const { data, error } = await admin.rpc('shop_unreport_payment', { p_org: orgId, p_user: user.id, p_email: email, p_code: code, p_phone: '' })
-      if (error) { console.error('shop_unreport_payment', error.message); return json({ error: 'Não foi possível desfazer agora.' }, 500) }
-      if (data?.reason === 'locked') return json({ error: 'A loja já confirmou o pagamento deste pedido.' }, 409)
-      if (!data?.ok) return json({ error: 'Pedido não encontrado.' }, 404)
       return json({ status: data.status })
     }
     if (body.action === 'cancel') {
@@ -99,13 +92,6 @@ Deno.serve(async (req) => {
     if (error) { console.error('shop_report_payment', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
     if (!data?.ok) return json({ error: 'Pedido não encontrado. Confira o código e o telefone.' }, 404)
     flushMail()
-    return json({ status: data.status })
-  }
-  if (body.action === 'unreport_payment') {
-    const { data, error } = await admin.rpc('shop_unreport_payment', { p_org: null, p_user: null, p_email: null, p_code: code, p_phone: phone })
-    if (error) { console.error('shop_unreport_payment', error.message); return json({ error: 'Não foi possível desfazer agora.' }, 500) }
-    if (data?.reason === 'locked') return json({ error: 'A loja já confirmou o pagamento deste pedido.' }, 409)
-    if (!data?.ok) return json({ error: 'Pedido não encontrado. Confira o código e o telefone.' }, 404)
     return json({ status: data.status })
   }
   if (body.action === 'cancel') {
