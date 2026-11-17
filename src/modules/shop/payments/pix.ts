@@ -93,12 +93,13 @@ export function pickupWhatsAppLinks(
 }
 
 /**
- * Taxa do cartão de crédito à vista na InfinitePay, repassada ao cliente na página de pagamento (R$ 48,00 virou R$ 50,11 num pedido real).
- * É uma estimativa: parcelando, a taxa é maior e o valor final aparece na página da InfinitePay.
+ * Taxas oficiais da InfinitePay no cartão de crédito, repassadas a quem paga na página de pagamento.
+ * O valor final é o do pedido dividido por (1 − taxa), arredondado para cima (R$ 48,00 à vista virou R$ 50,11 num pedido real).
  */
-export const CREDIT_FEE_RATE = 0.0421
-export const creditTotalCents = (cents: number): number => Math.round(cents / (1 - CREDIT_FEE_RATE))
-export const creditFeeCents = (cents: number): number => creditTotalCents(cents) - cents
+export const CREDIT_FEES_PCT: readonly number[] = [4.2, 6.09, 7.01, 7.91, 8.8, 9.67, 12.59, 13.42, 14.25, 15.06, 15.87, 16.66]
+export const creditTotalCents = (cents: number, installments = 1): number => Math.ceil(cents / (1 - (CREDIT_FEES_PCT[installments - 1] ?? CREDIT_FEES_PCT[0]) / 100) - 1e-9)
+export const creditFeeCents = (cents: number, installments = 1): number => creditTotalCents(cents, installments) - cents
+export const formatPct = (n: number): string => n.toFixed(2).replace('.', ',') + '%'
 
 const tlv = (id: string, value: string) => `${id}${String(value.length).padStart(2, '0')}${value}`
 
