@@ -108,13 +108,22 @@ export function AppShell() {
         <p className="max-w-sm text-muted-foreground">A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.</p>
         <div className="flex w-full max-w-sm flex-col gap-2">
           <Link to={`/${membership.slug}/loja`}><Button className="w-full"><Store className="h-4 w-4" /> Ir para a loja</Button></Link>
-          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Ir para o site</Button></Link>
+          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Visitar site</Button></Link>
           <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
         </div>
       </div>
     )
   }
   const base = `/${membership.slug}`
+  // Visitar site e Acessar loja: lado a lado com o Sair, sempre numa linha (só ícones quando a tela é estreita).
+  const quickLinks = (onClick?: () => void) => [
+    { to: "/site", label: "Visitar site", icon: Globe },
+    { to: `${base}/loja`, label: "Acessar loja", icon: Store },
+  ].map((l) => (
+    <Link key={l.to} to={l.to} onClick={onClick} title={l.label} aria-label={l.label} className="min-w-0 flex-1 md:flex-none">
+      <Button variant="outline" size="sm" className="w-full whitespace-nowrap"><l.icon className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">{l.label}</span></Button>
+    </Link>
+  ))
   const isTitular = membership.roles.includes('titular') // o titular é o usuário do bloco: o perfil dele é o perfil do bloco (contatos usados pela Loja e pelo Site)
   const visible = (i: NavItem) => (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
 
@@ -185,9 +194,9 @@ export function AppShell() {
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         {/* Site, nome e Sair: fixos no topo da página (no celular, também dentro do menu). */}
         <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 mb-3 flex h-12 items-center gap-2 border-b border-border bg-background px-4 md:-mx-8 md:-mt-8 md:px-8">
-          <Link to="/site" className="flex-1 md:flex-none"><Button variant="outline" size="sm" className="w-full md:w-auto"><Globe className="h-4 w-4" /> Ir para o site</Button></Link>
+          {quickLinks()}
           <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
-          <Button variant="outline" size="sm" className="flex-1 md:flex-none" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+          <Button variant="outline" size="sm" className="min-w-0 flex-1 whitespace-nowrap md:flex-none" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /> Sair</Button>
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 -mt-3 mb-3 [&:not(:has(>:not(#edit-actions-slot:empty)))]:hidden border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+3rem)] md:-mx-8 md:-mt-3 md:px-8 md:pt-3">
@@ -236,9 +245,9 @@ export function AppShell() {
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent drawer title="Menu" description={membership.display_name} headSlot={(
-          <div className="grid grid-cols-2 gap-2">
-            <Link to="/site" onClick={() => setMoreOpen(false)}><Button variant="outline" size="sm" className="w-full"><Globe className="h-4 w-4" /> Ir para o site</Button></Link>
-            <Button variant="outline" size="sm" className="w-full" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+          <div className="flex gap-2">
+            {quickLinks(() => setMoreOpen(false))}
+            <Button variant="outline" size="sm" className="min-w-0 flex-1 whitespace-nowrap" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /> Sair</Button>
           </div>
         )}>
           <nav className="space-y-1">{renderEntries(more, () => setMoreOpen(false))}</nav>

@@ -57,7 +57,7 @@ export function ShopAdminPage() {
           <ul className="mt-2 list-disc pl-5 text-sm">{pending.map((p) => <li key={p}>{p}</li>)}</ul>
         </Card>
       )}
-      <ButtonRow role="tablist" aria-label="Seções da loja">
+      <ButtonRow role="tablist" aria-label="Seções da loja" split={[3, 2]}>
         {TABS.map((t) => (
           <Button key={t.key} role="tab" aria-selected={tab === t.key} variant={tab === t.key ? 'default' : 'outline'} className="min-h-11" onClick={() => setTab(t.key)}>
             <FitWord>{t.label}</FitWord>
