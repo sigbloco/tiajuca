@@ -160,10 +160,10 @@ export function InterfacePage() {
   const [params] = useSearchParams()
   const [tab, setTab] = useState<Tab>(() => (['factory', 'general', 'site', 'shop'].includes(params.get('area') ?? '') ? (params.get('area') as Tab) : 'factory'))
   useRegisterCrumb(AREAS.find((a) => a.key === tab)?.label ?? 'Interface', () => setTab('factory'), can, 0)
-  if (!can) return <Card className="p-6">Você não tem permissão para mudar a interface.</Card>
-  const current = AREAS.find((a) => a.key === tab)!
   const pending = useUnsavedCount()
   const [next, setNext] = useState<Tab | null>(null)
+  if (!can) return <Card className="p-6">Você não tem permissão para mudar a interface.</Card>
+  const current = AREAS.find((a) => a.key === tab)!
   const go = (k: Tab) => { if (k === tab) return; if (pending > 0) setNext(k); else setTab(k) }
   return (
     <div className="space-y-4">

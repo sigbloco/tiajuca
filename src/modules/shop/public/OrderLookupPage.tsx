@@ -97,6 +97,8 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
   const withFee = order.payment_method === 'infinitepay' && status === 'awaiting_payment'
   const feeCents = withFee ? creditFeeCents(order.total_cents) : 0
   const payCents = order.total_cents + feeCents
+  const pickupPoint = store.pickup_points.find((p) => p.id === order.pickup_point_id)
+  const pickupPerson = pickupPoint?.kind === 'person' ? pickupPoint.name.replace(/^combinar com\s+/i, '').replace(/^(a|o)\s+/i, '') : null
   const payUrl = order.payment_method === 'infinitepay' && status === 'awaiting_payment' ? order.payment_url : null
   const itemCount = data.items.reduce((n, i) => n + i.quantity, 0)
   const pickupLinks = proofLinks({ points: store.pickup_points.filter((p) => p.id === order.pickup_point_id), allPoints: store.pickup_points, directors: store.contact.directors, beneficiary: store.pix?.beneficiary ?? '', orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
@@ -179,10 +181,22 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
 
       <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Retirada</h2>
-        <p className="font-semibold">{data.pickup.name}{data.pickup.address ? <span className="font-normal"> - {data.pickup.address}</span> : null}</p>
-        {data.pickup.opening_hours && <p className="text-sm text-muted-foreground">{data.pickup.opening_hours}</p>}
-        <p className="text-sm">A retirada é combinada: avisaremos quando estiver pronta.</p>
-        {pickupZap && <a className={linkBtn} href={pickupZap} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Falar pelo WhatsApp</a>}
+        {pickupPerson ? (
+          <>
+            {pickupZap
+              ? <a className={linkBtn} href={pickupZap} target="_blank" rel="noreferrer noopener">Combinar com <WhatsAppIcon className="h-4 w-4 shrink-0" />{pickupPerson}</a>
+              : <p className="font-semibold">Combinar com {pickupPerson}</p>}
+            <p className="text-sm">Pode ser no ensaio, entrega por aplicativo ou encontro ao vivo.</p>
+            <p className="text-sm">Avisaremos quando estiver pronta.</p>
+          </>
+        ) : (
+          <>
+            <p className="font-semibold">{data.pickup.name}{data.pickup.address ? <span className="font-normal"> - {data.pickup.address}</span> : null}</p>
+            {data.pickup.opening_hours && <p className="text-sm text-muted-foreground">{data.pickup.opening_hours}</p>}
+            <p className="text-sm">A retirada é combinada: avisaremos quando estiver pronta.</p>
+            {pickupZap && <a className={linkBtn} href={pickupZap} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Falar pelo WhatsApp</a>}
+          </>
+        )}
       </section>
 
       {directors.length > 0 && (

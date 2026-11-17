@@ -11,6 +11,11 @@ import { applyCachedTheme } from '@/core/theme'
 import '@/styles/index.css'
 
 applyCachedTheme()
+// Depois de uma publicação nova, um arquivo antigo pode sumir: recarrega uma vez em vez de deixar a tela em branco.
+window.addEventListener('vite:preloadError', () => {
+  try { if (sessionStorage.getItem('sigbloco:reloaded')) return; sessionStorage.setItem('sigbloco:reloaded', '1') } catch { /* segue */ }
+  window.location.reload()
+})
 startGlueConnectives()
 
 const queryClient = new QueryClient({

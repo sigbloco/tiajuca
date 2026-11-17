@@ -1,7 +1,7 @@
 import { DirectionOnly } from '@/core/permissions'
 import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/primitives'
-import { takePostLoginPath, useAuth } from '@/core/auth'
+import { isSigningOut, takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
 import { ClaimInvitePage, NoOrganizationPage } from '@/modules/auth/pages'
@@ -76,6 +76,8 @@ function RequireAuth() {
   const { session, loading } = useAuth()
   const { pathname, search } = useLocation() // hook ANTES de qualquer return: com o login ainda carregando, a ordem dos hooks mudava e a tela ficava em branco
   if (loading) return <Loading />
+  // Saiu de propósito: vai para a página inicial, sem abrir o login.
+  if (!session && isSigningOut()) return <Navigate to="/" replace />
   return session ? <Outlet /> : <Navigate to={`/?entrar=1&voltar=${encodeURIComponent(pathname + search)}`} replace />
 }
 
