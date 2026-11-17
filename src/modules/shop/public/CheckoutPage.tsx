@@ -14,7 +14,7 @@ import { formatCurrency } from '@/core/format'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
-import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents, pickupWhatsAppLinks } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents, proofLinks } from '../payments/pix'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
@@ -117,14 +117,16 @@ export function CheckoutPage() {
   }
 
     const pixBox = f.method === 'pix' && store.pix ? (() => {
-      const links = pickupWhatsAppLinks(pickup ? points.filter((p) => p.id === pickup) : points)
+      const links = proofLinks({ points: pickup ? points.filter((p) => p.id === pickup) : points, allPoints: store.pickup_points, directors: store.contact.directors, beneficiary: store.pix.beneficiary })
       return (
-        <div className="space-y-2 border-t border-primary/30 p-3 text-sm">
-          <p className="font-semibold">Chave Pix (Em nome de {store.pix.beneficiary})</p>
-          <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
-            <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
+        <div className="space-y-3 border-t border-primary/30 p-3 text-sm">
           <PixQr pixKey={store.pix.key} beneficiary={store.pix.beneficiary} amountCents={cart.totalCents} orderCode="" />
-          <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp de um dos pontos de retirada, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
+          <div>
+            <p className="flex flex-wrap items-center gap-2 break-all font-semibold">{store.pix.key}
+              <Button type="button" size="sm" variant="outline" onClick={() => void copy(store.pix!.key, 'Chave Pix')}><Copy className="h-4 w-4" /> Copiar</Button></p>
+            <p className="text-muted-foreground">Em nome de {store.pix.beneficiary}</p>
+          </div>
+          <p>Depois de confirmar o pedido, pague o valor exato e envie o <strong>comprovante</strong> pelo WhatsApp, citando o código do pedido. O pedido só é confirmado quando a loja conferir o pagamento.</p>
           {links.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {links.map((w) => <a key={w.id} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted" href={w.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> {w.name}</a>)}
@@ -166,18 +168,16 @@ export function CheckoutPage() {
             {methods.map((m) => (
               <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
                 <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
-                  <span className="block font-semibold">{METHOD_LABELS[m].label}</span>
-                  <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>
+                  <span className="block font-semibold">{METHOD_LABELS[m].label}{m === 'pix' && <> · <span className="whitespace-nowrap">{money(cart.totalCents)}</span></>}</span>
+                  {m !== 'pix' && <span className="block text-sm text-muted-foreground">{METHOD_LABELS[m].hint}</span>}
                   {m === 'infinitepay' && <span className="mt-1 block text-sm font-semibold">À vista: taxa de 4,20% (+ {money(creditFeeCents(cart.totalCents))}) · você paga ≈ {money(creditTotalCents(cart.totalCents))}. Parcelando, a taxa é maior.</span>}
-                  {m === 'pix' && <span className="mt-1 block text-sm font-semibold">Sem taxa · você paga {money(cart.totalCents)}</span>}
                 </button>
                 {m === 'pix' && pixBox}
                 {m === 'infinitepay' && f.method === 'infinitepay' && <div className="p-3 pt-0"><CreditFeeTable cents={cart.totalCents} /></div>}
               </div>
             ))}
           </div>
-          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.</p>
-          {(f.method === 'infinitepay' || f.method === 'pix') && <p className="rounded-lg bg-muted p-3 text-sm">No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>}
+          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento. No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>
         </Card>
 
         <Card className="space-y-3 p-4">

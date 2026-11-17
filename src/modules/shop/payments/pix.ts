@@ -81,8 +81,8 @@ export function pickupWhatsAppLinks(
   opts: { orderCode?: string; totalCents?: number; customerName?: string; firstId?: string } = {},
 ): PickupWhatsApp[] {
   const text = opts.orderCode
-    ? `Olá! Segue o comprovante do Pix do pedido ${opts.orderCode}${opts.totalCents ? ` (${brl(opts.totalCents)})` : ''}${opts.customerName ? `, em nome de ${opts.customerName}` : ''}.`
-    : 'Olá! Vou fazer o Pix da minha compra na loja e envio o comprovante por aqui.'
+    ? `Olá! Já fiz o Pix do pedido ${opts.orderCode}${opts.totalCents ? ` (${brl(opts.totalCents)})` : ''}${opts.customerName ? `, em nome de ${opts.customerName}` : ''}. Segue o comprovante.`
+    : 'Olá! Já fiz o Pix da minha compra na loja. Segue o comprovante.'
   const out: PickupWhatsApp[] = []
   for (const p of points) {
     const d = (p.contact_phone ?? '').replace(/\D/g, '')
@@ -124,4 +124,33 @@ export function pixCopyPaste(a: { key: string; beneficiary: string; amountCents:
     tlv('59', clean(a.beneficiary, 25) || 'LOJA') + tlv('60', clean(a.city ?? 'Rio de Janeiro', 15) || 'BRASIL') +
     tlv('62', tlv('05', a.txid.replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***')) + '6304'
   return body + crc16(body)
+}
+
+/**
+ * Links para enviar o comprovante: o(s) ponto(s) de retirada dados + SEMPRE o WhatsApp de quem recebe o Pix (o favorecido da chave),
+ * procurado entre os pontos de retirada e a direção pelo primeiro nome.
+ */
+export function proofLinks(a: {
+  points: readonly { id: string; name: string; contact_name?: string | null; contact_phone?: string | null }[]
+  allPoints: readonly { id: string; name: string; contact_name?: string | null; contact_phone?: string | null }[]
+  directors: readonly DirectorContact[]
+  beneficiary: string
+  orderCode?: string; totalCents?: number; customerName?: string; firstId?: string
+}): PickupWhatsApp[] {
+  const text = { orderCode: a.orderCode, totalCents: a.totalCents, customerName: a.customerName, firstId: a.firstId }
+  const out = pickupWhatsAppLinks(a.points, text)
+  const first = (a.beneficiary.trim().split(/\s+/)[0] ?? '').toLowerCase()
+  if (!first) return out
+  const hit = a.allPoints.find((p) => (p.contact_phone ?? '').replace(/\D/g, '').length >= 10 && `${p.name} ${p.contact_name ?? ''}`.toLowerCase().includes(first))
+  if (hit) {
+    const l = pickupWhatsAppLinks([hit], text)[0]
+    if (l && !out.some((o) => o.id === hit.id)) out.push(l)
+    return out
+  }
+  const dir = a.directors.find((d) => d.name.toLowerCase().includes(first))
+  if (dir) {
+    const msg = a.orderCode ? `Olá! Já fiz o Pix do pedido ${a.orderCode}${a.totalCents ? ` (${brl(a.totalCents)})` : ''}${a.customerName ? `, em nome de ${a.customerName}` : ''}. Segue o comprovante.` : 'Olá! Já fiz o Pix da minha compra na loja. Segue o comprovante.'
+    out.push({ id: 'beneficiary', name: `Enviar para ${dir.name.trim().split(/\\s+/)[0]}`, url: `https://wa.me/${dir.whatsapp}?text=${encodeURIComponent(msg)}` })
+  }
+  return out
 }
