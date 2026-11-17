@@ -24,6 +24,10 @@ export function takePostLoginPath(): string | null {
   } catch { return null }
 }
 
+let signingOut = false
+/** true logo depois de o usuário clicar em Sair: as áreas protegidas voltam à página inicial (sem abrir o login). */
+export const isSigningOut = () => signingOut
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
@@ -33,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => { if (s) signingOut = false; setSession(s) })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -50,8 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error
       },
       async signOut() {
+        signingOut = true
         const { error } = await supabase.auth.signOut()
-        if (error) throw error
+        if (error) { signingOut = false; throw error }
       },
     }),
     [session, loading],

@@ -1,0 +1,12 @@
+{
+  "name": "Cordão da Tia Juca",
+  "short_name": "Tia Juca",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e93d2b",
+  "icons": [
+    { "src": "/brand/tiajuca.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/tiajuca.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
