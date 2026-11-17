@@ -36,6 +36,34 @@ Deno.serve(async (req) => {
   try { body = await req.json() } catch { return json({ error: 'Requisição inválida.' }, 400) }
   const code = String(body.code ?? '').trim().toUpperCase()
   const phone = String(body.phone ?? '')
+
+  // Usuário logado: vê os próprios pedidos sem código/telefone. Token de visitante (chave anon) não resolve usuário.
+  if (body.action === 'mine' || (!phone && (body.action === 'lookup' || body.action === 'report_payment'))) {
+    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+    const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+    const { data: u } = token ? await admin.auth.getUser(token) : { data: { user: null } }
+    const user = u.user
+    if (!user) return json({ error: 'Entre na sua conta ou informe o código e o telefone do pedido.' }, 401)
+    const { data: orgId } = await admin.rpc('shop_org_id', { p_slug: String(body.org_slug ?? '') })
+    if (!orgId) return json({ error: 'Loja não encontrada.' }, 404)
+    const email = user.email ?? null
+    if (body.action === 'mine') {
+      const { data, error } = await admin.rpc('shop_orders_of_user', { p_org: orgId, p_user: user.id, p_email: email })
+      if (error) { console.error('shop_orders_of_user', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
+      return json({ orders: data })
+    }
+    if (body.action === 'report_payment') {
+      const { data, error } = await admin.rpc('shop_report_payment_owned', { p_org: orgId, p_user: user.id, p_email: email, p_code: code })
+      if (error) { console.error('shop_report_payment_owned', error.message); return json({ error: 'Não foi possível processar agora.' }, 500) }
+      if (!data?.ok) return json({ error: 'Pedido não encontrado.' }, 404)
+      flushMail()
+      return json({ status: data.status })
+    }
+    const { data: list } = await admin.rpc('shop_orders_of_user', { p_org: orgId, p_user: user.id, p_email: email })
+    const found = ((list ?? []) as { order: { code: string } }[]).find((o) => o.order.code === code)
+    return found ? json(found) : json({ error: 'Pedido não encontrado.' }, 404)
+  }
+
   if (!/^[A-Z0-9]{6,12}$/.test(code)) return json({ error: 'Pedido não encontrado. Confira o código e o telefone.' }, 404)
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })

@@ -41,8 +41,7 @@ import { SectionNamesPage } from '@/modules/structure/NaipesSettings'
 import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
 import { CartPage } from '@/modules/shop/public/CartPage'
 import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
-import { OrderConfirmationPage } from '@/modules/shop/public/OrderConfirmationPage'
-import { OrderLookupPage } from '@/modules/shop/public/OrderLookupPage'
+import { OrderCodeRedirect, OrderLookupPage } from '@/modules/shop/public/OrderLookupPage'
 import { PrivacyPage } from '@/modules/shop/public/PrivacyPage'
 import { ProductPage } from '@/modules/shop/public/ProductPage'
 import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
@@ -140,7 +139,7 @@ export const router = createBrowserRouter(
             { path: 'produto/:slug', element: <ProductPage /> },
             { path: 'carrinho', element: <CartPage /> },
             { path: 'finalizar', element: <CheckoutPage /> },
-            { path: 'pedido/:code', element: <OrderConfirmationPage /> },
+            { path: 'pedido/:code', element: <OrderCodeRedirect /> },
             { path: 'consultar', element: <OrderLookupPage /> },
             { path: 'privacidade', element: <PrivacyPage /> },
           ],

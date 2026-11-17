@@ -72,3 +72,22 @@ export function directorLinks(contact: ContactInfo, orderCode?: string): Directo
   const text = orderCode ? `Olá! Preciso de ajuda com o pedido ${orderCode} da loja.` : 'Olá! Tenho uma dúvida sobre a loja.'
   return contact.directors.map((d) => ({ name: d.name, url: `https://wa.me/${d.whatsapp}?text=${encodeURIComponent(text)}` }))
 }
+
+export interface PickupWhatsApp { id: string; name: string; url: string }
+
+/** Links de WhatsApp dos pontos de retirada para enviar o comprovante do Pix. O ponto do pedido (`firstId`) vem primeiro. */
+export function pickupWhatsAppLinks(
+  points: readonly { id: string; name: string; contact_name?: string | null; contact_phone?: string | null }[],
+  opts: { orderCode?: string; totalCents?: number; customerName?: string; firstId?: string } = {},
+): PickupWhatsApp[] {
+  const text = opts.orderCode
+    ? `Olá! Segue o comprovante do Pix do pedido ${opts.orderCode}${opts.totalCents ? ` (${brl(opts.totalCents)})` : ''}${opts.customerName ? `, em nome de ${opts.customerName}` : ''}.`
+    : 'Olá! Vou fazer o Pix da minha compra na loja e envio o comprovante por aqui.'
+  const out: PickupWhatsApp[] = []
+  for (const p of points) {
+    const d = (p.contact_phone ?? '').replace(/\D/g, '')
+    if (d.length < 10) continue
+    out.push({ id: p.id, name: p.contact_name ? `${p.name} · ${p.contact_name}` : p.name, url: `https://wa.me/${d.startsWith('55') ? d : '55' + d}?text=${encodeURIComponent(text)}` })
+  }
+  return opts.firstId ? [...out.filter((o) => o.id === opts.firstId), ...out.filter((o) => o.id !== opts.firstId)] : out
+}
