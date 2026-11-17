@@ -121,7 +121,7 @@ export function AppShell() {
     { to: `${base}/loja`, label: "Acessar loja", icon: Store },
   ].map((l) => (
     <Link key={l.to} to={l.to} onClick={onClick} title={l.label} aria-label={l.label} className="min-w-0 flex-1 md:flex-none">
-      <Button variant="outline" size="sm" className="w-full whitespace-nowrap"><l.icon className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">{l.label}</span></Button>
+      <Button variant="outline" size="sm" className="w-full whitespace-nowrap px-2"><l.icon className="h-4 w-4 shrink-0" /><span className="min-w-0 truncate">{l.label}</span></Button>
     </Link>
   ))
   const isTitular = membership.roles.includes('titular') // o titular é o usuário do bloco: o perfil dele é o perfil do bloco (contatos usados pela Loja e pelo Site)
@@ -196,7 +196,7 @@ export function AppShell() {
         <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 mb-3 flex h-12 items-center gap-2 border-b border-border bg-background px-4 md:-mx-8 md:-mt-8 md:px-8">
           {quickLinks()}
           <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
-          <Button variant="outline" size="sm" className="min-w-0 flex-1 whitespace-nowrap md:flex-none" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /> Sair</Button>
+          <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" aria-label="Sair" title="Sair" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /><span className="hidden md:inline">Sair</span></Button>
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 -mt-3 mb-3 [&:not(:has(>:not(#edit-actions-slot:empty)))]:hidden border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+3rem)] md:-mx-8 md:-mt-3 md:px-8 md:pt-3">
@@ -247,7 +247,7 @@ export function AppShell() {
         <SheetContent drawer title="Menu" description={membership.display_name} headSlot={(
           <div className="flex gap-2">
             {quickLinks(() => setMoreOpen(false))}
-            <Button variant="outline" size="sm" className="min-w-0 flex-1 whitespace-nowrap" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /> Sair</Button>
+            <Button variant="outline" size="sm" className="shrink-0" aria-label="Sair" title="Sair" onClick={() => signOut()}><LogOut className="h-4 w-4" /></Button>
           </div>
         )}>
           <nav className="space-y-1">{renderEntries(more, () => setMoreOpen(false))}</nav>

@@ -9,12 +9,12 @@ import { Badge, Button, Card, Input, Label, cn } from '@/components/ui/primitive
 import { useAuth } from '@/core/auth'
 import { formatCurrency, formatDate, formatDateTime } from '@/core/format'
 import { fromCents, type ProductKind } from '../catalog'
-import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, timelineLabel, type TimelineEntry } from '../orders/customerView'
+import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { CreditFeeTable } from './CreditFeeTable'
 import { PixQr } from './PixQr'
-import { METHOD_LABELS, availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
+import { availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pickupWhatsAppLinks, pixInstructions } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -97,19 +97,29 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
   const withFee = order.payment_method === 'infinitepay' && status === 'awaiting_payment'
   const feeCents = withFee ? creditFeeCents(order.total_cents) : 0
   const payCents = order.total_cents + feeCents
+  const payUrl = order.payment_method === 'infinitepay' && status === 'awaiting_payment' ? order.payment_url : null
   const itemCount = data.items.reduce((n, i) => n + i.quantity, 0)
   const pickupLinks = pickupWhatsAppLinks(store.pickup_points.filter((p) => p.id === order.pickup_point_id), { orderCode: order.code, totalCents: order.total_cents, customerName: order.customer_name, firstId: order.pickup_point_id })
 
   return (
     <Card className="overflow-hidden p-0">
-      <button type="button" aria-expanded={open} onClick={toggle} className="flex w-full items-center gap-3 bg-card p-4 text-left hover:bg-muted">
-        <span className="min-w-0 flex-1 space-y-1">
-          <span className="flex flex-wrap items-center gap-2"><span className="font-display text-xl font-extrabold tracking-widest">{order.code}</span><Badge>{CUSTOMER_STATUS_LABEL[status]}</Badge></span>
-          <span className="block text-sm text-muted-foreground">{formatDateTime(order.created_at)} · {itemCount} {itemCount === 1 ? 'item' : 'itens'} · {METHOD_LABELS[order.payment_method].label}</span>
-        </span>
+      <div role="button" tabIndex={0} aria-expanded={open} onClick={toggle} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle() } }}
+        className="flex w-full cursor-pointer items-start gap-3 bg-card p-4 text-left hover:bg-muted">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-display text-xl font-extrabold tracking-widest">{order.code}</span>
+            <button type="button" aria-label="Copiar código do pedido" title="Copiar código do pedido" onClick={(e) => { e.stopPropagation(); void copy(order.code, 'Código') }}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-background"><Copy className="h-4 w-4" /></button>
+            <Badge>{CUSTOMER_STATUS_LABEL[status]}</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">{formatDateTime(order.created_at)}</p>
+          <p className="text-sm text-muted-foreground">{itemCount} {itemCount === 1 ? 'item' : 'itens'}{order.expires_at && status === 'awaiting_payment' ? ` (reservado até ${formatDate(order.expires_at)})` : ''}</p>
+          <p className="text-sm text-muted-foreground">{METHOD_NAME[order.payment_method]}</p>
+        </div>
         <span className="shrink-0 whitespace-nowrap text-lg font-extrabold">{money(payCents)}</span>
-        <ChevronDown className={cn('h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
-      </button>
+        <ChevronDown className={cn('mt-1 h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
+      </div>
+      {payUrl && <div className="px-4 pb-4"><a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={payUrl}>Ir para o pagamento · <span className="whitespace-nowrap">{money(payCents)}</span></a></div>}
       {open && <div className="divide-y divide-border border-t border-border">
       <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Itens</h2>
@@ -131,30 +141,18 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
             ))}
           </div>
         )}
-        {data.timeline.length > 0 && (
-          <div className="space-y-1 border-t border-border pt-3">
-            <h3 className="font-bold">Histórico</h3>
-            <ul className="space-y-1 text-sm">
-              {data.timeline.map((e, i) => <li key={i} className="text-muted-foreground"><span className="text-foreground">{timelineLabel(e)}</span> · {formatDateTime(e.at)}</li>)}
-            </ul>
-          </div>
-        )}
-        {order.expires_at && status === 'awaiting_payment' && <p className="text-sm text-muted-foreground">Itens reservados até {formatDate(order.expires_at)}.</p>}
       </section>
 
       {status !== 'cancelled' && (
         <section className="space-y-3 p-5">
-          <h2 className="text-lg font-bold">Forma de pagamento: {METHOD_NAME[order.payment_method]}</h2>
+          <h2 className="text-lg font-bold">Forma de pagamento:<br />{METHOD_NAME[order.payment_method]}</h2>
           {status === 'paid' && <p className="text-sm">Pagamento confirmado. Obrigado!</p>}
           {status === 'payment_review' && <p className="text-sm">Recebemos o seu aviso. Assim que a loja conferir o comprovante, o pedido é marcado como pago.</p>}
           {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
-            order.payment_url
-              ? <>
-                  <a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={order.payment_url}>Ir para o pagamento · <span className="whitespace-nowrap">{money(payCents)}</span></a>
-                  <p className="text-sm">Conclua o pagamento no link da InfinitePay. A confirmação é automática.</p>
-                  <CreditFeeTable cents={order.total_cents} />
-                </>
-              : <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>
+            <>
+              {!order.payment_url && <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>}
+              <CreditFeeTable cents={order.total_cents} />
+            </>
           )}
           {pix && (
             <>
@@ -176,24 +174,12 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
             </>
           )}
           {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
-          {status === 'awaiting_payment' && (confirmCancel
-            ? (
-              <div className="space-y-2 rounded-lg border border-destructive p-3">
-                <p className="text-sm font-semibold">Cancelar este pedido? Os itens reservados serão liberados.</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" onClick={() => setConfirmCancel(false)}>Voltar</Button>
-                  <Button variant="destructive" disabled={cancel.isPending} onClick={() => cancel.mutate()}>{cancel.isPending ? 'Cancelando' : 'Sim, cancelar'}</Button>
-                </div>
-              </div>
-            )
-            : <Button variant="outline" className="w-full text-destructive" onClick={() => setConfirmCancel(true)}>Cancelar pedido</Button>)}
         </section>
       )}
 
       <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Retirada</h2>
-        <p className="font-semibold">{data.pickup.name}</p>
-        <p className="text-sm">{data.pickup.address}</p>
+        <p className="font-semibold">{data.pickup.name}{data.pickup.address ? <span className="font-normal"> - {data.pickup.address}</span> : null}</p>
         {data.pickup.opening_hours && <p className="text-sm text-muted-foreground">{data.pickup.opening_hours}</p>}
         <p className="text-sm">A retirada é combinada: avisaremos quando estiver pronta.</p>
         {pickupZap && <a className={linkBtn} href={pickupZap} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4" /> Falar pelo WhatsApp</a>}
@@ -205,6 +191,22 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
           <ButtonRow>
             {directors.map((d) => <a key={d.name} className={`${linkBtn} justify-center`} href={d.url} target="_blank" rel="noreferrer noopener"><WhatsAppIcon className="h-4 w-4 shrink-0" /> {d.name}</a>)}
           </ButtonRow>
+        </section>
+      )}
+      {status === 'awaiting_payment' && (
+        <section className="space-y-3 p-5">
+            {status === 'awaiting_payment' && (confirmCancel
+              ? (
+                <div className="space-y-2 rounded-lg border border-destructive p-3">
+                  <p className="text-sm font-semibold">Cancelar este pedido? Os itens reservados serão liberados.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={() => setConfirmCancel(false)}>Voltar</Button>
+                    <Button variant="destructive" disabled={cancel.isPending} onClick={() => cancel.mutate()}>{cancel.isPending ? 'Cancelando' : 'Sim, cancelar'}</Button>
+                  </div>
+                </div>
+              )
+              : <Button variant="outline" className="w-full text-destructive" onClick={() => setConfirmCancel(true)}>Cancelar pedido</Button>)}
+  
         </section>
       )}
       </div>}
