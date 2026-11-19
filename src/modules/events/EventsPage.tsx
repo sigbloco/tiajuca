@@ -203,7 +203,7 @@ export function EventsPage() {
                   Math.floor(di / 7) % 2 === 1 ? 'bg-muted/60' : 'bg-card',
                   !d.inMonth && 'opacity-40',
                   d.iso === today && 'ring-2 ring-primary',
-                  selectedDay === d.iso && 'bg-muted',
+                  selectedDay === d.iso && 'bg-muted ring-2 ring-foreground',
                 )}
                 title={holidayOf(d.iso)}
                 aria-label={`${formatDayLong(d.iso)}${holidayOf(d.iso) ? `, feriado: ${holidayOf(d.iso)}` : ""}${list.length ? `, ${list.length} evento(s)` : ""}${birthdaysOn(d.iso).length ? `, ${birthdaysOn(d.iso).length} aniversário(s)` : ""}`}
