@@ -72,15 +72,16 @@ export function CouponsTab() {
       <Button variant="add" className="w-full" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Novo cupom</Button>
       {adding && (
         <Card className="space-y-3 p-4">
-          <form className="space-y-3" onSubmit={(e) => {
+          {/* Código, desconto e botão lado a lado; no celular o botão fica só com o "+". */}
+          <form className="flex items-end gap-2" onSubmit={(e) => {
             e.preventDefault()
             if (requireFields([['Código (3 a 30 letras, números, - ou _)', validCode(code)], ['Desconto (de 0,01 a 100%)', parseDiscount(pct) !== null]])) create.mutate()
           }}>
-            <div className="space-y-1.5"><Label htmlFor="cp-code" required>Código</Label>
-              <Input id="cp-code" autoCapitalize="characters" autoComplete="off" maxLength={30} className="uppercase tracking-wider" placeholder="Ex.: BLOCO10" value={code} onChange={(e) => setCode(normalizeCode(e.target.value))} /></div>
+            <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor="cp-code" required>Código</Label>
+              <Input id="cp-code" autoCapitalize="characters" autoComplete="off" maxLength={30} className="uppercase tracking-wider" placeholder="BLOCO10" value={code} onChange={(e) => setCode(normalizeCode(e.target.value))} /></div>
             <div className="space-y-1.5"><Label htmlFor="cp-pct" required>Desconto</Label>
-              <div className="flex items-center gap-2"><Input id="cp-pct" inputMode="decimal" className="w-24 text-center" maxLength={6} placeholder="10" value={pct} onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, ''))} /><span className="font-semibold">%</span></div></div>
-            <Button type="submit" className="w-full" disabled={create.isPending}><Plus className="h-4 w-4" /> Criar cupom</Button>
+              <div className="flex items-center gap-1"><Input id="cp-pct" inputMode="decimal" className="w-16 text-center" maxLength={6} placeholder="10" value={pct} onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, ''))} /><span className="font-semibold">%</span></div></div>
+            <Button type="submit" className="shrink-0" disabled={create.isPending} aria-label="Criar cupom" title="Criar cupom"><Plus className="h-4 w-4" /><span className="ml-1.5 hidden sm:inline">Criar cupom</span></Button>
           </form>
         </Card>
       )}

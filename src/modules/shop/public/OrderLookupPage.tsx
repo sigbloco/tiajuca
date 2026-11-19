@@ -13,6 +13,7 @@ import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, type TimelineEntry
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { CreditFeeTable } from './CreditFeeTable'
+import { GoogleInvite } from './GoogleInvite'
 import { PixQr } from './PixQr'
 import { availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pixInstructions, proofLinks } from '../payments/pix'
 import { invokeShop } from './api'
@@ -327,6 +328,7 @@ export function OrderLookupPage() {
               <Button type="submit" className="w-full" disabled={search.isPending || code.trim().length < 6 || phone.replace(/\D/g, '').length < 10}>{search.isPending ? 'Buscando' : 'Consultar pedido'}</Button>
             </form>
           </Card>
+          {data && <GoogleInvite title="Acompanhe este pedido sem código" text="Entre com o Google e todos os seus pedidos ficam em Meus pedidos, sem precisar do código nem do telefone." />}
           {data && <OrderView key={data.order.code} defaultOpen data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
         </>
       )}
