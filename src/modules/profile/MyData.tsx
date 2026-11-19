@@ -73,6 +73,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   // Cada bloco só olha e grava os seus campos.
   const nets = useSocialNetworks()
   const [rows, setRows] = useState<NetRow[]>([{ network: 'instagram', user: '' }])
+  // Redes como vieram do banco (lidas junto com `rows`, com as mesmas redes): é com elas que se compara, para não acusar alteração só porque a lista de redes carregou depois.
+  const [baseRows, setBaseRows] = useState<NetRow[]>([{ network: 'instagram', user: '' }])
   // Data de fundação do bloco (perfil do bloco): aparece nos aniversários do Calendário.
   const founded = useQuery({
     queryKey: ['org-founded', orgId], enabled: part === 'bloco',
@@ -87,7 +89,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     queryKey: ['me-linked', orgId, memberId], enabled: part !== 'bloco',
     queryFn: async () => { const { data, error } = await supabase.from('members').select('user_id').eq('id', memberId).single(); if (error) throw error; return Boolean((data as { user_id: string | null }).user_id) },
   })
-  useEffect(() => { if (me.data) { setRows(rowsOf(me.data.social_handle, nets)); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data])
+  useEffect(() => { if (me.data) { const r = rowsOf(me.data.social_handle, nets); setRows(r); setBaseRows(r); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
   const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone])
 
@@ -108,8 +110,8 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, urlsOf(rowsOf(me.data.social_handle, nets), nets), founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(urlsOf(rowsOf(me.data.social_handle))) + String(isNoSocial(me.data.social_handle)))) : ''
-  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, urlsOf(rows, nets), foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(urlsOf(rows, nets)) + String(noSocial))
+  const baseline = me.data ? (part === 'bloco' ? JSON.stringify([toF(me.data).email, toF(me.data).phone, baseRows, founded.data ?? '']) : mine(toF(me.data)) + (part === 'other' ? '' : JSON.stringify(baseRows) + String(isNoSocial(me.data.social_handle)))) : ''
+  const curKey = part === 'bloco' ? JSON.stringify([f.email, f.phone, rows, foundedOn]) : mine(f) + (part === 'other' ? '' : JSON.stringify(rows) + String(noSocial))
   useUnsaved(!!me.data && curKey !== baseline, () => save.mutateAsync())
   const phoneDigits = f.phone.replace(/\D/g, '')
   const phoneOk = phoneDigits === '' || (phoneDigits.length >= 10 && phoneDigits.length <= 13)
