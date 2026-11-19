@@ -216,23 +216,19 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             && !(await confirmBox(`A data ${formatDayLong(f.activity_date)} fica fora do ciclo ${cy.name}. O evento não vai aparecer no calendário desse ciclo. Salvar mesmo assim?`))) return
           save.mutate()
         }} className="space-y-3">
+        {/* "À confirmar" em cima do título. */}
+        <label className="flex items-center gap-2 font-semibold">
+          <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> À confirmar
+        </label>
+        {f.to_confirm && (
+          <div className="space-y-1.5"><Label htmlFor="ev-confirm-note">O que falta confirmar</Label>
+            <Input id="ev-confirm-note" maxLength={200} placeholder="Ex.: horário, local" value={f.to_confirm_note} onChange={(e) => setF({ ...f, to_confirm_note: e.target.value })} /></div>
+        )}
         {/* Título e tipo lado a lado (celular e computador). */}
         <div className="grid grid-cols-[1.3fr_1fr] items-start gap-2">
           <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
           <div className="min-w-0"><TypePicker types={types.data ?? []} ids={labelIds} onChange={changeTypes} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 font-semibold">
-            <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
-          </label>
-          <label className="flex items-center gap-2 font-semibold">
-            <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> À confirmar
-          </label>
-        </div>
-        {f.to_confirm && (
-          <div className="space-y-1.5"><Label htmlFor="ev-confirm-note">O que falta confirmar</Label>
-            <Input id="ev-confirm-note" maxLength={200} placeholder="Ex.: horário, local" value={f.to_confirm_note} onChange={(e) => setF({ ...f, to_confirm_note: e.target.value })} /></div>
-        )}
         {/* Data, início e fim na mesma linha: a data pede mais largura que as horas. */}
         {/* Celular: data, início e fim numa linha e o local embaixo. Computador: os quatro na mesma linha. */}
         <div className={fromRule ? '' : 'grid grid-cols-[1.5fr_1fr_1fr] gap-2 sm:grid-cols-[1.3fr_1fr_1fr_1.7fr]'}>
@@ -269,6 +265,10 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             </Select>
           </div>
         </div>
+        {/* "Presença" em cima do público da chamada. */}
+        <label className="flex items-center gap-2 font-semibold">
+          <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
+        </label>
         <AudiencePicker value={auds} onChange={setAuds} />
         {/* Checklist por último na edição (grava na hora, por isso não conta como alteração a salvar). Em evento novo aparece depois do primeiro Salvar. */}
         {activity && <ChecklistSection activityId={activity.id} />}
