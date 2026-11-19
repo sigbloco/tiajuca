@@ -169,7 +169,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             <h3>Roteiro</h3>
             <ol className="divide-y divide-border rounded-lg border border-border">
               {[...activity.itinerary].sort((a, b) => a.time.localeCompare(b.time)).map((x, i) => (
-                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span className="w-24 shrink-0 font-display font-bold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span><span className="min-w-0"><span className="font-semibold">{x.label}</span>{x.location && <span className="block text-muted-foreground">{x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span></li>
+                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span className="w-24 shrink-0 font-display font-bold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span><span className="min-w-0"><span className="font-semibold">{x.label}</span>{x.location && x.location.trim() !== activity.location?.trim() && <span className="block text-muted-foreground">{x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span></li>
               ))}
             </ol>
           </section>
@@ -250,7 +250,9 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
         </div>
           </>
         )}
-        <ItineraryEditor steps={steps} onChange={setSteps} />
+        <ItineraryEditor steps={steps} onChange={setSteps} defaultLocation={fromRule ? '' : f.location.trim()} />
+        {/* Checklist também na edição (grava na hora, por isso não conta como alteração a salvar). Em evento novo aparece depois do primeiro Salvar. */}
+        {activity && <ChecklistSection activityId={activity.id} />}
         <div className="grid grid-cols-2 gap-2">
           <div className="min-w-0 space-y-1.5">
             <Label htmlFor="ev-cycle" required>Ciclo</Label>
