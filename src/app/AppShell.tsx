@@ -1,5 +1,5 @@
 import { OrgName } from '@/components/shared/OrgName'
-import { LoadingScreen } from '@/components/shared/LoadingScreen'
+import { LoadingScreen, useSplashHold } from '@/components/shared/LoadingScreen'
 import { ArrowLeft, Construction, Globe, LogOut, Menu, Store, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useCrumbOverride, useExtraCrumbs } from '@/core/breadcrumb'
@@ -14,7 +14,7 @@ import { supabase } from '@/core/supabase'
 import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
-import { applyBrandToDocument } from '@/modules/auth/AuthLayout'
+import { applyBrandToDocument, cacheBrand } from '@/modules/auth/AuthLayout'
 import { HUBS, NAV_ITEMS, crumbsFor, type CameFrom, type HubKey, type NavItem } from './navigation'
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { BulletTrail } from '@/components/shared/BulletTrail'
@@ -80,6 +80,7 @@ export function AppShell() {
   })
   const { membership } = useOrganization()
   const rel = useMyReleases()
+  const splash = useSplashHold()
   const { signOut } = useAuth()
   const { pathname, search, state } = useLocation()
   const navigate = useNavigate()
@@ -121,11 +122,11 @@ export function AppShell() {
     void supabase.rpc('refresh_current_cycle', { p_org: orgIdForCycles }).then(() => qcShell.invalidateQueries({ queryKey: ['cycles'] }))
   }, [orgIdForCycles]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
+  useEffect(() => { if (membership) cacheBrand({ name: membership.name, short_name: membership.short_name, logo_path: membership.logo_path, theme: membership.theme }) }, [membership?.name, membership?.logo_path, membership?.theme]) // eslint-disable-line react-hooks/exhaustive-deps
   // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0
-  if (!membership) return <LoadingScreen />
-  if (!rel.ready) return <LoadingScreen />
+  if (!membership || !rel.ready || splash) return <LoadingScreen />
   // Nenhuma página liberada para este perfil (a liberação fica em Acesso e papéis): só o aviso, a loja, o site e o Sair.
   // O Titular que está "visualizando como" esse perfil continua com a barra para voltar; o inativo ainda pode pedir para voltar.
   if (!rel.all && !rel.anyPage) {

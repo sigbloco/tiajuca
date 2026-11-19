@@ -19,7 +19,16 @@ import { audienceSectionIds, getAudiencesFor, listActivities, type Activity } fr
 
 const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
 
-function Stat({ label, value, hint, tone }: { label: string; value: string | number; hint?: string; tone?: string }) {
+function Stat({ label, value, hint, tone, compact }: { label: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
+  if (compact) {
+    return (
+      <Card className="h-full min-w-0 p-2">
+        <p className="text-[clamp(0.58rem,2.3vw,0.75rem)] leading-tight text-muted-foreground">{label}</p>
+        <p className={cn('font-display font-bold leading-tight [overflow-wrap:anywhere] text-[clamp(0.72rem,3.4vw,1.25rem)]', tone)}>{value}</p>
+        {hint && <p className="text-[clamp(0.52rem,2vw,0.7rem)] leading-tight text-muted-foreground">{hint}</p>}
+      </Card>
+    )
+  }
   return (
     <Card className="h-full p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
@@ -157,15 +166,16 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
   if (direction && !data.status && !data.paidRole) return null
   const receives = data.paidRole || direction || staff
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-      <Stat label="Ciclo" value={data.cycle?.name ?? '—'} />
-      <Stat label="Meu status" value={data.status ?? 'Sem registro'} />
-      {!staff && !direction && <Stat label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
+    // Uma linha só, ocupando toda a largura: caixas iguais, com fonte que encolhe conforme a tela.
+    <div className="flex gap-1.5 [&>*]:min-w-0 [&>*]:flex-1">
+      <Stat compact label="Ciclo" value={data.cycle?.name ?? '—'} />
+      <Stat compact label="Meu status" value={data.status ?? 'Sem registro'} />
+      {!staff && !direction && <Stat compact label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
       <Link to={`/${slug}/cobrancas`} className="block h-full">
         {receives ? (
-          <Stat label="Pagamento" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
+          <Stat compact label="Pagamento" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
         ) : (
-          <Stat label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
+          <Stat compact label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
             hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
         )}
       </Link>

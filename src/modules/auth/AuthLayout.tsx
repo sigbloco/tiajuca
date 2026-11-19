@@ -24,6 +24,11 @@ export function readBrand(): PublicOrg | undefined {
   } catch { return undefined }
 }
 
+/** Guarda nome, logo e cores do bloco no aparelho: a tela de carregando mostra a logo logo de cara na próxima vez. */
+export function cacheBrand(org: PublicOrg) {
+  try { localStorage.setItem(BRAND_KEY, JSON.stringify(org)) } catch { /* sem armazenamento: só não lembra */ }
+}
+
 /** Troca o título da aba e o ícone pela identidade da organização. */
 export function applyBrandToDocument(org: { name: string; logo_path: string | null }) {
   document.title = org.name
