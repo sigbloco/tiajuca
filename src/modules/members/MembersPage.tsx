@@ -20,6 +20,7 @@ import { friendlyError } from '@/core/errors'
 import { adultBirthDateMax } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { Can, useIsDirection, usePermission } from '@/core/permissions'
+import { MemberAvatar } from './MemberAvatar'
 import { supabase } from '@/core/supabase'
 import { hrefOf } from '@/modules/site/links'
 import { maskPhone } from '@/components/ui/masked-inputs'
@@ -349,6 +350,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const wa = m.phone ? hrefOf({ kind: 'whatsapp', label: '', value: m.phone }) : null
     return (
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
+        <MemberAvatar memberId={m.id} name={rowName(m)} />
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>

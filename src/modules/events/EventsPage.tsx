@@ -101,6 +101,8 @@ export function EventsPage() {
     return map
   }, [data])
 
+  const [onlyPending, setOnlyPending] = useState(false)
+  const pending = useMemo(() => (data ?? []).filter((a) => a.to_confirm), [data])
   const monthPrefix = `${ym.y}-${String(ym.m + 1).padStart(2, '0')}`
   const listDays = Object.keys(byDay).filter((d) => d.startsWith(monthPrefix) && (!selectedDay || d === selectedDay)).sort()
   const shift = (delta: number) => {
@@ -144,6 +146,21 @@ export function EventsPage() {
         <p className="text-muted-foreground">Ensaios, aulas, apresentações e aniversários do ciclo.</p>
       </div>
       {header}
+      {pending.length > 0 && (
+        <Button variant={onlyPending ? 'default' : 'outline'} className="w-full" aria-pressed={onlyPending} onClick={() => setOnlyPending(!onlyPending)}>
+          À confirmar ({pending.length})
+        </Button>
+      )}
+      {onlyPending && (
+        <div className="space-y-4">
+          {[...new Set(pending.map((a) => a.activity_date))].sort().map((day) => (
+            <section key={day} className="space-y-2">
+              <h3 className="capitalize">{formatDayLong(day)}</h3>
+              {pending.filter((a) => a.activity_date === day).map((a, ai) => <EventCard key={a.id} a={a} index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+            </section>
+          ))}
+        </div>
+      )}
 
       <Card className="p-3">
         <StepNav className="mb-2" prevLabel="Mês anterior" nextLabel="Próximo mês" onPrev={() => shift(-1)} onNext={() => shift(1)}>{formatCompetence(monthPrefix)}</StepNav>
@@ -171,7 +188,7 @@ export function EventsPage() {
                 <span className="mt-0.5 flex h-1.5 flex-wrap items-center justify-center gap-0.5">
                   {birthdaysOn(d.iso).length > 0 && <Cake className="-my-0.5 h-3 w-3 text-foreground" strokeWidth={2.75} aria-hidden="true" />}
                   {list.slice(0, 4).map((a) => (
-                    <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30')} />
+                    <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30', a.to_confirm && 'border border-foreground/60 bg-transparent')} />
                   ))}
                 </span>
               </button>

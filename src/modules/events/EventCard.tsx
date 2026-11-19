@@ -1,7 +1,7 @@
 import { ActionRow } from '@/components/shared/ActionRow'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, ClipboardCheck, Pencil, Undo2 } from 'lucide-react'
+import { Ban, CheckCircle2, ClipboardCheck, Pencil, Undo2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
@@ -10,7 +10,7 @@ import { formatTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { notifyChange } from '@/core/undo'
-import { COLOR_DOT, STATUS_LABEL, cancelWord, setActivityStatus, type Activity } from './service'
+import { COLOR_DOT, STATUS_LABEL, cancelWord, confirmActivity, setActivityStatus, type Activity } from './service'
 
 /** Cartão de evento (calendário e início): horário/roteiro, atalho para Presença, editar e cancelar. */
 export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index?: number; onOpen: () => void; onEdit: () => void }) {
@@ -30,14 +30,20 @@ export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index
     onSuccess: () => { toast.success('Reativado.'); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
+  const confirm = useMutation({
+    mutationFn: () => confirmActivity(orgId, a.id),
+    onSuccess: () => { toast.success('Evento confirmado.'); refresh() },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
   const t = a.activity_types
   const time = [formatTime(a.start_time), formatTime(a.end_time)].filter(Boolean).join(' – ')
   return (
-    <Card className={cn('flex items-stretch gap-3 p-3', index % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60')}>
+    <Card className={cn('flex items-stretch gap-3 p-3', index % 2 === 1 && 'bg-muted/50', a.status === 'cancelled' && 'opacity-60', a.to_confirm && 'border-dashed border-warning')}>
       <span className={cn('w-1.5 shrink-0 rounded-full', COLOR_DOT[t?.color ?? 'muted'])} />
       <div className="min-w-0 flex-1">
         <button className="w-full text-left" onClick={onOpen}>
           <p className={cn('font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
+          {a.to_confirm && <p className="text-sm font-semibold text-warning">À confirmar{a.to_confirm_note ? `: ${a.to_confirm_note}` : ''}</p>}
           {a.itinerary && a.itinerary.length > 0 ? (
             <div className="text-muted-foreground">
               {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k, list) => {
@@ -60,6 +66,7 @@ export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index
         {a.status === 'scheduled' && (canRecord || canManage) && (
           <ActionRow className="mt-2">
             {canRecord && a.has_attendance !== false && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>}
+            {canManage && a.to_confirm && <Button size="sm" variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso À confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>}
             {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /><span className="act-label ml-1.5">Editar</span></Button>}
             {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
               onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(t?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /><span className="act-label ml-1.5">Cancelar</span></Button>}

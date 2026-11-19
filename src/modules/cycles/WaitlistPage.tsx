@@ -1,8 +1,11 @@
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
+import { MemberAvatar } from '@/modules/members/MemberAvatar'
 import { shortName } from '@/core/format'
-import { ArrowUpCircle } from 'lucide-react'
+import { ArrowUpCircle, UsersRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useMyReleases } from '@/modules/access/releaseData'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, EmptyState, Label, Select, Skeleton } from '@/components/ui/primitives'
@@ -30,6 +33,8 @@ export function WaitlistPage() {
   const qc = useQueryClient()
   const canManage = usePermission('member_cycles.manage', 'group')
   const canForce = usePermission('capacity.manage')
+  const canSeeVagas = usePermission('capacity.read')
+  const released = useMyReleases().released('naipes') // Vagas fica dentro de Naipes e instrumentos
   const instruments = useCatalog('instruments')
   const { cycleId } = useSelectedCycle()
   const [memberId, setMemberId] = useState('')
@@ -81,6 +86,9 @@ export function WaitlistPage() {
 
   return (
     <div className="space-y-4">
+      {canSeeVagas && (released
+        ? <Button asChild variant="outline" className="w-full"><Link to={`/${membership?.slug}/vagas`}><UsersRound className="h-4 w-4" /> Vagas</Link></Button>
+        : <Button variant="outline" className="w-full opacity-50" disabled title="Ainda não liberado para o seu perfil"><UsersRound className="h-4 w-4" /> Vagas</Button>)}
 
       {canManage && cycleId && (
         <Card className="space-y-3 p-4">
@@ -102,7 +110,8 @@ export function WaitlistPage() {
       <div className="grid gap-2">
         <ProgressiveList items={(data) ?? []} render={(r, i) => (
           <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
-            <div className="min-w-0">
+            <MemberAvatar memberId={r.member_id} name={shortName(r.members?.full_name, r.members?.display_name)} />
+            <div className="min-w-0 flex-1">
               <p className="break-words font-semibold">{i + 1}. <MemberLink id={r.member_id}>{shortName(r.members?.full_name, r.members?.display_name)}</MemberLink></p>
               <p className="text-muted-foreground">
                 {r.instruments?.name ?? 'Instrumento não informado'} · desde {formatDateTime(r.waitlisted_at, membership?.timezone)}

@@ -13,6 +13,8 @@ import { supabase } from '@/core/supabase'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { EventCard } from '@/modules/events/EventCard'
 import { EventSheet } from '@/modules/events/EventSheet'
+import { MergedEventCard } from '@/modules/events/MergedEventCard'
+import { groupSimultaneous } from '@/modules/events/grouping'
 import { audienceSectionIds, getAudiencesFor, listActivities, type Activity } from '@/modules/events/service'
 
 const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
@@ -111,7 +113,10 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
       {days.map((day) => (
         <section key={day} className="space-y-2">
           <h4 className="capitalize">{day === today ? 'Hoje · ' : ''}{formatDayLong(day)}</h4>
-          {list.filter((a) => a.activity_date === day).map((a, i) => <EventCard key={a.id} a={a} index={i} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+          {/* Eventos no mesmo horário viram um cartão só. */}
+          {groupSimultaneous(list.filter((a) => a.activity_date === day)).map((g, i) => g.items.length > 1
+            ? <MergedEventCard key={g.key} items={g.items} index={i} onOpen={(a) => setSheet({ activity: a })} />
+            : <EventCard key={g.key} a={g.items[0]} index={i} onOpen={() => setSheet({ activity: g.items[0] })} onEdit={() => setSheet({ activity: g.items[0], edit: true })} />)}
         </section>
       ))}
       {visible.length > list.length && <Button variant="outline" className="w-full" onClick={() => setShown((n) => n + 3)}>Carregar mais...</Button>}

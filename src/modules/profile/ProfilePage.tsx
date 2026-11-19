@@ -11,6 +11,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { MyParticipation } from './MyParticipation'
+import { MemberPhotoEditor } from '@/modules/members/MemberAvatar'
 import { StickySave } from '@/components/shared/StickySave'
 import { MyData, MySensitiveData, type SaveBinder } from './MyData'
 import { PAY_STATUS_CLASS, PAY_STATUS_LABEL, type StaffPayment } from '@/modules/finance/service'
@@ -114,6 +115,7 @@ export function ProfilePage() {
         <h1>Meu perfil</h1>
         {head.data?.joined_at && <p className="text-sm text-muted-foreground">Inscrição em {formatDate(head.data.joined_at)}</p>}
       </div>
+      <Card className="space-y-2 p-4"><h3>Foto</h3><MemberPhotoEditor memberId={memberId} name={membership.display_name} canEdit /></Card>
       <MyData memberId={memberId} bind={bindData} />
       <MySensitiveData memberId={memberId} bind={bindSens} />
       <MyParticipation memberId={memberId} />
