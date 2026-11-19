@@ -110,6 +110,15 @@ export function TimeInput({ id, value, onChange, required }: { id?: string; valu
   useEffect(() => { if (value !== text && (value === '' || /^\d{2}:\d{2}$/.test(value))) setText(value) }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Input id={id} inputMode="numeric" autoComplete="off" placeholder="hh:mm" maxLength={5} required={required} value={text}
+      onBlur={() => {
+        // Só a hora ("16" ou "9") completa para 16:00 / 09:00; "930" vira 09:30.
+        const d = text.replace(/\D/g, '')
+        if (d.length === 0 || d.length === 4 || (d.length === 2 && text.includes(':'))) return
+        const full = d.length <= 2 ? `${d.padStart(2, '0')}:00` : `${d.padStart(2, '0').slice(0, 2)}:${d.slice(-2)}`
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(full)) return
+        setText(full)
+        onChange(full)
+      }}
       onChange={(e) => {
         const d = e.target.value.replace(/\D/g, '').slice(0, 4)
         const masked = d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d
