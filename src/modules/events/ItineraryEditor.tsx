@@ -20,10 +20,17 @@ export function ItineraryEditor({ steps, onChange }: { steps: ItineraryStep[]; o
             <div className="w-24 shrink-0 space-y-1"><Label htmlFor={`it-end-${i}`} className="text-xs">Fim</Label><TimeInput id={`it-end-${i}`} value={x.end ?? ''} onChange={(v) => setStep(i, { end: v })} /></div>
             <div className="ml-auto"><Button type="button" size="icon" variant="ghost" aria-label={`Remover item ${i + 1}`} onClick={() => onChange(steps.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button></div>
           </div>
-          <div className="space-y-1"><Label htmlFor={`it-label-${i}`} className="text-xs">Item</Label><Input id={`it-label-${i}`} placeholder="Ex.: ensaio, passagem de som" value={x.label} onChange={(e) => setStep(i, { label: e.target.value })} /></div>
-          <div className="space-y-1"><Label htmlFor={`it-loc-${i}`} className="text-xs">Local</Label><Input id={`it-loc-${i}`} value={x.location ?? ''} onChange={(e) => setStep(i, { location: e.target.value })} /></div>
-          <div className="space-y-1"><Label htmlFor={`it-desc-${i}`} className="text-xs">Descrição</Label>
-            <textarea id={`it-desc-${i}`} rows={2} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={x.description ?? ''} onChange={(e) => setStep(i, { description: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0 space-y-1"><Label htmlFor={`it-label-${i}`} className="text-xs">Item</Label><Input id={`it-label-${i}`} placeholder="Ex.: ensaio" value={x.label} onChange={(e) => setStep(i, { label: e.target.value })} /></div>
+            <div className="min-w-0 space-y-1"><Label htmlFor={`it-loc-${i}`} className="text-xs">Local</Label><Input id={`it-loc-${i}`} value={x.location ?? ''} onChange={(e) => setStep(i, { location: e.target.value })} /></div>
+          </div>
+          {/* Descrição só aparece se marcada (economiza espaço); desmarcar apaga o texto. */}
+          <label className="flex items-center gap-2 text-xs font-semibold">
+            <input type="checkbox" className="h-4 w-4" checked={x.description !== undefined} onChange={(e) => setStep(i, { description: e.target.checked ? '' : undefined })} /> Descrição
+          </label>
+          {x.description !== undefined && (
+            <textarea id={`it-desc-${i}`} aria-label="Descrição do item" rows={2} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={x.description} onChange={(e) => setStep(i, { description: e.target.value })} />
+          )}
         </div>
       ))}
     </div>
@@ -32,7 +39,7 @@ export function ItineraryEditor({ steps, onChange }: { steps: ItineraryStep[]; o
 
 /** Itens salvos → itens do formulário (horários sem os segundos). */
 export const loadSteps = (items: ItineraryStep[] | null | undefined): ItineraryStep[] =>
-  (items ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label, end: x.end?.slice(0, 5) ?? '', location: x.location ?? '', description: x.description ?? '' }))
+  (items ?? []).map((x) => ({ time: x.time.slice(0, 5), label: x.label, end: x.end?.slice(0, 5) ?? '', location: x.location ?? '', description: x.description?.trim() ? x.description : undefined }))
 
 /** Itens do formulário → o que se grava: só os que têm início e nome, sem campos vazios, em ordem de horário. */
 export const cleanSteps = (steps: ItineraryStep[]): ItineraryStep[] =>
