@@ -33,6 +33,8 @@
   body { @apply bg-background font-sans text-sm text-foreground antialiased; }
   h1, h2, h3 { @apply font-display font-bold leading-tight tracking-tight; }
   h1 { @apply text-2xl; }
+  /* Descrição logo abaixo do título da página: fonte menor em todo o sistema. */
+  h1 + p { @apply text-sm; }
   h2 { @apply text-xl; }
   h3 { @apply text-base; }
 }
