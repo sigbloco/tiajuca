@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Cake, ChevronRight, UserRound } from 'lucide-react'
+import { FitText } from '@/components/shared/FitText'
 import { useParticipationLine } from '@/modules/profile/participationLine'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 import { useState } from 'react'
@@ -21,11 +22,12 @@ const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direca
 
 function Stat({ label, value, hint, tone, compact }: { label: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
   if (compact) {
+    // Cada texto começa grande e a fonte desce só até caber na largura da caixa (uma linha, sem quebrar): aproveita o espaço que sobra.
     return (
-      <Card className="h-full min-w-0 p-2">
-        <p className="text-[clamp(0.58rem,2.3vw,0.75rem)] leading-tight text-muted-foreground">{label}</p>
-        <p className={cn('font-display font-bold leading-tight [overflow-wrap:anywhere] text-[clamp(0.72rem,3.4vw,1.25rem)]', tone)}>{value}</p>
-        {hint && <p className="text-[clamp(0.52rem,2vw,0.7rem)] leading-tight text-muted-foreground">{hint}</p>}
+      <Card className="flex h-full min-w-0 flex-1 flex-col justify-center p-1.5">
+        <FitText min={7} className="text-sm text-muted-foreground">{label}</FitText>
+        <FitText min={7} className={cn('font-display text-2xl font-bold', tone)}>{value}</FitText>
+        {hint && <FitText min={7} className="text-xs text-muted-foreground">{hint}</FitText>}
       </Card>
     )
   }
@@ -167,11 +169,11 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
   const receives = data.paidRole || direction || staff
   return (
     // Uma linha só, ocupando toda a largura: caixas iguais, com fonte que encolhe conforme a tela.
-    <div className="flex gap-1.5 [&>*]:min-w-0 [&>*]:flex-1">
+    <div className="grid grid-flow-col auto-cols-fr items-stretch gap-1.5">
       <Stat compact label="Ciclo" value={data.cycle?.name ?? '—'} />
       <Stat compact label="Meu status" value={data.status ?? 'Sem registro'} />
       {!staff && !direction && <Stat compact label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
-      <Link to={`/${slug}/cobrancas`} className="block h-full">
+      <Link to={`/${slug}/cobrancas`} className="flex min-w-0">
         {receives ? (
           <Stat compact label="Pagamento" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
         ) : (
