@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Cake, ChevronRight, UserRound } from 'lucide-react'
-import { FitBox, FitText } from '@/components/shared/FitText'
+import { FitBox, FitLabel, FitText } from '@/components/shared/FitText'
 import { useParticipationLine } from '@/modules/profile/participationLine'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 import { useState } from 'react'
@@ -20,16 +20,16 @@ import { audienceSectionIds, getAudiencesFor, listActivities, type Activity } fr
 
 const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
 
-function Stat({ label, value, hint, tone, compact }: { label: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
+function Stat({ label, labelShort, value, hint, tone, compact }: { label: string; /** Forma curta do título, usada só se o completo não couber (compact). */ labelShort?: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
   if (compact) {
     // Título sempre no topo; o valor ocupa a maior fonte que cabe no espaço que sobra (largura e altura), quebrando só entre palavras.
     return (
-      <Card className="flex h-full min-h-[5.75rem] min-w-0 flex-1 flex-col p-1.5">
-        <FitText min={7} className="text-sm text-muted-foreground">{label}</FitText>
-        <div className="relative min-h-[2.25rem] flex-1">
+      <Card className="flex h-full min-h-[5rem] min-w-0 flex-1 flex-col p-1.5">
+        <FitLabel full={label} short={labelShort ?? label} className="text-sm leading-none text-muted-foreground" />
+        <div className="relative min-h-[2rem] flex-1">
           <FitBox min={9} max={36} className={cn('px-1 font-display font-bold', tone)}>{value}</FitBox>
         </div>
-        {hint && <FitText min={7} className="text-xs text-muted-foreground">{hint}</FitText>}
+        {hint && <FitText min={7} className="text-xs leading-none text-muted-foreground">{hint}</FitText>}
       </Card>
     )
   }
@@ -173,8 +173,8 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
     // Uma linha só, ocupando toda a largura: caixas iguais, com fonte que encolhe conforme a tela.
     <div className="grid grid-flow-col auto-cols-fr items-stretch gap-1.5">
       <Stat compact label="Ciclo" value={data.cycle?.name ?? '—'} />
-      <Stat compact label="Meu status" value={data.status ?? 'Sem registro'} />
-      {!staff && !direction && <Stat compact label="Minha frequência" value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
+      <Stat compact label="Status" value={data.status ?? 'Sem registro'} />
+      {!staff && !direction && <Stat compact label="Frequência" labelShort="Freq." value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
       <Link to={`/${slug}/cobrancas`} className="flex min-w-0">
         {receives ? (
           <Stat compact label="Pagamento" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
