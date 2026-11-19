@@ -228,13 +228,18 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
           <div className="space-y-1.5"><Label htmlFor="ev-confirm-note">O que falta confirmar</Label>
             <Input id="ev-confirm-note" maxLength={200} placeholder="Ex.: horário, local" value={f.to_confirm_note} onChange={(e) => setF({ ...f, to_confirm_note: e.target.value })} /></div>
         )}
-        <div className="space-y-1.5"><Label htmlFor="ev-date" required>Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
+        {/* Data, início e fim na mesma linha: a data pede mais largura que as horas. */}
+        <div className={fromRule ? '' : 'grid grid-cols-[1.5fr_1fr_1fr] gap-2'}>
+          <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-date" required>Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
+          {!fromRule && (
+            <>
+              <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-start">Início</Label><TimeInput id="ev-start" value={f.start_time} onChange={(v) => setF({ ...f, start_time: v })} /></div>
+              <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-end">Fim</Label><TimeInput id="ev-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
+            </>
+          )}
+        </div>
         {!fromRule && (
           <>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5"><Label htmlFor="ev-start">Início</Label><TimeInput id="ev-start" value={f.start_time} onChange={(v) => setF({ ...f, start_time: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="ev-end">Fim</Label><TimeInput id="ev-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
-        </div>
         <div className="space-y-1.5"><Label htmlFor="ev-loc">Local</Label><Input id="ev-loc" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></div>
         <div className="space-y-1.5">
           <Label htmlFor="ev-desc">Descrição</Label>
