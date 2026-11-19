@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { Hourglass } from 'lucide-react'
+import { useMyReleases } from '@/modules/access/releaseData'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
+import { Button, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
 import { SaveInput } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
-import { useOrgId } from '@/core/organization'
+import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
@@ -116,6 +119,9 @@ function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: strin
 export function CapacityPage() {
   const orgId = useOrgId()
   const canManage = usePermission('capacity.manage')
+  const { membership } = useOrganization()
+  const canSeeWaitlist = usePermission('member_cycles.read', 'group')
+  const waitlistReleased = useMyReleases().released('lista-de-espera')
   const { cycleId } = useSelectedCycle()
   const { data, isLoading } = useQuery({
     queryKey: ['capacity', orgId, cycleId],
@@ -141,6 +147,9 @@ export function CapacityPage() {
   return (
     <div className="space-y-4">
       <NaipesTabs />
+      {canSeeWaitlist && (waitlistReleased
+        ? <Button asChild variant="outline" className="w-full"><Link to={`/${membership?.slug}/lista-de-espera`}><Hourglass className="h-4 w-4" /> Lista de espera</Link></Button>
+        : <Button variant="outline" className="w-full opacity-50" disabled title="Ainda não liberado para o seu perfil"><Hourglass className="h-4 w-4" /> Lista de espera</Button>)}
       {cycleId && <p className="text-muted-foreground">{full} {full === 1 ? 'instrumento lotado' : 'instrumentos lotados'}. A contagem considera integrantes ativos no ciclo.</p>}
       {isLoading && <Skeleton className="h-32" />}
       {!cycleId && <EmptyState>Crie um ciclo em “Ciclos” para definir vagas.</EmptyState>}

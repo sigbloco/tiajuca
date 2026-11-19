@@ -3,7 +3,7 @@ import { ActionRow } from '@/components/shared/ActionRow'
 import { requireFields } from '@/core/required'
 import { confirmBox, promptBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, ClipboardCheck, Pencil, Save, Trash2 } from 'lucide-react'
+import { Ban, CheckCircle2, ClipboardCheck, Pencil, Save, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -20,7 +20,7 @@ import { useCycles } from '@/modules/cycles/service'
 import { TypePicker } from './TypePicker'
 import { AudiencePicker, type AudRow } from './AudiencePicker'
 import {
-  COLOR_BADGE, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord, trashActivity, restoreActivity,
+  COLOR_BADGE, confirmActivity, labelsOf, listActivityTypes, STATUS_LABEL, VISIBILITY_LABEL, getAudiences, saveActivity, setActivityStatus, cancelWord, trashActivity, restoreActivity,
   type Activity, type ItineraryStep, type TypeColor,
 } from './service'
 
@@ -52,6 +52,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
     description: activity?.description ?? '',
     cycle_id: activity?.cycle_id ?? '',
     visibility: activity?.visibility ?? ('members' as Activity['visibility']),
+    to_confirm: activity?.to_confirm ?? false,
+    to_confirm_note: activity?.to_confirm_note ?? '',
   })
   // Rótulos acumuláveis (o primeiro é o principal e dá a cor no calendário).
   const types = useQuery({ queryKey: ['activity-types', orgId], queryFn: () => listActivityTypes(orgId) })
@@ -104,6 +106,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         visibility: f.visibility,
         itinerary: cleanSteps(steps),
         has_attendance: f.has_attendance,
+        to_confirm: f.to_confirm,
+        to_confirm_note: f.to_confirm ? f.to_confirm_note.trim() || null : null,
       }, auds.filter((a) => a.ref).map((a) => ({ kind: a.kind, ref_id: a.ref })), labelIds.slice(1))
     },
     onSuccess: () => {
@@ -120,6 +124,11 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
       qc.invalidateQueries({ queryKey: ['audience'] }); refresh(); onClose()
       notifyChange('Evento enviado para a lixeira.', async () => { await restoreActivity(activity!.id); refresh() })
     },
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  const confirm = useMutation({
+    mutationFn: () => confirmActivity(orgId, activity!.id),
+    onSuccess: () => { toast.success('Evento confirmado.'); refresh(); onClose() },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1)
@@ -141,7 +150,13 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           {labels.map((l) => <Badge key={l.id} className={COLOR_BADGE[l.color]}>{l.name}</Badge>)}
           {activity.status !== 'scheduled' && <Badge>{STATUS_LABEL[activity.status]}</Badge>}
           {activity.visibility === 'staff' && <Badge>{VISIBILITY_LABEL.staff}</Badge>}
+          {activity.to_confirm && <Badge className="border border-dashed border-warning bg-warning/15 text-warning">À confirmar</Badge>}
         </div>
+        {activity.to_confirm && (
+          <p className="rounded-lg border border-dashed border-warning bg-warning/10 p-3 text-sm">
+            <strong>À confirmar</strong>{activity.to_confirm_note ? `: ${activity.to_confirm_note}` : '. Data, horário ou local ainda podem mudar.'}
+          </p>
+        )}
         <dl className="space-y-2">
           {time && <div><dt className="text-muted-foreground">Horário</dt><dd className="font-semibold">{time}</dd></div>}
           {activity.location && <div><dt className="text-muted-foreground">Local</dt><dd className="font-semibold">{activity.location}</dd></div>}
@@ -162,6 +177,9 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
           <ActionRow>
             {canRecord && activity.has_attendance && activity.status !== 'cancelled' && (
               <Button asChild variant="outline"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>
+            )}
+            {canManage && activity.to_confirm && activity.status !== 'cancelled' && (
+              <Button variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso À confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>
             )}
             {canManage && <Button variant="outline" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /><span className="act-label ml-1.5">Editar</span></Button>}
             {canManage && activity.status !== 'cancelled' && (
@@ -193,6 +211,13 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         <label className="flex items-center gap-2 font-semibold">
           <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
         </label>
+        <label className="flex items-center gap-2 font-semibold">
+          <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> À confirmar
+        </label>
+        {f.to_confirm && (
+          <div className="space-y-1.5"><Label htmlFor="ev-confirm-note">O que falta confirmar</Label>
+            <Input id="ev-confirm-note" maxLength={200} placeholder="Ex.: horário, local" value={f.to_confirm_note} onChange={(e) => setF({ ...f, to_confirm_note: e.target.value })} /></div>
+        )}
         <div className="space-y-1.5"><Label htmlFor="ev-date" required>Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
         {!fromRule && (
           <>

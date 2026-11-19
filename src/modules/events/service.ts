@@ -34,6 +34,9 @@ export interface Activity {
   activity_types: { id?: string; name: string; color: TypeColor } | null
   /** Evento com chamada de presença? (nem tudo tem). */
   has_attendance: boolean
+  /** Evento ainda não confirmado: aparece com o aviso "À confirmar" e, se houver, o que falta confirmar. */
+  to_confirm: boolean
+  to_confirm_note: string | null
   /** Rótulos extras (além do principal, que é o tipo do evento). */
   activity_type_links?: { activity_types: { id: string; name: string; color: TypeColor } | null }[] | null
 }
@@ -50,7 +53,7 @@ export function labelsOf(a: Pick<Activity, 'activity_types' | 'activity_type_lin
 export const STATUS_LABEL: Record<Activity['status'], string> = { scheduled: 'Agendado', done: 'Realizado', cancelled: 'Cancelado' }
 export const VISIBILITY_LABEL: Record<Activity['visibility'], string> = { members: 'Todos os integrantes', staff: 'Somente equipe' }
 
-const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, cancel_reason, has_attendance, activity_types(id, name, color), activity_type_links(activity_types(id, name, color))'
+const SELECT = 'id, activity_type_id, cycle_id, title, activity_date, start_time, end_time, location, description, status, visibility, recurrence_rule_id, itinerary, cancel_reason, has_attendance, to_confirm, to_confirm_note, activity_types(id, name, color), activity_type_links(activity_types(id, name, color))'
 
 /** `trashed`: só os da lixeira (padrão: só os que não foram apagados). */
 export async function listActivities(p: { orgId: string; from: string; to: string; cycleId?: string; typeId?: string; trashed?: boolean }) {
@@ -82,6 +85,14 @@ export interface ActivityInput {
   visibility: Activity['visibility']
   itinerary: ItineraryStep[] | null
   has_attendance: boolean
+  to_confirm: boolean
+  to_confirm_note: string | null
+}
+
+/** Confirma o evento (tira o aviso "À confirmar"). */
+export async function confirmActivity(orgId: string, id: string) {
+  const { error } = await supabase.from('activities').update({ to_confirm: false, to_confirm_note: null }).eq('id', id).eq('organization_id', orgId)
+  if (error) throw error
 }
 
 export type AudienceKind = 'section' | 'instrument' | 'category'

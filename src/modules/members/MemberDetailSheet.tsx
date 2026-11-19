@@ -25,7 +25,8 @@ import { whatsappUrl } from '@/modules/suppliers/service'
 import { OkSelect } from '@/components/shared/ConfirmField'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
-import { useOrgId } from '@/core/organization'
+import { useOrgId, useOrganization } from '@/core/organization'
+import { MemberPhotoEditor } from './MemberAvatar'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { isPastCycle, setMemberCycleStatus, useCycleStatuses, useCycles } from '@/modules/cycles/service'
@@ -386,6 +387,7 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
 export function MemberDetailSheet({ member, category, onChanged = () => {}, onCrumbClick, onArchived }: { member: MemberRow; category?: string; onCrumbClick?: () => void; onChanged?: (p: Partial<MemberRow>) => void; onArchived?: () => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')
+  const realMemberId = useOrganization().realMembership?.member_id
   const staffView = usePermission('members.read', 'group')
   const labeler = usePersonLabeler() // nome com sobrenome quando há outro integrante com o mesmo primeiro nome
   const [editing, setEditing] = useState(false)
@@ -408,6 +410,7 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
           onClick={async () => { if (await confirmBox(`Excluir ${labeler(member)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
       </>
     )} description={!staffView || ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
+      <MemberPhotoEditor memberId={member.id} name={labeler(member)} canEdit={canManage || member.id === realMemberId} />
       <ContactLinks member={member} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin readOnly={!editing} /></MemberSection>}
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}
