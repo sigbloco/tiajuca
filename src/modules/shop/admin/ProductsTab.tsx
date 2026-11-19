@@ -2,7 +2,7 @@ import { usePurge } from '@/core/purge'
 import { KitChip } from '@/modules/shop/KitChip'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
@@ -98,7 +98,11 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
       {q.isError && <EmptyState>Não foi possível carregar os produtos.</EmptyState>}
       {q.data && items.length === 0 && <EmptyState>{kits ? 'Nenhum kit ainda. Crie o primeiro.' : 'Nenhum produto ainda. Crie o primeiro.'}</EmptyState>}
       {paged.visible.map((p, i) => (
-        <Card key={p.id} data-pid={p.id} className={`flex items-center gap-2 p-3 ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
+        // O cartão inteiro abre a edição; os botões dentro dele (reordenar, arrastar, lixeira) não.
+        <Card key={p.id} data-pid={p.id} role="button" tabIndex={0} aria-label={`Editar ${p.name}`}
+          onClick={(e) => { if (!(e.target as HTMLElement).closest('button')) setSheet(p.id) }}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setSheet(p.id) } }}
+          className={`flex cursor-pointer items-center gap-2 p-3 transition hover:shadow-md ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
           <div className="flex shrink-0 flex-col items-center">
           <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Subir ${p.name}`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
           <button type="button" aria-label={`Arrastar ${p.name}`} title="Arraste para reordenar" style={{ touchAction: 'none' }}
@@ -114,7 +118,6 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
               ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
               : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
             <div className="flex">
-              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar ${p.name}`} title="Editar" onClick={() => setSheet(p.id)}><Pencil className="h-4 w-4" /></Button>
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
                 onClick={async () => await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
             </div>
