@@ -135,12 +135,15 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
                     <span className="flex items-center gap-0.5"><UserRound className="h-3 w-3" />{assigneeName ?? 'Sem responsável'}</span>
                   </p>
                 </div>
-                <Button type="button" size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpen(open === i.id ? null : i.id)}>
-                  <MessageSquare className={cn('h-4 w-4', i.notes && 'text-primary')} />
-                </Button>
-                {canManage && (
-                  <Button type="button" size="icon" variant="ghost" aria-label="Remover" onClick={async () => { if (await confirmBox('Remover esta tarefa do evento?')) remove.mutate(i.id) }}><Trash2 className="h-4 w-4" /></Button>
-                )}
+                {/* Balão em cima e lixeira embaixo: ganha largura no celular. */}
+                <div className="flex shrink-0 flex-col items-center">
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="Observação" onClick={() => setOpen(open === i.id ? null : i.id)}>
+                    <MessageSquare className={cn('h-4 w-4', i.notes && 'text-primary')} />
+                  </Button>
+                  {canManage && (
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label="Remover" onClick={async () => { if (await confirmBox('Remover esta tarefa do evento?')) remove.mutate(i.id) }}><Trash2 className="h-4 w-4" /></Button>
+                  )}
+                </div>
               </div>
               {open === i.id && (
                 <div className="space-y-2 pl-8">
