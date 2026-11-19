@@ -100,6 +100,7 @@ export function AppShell() {
     if (pathname !== lastPath.current) {
       if (popping.current) popping.current = false // foi um Voltar: a página que se deixou não volta para a pilha
       else if (/\/alunos$/.test(lastPath.current)) { /* Oficina → Alunos só redireciona para Integrantes: não conta como página visitada */ }
+      else if (/\/presenca$/.test(lastPath.current) && !/[?&]dia=/.test(lastUrl.current)) { /* Oficina → Presença redireciona direto para a chamada: não conta como página visitada (o Voltar não pode cair de novo no redirecionamento) */ }
       else {
         const left: Visit = { path: lastPath.current, url: lastUrl.current, trail: trailCommitted.current }
         setStack((st) => [...(st[st.length - 1]?.path === left.path ? st.slice(0, -1) : st), left].slice(-BACK_LIMIT))
@@ -126,7 +127,7 @@ export function AppShell() {
   // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0
-  if (!membership || !rel.ready || splash) return <LoadingScreen />
+  if (!membership || !rel.ready || splash) return <LoadingScreen fillMs={3000} />
   // Nenhuma página liberada para este perfil (a liberação fica em Acesso e papéis): só o aviso, a loja, o site e o Sair.
   // O Titular que está "visualizando como" esse perfil continua com a barra para voltar; o inativo ainda pode pedir para voltar.
   if (!rel.all && !rel.anyPage) {

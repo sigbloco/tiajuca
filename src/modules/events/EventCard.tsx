@@ -13,7 +13,7 @@ import { notifyChange } from '@/core/undo'
 import { COLOR_DOT, STATUS_LABEL, cancelWord, confirmActivity, setActivityStatus, type Activity } from './service'
 
 /** Cartão de evento (calendário e início): horário/roteiro, atalho para Presença, editar e cancelar. */
-export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index?: number; onOpen: () => void; onEdit: () => void }) {
+export function EventCard({ a, index = 0, onOpen, onEdit, presence = 'roster' }: { a: Activity; index?: number; onOpen: () => void; onEdit: () => void; /** Para onde vai o botão Presença: a chamada do evento (Início) ou a lista do dia (Calendário). */ presence?: 'roster' | 'day' }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -65,7 +65,7 @@ export function EventCard({ a, index = 0, onOpen, onEdit }: { a: Activity; index
         </button>
         {a.status === 'scheduled' && (canRecord || canManage) && (
           <ActionRow className="mt-2">
-            {canRecord && a.has_attendance !== false && <Button asChild size="sm" variant="outline" title="Presença"><Link to={`/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>}
+            {canRecord && a.has_attendance !== false && <Button asChild size="sm" variant="outline" title="Presença"><Link to={presence === 'day' ? `/${membership?.slug}/presenca?dia=${a.activity_date}` : `/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>}
             {canManage && a.to_confirm && <Button size="sm" variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso À confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>}
             {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /><span className="act-label ml-1.5">Editar</span></Button>}
             {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}

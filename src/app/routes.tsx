@@ -218,7 +218,7 @@ export const router = createBrowserRouter(
                   children: [
                     { path: 'alunos', element: <AlunosRedirect /> },
                     { path: 'relatorios', element: <ReportsPage /> },
-                    { path: 'presenca', element: <AttendanceListPage /> },
+                    { path: 'presenca', element: <AttendanceListPage mode="mine" /> },
                     { path: 'presenca/:activityId', element: <AttendanceRosterPage /> },
                     { path: 'vagas', element: <CapacityPage /> },
                     { path: 'lista-de-espera', element: <WaitlistPage /> },

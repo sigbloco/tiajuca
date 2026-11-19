@@ -29,10 +29,12 @@ interface Props {
   defaultDate: string
   onClose: () => void
   startEditing?: boolean
+  /** Para onde vai o botão Presença: a chamada do evento (Início) ou a lista do dia (Calendário). */
+  presence?: 'roster' | 'day'
 }
 
 /** Detalhes + criação/edição de evento em drawer (mantém o contexto da agenda). */
-export function EventSheet({ activity, defaultDate, onClose, startEditing }: Props) {
+export function EventSheet({ activity, defaultDate, onClose, startEditing, presence = 'roster' }: Props) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
@@ -176,7 +178,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing }: Pro
         <div className="mt-auto flex flex-col gap-2">
           <ActionRow>
             {canRecord && activity.has_attendance && activity.status !== 'cancelled' && (
-              <Button asChild variant="outline"><Link to={`/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>
+              <Button asChild variant="outline"><Link to={presence === 'day' ? `/${membership?.slug}/presenca?dia=${activity.activity_date}` : `/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>
             )}
             {canManage && activity.to_confirm && activity.status !== 'cancelled' && (
               <Button variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso À confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>
