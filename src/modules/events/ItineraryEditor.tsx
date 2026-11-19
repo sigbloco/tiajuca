@@ -4,7 +4,7 @@ import { Button, Input, Label } from '@/components/ui/primitives'
 import type { ItineraryStep } from './service'
 
 /** Editor de roteiro, usado em eventos e recorrências: cada item tem início, fim, nome, local e descrição. */
-export function ItineraryEditor({ steps, onChange }: { steps: ItineraryStep[]; onChange: (s: ItineraryStep[]) => void }) {
+export function ItineraryEditor({ steps, onChange, defaultLocation }: { steps: ItineraryStep[]; onChange: (s: ItineraryStep[]) => void; /** Local do evento: o item sem local herda este. */ defaultLocation?: string }) {
   const setStep = (i: number, p: Partial<ItineraryStep>) => onChange(steps.map((x, k) => (k === i ? { ...x, ...p } : x)))
   return (
     <div className="space-y-2">
@@ -20,7 +20,7 @@ export function ItineraryEditor({ steps, onChange }: { steps: ItineraryStep[]; o
             <div className="space-y-1"><Label htmlFor={`it-start-${i}`} className="text-xs">Início</Label><TimeInput id={`it-start-${i}`} value={x.time} onChange={(v) => setStep(i, { time: v })} /></div>
             <div className="space-y-1"><Label htmlFor={`it-end-${i}`} className="text-xs">Fim</Label><TimeInput id={`it-end-${i}`} value={x.end ?? ''} onChange={(v) => setStep(i, { end: v })} /></div>
             <div className="min-w-0 space-y-1"><Label htmlFor={`it-label-${i}`} className="text-xs">Item</Label><Input id={`it-label-${i}`} placeholder="Ex.: ensaio" value={x.label} onChange={(e) => setStep(i, { label: e.target.value })} /></div>
-            <div className="col-span-3 min-w-0 space-y-1 sm:col-span-1"><Label htmlFor={`it-loc-${i}`} className="text-xs">Local</Label><Input id={`it-loc-${i}`} value={x.location ?? ''} onChange={(e) => setStep(i, { location: e.target.value })} /></div>
+            <div className="col-span-3 min-w-0 space-y-1 sm:col-span-1"><Label htmlFor={`it-loc-${i}`} className="text-xs">Local</Label><Input id={`it-loc-${i}`} placeholder={defaultLocation ? `Igual ao evento: ${defaultLocation}` : undefined} value={x.location ?? ''} onChange={(e) => setStep(i, { location: e.target.value })} /></div>
             <Button type="button" size="icon" variant="ghost" className="hidden sm:inline-flex" aria-label={`Remover item ${i + 1}`} onClick={() => onChange(steps.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
           </div>
           {/* Descrição só aparece se marcada (economiza espaço); desmarcar apaga o texto. */}

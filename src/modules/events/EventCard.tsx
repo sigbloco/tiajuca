@@ -47,8 +47,9 @@ export function EventCard({ a, index = 0, onOpen, onEdit, presence = 'roster' }:
           {a.itinerary && a.itinerary.length > 0 ? (
             <div className="text-muted-foreground">
               {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k, list) => {
-                const loc = x.location?.trim()
-                const lastLoc = list.slice(0, k).reverse().find((y) => y.location?.trim())?.location?.trim().toLowerCase()
+                // Item sem local herda o local do evento.
+                const loc = x.location?.trim() || a.location?.trim()
+                const lastLoc = k === 0 ? undefined : (list[k - 1].location?.trim() || a.location?.trim())?.toLowerCase()
                 const showLoc = !!loc && loc.toLowerCase() !== lastLoc
                 return (
                   <div key={k}>

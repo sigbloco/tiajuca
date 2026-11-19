@@ -61,7 +61,13 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
 
   if (!canManage && list.length === 0) return null
   return (
-    <section className="space-y-2">
+    // Enter nos campos daqui não pode enviar o formulário do evento em volta (a tela de edição); na nova tarefa, Enter adiciona.
+    <section data-noguard className="space-y-2" onKeyDown={(e) => {
+      if (e.key !== 'Enter' || !(e.target instanceof HTMLInputElement)) return
+      e.preventDefault()
+      if (e.target.placeholder === 'Nova tarefa' && newTitle.trim() && !add.isPending) add.mutate()
+      else e.target.blur()
+    }}>
       <div className="flex items-center justify-between"><h3>Checklist</h3><span className="text-muted-foreground">{p.done}/{p.total} · {p.pct}%</span></div>
       <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={p.pct} aria-valuemin={0} aria-valuemax={100}>
         <div className="h-full bg-success transition-all" style={{ width: `${p.pct}%` }} />
@@ -90,14 +96,14 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
                   <span className="flex items-center gap-0.5"><UserRound className="h-3 w-3" />{assigneeName ?? 'Sem responsável'}</span>
                 </p>
               </div>
-              <Button size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpen(open === i.id ? null : i.id)}>
+              <Button type="button" size="icon" variant="ghost" aria-label="Observação" onClick={() => setOpen(open === i.id ? null : i.id)}>
                 <MessageSquare className={cn('h-4 w-4', i.notes && 'text-primary')} />
               </Button>
               {canManage && (
                 <div className="flex">
-                  <Button size="icon" variant="ghost" aria-label="Subir" disabled={idx === 0} onClick={() => reorder.mutate({ from: idx, to: idx - 1 })}><ArrowUp className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" aria-label="Descer" disabled={idx === list.length - 1} onClick={() => reorder.mutate({ from: idx, to: idx + 1 })}><ArrowDown className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" aria-label="Remover" onClick={async () => { if (await confirmBox('Remover esta tarefa do evento?')) remove.mutate(i.id) }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button type="button" size="icon" variant="ghost" aria-label="Subir" disabled={idx === 0} onClick={() => reorder.mutate({ from: idx, to: idx - 1 })}><ArrowUp className="h-4 w-4" /></Button>
+                  <Button type="button" size="icon" variant="ghost" aria-label="Descer" disabled={idx === list.length - 1} onClick={() => reorder.mutate({ from: idx, to: idx + 1 })}><ArrowDown className="h-4 w-4" /></Button>
+                  <Button type="button" size="icon" variant="ghost" aria-label="Remover" onClick={async () => { if (await confirmBox('Remover esta tarefa do evento?')) remove.mutate(i.id) }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               )}
             </div>
@@ -109,14 +115,14 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
                   <div className="space-y-1.5">
                     <MemberPicker value={assignee} onChange={setAssignee} />
                     <div className="flex gap-2">
-                      <Button size="sm" disabled={!assignee} onClick={() => { update.mutate({ p_item: i.id, p_assignee: assignee, p_set_assignee: true }); setAssignFor(null); setAssignee('') }}>Definir</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setAssignFor(null)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
+                      <Button type="button" size="sm" disabled={!assignee} onClick={() => { update.mutate({ p_item: i.id, p_assignee: assignee, p_set_assignee: true }); setAssignFor(null); setAssignee('') }}>Definir</Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setAssignFor(null)} aria-label="Cancelar" title="Cancelar"><X className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setAssignFor(i.id)}>Escolher responsável</Button>
-                    {i.assignee_member_id && <Button size="sm" variant="ghost" onClick={() => update.mutate({ p_item: i.id, p_assignee: null, p_set_assignee: true })}>Remover responsável</Button>}
+                    <Button type="button" size="sm" variant="outline" onClick={() => setAssignFor(i.id)}>Escolher responsável</Button>
+                    {i.assignee_member_id && <Button type="button" size="sm" variant="ghost" onClick={() => update.mutate({ p_item: i.id, p_assignee: null, p_set_assignee: true })}>Remover responsável</Button>}
                   </div>
                 ))}
               </div>
@@ -132,11 +138,11 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
               <option value="">Usar modelo</option>
               {templates.data?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </Select>
-            <Button size="sm" disabled={!template || apply.isPending} onClick={() => apply.mutate()}>Aplicar</Button>
+            <Button type="button" size="sm" disabled={!template || apply.isPending} onClick={() => apply.mutate()}>Aplicar</Button>
           </div>
           <div className="flex gap-2">
             <Input placeholder="Nova tarefa" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-            <Button size="sm" disabled={!newTitle.trim() || add.isPending} onClick={() => add.mutate()}>Adicionar</Button>
+            <Button type="button" size="sm" disabled={!newTitle.trim() || add.isPending} onClick={() => add.mutate()}>Adicionar</Button>
           </div>
         </Card>
       )}
