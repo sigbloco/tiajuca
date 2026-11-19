@@ -167,7 +167,7 @@ export function EventsPage() {
     <div className="space-y-4">
       <div>
         <h1>Calendário</h1>
-        <p className="text-muted-foreground">Ensaios, aulas, apresentações e aniversários do ciclo.</p>
+        <p className="text-muted-foreground">Ensaios, aulas, apresentações e aniversários.</p>
       </div>
       {header}
       {pending.length > 0 && (
