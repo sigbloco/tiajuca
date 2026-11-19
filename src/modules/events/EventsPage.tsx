@@ -16,6 +16,8 @@ import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventCard } from './EventCard'
 import { EventSheet } from './EventSheet'
 import { EventsArchive } from './EventsArchive'
+import { groupSimultaneous } from './grouping'
+import { MergedEventCard } from './MergedEventCard'
 import { HighlightCards, isSpecial } from './Highlights'
 import { RecurrenceDay } from './RecurrenceDay'
 import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
@@ -152,6 +154,10 @@ export function EventsPage() {
       {isDirection && <SettingsButton to={`/${membership?.slug}/eventos/configuracoes`} />}
     </ButtonRow>
   )
+  // Eventos no mesmo horário viram um cartão só; a edição fica dentro do detalhe (toque na linha do evento).
+  const dayCards = (items: Activity[]) => groupSimultaneous(items).map((g, i) => g.items.length > 1
+    ? <MergedEventCard key={g.key} items={g.items} index={i} onOpen={(a) => setSheet({ activity: a })} />
+    : <EventCard key={g.key} a={g.items[0]} presence="day" index={i} onOpen={() => setSheet({ activity: g.items[0] })} onEdit={() => setSheet({ activity: g.items[0], edit: true })} />)
   const sheetEl = (
     <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
       {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} presence="day" startEditing={sheet.edit} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
@@ -174,7 +180,7 @@ export function EventsPage() {
           {[...new Set(pending.map((a) => a.activity_date))].sort().map((day) => (
             <section key={day} className="space-y-2">
               <h3>{formatDayShort(day).toUpperCase()}</h3>
-              {pending.filter((a) => a.activity_date === day).map((a, ai) => <EventCard key={a.id} a={a} presence="day" index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+              {dayCards(pending.filter((a) => a.activity_date === day))}
             </section>
           ))}
         </div>
@@ -241,7 +247,7 @@ export function EventsPage() {
         {selectedDay && listDays.map((day) => (
           <section key={day} className="space-y-2">
             <h3>{formatDayShort(day).toUpperCase()}</h3>
-            {byDay[day].map((a, ai) => <EventCard key={a.id} a={a} presence="day" index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+            {dayCards(byDay[day])}
           </section>
         ))}
       </div>
