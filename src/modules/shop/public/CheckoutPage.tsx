@@ -13,6 +13,7 @@ import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
 import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents } from '../payments/pix'
 import { CouponBox } from './CouponBox'
+import { GoogleInvite } from './GoogleInvite'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
@@ -135,6 +136,7 @@ export function CheckoutPage() {
     <div className="grid gap-6 md:grid-cols-[1fr_20rem]">
       <form onSubmit={(e) => { e.preventDefault(); tryConfirm() }} noValidate className="space-y-4">
         <h1>Finalizar compra</h1>
+        <GoogleInvite title="Entre com o Google" text="Preenchemos seus dados e você acompanha seus pedidos sem precisar de código (usamos só o nome e o e-mail da sua conta). Comprar como visitante também funciona." />
         {compactData ? (
           <Card className="space-y-1 p-4">
             <div className="flex items-start justify-between gap-2">

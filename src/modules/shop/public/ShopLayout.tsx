@@ -16,13 +16,15 @@ import { StoreProvider, fetchStore, useStore } from './StoreContext'
 function MemberNotice() {
   const { store, isMember, isSpecial, setLoginOpen } = useStore()
   const { session } = useAuth()
+  const { pathname } = useLocation()
   const hasDiscount = store.products.some((p) => p.member_discount_pct > 0 || !!p.special_price_cents)
   if (isMember) return <p role="status" className="mb-4 inline-block rounded-full bg-secondary px-3 py-1 text-sm font-bold text-secondary-foreground">{isSpecial ? 'Preço especial ativo' : 'Preço de integrante ativo'}</p>
-  if (session || !hasDiscount) return null
+  // No carrinho e na finalização o convite tem o seu próprio cartão.
+  if (session || /\/(carrinho|finalizar)\/?$/.test(pathname)) return null
   return (
     <div className="mb-4 space-y-2">
-      <Button className="w-full" onClick={() => setLoginOpen(true)}><LogIn className="h-4 w-4" aria-hidden /> Entrar</Button>
-      <Card className="border-secondary p-3 text-sm">Entre com a sua conta para ver os preços de integrante.</Card>
+      <Button className="w-full" onClick={() => setLoginOpen(true)}><LogIn className="h-4 w-4" aria-hidden /> Entrar com o Google</Button>
+      <Card className="border-secondary p-3 text-sm">{hasDiscount ? 'Entre com o Google para ver os preços de integrante, preencher seus dados e acompanhar seus pedidos.' : 'Entre com o Google para preencher seus dados e acompanhar seus pedidos sem precisar de código.'}</Card>
     </div>
   )
 }

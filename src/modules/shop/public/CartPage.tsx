@@ -7,6 +7,7 @@ import { fromCents } from '../catalog'
 import { maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
 import { CouponBox } from './CouponBox'
+import { GoogleInvite } from './GoogleInvite'
 import { RandomSuggestions, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
@@ -55,6 +56,7 @@ export function CartPage() {
         })}
       </ul>
 
+      <GoogleInvite title="Entre com o Google" text="Preenchemos seus dados na finalização e você acompanha seus pedidos sem precisar de código. Comprar como visitante também funciona." />
       <Card className="space-y-2 p-4">
         <CouponBox />
         <div className="flex justify-between"><span>Subtotal</span><span>{money(cart.subtotalCents)}</span></div>

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { MemberLink } from '@/modules/members/MemberLink'
 import { Cake, Plus, Star } from 'lucide-react'
 import { StepNav } from '@/components/shared/StepNav'
+import { Collapsible } from '@/components/shared/Collapsible'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { addDaysIso, formatCompetence, formatDayLong, formatDayShort, formatTime, monthGridDays, todayIso } from '@/core/format'
@@ -104,13 +105,13 @@ export function EventsPage() {
   }
 
   // Pontual = evento que não vem de recorrência (apresentação, confraternização, Cortejo...).
-  const [onlySpecial, setOnlySpecial] = useState(false)
-  const view = useMemo(() => (onlySpecial ? (data ?? []).filter(isSpecial) : data), [data, onlySpecial])
+  // Grupo "Em destaque": começa aberto e fecha sozinho quando se escolhe um dia no calendário.
+  const [highOpen, setHighOpen] = useState(true)
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
-    for (const a of view ?? []) (map[a.activity_date] ??= []).push(a)
+    for (const a of data ?? []) (map[a.activity_date] ??= []).push(a)
     return map
-  }, [view])
+  }, [data])
   // Próximos eventos pontuais do ciclo (de hoje em diante), mesmo que estejam em meses lá na frente.
   const upcomingFrom = selCycle && selCycle.ends_on >= today ? (selCycle.starts_on > today ? selCycle.starts_on : today) : today
   const upcomingTo = selCycle?.ends_on && selCycle.ends_on >= upcomingFrom ? selCycle.ends_on : addDaysIso(today, 365)
@@ -169,28 +170,11 @@ export function EventsPage() {
         <p className="text-muted-foreground">Ensaios, aulas, apresentações e aniversários do ciclo.</p>
       </div>
       {header}
-      {(highlights.data?.length ?? 0) > 0 && (
-        <section className="space-y-1.5" aria-label="Em destaque">
-          <h3 className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-primary" aria-hidden /> Em destaque</h3>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-            {highlights.data!.map((a) => (
-              <button key={a.id} type="button" onClick={() => goTo(a)} className="w-44 shrink-0 rounded-xl border border-primary/40 bg-primary/5 p-2.5 text-left transition hover:bg-primary/10">
-                <p className="text-xs font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ' · ' + formatTime(a.start_time) : ''}</p>
-                <p className="line-clamp-2 break-words font-semibold leading-tight">{a.title}</p>
-                <p className="mt-0.5 text-xs font-semibold text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · à confirmar' : ''}</p>
-              </button>
-            ))}
-          </div>
-        </section>
+      {pending.length > 0 && (
+        <Button variant={onlyPending ? 'default' : 'outline'} className="w-full" aria-pressed={onlyPending} onClick={() => setOnlyPending(!onlyPending)}>
+          À confirmar ({pending.length})
+        </Button>
       )}
-      <ButtonRow>
-        <Button variant={onlySpecial ? 'default' : 'outline'} aria-pressed={onlySpecial} onClick={() => setOnlySpecial(!onlySpecial)}><Star className="h-4 w-4 shrink-0" /> Só eventos pontuais</Button>
-        {pending.length > 0 && (
-          <Button variant={onlyPending ? 'default' : 'outline'} aria-pressed={onlyPending} onClick={() => setOnlyPending(!onlyPending)}>
-            À confirmar ({pending.length})
-          </Button>
-        )}
-      </ButtonRow>
       {onlyPending && (
         <div className="space-y-4">
           {[...new Set(pending.map((a) => a.activity_date))].sort().map((day) => (
@@ -213,7 +197,7 @@ export function EventsPage() {
             return (
               <button
                 key={d.iso}
-                onClick={() => setSelectedDay(selectedDay === d.iso ? null : d.iso)}
+                onClick={() => { setSelectedDay(selectedDay === d.iso ? null : d.iso); setHighOpen(false) }}
                 className={cn(
                   'flex h-9 flex-col items-center justify-center rounded-md p-0 hover:bg-muted',
                   Math.floor(di / 7) % 2 === 1 ? 'bg-muted/60' : 'bg-card',
@@ -238,6 +222,21 @@ export function EventsPage() {
           })}
         </div>
       </Card>
+
+      {(highlights.data?.length ?? 0) > 0 && (
+        <Collapsible open={highOpen} onToggle={() => setHighOpen(!highOpen)} count={highlights.data!.length}
+          title={<span className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-primary" aria-hidden /> Em destaque</span>}>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {highlights.data!.map((a) => (
+              <button key={a.id} type="button" onClick={() => goTo(a)} className="w-44 shrink-0 rounded-xl border border-primary/40 bg-primary/5 p-2.5 text-left transition hover:bg-primary/10">
+                <p className="text-xs font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ' · ' + formatTime(a.start_time) : ''}</p>
+                <p className="line-clamp-2 break-words font-semibold leading-tight">{a.title}</p>
+                <p className="mt-0.5 text-xs font-semibold text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · à confirmar' : ''}</p>
+              </button>
+            ))}
+          </div>
+        </Collapsible>
+      )}
 
       {selectedDay && holidayOf(selectedDay) && <Badge className="bg-destructive/15 text-destructive">Feriado: {holidayOf(selectedDay)}</Badge>}
       {canManage && selectedDay && raw && <RecurrenceDay day={selectedDay} existing={raw.filter((a) => a.activity_date === selectedDay)} />}
