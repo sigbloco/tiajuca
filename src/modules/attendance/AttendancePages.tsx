@@ -61,15 +61,23 @@ function cycleOf(a: { cycle_id: string | null; activity_date: string }, cycles: 
 
 interface InstrumentInfo { id: string; name: string; section_id: string; section: string }
 /** Catálogo de instrumentos com o naipe de cada um (para filtrar a chamada e mostrar a equipe). */
-function useInstrumentCatalog() {
+/** Com "cycleId", "list" traz só os instrumentos que existem naquele ciclo (os botões da chamada); "all" e "byName" continuam completos, para quem toca um instrumento que saiu do ciclo. */
+function useInstrumentCatalog(cycleId?: string | null) {
   const orgId = useOrgId()
   return useQuery({
-    queryKey: ['instrument-catalog', orgId],
+    queryKey: ['instrument-catalog', orgId, cycleId ?? null],
     queryFn: async () => {
       const { data, error } = await supabase.from('instruments').select('id, name, section_id, is_active, sections(name, is_active)').eq('organization_id', orgId).eq('is_active', true).limit(1000)
       if (error) throw error
       const list = ((data ?? []) as unknown as (Omit<InstrumentInfo, 'section'> & { sections: { name: string; is_active: boolean } | null })[]).filter((i) => i.sections?.is_active).map((i) => ({ ...i, section: i.sections?.name ?? '' }))
-      return { list, byName: new Map(list.map((i) => [i.name, i])) }
+      let inCycle = list
+      if (cycleId) {
+        const ic = await supabase.from('instrument_cycles').select('instrument_id').eq('organization_id', orgId).eq('cycle_id', cycleId).limit(5000)
+        if (ic.error) throw ic.error
+        const ids = new Set((ic.data ?? []).map((r) => r.instrument_id as string))
+        if (ids.size > 0) inCycle = list.filter((i) => ids.has(i.id)) // ciclo sem nenhum instrumento cadastrado: não filtra
+      }
+      return { list: inCycle, all: list, byName: new Map(list.map((i) => [i.name, i])) }
     },
   })
 }
@@ -239,10 +247,10 @@ function useMySectionIds(cycleId: string | null | undefined) {
   const { membership } = useOrganization()
   const catalog = useInstrumentCatalog()
   return useQuery({
-    queryKey: ['my-attendance-sections', orgId, membership?.member_id, cycleId, catalog.data?.list.length],
+    queryKey: ['my-attendance-sections', orgId, membership?.member_id, cycleId, catalog.data?.all.length],
     enabled: Boolean(cycleId && membership?.member_id && catalog.data),
     queryFn: async () => {
-      const bySection = new Map(catalog.data!.list.map((i) => [i.id, i.section_id]))
+      const bySection = new Map(catalog.data!.all.map((i) => [i.id, i.section_id]))
       const ids = new Set<string>()
       const staff = await supabase.from('staff_assignments').select('section_id, instrument_id').eq('organization_id', orgId).eq('member_id', membership!.member_id).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).limit(200)
       if (staff.error) throw staff.error
@@ -279,7 +287,7 @@ export function AttendanceListPage({ mode: modeProp = 'day' }: { mode?: 'day' | 
     queryFn: () => listActivities({ orgId, from: selCycle!.starts_on, to: selCycle!.ends_on }),
   })
   const cycles = useCycles()
-  const catalog = useInstrumentCatalog()
+  const catalog = useInstrumentCatalog(cycleId)
   const students = useStudentInstruments(cycleId)
   const mineSec = useMySectionIds(mode === 'mine' ? cycleId : null)
   const baseItems = (data ?? []).filter((a) => a.has_attendance !== false && cycleOf(a, cycles.data ?? []) === cycleId)
@@ -287,7 +295,7 @@ export function AttendanceListPage({ mode: modeProp = 'day' }: { mode?: 'day' | 
   const mineReady = mode !== 'mine' || !cycleId || (mineSec.isFetched && (allAud.isFetched || baseItems.length === 0))
   const mine = mode === 'mine' ? mineSec.data : undefined
   // Evento com público segue o público (naipe ou instrumento); sem público (ou só de categoria) vale para todos.
-  const instSection = new Map((catalog.data?.list ?? []).map((i) => [i.id, i.section_id]))
+  const instSection = new Map((catalog.data?.all ?? []).map((i) => [i.id, i.section_id]))
   const appliesToMine = (a: Activity) => {
     const aud = allAud.data?.get(a.id)
     if (!aud || aud.length === 0) return true

@@ -126,11 +126,14 @@ export function MyParticipation({ memberId }: { memberId: string }) {
         {addForm('collab')}
       </section>
 
-      <section className="space-y-1 border-t border-border pt-3">
-        {head('Remunerada')}
-        {d.paid.length === 0 ? <p className="text-muted-foreground">Nenhuma atividade remunerada.</p> : <p>{d.paid.map((p) => p.name).join(', ')}</p>}
-        <p className="text-xs text-muted-foreground">Mudanças nesta só pela direção.</p>
-      </section>
+      {/* Quem não tem atividade remunerada nem vê esta seção. */}
+      {d.paid.length > 0 && (
+        <section className="space-y-1 border-t border-border pt-3">
+          {head('Remunerada')}
+          <p>{d.paid.map((p) => p.name).join(', ')}</p>
+          <p className="text-xs text-muted-foreground">Mudanças nesta só pela direção.</p>
+        </section>
+      )}
 
         </>
       )}
