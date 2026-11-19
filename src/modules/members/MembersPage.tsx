@@ -157,7 +157,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   // Categorias com qualificador, como "Aluno (sopro)" e "Aluno (percussão)", são o mesmo tipo ("Aluno"): vale o nome sem o parêntese.
   const baseName = (n: string) => n.replace(/\s*\([^)]*\)\s*$/, '').trim()
   const baseKey = (n: string) => { const w = baseName(n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()); return w === 'aluno' ? 'aluno' : w === 'senior' ? 'senior' : w.startsWith('musico') ? 'musico' : undefined }
-  const keyByName = new Map((feeCats.data ?? []).filter((c) => c.system_key).map((c) => [c.name, c.system_key as string]))
+  const keyByName = new Map((feeCats.data ?? []).filter((c) => c.base_key || c.system_key).map((c) => [c.name, (c.base_key ?? c.system_key) as string]))
   const typesOf = (memberId: string) => {
     const out = new Set<string>(staffKinds.data?.get(memberId) ?? [])
     for (const cat of allCategories(memberId)) {
@@ -167,7 +167,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     return out
   }
   const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  const catName = (k: string) => { const n = (feeCats.data ?? []).find((c) => c.system_key === k)?.name; return n ? baseName(n) : n }
+  const catName = (k: string) => { const n = (feeCats.data ?? []).find((c) => (c.base_key ?? c.system_key) === k)?.name; return n ? baseName(n) : n }
   /** Nome mostrado: o padrão se a categoria ainda tem o nome de fábrica; senão, o nome que a Direção deu. */
   const typeName = (k: string, fallback: string, factory: string[]) => { const n = catName(k); return n && !factory.some((f) => norm(f) === norm(n)) ? n : fallback }
   const typeBadge = (k: string) => (k === 'musico' ? typeName(k, TYPE_LABEL[k], ['Músico']) : k === 'senior' ? typeName(k, TYPE_LABEL[k], ['Senior', 'Sênior']) : k === 'aluno' ? typeName(k, TYPE_LABEL[k], ['Aluno']) : TYPE_LABEL[k] ?? k)

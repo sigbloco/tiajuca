@@ -12,6 +12,8 @@ export interface CatalogItem {
   function_id?: string | null
   /** Chave fixa de categorias que o sistema usa por significado (aluno, musico, senior...): renomear não quebra nada. */
   system_key?: string | null
+  /** Categorias de contribuição: tipo (aluno, senior, musico, isento). É o que o sistema usa para reconhecer; o nome é livre. */
+  base_key?: 'aluno' | 'senior' | 'musico' | 'isento' | null
   /** Descrição opcional (listas do cadastro e categorias): explica o item onde ele é escolhido. */
   description?: string | null
   section_id?: string | null
