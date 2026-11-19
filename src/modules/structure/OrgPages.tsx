@@ -7,7 +7,8 @@ import { TrashGroup } from '@/components/shared/TrashGroup'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { SaveInput } from '@/components/shared/ConfirmField'
-import { Badge, Button, Card, Input } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Label, Select } from '@/components/ui/primitives'
+import { CATEGORY_TYPES } from '@/modules/members/categoryKind'
 import { friendlyError } from '@/core/errors'
 import { requireFields } from '@/core/required'
 import { useOrgId } from '@/core/organization'
@@ -71,8 +72,21 @@ export function FunctionsPage() {
     onError: (e) => toast.error(/foreign key|violates|23503/i.test(String((e as Error).message ?? e)) ? 'Há pessoas com esta categoria. Deixe-a na lixeira.' : friendlyError(e)),
   })
 
+  // Tipo e naipe da categoria de contribuição (ficam na categoria de Financeiro ligada a esta, pelo id).
+  const feeCats = useCatalog('fee_categories')
+  const sections = useCatalog('sections')
+  const setFee = useMutation({
+    mutationFn: async (v: { id: string; fields: { base_key?: string | null; section_id?: string | null } }) => {
+      const { error } = await supabase.from('fee_categories').update(v.fields).eq('id', v.id).eq('organization_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { refresh(); notifySaved('Categoria atualizada.') },
+    onError,
+  })
+
   const row = (f: CatalogItem) => {
     const locked = !!f.is_fixed
+    const fee = kindOf(f) === 'payer' ? (feeCats.data ?? []).find((c) => c.function_id === f.id) : undefined
     return (
       <Card key={f.id} className="flex flex-wrap items-center gap-2 p-2">
         {locked ? (
@@ -85,6 +99,21 @@ export function FunctionsPage() {
             onClick={async () => { if (await confirmBox(`Mover a categoria “${f.name}” para a lixeira? Você pode restaurar depois.`)) patch.mutate({ f, fields: { is_active: false } }) }}><Trash2 className="h-4 w-4" /></Button>
         )}
         <div className="basis-full"><SaveInput value={f.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${f.name}`} onSave={(v) => patch.mutateAsync({ f, fields: { description: v.trim() || null } })} /></div>
+        {fee && (
+          <div className="grid basis-full grid-cols-2 gap-2">
+            <div className="space-y-1"><Label htmlFor={`tp-${f.id}`} className="text-xs">Tipo</Label>
+              <Select id={`tp-${f.id}`} value={fee.base_key ?? ''} disabled={!canEdit || setFee.isPending} onChange={(e) => setFee.mutate({ id: fee.id, fields: { base_key: e.target.value || null } })}>
+                <option value="">Outro</option>
+                {CATEGORY_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+              </Select></div>
+            <div className="space-y-1"><Label htmlFor={`nz-${f.id}`} className="text-xs">Naipe</Label>
+              <Select id={`nz-${f.id}`} value={fee.section_id ?? ''} disabled={!canEdit || setFee.isPending} onChange={(e) => setFee.mutate({ id: fee.id, fields: { section_id: e.target.value || null } })}>
+                <option value="">Qualquer naipe</option>
+                {(sections.data ?? []).filter((s) => s.is_active || s.id === fee.section_id).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </Select></div>
+            <p className="col-span-2 text-xs text-muted-foreground">Com um naipe, só quem toca nele pode ter esta categoria como principal (o valor da categoria vale para aquele naipe).</p>
+          </div>
+        )}
       </Card>
     )
   }

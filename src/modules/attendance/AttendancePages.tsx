@@ -86,11 +86,11 @@ function useStudentInstruments(cycleId: string | null | undefined) {
         supabase.from('cycle_participations').select('member_id, instrument_id').eq('cycle_id', cycleId!).not('instrument_id', 'is', null).limit(5000),
         supabase.from('member_cycles').select('member_id, status_id').eq('cycle_id', cycleId!).limit(5000),
         supabase.from('member_cycle_statuses').select('id').eq('organization_id', orgId).eq('counts_as_active', true),
-        supabase.from('fee_categories').select('name, system_key').eq('organization_id', orgId),
+        supabase.from('fee_categories').select('name, system_key, base_key').eq('organization_id', orgId),
       ])
       if (alunoCat.error) throw alunoCat.error
       // Todas as categorias de Aluno: a de chave fixa (mesmo renomeada) e as irmãs sem chave, como "Aluno (percussão)".
-      const alunoNames = new Set((alunoCat.data ?? []).filter((x) => isAlunoCategory({ name: x.name as string, system_key: x.system_key as string | null })).map((x) => x.name as string))
+      const alunoNames = new Set((alunoCat.data ?? []).filter((x) => isAlunoCategory({ name: x.name as string, system_key: x.system_key as string | null, base_key: x.base_key as string | null })).map((x) => x.name as string))
       if (mc.error) throw mc.error
       if (sts.error) throw sts.error
       if (cats.error) throw cats.error

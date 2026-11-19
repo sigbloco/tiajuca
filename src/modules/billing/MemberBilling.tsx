@@ -67,6 +67,24 @@ function ParticipationCategories({ memberId, cycleId, current }: { memberId: str
   )
 }
 
+/** Naipes da pessoa no ciclo (instrumento ou função): só as categorias do naipe dela, ou sem naipe, podem ser a principal. */
+function useMemberSections(memberId: string, cycleId: string | undefined) {
+  const orgId = useOrgId()
+  return useQuery({
+    queryKey: ['member-cycle-sections', orgId, memberId, cycleId],
+    enabled: Boolean(cycleId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cycle_participations').select('instruments(section_id), artistic_functions(section_id)').eq('member_id', memberId).eq('cycle_id', cycleId!)
+      if (error) throw error
+      const rows = (data ?? []) as unknown as { instruments: { section_id: string | null } | null; artistic_functions: { section_id: string | null } | null }[]
+      return rows.map((r) => r.instruments?.section_id ?? r.artistic_functions?.section_id ?? null).filter((x): x is string => !!x)
+    },
+  })
+}
+/** A categoria pode ser a principal desta pessoa? Sem naipe na categoria, ou pessoa sem naipe ainda, ou o mesmo naipe; a atual sempre aparece. */
+const fitsSections = (c: { id: string; section_id?: string | null }, mine: string[] | undefined, currentId: string) =>
+  c.id === currentId || !c.section_id || !mine || mine.length === 0 || mine.includes(c.section_id)
+
 /** Categorias extras do ciclo (ex.: Aluno + Sênior): só marcações; a cobrança segue a categoria principal. Botão "+" abre a escolha. */
 function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; cycleId: string; primaryId: string }) {
   const orgId = useOrgId()
@@ -194,6 +212,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
   const isMemberCategory = useIsMemberCategory()
+  const mySections = useMemberSections(memberId, cycle.id)
   const today = todayIso(membership?.timezone)
   const info = useQuery({
     queryKey: ['cycle-billing', orgId, memberId, cycle.id],
@@ -272,7 +291,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
         <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
             {!catId && <option value="">Escolha a categoria</option>}
-            {categories.data?.filter((c) => (isMemberCategory(c) && c.system_key !== 'isento') || c.id === catId).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.data?.filter((c) => ((isMemberCategory(c) && c.system_key !== 'isento') || c.id === catId) && fitsSections(c, mySections.data, catId)).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
         <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
@@ -303,6 +322,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
   const isMemberCategory = useIsMemberCategory()
   const [livePct, setLivePct] = useState(0)
   const currentCycleId = useCycles().data?.find((c) => c.is_current)?.id ?? ''
+  const mySections = useMemberSections(memberId, currentCycleId || undefined)
   const exemptBy = useExemptFunction(memberId, currentCycleId || undefined)
   // Quem tem atividade remunerada não contribui: a seção some.
   const paid = useQuery({
@@ -365,7 +385,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
         <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
           <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
             {!assignment?.fee_category_id && <option value="">Escolha a categoria</option>}
-            {categories.data?.filter((c) => (isMemberCategory(c) && c.system_key !== 'isento') || c.id === assignment?.fee_category_id).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.data?.filter((c) => ((isMemberCategory(c) && c.system_key !== 'isento') || c.id === assignment?.fee_category_id) && fitsSections(c, mySections.data, assignment?.fee_category_id ?? '')).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
         <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
