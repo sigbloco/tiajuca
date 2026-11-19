@@ -216,8 +216,11 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             && !(await confirmBox(`A data ${formatDayLong(f.activity_date)} fica fora do ciclo ${cy.name}. O evento não vai aparecer no calendário desse ciclo. Salvar mesmo assim?`))) return
           save.mutate()
         }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-        <TypePicker types={types.data ?? []} ids={labelIds} onChange={changeTypes} />
+        {/* Título e tipo lado a lado (celular e computador). */}
+        <div className="grid grid-cols-[1.3fr_1fr] items-start gap-2">
+          <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
+          <div className="min-w-0"><TypePicker types={types.data ?? []} ids={labelIds} onChange={changeTypes} /></div>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 font-semibold">
             <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
@@ -231,18 +234,19 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             <Input id="ev-confirm-note" maxLength={200} placeholder="Ex.: horário, local" value={f.to_confirm_note} onChange={(e) => setF({ ...f, to_confirm_note: e.target.value })} /></div>
         )}
         {/* Data, início e fim na mesma linha: a data pede mais largura que as horas. */}
-        <div className={fromRule ? '' : 'grid grid-cols-[1.5fr_1fr_1fr] gap-2'}>
+        {/* Celular: data, início e fim numa linha e o local embaixo. Computador: os quatro na mesma linha. */}
+        <div className={fromRule ? '' : 'grid grid-cols-[1.5fr_1fr_1fr] gap-2 sm:grid-cols-[1.3fr_1fr_1fr_1.7fr]'}>
           <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-date" required>Data</Label><DateInput id="ev-date" required value={f.activity_date} onChange={(v) => setF({ ...f, activity_date: v })} /></div>
           {!fromRule && (
             <>
               <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-start">Início</Label><TimeInput id="ev-start" value={f.start_time} onChange={(v) => setF({ ...f, start_time: v })} /></div>
               <div className="min-w-0 space-y-1.5"><Label htmlFor="ev-end">Fim</Label><TimeInput id="ev-end" value={f.end_time} onChange={(v) => setF({ ...f, end_time: v })} /></div>
+              <div className="col-span-3 min-w-0 space-y-1.5 sm:col-span-1"><Label htmlFor="ev-loc">Local</Label><Input id="ev-loc" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></div>
             </>
           )}
         </div>
         {!fromRule && (
           <>
-        <div className="space-y-1.5"><Label htmlFor="ev-loc">Local</Label><Input id="ev-loc" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} /></div>
         <div className="space-y-1.5">
           <Label htmlFor="ev-desc">Descrição</Label>
           <textarea id="ev-desc" rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
