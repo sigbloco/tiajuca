@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Cake, ChevronRight, UserRound } from 'lucide-react'
-import { FitText } from '@/components/shared/FitText'
+import { FitBox, FitText } from '@/components/shared/FitText'
 import { useParticipationLine } from '@/modules/profile/participationLine'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 import { useState } from 'react'
@@ -22,11 +22,13 @@ const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direca
 
 function Stat({ label, value, hint, tone, compact }: { label: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
   if (compact) {
-    // Cada texto começa grande e a fonte desce só até caber na largura da caixa (uma linha, sem quebrar): aproveita o espaço que sobra.
+    // Título sempre no topo; o valor ocupa a maior fonte que cabe no espaço que sobra (largura e altura), quebrando só entre palavras.
     return (
-      <Card className="flex h-full min-w-0 flex-1 flex-col justify-center p-1.5">
+      <Card className="flex h-full min-h-[5.75rem] min-w-0 flex-1 flex-col p-1.5">
         <FitText min={7} className="text-sm text-muted-foreground">{label}</FitText>
-        <FitText min={7} className={cn('font-display text-2xl font-bold', tone)}>{value}</FitText>
+        <div className="relative min-h-[2.25rem] flex-1">
+          <FitBox min={9} max={36} className={cn('px-1 font-display font-bold', tone)}>{value}</FitBox>
+        </div>
         {hint && <FitText min={7} className="text-xs text-muted-foreground">{hint}</FitText>}
       </Card>
     )
