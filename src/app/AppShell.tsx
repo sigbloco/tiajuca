@@ -1,4 +1,5 @@
 import { OrgName } from '@/components/shared/OrgName'
+import { LoadingScreen } from '@/components/shared/LoadingScreen'
 import { ArrowLeft, Construction, Globe, LogOut, Menu, Store, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useCrumbOverride, useExtraCrumbs } from '@/core/breadcrumb'
@@ -123,8 +124,8 @@ export function AppShell() {
   // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0
-  if (!membership) return <div className="p-8 text-muted-foreground">Carregando</div>
-  if (!rel.ready) return <div className="p-8 text-muted-foreground">Carregando</div>
+  if (!membership) return <LoadingScreen />
+  if (!rel.ready) return <LoadingScreen />
   // Nenhuma página liberada para este perfil (a liberação fica em Acesso e papéis): só o aviso, a loja, o site e o Sair.
   // O Titular que está "visualizando como" esse perfil continua com a barra para voltar; o inativo ainda pode pedir para voltar.
   if (!rel.all && !rel.anyPage) {
