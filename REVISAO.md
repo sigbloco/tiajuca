@@ -9,7 +9,7 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 
 - Leia o `CLAUDE.md`, a memória do projeto e este arquivo (seção Andamento) antes de começar. Eles têm regras que a revisão não pode quebrar (dados por ciclo, regras de UI do site todo, categorias por naipe etc.).
 - Escreva tudo em português.
-- Trabalhe na branch `revisao-geral` (ou numa branch da etapa criada a partir dela).
+- Trabalhe na branch `revisao-geral` (ou numa branch da etapa criada a partir dela). **Outras sessões usam a mesma pasta e trocam de branch** (na Fase 1 o checkout foi trocado para a `main` no meio do trabalho): trabalhe num worktree próprio (`git worktree add`) ou confira `git rev-parse --abbrev-ref HEAD` antes de cada commit.
 - Fase 1: não altere código nem banco. A única escrita permitida é o `REVISAO.md` (e `docs/regras-de-negocio.md`), commitados na branch.
 - Refatorar é manter comportamento. Se achar que uma regra de negócio está errada, aponte e pergunte; não corrija por conta própria.
 - Correção de segurança que mude comportamento pode entrar no plano, mas liste o impacto e pergunte antes de aplicar.
@@ -59,7 +59,7 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 
 ---
 
-## 4. Linha de base (19/11/2026, branch `revisao-geral` = `main` em `5f67d3b`)
+## 4. Linha de base (19/11/2026, medida sobre a `main` em `5f67d3b`; a branch `revisao-geral` parte de `9106dd7`, que só acrescenta ajustes de interface)
 
 | Verificação | Resultado |
 |---|---|
