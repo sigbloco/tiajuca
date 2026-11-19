@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { applyTheme } from '@/core/theme'
 import { readBrand } from '@/modules/auth/AuthLayout'
+import { RaysBackdrop } from '@/modules/site/Rays'
 
 /** Vale por carga da página: ao recarregar volta a valer; ao navegar dentro do app, não. */
 let splashShown = false
@@ -16,9 +17,6 @@ export function useSplashHold(ms = 3000): boolean {
   }, [hold, ms])
   return hold
 }
-
-/** Raios (9) saindo do centro da logo e cobrindo a tela toda, girando devagar. Sem giro para quem prefere menos movimento. */
-const RAYS = 'repeating-conic-gradient(rgb(var(--primary)) 0deg 20deg, transparent 20deg 40deg)'
 
 /** Contorno branco em volta do texto (oito direções), para proteger a leitura sobre os raios. */
 const STROKE = { textShadow: '2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff, 1.5px 1.5px #fff, -1.5px -1.5px #fff, 1.5px -1.5px #fff, -1.5px 1.5px #fff' }
@@ -51,12 +49,11 @@ export function LoadingScreen({ children, fillMs }: { children?: ReactNode; fill
   useEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const pct = useCountUp(fillMs)
   return (
-    <div role="status" aria-live="polite" className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden bg-background p-6 text-center">
+    <div role="status" aria-live="polite" className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center" style={{ backgroundColor: 'rgb(var(--secondary))' }}>
+      {/* Fundo na cor secundária (100%) e 9 raios na cor principal, em SVG (bordas lisas), saindo do centro da logo. */}
       <div className="relative h-20 w-20">
-        <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-[250vmax] w-[250vmax] shrink-0 animate-[spin_90s_linear_infinite] motion-reduce:animate-none" style={{ background: RAYS }} />
-        </div>
-        {brand && <OrgLogo name={brand.name} logoPath={brand.logo_path} className="relative h-20 w-20 ring-4 ring-white" />}
+        <RaysBackdrop count={9} opacity={100} color="rgb(var(--primary))" animate speed={8} />
+        {brand && <OrgLogo name={brand.name} logoPath={brand.logo_path} className="relative h-20 w-20" />}
       </div>
       <div className="relative h-3 w-52 overflow-hidden rounded-full bg-white p-0.5 shadow-sm" aria-hidden>
         {fillMs
