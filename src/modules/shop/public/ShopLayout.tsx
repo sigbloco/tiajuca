@@ -24,7 +24,7 @@ function MemberNotice() {
   return (
     <div className="mb-4 space-y-2">
       <Button className="w-full" onClick={() => setLoginOpen(true)}><LogIn className="h-4 w-4" aria-hidden /> Entrar com o Google</Button>
-      <Card className="border-secondary p-3 text-sm">{hasDiscount ? 'Entre com o Google para acompanhar seus pedidos. Integrantes tem preços especiais.' : 'Entre com o Google para preencher seus dados e acompanhar seus pedidos sem precisar de código.'}</Card>
+      <Card className="border-secondary p-3 text-sm">{hasDiscount ? 'Entre com o Google para acompanhar seus pedidos. Integrantes têm preços especiais.' : 'Entre com o Google para preencher seus dados e acompanhar seus pedidos sem precisar de código.'}</Card>
     </div>
   )
 }
