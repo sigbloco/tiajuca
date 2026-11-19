@@ -207,7 +207,15 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
 
   return (
     <SheetContent title={isNew ? 'Novo evento' : 'Editar evento'} description="Data e horário no horário de Brasília.">
-      <form onSubmit={(e) => { e.preventDefault(); if (requireFields([['Título', f.title.trim()], ['Tipo', labelIds[0]], ['Data', f.activity_date], ['Ciclo', f.cycle_id], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) save.mutate() }} className="space-y-3">
+      <form onSubmit={async (e) => {
+          e.preventDefault()
+          if (!requireFields([['Título', f.title.trim()], ['Tipo', labelIds[0]], ['Data', f.activity_date], ['Ciclo', f.cycle_id], ['Público (escolha ou tire o item vazio)', !auds.some((a) => !a.ref)]])) return
+          // Data fora do ciclo escolhido (ex.: ano digitado errado): o evento "some" do calendário do ciclo.
+          const cy = cycles.data?.find((c) => c.id === f.cycle_id)
+          if (cy && (f.activity_date < cy.starts_on || (cy.ends_on && f.activity_date > cy.ends_on))
+            && !(await confirmBox(`A data ${formatDayLong(f.activity_date)} fica fora do ciclo ${cy.name}. O evento não vai aparecer no calendário desse ciclo. Salvar mesmo assim?`))) return
+          save.mutate()
+        }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <TypePicker types={types.data ?? []} ids={labelIds} onChange={changeTypes} />
         <label className="flex items-center gap-2 font-semibold">

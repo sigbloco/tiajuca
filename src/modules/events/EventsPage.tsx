@@ -223,11 +223,12 @@ export function EventsPage() {
         </div>
       </Card>
 
-      {(highlights.data?.length ?? 0) > 0 && (
-        <Collapsible open={highOpen} onToggle={() => setHighOpen(!highOpen)} count={highlights.data!.length}
+      {(
+        <Collapsible open={highOpen} onToggle={() => setHighOpen(!highOpen)} count={highlights.data?.length ?? 0}
           title={<span className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-primary" aria-hidden /> Em destaque</span>}>
+          {highlights.data && highlights.data.length === 0 && <p className="px-1 text-sm text-muted-foreground">Nenhum evento pontual a caminho neste ciclo.</p>}
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {highlights.data!.map((a) => (
+            {(highlights.data ?? []).map((a) => (
               <button key={a.id} type="button" onClick={() => goTo(a)} className="w-44 shrink-0 rounded-xl border border-primary/40 bg-primary/5 p-2.5 text-left transition hover:bg-primary/10">
                 <p className="text-xs font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ' · ' + formatTime(a.start_time) : ''}</p>
                 <p className="line-clamp-2 break-words font-semibold leading-tight">{a.title}</p>
