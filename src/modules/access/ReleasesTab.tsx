@@ -17,6 +17,7 @@ export function ReleasesTab() {
   const access = useCategoryAccess()
   const set = useSetReleases()
   const [busy, setBusy] = useState(false)
+  const [more, setMore] = useState(false)
   const map = rows.data ?? new Map()
   const ready = !!rows.data && !!access.data
 
@@ -40,10 +41,17 @@ export function ReleasesTab() {
       <Card className="space-y-2 p-4">
         <p className="font-semibold">Quais páginas cada categoria pode abrir</p>
         <p className="text-sm text-muted-foreground">
-          Marque as páginas que quer liberar. Elas só valem para quem já tem acesso em <strong>Permissões dos papéis</strong>: sem acesso, a caixa fica desmarcada e desabilitada.
-          Página não liberada aparece apagada no menu. O Titular vê tudo. Desmarcar uma área (Oficina, Financeiro, Organização) apaga também as páginas dela; marcar a área não libera as páginas, cada uma tem a sua caixa.
-          Professor e Monitor não herdam de Integrante ativo: marque cada coluna.
+          Marque o que quer liberar. Só vale para quem já tem acesso em <strong>Permissões dos papéis</strong>; página não liberada fica apagada no menu.
         </p>
+        {more && (
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Sem acesso em Permissões dos papéis, a caixa fica desmarcada e desabilitada.</li>
+            <li>O Titular vê tudo.</li>
+            <li>Desmarcar uma área (Oficina, Financeiro, Organização) apaga também as páginas dela. Marcar a área não libera as páginas: cada uma tem a sua caixa.</li>
+            <li>Professor e Monitor não herdam de Integrante ativo: marque cada coluna.</li>
+          </ul>
+        )}
+        <button type="button" className="text-sm font-semibold text-primary hover:underline" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Ocultar' : 'Ler mais'}</button>
         {isTitular
           ? <Button variant="outline" className="w-full" disabled={!ready || busy} onClick={() => void closeAll()}>Desmarcar tudo (todas as categorias, menos Direção)</Button>
           : <p className="text-sm text-muted-foreground">Só o Titular altera a liberação. Aqui você pode conferir.</p>}
@@ -60,9 +68,11 @@ export function ReleasesTab() {
                   <th key={c.key} scope="col" className="min-w-[5.5rem] px-1 py-2 text-center font-semibold" title={c.label}>
                     <span className="block"><span className="hidden md:inline">{c.label}</span><span className="md:hidden">{c.short}</span></span>
                     {isTitular && (
-                      <button type="button" disabled={!ready || busy || col.cells.length === 0} onClick={() => void col.toggle()}
-                        className="mt-1 rounded-md border border-border bg-card px-1.5 py-0.5 text-xs font-semibold hover:bg-muted disabled:opacity-50">
-                        {col.allOn ? 'Desmarcar tudo' : 'Marcar tudo'}
+                      // O rótulo não muda: ligado (destacado) = tudo marcado; clicar de novo desmarca tudo.
+                      <button type="button" aria-pressed={col.allOn} disabled={!ready || busy || col.cells.length === 0} onClick={() => void col.toggle()}
+                        className={cn('mt-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50',
+                          col.allOn ? 'border-primary bg-primary text-primary-foreground hover:bg-primary' : 'border-border bg-card hover:bg-muted')}>
+                        Marcar tudo
                       </button>
                     )}
                   </th>
