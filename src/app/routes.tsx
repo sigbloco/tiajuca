@@ -1,7 +1,7 @@
 import { DirectionOnly } from '@/core/permissions'
 import { useEffect, useState } from 'react'
 import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
-import { Skeleton } from '@/components/ui/primitives'
+import { LoadingScreen } from '@/components/shared/LoadingScreen'
 import { isSigningOut, takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
@@ -56,21 +56,19 @@ import { PaymentsPage } from '@/modules/finance/PaymentsPage'
 import { TeamPage } from '@/modules/finance/TeamPage'
 import { ValuesPage } from '@/modules/billing/ValuesPage'
 
-/** Carregando: nunca deixa a tela em branco. Se demorar demais, mostra uma saída (recarregar ou sair). */
+/** Carregando: nunca deixa a tela em branco. Se demorar demais, mostra uma saída (recarregar). */
 function Loading() {
   const [slow, setSlow] = useState(false)
   useEffect(() => { const t = setTimeout(() => setSlow(true), 8000); return () => clearTimeout(t) }, [])
   return (
-    <div className="space-y-4 p-8">
-      <Skeleton className="h-10 w-64" />
-      <p className="text-muted-foreground">Carregando</p>
+    <LoadingScreen>
       {slow && (
         <div className="space-y-2">
           <p>Está demorando mais que o normal.</p>
           <button type="button" className="rounded-lg border border-border px-4 py-2 font-semibold hover:bg-muted" onClick={() => window.location.reload()}>Recarregar a página</button>
         </div>
       )}
-    </div>
+    </LoadingScreen>
   )
 }
 

@@ -17,7 +17,7 @@ interface PublicOrg {
 
 const BRAND_KEY = 'sigbloco:brand'
 // Cache só de nome e logo (públicos) para a tela de login não piscar com texto genérico.
-function readBrand(): PublicOrg | undefined {
+export function readBrand(): PublicOrg | undefined {
   try {
     const raw = localStorage.getItem(BRAND_KEY)
     return raw ? (JSON.parse(raw) as PublicOrg) : undefined
