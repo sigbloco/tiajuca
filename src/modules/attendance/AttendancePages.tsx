@@ -3,7 +3,7 @@ import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check, Pencil, Search, Undo2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ChipRows } from '@/components/shared/ChipRows'
 import { ButtonRow } from '@/components/shared/ButtonRow'
@@ -17,7 +17,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { useCycles, type Cycle } from '@/modules/cycles/service'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { supabase } from '@/core/supabase'
-import { cancelWord, getAudiencesFor, listActivities, setActivityStatus, type Activity, type AudienceInput } from '@/modules/events/service'
+import { audienceSectionIds, cancelWord, getAudiencesFor, listActivities, setActivityStatus, type Activity, type AudienceInput } from '@/modules/events/service'
 import { promptBox } from '@/components/shared/DialogHost'
 import { useSetCrumbOverride } from '@/core/breadcrumb'
 import { usePermission } from '@/core/permissions'
@@ -232,8 +232,41 @@ function ActivityCard({ a, instruments, studentIds, slug, audience, staff, stude
   )
 }
 
-/** Presença: um dia por vez (o vigente), com setas para o dia anterior/seguinte com atividades. */
-export function AttendanceListPage() {
+/** Naipes (ids) da pessoa no ciclo: os que ela ministra (professor/monitor) ou, na falta, os do próprio instrumento/função (ex.: a direção que também toca). */
+function useMySectionIds(cycleId: string | null | undefined) {
+  const orgId = useOrgId()
+  const { membership } = useOrganization()
+  const catalog = useInstrumentCatalog()
+  return useQuery({
+    queryKey: ['my-attendance-sections', orgId, membership?.member_id, cycleId, catalog.data?.list.length],
+    enabled: Boolean(cycleId && membership?.member_id && catalog.data),
+    queryFn: async () => {
+      const bySection = new Map(catalog.data!.list.map((i) => [i.id, i.section_id]))
+      const ids = new Set<string>()
+      const staff = await supabase.from('staff_assignments').select('section_id, instrument_id').eq('organization_id', orgId).eq('member_id', membership!.member_id).eq('cycle_id', cycleId!).is('valid_to', null).in('staff_kind', ['professor', 'monitor']).limit(200)
+      if (staff.error) throw staff.error
+      for (const r of staff.data ?? []) { const sid = (r.section_id as string | null) ?? bySection.get(r.instrument_id as string); if (sid) ids.add(sid) }
+      if (ids.size === 0) {
+        const parts = await supabase.from('cycle_participations').select('instrument_id, artistic_functions(section_id)').eq('member_id', membership!.member_id).eq('cycle_id', cycleId!)
+        if (parts.error) throw parts.error
+        for (const r of (parts.data ?? []) as unknown as { instrument_id: string | null; artistic_functions: { section_id: string | null } | null }[]) {
+          const sid = (r.instrument_id ? bySection.get(r.instrument_id) : undefined) ?? r.artistic_functions?.section_id
+          if (sid) ids.add(sid)
+        }
+      }
+      return ids
+    },
+  })
+}
+
+/**
+ * Presença: um dia por vez (o vigente), com setas para o dia anterior/seguinte com atividades.
+ * mode "day" (vindo do Calendário): o dia inteiro, com todos os instrumentos (o parâmetro "dia" escolhe o dia).
+ * mode "mine" (Oficina → Presença): só o que é do naipe da pessoa e, havendo um evento só, abre direto a chamada dele.
+ */
+export function AttendanceListPage({ mode: modeProp = 'day' }: { mode?: 'day' | 'mine' } = {}) {
+  const [params] = useSearchParams()
+  const mode = params.get('dia') ? 'day' : modeProp // vindo do Calendário (com o dia na URL): o dia inteiro
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)
@@ -247,9 +280,23 @@ export function AttendanceListPage() {
   const cycles = useCycles()
   const catalog = useInstrumentCatalog()
   const students = useStudentInstruments(cycleId)
-  const items = (data ?? []).filter((a) => a.has_attendance !== false && cycleOf(a, cycles.data ?? []) === cycleId)
+  const mineSec = useMySectionIds(mode === 'mine' ? cycleId : null)
+  const baseItems = (data ?? []).filter((a) => a.has_attendance !== false && cycleOf(a, cycles.data ?? []) === cycleId)
+  const allAud = useQuery({ queryKey: ['audiences-all', baseItems.map((a) => a.id).join(',')], enabled: mode === 'mine' && baseItems.length > 0, queryFn: () => getAudiencesFor(baseItems.map((a) => a.id)) })
+  const mineReady = mode !== 'mine' || !cycleId || (mineSec.isFetched && (allAud.isFetched || baseItems.length === 0))
+  const mine = mode === 'mine' ? mineSec.data : undefined
+  // Evento com público segue o público (naipe ou instrumento); sem público (ou só de categoria) vale para todos.
+  const instSection = new Map((catalog.data?.list ?? []).map((i) => [i.id, i.section_id]))
+  const appliesToMine = (a: Activity) => {
+    const aud = allAud.data?.get(a.id)
+    if (!aud || aud.length === 0) return true
+    const sids = audienceSectionIds(aud, instSection)
+    return sids.size === 0 || [...sids].some((sid) => mine!.has(sid))
+  }
+  const filtering = mode === 'mine' && !!mine && mine.size > 0
+  const items = filtering && mineReady ? baseItems.filter(appliesToMine) : baseItems
   const days = [...new Set(items.map((a) => a.activity_date))].sort()
-  const [picked, setPicked] = useState<string | null>(null)
+  const [picked, setPicked] = useState<string | null>(params.get('dia'))
   const current = (picked && days.includes(picked) ? picked : null) ?? days.find((d) => d >= today) ?? days[days.length - 1] ?? null
   const idx = current ? days.indexOf(current) : -1
   const dayItems = items.filter((a) => a.activity_date === current)
@@ -266,10 +313,12 @@ export function AttendanceListPage() {
     },
   })
   const audiences = useQuery({ queryKey: ['audiences-day', dayItems.map((a) => a.id).join(',')], enabled: dayItems.length > 0, queryFn: () => getAudiencesFor(dayItems.map((a) => a.id)) })
+  // Um evento só do naipe da pessoa no dia: vai direto para a chamada dele (nela, o naipe já vem selecionado).
+  if (filtering && mineReady && !picked && dayItems.length === 1) return <Navigate to={`/${membership?.slug}/presenca/${dayItems[0].id}`} replace />
   return (
     <div className="space-y-4">
-      {isLoading && <Skeleton className="h-24" />}
-      {data && days.length === 0 && <EmptyState>Nenhuma atividade neste ciclo.</EmptyState>}
+      {(isLoading || !mineReady) && <Skeleton className="h-24" />}
+      {data && mineReady && days.length === 0 && <EmptyState>Nenhuma atividade neste ciclo.</EmptyState>}
       {current && (
         <StepNav prevLabel="Dia anterior" nextLabel="Próximo dia" prevDisabled={idx <= 0} nextDisabled={idx >= days.length - 1} onPrev={() => setPicked(days[idx - 1])} onNext={() => setPicked(days[idx + 1])}>
           {formatDayShort(current)}{current === today && <Badge className="ml-2 bg-primary text-primary-foreground">Hoje</Badge>}
@@ -410,10 +459,15 @@ export function AttendanceRosterPage() {
       return (data ?? []) as { section_id: string | null; instrument_id: string | null }[]
     },
   })
+  // Sem atribuição de professor/monitor (ex.: a direção que também toca): abre no naipe do próprio instrumento.
+  const mySections = useMySectionIds(activity.data && cyclesAll.data ? cycleOf(activity.data, cyclesAll.data) : null)
   const myScope = (() => {
     const list = catalog.data?.list ?? []
     const a = myStaff.data ?? []
-    if (a.length === 0) return { section: '', inst: '' }
+    if (a.length === 0) {
+      const names = [...new Set(list.filter((i) => mySections.data?.has(i.section_id)).map((i) => i.section))]
+      return { section: names.length === 1 ? names[0] : '', inst: '' }
+    }
     const mine = list.filter((i) => a.some((x) => x.instrument_id === i.id || (x.section_id && x.section_id === i.section_id)))
     const secs = new Set(mine.map((i) => i.section))
     const direct = a.filter((x) => x.instrument_id)

@@ -136,7 +136,7 @@ export function EventsPage() {
   )
   const sheetEl = (
     <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-      {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} startEditing={sheet.edit} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
+      {sheet && <EventSheet key={sheet.activity?.id ?? 'new'} presence="day" startEditing={sheet.edit} activity={sheet.activity} defaultDate={selectedDay ?? today} onClose={() => setSheet(null)} />}
     </Sheet>
   )
   return (
@@ -156,7 +156,7 @@ export function EventsPage() {
           {[...new Set(pending.map((a) => a.activity_date))].sort().map((day) => (
             <section key={day} className="space-y-2">
               <h3 className="capitalize">{formatDayLong(day)}</h3>
-              {pending.filter((a) => a.activity_date === day).map((a, ai) => <EventCard key={a.id} a={a} index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+              {pending.filter((a) => a.activity_date === day).map((a, ai) => <EventCard key={a.id} a={a} presence="day" index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
             </section>
           ))}
         </div>
@@ -213,7 +213,7 @@ export function EventsPage() {
         {selectedDay && listDays.map((day) => (
           <section key={day} className="space-y-2">
             <h3 className="capitalize">{formatDayLong(day)}</h3>
-            {byDay[day].map((a, ai) => <EventCard key={a.id} a={a} index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
+            {byDay[day].map((a, ai) => <EventCard key={a.id} a={a} presence="day" index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
           </section>
         ))}
       </div>
