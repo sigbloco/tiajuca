@@ -35,7 +35,7 @@ export function FitWord({ children }: { children: string }) {
  * Texto que ocupa a MAIOR fonte possível dentro da área que o pai (position: relative, com altura própria) oferece:
  * quebra só entre palavras (nunca no meio) e a fonte cresce até a largura e a altura acabarem. Centralizado na vertical.
  */
-export function FitBox({ children, className, min = 9, max = 44, align = 'center', onFit, forceSize }: { children: ReactNode; className?: string; min?: number; max?: number; /** Posição vertical do texto na área: no centro ou embaixo (bases alinhadas entre caixas). */ align?: 'center' | 'end'; /** Avisa a maior fonte que coube (para várias caixas usarem a mesma). */ onFit?: (size: number) => void; /** Se dada, o texto usa no máximo esta fonte (a menor entre as caixas). */ forceSize?: number }) {
+export function FitBox({ children, className, min = 9, max = 44, align = 'center', onFit, forceSize }: { children: ReactNode; className?: string; min?: number; max?: number; /** Posição vertical do texto na área: no centro, no topo ou embaixo. */ align?: 'center' | 'start' | 'end'; /** Avisa a maior fonte que coube (para várias caixas usarem a mesma). */ onFit?: (size: number) => void; /** Se dada, o texto usa no máximo esta fonte (a menor entre as caixas). */ forceSize?: number }) {
   const wrap = useRef<HTMLDivElement>(null)
   const text = useRef<HTMLSpanElement>(null)
   useLayoutEffect(() => {
@@ -59,7 +59,7 @@ export function FitBox({ children, className, min = 9, max = 44, align = 'center
     return () => ro.disconnect()
   }, [children, min, max, forceSize]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div ref={wrap} className={cn('absolute inset-0 flex', align === 'end' ? 'items-end' : 'items-center')}>
+    <div ref={wrap} className={cn('absolute inset-0 flex', align === 'end' ? 'items-end' : align === 'start' ? 'items-start' : 'items-center')}>
       <span ref={text} className={cn('block w-full min-w-0 break-normal [overflow-wrap:normal] leading-none', className)}>{children}</span>
     </div>
   )

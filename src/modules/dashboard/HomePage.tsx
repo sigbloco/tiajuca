@@ -22,12 +22,12 @@ const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direca
 
 function Stat({ label, labelShort, value, hint, tone, compact, size, onSize }: { /** Fonte única do valor, escolhida pela linha de caixas (a menor que cabe em todas). */ size?: number; onSize?: (n: number) => void; label: string; /** Forma curta do título, usada só se o completo não couber (compact). */ labelShort?: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
   if (compact) {
-    // Título (mesmo tamanho em todas), valor (mesma fonte em todas, a menor que cabe) e linha pequena: as bases ficam alinhadas entre as caixas.
+    // Título (mesmo tamanho em todas), valor (mesma fonte em todas, a menor que cabe) e linha pequena: o valor fica colado no título, alinhado pelo topo.
     return (
       <Card className="flex h-full min-h-[5rem] min-w-0 flex-1 flex-col p-1.5">
         <FitLabel full={label} short={labelShort ?? label} minFull={11} className="text-[11px] leading-none text-muted-foreground" />
         <div className="relative min-h-[2rem] flex-1">
-          <FitBox min={9} max={26} align="end" forceSize={size} onFit={onSize} className={cn('px-1 font-display font-bold', tone)}>{value}</FitBox>
+          <FitBox min={9} max={26} align="start" forceSize={size} onFit={onSize} className={cn('px-1 font-display font-bold text-foreground', tone)}>{value}</FitBox>
         </div>
         <div className="mt-0.5 h-3.5"><FitText min={8} className="text-[10px] leading-snug text-muted-foreground">{hint ?? ' '}</FitText></div>
       </Card>
