@@ -110,7 +110,7 @@ export function WaitlistPage() {
       <div className="grid gap-2">
         <ProgressiveList items={(data) ?? []} render={(r, i) => (
           <Card key={r.id} className="flex items-center justify-between gap-3 p-3">
-            <MemberAvatar memberId={r.member_id} name={shortName(r.members?.full_name, r.members?.display_name)} />
+            <MemberAvatar memberId={r.member_id} name={r.members?.full_name} />
             <div className="min-w-0 flex-1">
               <p className="break-words font-semibold">{i + 1}. <MemberLink id={r.member_id}>{shortName(r.members?.full_name, r.members?.display_name)}</MemberLink></p>
               <p className="text-muted-foreground">

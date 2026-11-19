@@ -5,7 +5,8 @@ import { supabase } from '@/core/supabase'
 /** Iniciais como no Google: primeira letra do primeiro nome e da última palavra do sobrenome ("Rafael Braz" → RB; só um nome → R). */
 const CONNECTORS = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
 export function initialsOf(name: string | null | undefined): string {
-  const words = (name ?? '').trim().split(/\s+/).filter(Boolean)
+  // Só o nome completo, em palavras com letras: o apelido entre parênteses e símbolos não entram ("Rafael Braz (Rafa)" → RB).
+  const words = (name ?? '').replace(/\([^)]*\)/g, ' ').split(/\s+/).filter((w) => /^\p{L}/u.test(w))
   if (words.length === 0) return '?'
   const first = words[0]
   const last = [...words.slice(1)].reverse().find((w) => !CONNECTORS.has(w.toLowerCase()))
