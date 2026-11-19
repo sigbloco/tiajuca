@@ -58,8 +58,8 @@ export function ShopHomePage() {
           // na linha tem tamanho máximo.
           const n = products.length
           const per = (max: number) => { const c = balancedCols(n, max); const rem = n % c; return rem > 0 && idx >= n - rem ? rem : c }
-          const sm = ({ 1: 'sm:col-span-12 sm:w-full sm:max-w-[18rem] sm:justify-self-center', 2: 'sm:col-span-6', 3: 'sm:col-span-4' } as const)[per(3) as 1 | 2 | 3]
-          const lg = ({ 1: 'lg:col-span-12 lg:w-full lg:max-w-[18rem] lg:justify-self-center', 2: 'lg:col-span-6 lg:max-w-none lg:justify-self-stretch', 3: 'lg:col-span-4 lg:max-w-none lg:justify-self-stretch', 4: 'lg:col-span-3 lg:max-w-none lg:justify-self-stretch' } as const)[per(4) as 1 | 2 | 3 | 4]
+          const sm = ({ 1: 'sm:col-span-12 sm:w-full sm:max-w-[24rem] sm:justify-self-center', 2: 'sm:col-span-6', 3: 'sm:col-span-4' } as const)[per(3) as 1 | 2 | 3]
+          const lg = ({ 1: 'lg:col-span-12 lg:w-full lg:max-w-[24rem] lg:justify-self-center', 2: 'lg:col-span-6 lg:max-w-none lg:justify-self-stretch', 3: 'lg:col-span-4 lg:max-w-none lg:justify-self-stretch', 4: 'lg:col-span-3 lg:max-w-none lg:justify-self-stretch' } as const)[per(4) as 1 | 2 | 3 | 4]
           const phone = idx === n - 1 && n % 2 === 1 ? 'col-span-2' : 'col-span-1'
           const a = productAvailability(p.kind, p.variants.map((v) => ({ stock: v.available, reserved: 0, is_active: true })))
           const soldOut = a.status === 'sold_out'
