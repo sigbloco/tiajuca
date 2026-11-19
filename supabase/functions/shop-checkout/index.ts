@@ -1,7 +1,8 @@
 // Edge Function: cria o pedido da loja. Público (sem login), mas o navegador NUNCA decide preço, desconto ou estoque:
 // tudo é conferido e gravado pela função SQL `shop_create_order` (transação única, trava de estoque, preço de integrante).
 //
-// POST JSON: { org_slug, name, phone, email, pickup_point_id, payment_method: 'pix' | 'infinitepay', items: [{ variant_id, quantity }] }
+// POST JSON: { org_slug, name, phone, email, pickup_point_id, payment_method: 'pix' | 'infinitepay', items: [{ variant_id, quantity }], coupon?: string }
+// O cupom (opcional) é conferido e aplicado pelo banco: não acumula com preço de integrante/especial (vale o menor preço de cada item).
 // Se a requisição vier com o token de um usuário logado, o preço de integrante só vale se ele for integrante ATIVO (checado no banco).
 //
 // Métodos de pagamento, InfiniteTag e endereço público do site vêm da tabela `shop_settings` (editável no painel da loja).
@@ -173,6 +174,7 @@ Deno.serve(async (req) => {
     p_org: orgId, p_user: userId, p_name: String(body.name ?? ''), p_phone: String(body.phone ?? ''), p_email: String(body.email ?? ''),
     p_pickup: body.pickup_point_id, p_method: method,
     p_items: items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })), p_hours: hours,
+    p_coupon: typeof body.coupon === 'string' && body.coupon.trim() ? body.coupon.trim().slice(0, 40) : null,
   })
   if (error) {
     // P0001 = regra de negócio com mensagem segura para o cliente; o resto é erro interno.

@@ -7,7 +7,7 @@ export interface Fulfillment { id: string; kind: ProductKind; status: Fulfillmen
 export interface AdminOrder {
   id: string; code: string; status: OrderStatus; payment_method: 'pix' | 'infinitepay'
   customer_name: string; customer_phone: string; customer_email: string; member_id: string | null; pickup_point_id: string
-  subtotal_cents: number; discount_cents: number; total_cents: number
+  subtotal_cents: number; discount_cents: number; coupon_code?: string | null; coupon_discount_cents?: number; total_cents: number
   created_at: string; expires_at: string | null; paid_at: string | null; paid_via: 'manual' | 'webhook' | null; cancel_reason: string | null
   payment_ref: Record<string, unknown>; archived_at: string | null
   shop_order_items: OrderItem[]; shop_fulfillments: Fulfillment[]

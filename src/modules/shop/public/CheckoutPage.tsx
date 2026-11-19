@@ -12,13 +12,14 @@ import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
 import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents } from '../payments/pix'
+import { CouponBox } from './CouponBox'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
 const money = (cents: number) => formatCurrency(fromCents(cents))
 
 export function CheckoutPage() {
-  const { store, cart, basePath, clear, isMember, index } = useStore()
+  const { store, cart, basePath, clear, isMember, index, coupon, clearCoupon } = useStore()
   const { session } = useAuth()
   const navigate = useNavigate()
   const methods = availableMethods(store.payment_methods)
@@ -67,6 +68,7 @@ export function CheckoutPage() {
       return invokeShop<{ order: CreatedOrder; payment: { url?: string } }>('shop-checkout', {
         org_slug: store.org.slug, client_request_id: attemptId(store.org.slug), name: f.name, phone: f.phone, email: f.email, pickup_point_id: pickup, payment_method: f.method, accept_privacy: accepted,
         items: cart.lines.map((l) => ({ variant_id: l.variantId, quantity: l.quantity })),
+        coupon: coupon?.code,
       })
     },
     onSuccess: ({ order }) => {
@@ -74,6 +76,7 @@ export function CheckoutPage() {
       rememberOrder(order.code, f.phone)
       attemptId(store.org.slug, true)
       clear()
+      clearCoupon()
       // Pix e InfinitePay: o pedido, a chave Pix e o link de pagamento ficam em Meus pedidos (dá para retomar a qualquer momento).
       navigate(`${basePath}/consultar?codigo=${order.code}`, { replace: true })
     },
@@ -119,7 +122,9 @@ export function CheckoutPage() {
           ))}
         </ul>
         <hr className="border-border" />
-        {cart.discountCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents)}</span></div>}
+        <CouponBox />
+        {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents - cart.couponCents)}</span></div>}
+        {cart.couponCents > 0 && coupon && <div className="flex justify-between text-sm text-primary"><span>Cupom {coupon.code}</span><span className="shrink-0 whitespace-nowrap">− {money(cart.couponCents)}</span></div>}
         {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents))}</span></div>}
         <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
         {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}

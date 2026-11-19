@@ -25,7 +25,7 @@ export interface MailContext {
   product?: { name: string; min_units: number | null; lead_time_days: string | null } | null
   order: {
     code: string; customer_name: string; status: string; payment_method: 'pix' | 'infinitepay'
-    subtotal_cents: number; discount_cents: number; total_cents: number; expires_at: string | null; payment_url: string | null; items: MailItem[]
+    subtotal_cents: number; discount_cents: number; coupon_code?: string | null; coupon_discount_cents?: number; total_cents: number; expires_at: string | null; payment_url: string | null; items: MailItem[]
   }
   pickup: { name: string; address: string; opening_hours: string }
   org: { name: string }
@@ -59,11 +59,15 @@ const raw = (html: string, text: string): Section => ({ html, text })
 
 function itemsSection(c: MailContext): Section {
   const o = c.order
+  // O desconto total inclui o do cupom: separa para mostrar cada um na sua linha.
+  const couponOff = o.coupon_discount_cents ?? 0
+  const memberOff = Math.max(0, o.discount_cents - couponOff)
   const lines = o.items.map((i) => `${i.quantity}× ${i.name} (${i.variant})${i.kind === 'made_to_order' ? ' — sob encomenda' : ''} — ${brl(i.unit_final_cents * i.quantity)}`)
   const html = `<ul style="margin:0 0 12px;padding-left:18px">${lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`
-    + (o.discount_cents > 0 ? `<p style="margin:0 0 4px">Desconto de integrante: − ${brl(o.discount_cents)}</p>` : '')
+    + (memberOff > 0 ? `<p style="margin:0 0 4px">Desconto de integrante: − ${brl(memberOff)}</p>` : '')
+    + (couponOff > 0 ? `<p style="margin:0 0 4px">Cupom ${escapeHtml(o.coupon_code ?? '')}: − ${brl(couponOff)}</p>` : '')
     + `<p style="margin:0 0 12px"><strong>Total: ${brl(o.total_cents)}</strong></p>`
-  const text = [...lines.map((l) => `- ${l}`), o.discount_cents > 0 ? `Desconto de integrante: - ${brl(o.discount_cents)}` : '', `Total: ${brl(o.total_cents)}`].filter(Boolean).join('\n')
+  const text = [...lines.map((l) => `- ${l}`), memberOff > 0 ? `Desconto de integrante: - ${brl(memberOff)}` : '', couponOff > 0 ? `Cupom ${o.coupon_code ?? ''}: - ${brl(couponOff)}` : '', `Total: ${brl(o.total_cents)}`].filter(Boolean).join('\n')
   return raw(html, text)
 }
 

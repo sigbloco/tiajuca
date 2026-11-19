@@ -6,13 +6,14 @@ import { formatCurrency } from '@/core/format'
 import { fromCents } from '../catalog'
 import { maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
+import { CouponBox } from './CouponBox'
 import { RandomSuggestions, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
 const money = (cents: number) => formatCurrency(fromCents(cents))
 
 export function CartPage() {
-  const { cart, index, isMember, basePath, setQty, remove } = useStore()
+  const { cart, index, basePath, setQty, remove, coupon } = useStore()
   if (cart.lines.length === 0) {
     return (
       <div className="space-y-3">
@@ -37,7 +38,7 @@ export function CartPage() {
                   <Link to={`${basePath}/produto/${l.slug}`} className="font-semibold hover:underline">{entry?.product.is_kit && <KitChip />}{l.name}</Link>
                   <p className="text-sm text-muted-foreground">{l.variantLabel}{l.kind === 'made_to_order' ? ' · sob encomenda' : ''}</p>
                   <p className="text-sm">
-                    {isMember && l.unitFinalCents !== l.unitPriceCents && <s className="mr-2 text-muted-foreground">{money(l.unitPriceCents)}</s>}
+                    {l.unitFinalCents !== l.unitPriceCents && <s className="mr-2 text-muted-foreground">{money(l.unitPriceCents)}</s>}
                     {money(l.unitFinalCents)}
                   </p>
                   <div className="flex items-center gap-2">
@@ -54,9 +55,11 @@ export function CartPage() {
         })}
       </ul>
 
-      <Card className="space-y-1 p-4">
+      <Card className="space-y-2 p-4">
+        <CouponBox />
         <div className="flex justify-between"><span>Subtotal</span><span>{money(cart.subtotalCents)}</span></div>
-        {cart.discountCents > 0 && <div className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {money(cart.discountCents)}</span></div>}
+        {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {money(cart.discountCents - cart.couponCents)}</span></div>}
+        {cart.couponCents > 0 && coupon && <div className="flex justify-between text-primary"><span>Cupom {coupon.code}</span><span>− {money(cart.couponCents)}</span></div>}
         <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(cart.totalCents)}</span></div>
       </Card>
       <Link to={`${basePath}/finalizar`} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90">Finalizar compra</Link>

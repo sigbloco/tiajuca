@@ -76,17 +76,27 @@ export interface PricedLine {
   quantity: number; unitPriceCents: number; unitFinalCents: number; lineTotalCents: number
 }
 export interface PricedCart {
-  lines: PricedLine[]; subtotalCents: number; discountCents: number; totalCents: number; itemCount: number
+  lines: PricedLine[]; subtotalCents: number; /** Total descontado (integrante/especial + cupom). */ discountCents: number; /** Parte do desconto que vem do cupom. */ couponCents: number; totalCents: number; itemCount: number
   hasStock: boolean; hasMadeToOrder: boolean
 }
 
 /** Totais para exibição. `isMember` = integrante ATIVO logado (o servidor confirma isso de verdade no checkout). */
-export function priceCart(lines: CartLine[], index: CatalogIndex, isMember: boolean, isSpecial = false): PricedCart {
+/** Cupom: em cada item vale o MENOR preço entre o do comprador (público/integrante/especial) e o com o cupom (o servidor repete esta regra). */
+export function couponUnitCents(priceCents: number, buyerCents: number, couponPct: number): number {
+  if (!(couponPct > 0)) return buyerCents
+  const c = Math.round((priceCents * (100 - couponPct)) / 100)
+  return c > 0 && c < buyerCents ? c : buyerCents
+}
+
+export function priceCart(lines: CartLine[], index: CatalogIndex, isMember: boolean, isSpecial = false, couponPct = 0): PricedCart {
   const priced: PricedLine[] = []
+  let couponCents = 0
   for (const l of lines) {
     const e = index.get(l.variantId)
     if (!e) continue
-    const unitFinal = buyerPriceCents(e.product, { isMember, isSpecial })
+    const buyer = buyerPriceCents(e.product, { isMember, isSpecial })
+    const unitFinal = couponUnitCents(e.product.price_cents, buyer, couponPct)
+    couponCents += (buyer - unitFinal) * l.quantity
     priced.push({
       variantId: l.variantId, productId: e.product.id, slug: e.product.slug, name: e.product.name, variantLabel: e.variant.label, kind: e.product.kind,
       image: e.product.images[0] ?? null, quantity: l.quantity, unitPriceCents: e.product.price_cents, unitFinalCents: unitFinal, lineTotalCents: unitFinal * l.quantity,
@@ -95,7 +105,7 @@ export function priceCart(lines: CartLine[], index: CatalogIndex, isMember: bool
   const subtotal = priced.reduce((s, l) => s + l.unitPriceCents * l.quantity, 0)
   const total = priced.reduce((s, l) => s + l.lineTotalCents, 0)
   return {
-    lines: priced, subtotalCents: subtotal, discountCents: subtotal - total, totalCents: total,
+    lines: priced, subtotalCents: subtotal, discountCents: subtotal - total, couponCents, totalCents: total,
     itemCount: priced.reduce((s, l) => s + l.quantity, 0),
     hasStock: priced.some((l) => l.kind === 'stock'), hasMadeToOrder: priced.some((l) => l.kind === 'made_to_order'),
   }
