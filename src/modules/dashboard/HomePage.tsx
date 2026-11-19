@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Cake, ChevronRight, UserRound } from 'lucide-react'
+import { Cake, ChevronRight, Star, UserRound } from 'lucide-react'
+import { HighlightCards, isSpecial } from '@/modules/events/Highlights'
 import { FitBox, FitLabel, FitText } from '@/components/shared/FitText'
 import { useParticipationLine } from '@/modules/profile/participationLine'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
@@ -98,9 +99,13 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
   const [shown, setShown] = useState(3)
   const [sheet, setSheet] = useState<{ activity: Activity; edit?: boolean } | null>(null)
   const my = useMySections(orgId, memberId, cycleId, filterByMine)
+  // Busca até o fim do ciclo atual (para os destaques); a lista de baixo continua nos próximos 90 dias.
+  const cycleEnd = (allCycles.data ?? []).find((c) => c.is_current)?.ends_on
+  const horizon = addDaysIso(today, 90)
+  const to = cycleEnd && cycleEnd > horizon ? cycleEnd : horizon
   const { data, isLoading } = useQuery({
-    queryKey: ['activities', orgId, 'upcoming', today],
-    queryFn: async () => (await listActivities({ orgId, from: today, to: addDaysIso(today, 90) })).filter((a) => a.status !== 'cancelled'),
+    queryKey: ['activities', orgId, 'upcoming', today, to],
+    queryFn: async () => (await listActivities({ orgId, from: today, to })).filter((a) => a.status !== 'cancelled'),
   })
   // Evento com PÚBLICO definido segue o público (naipe ou instrumento); sem público, aparece para todos.
   const audiences = useQuery({ queryKey: ['audiences-upcoming', (data ?? []).map((a) => a.id).join(',')], enabled: (data?.length ?? 0) > 0, queryFn: () => getAudiencesFor((data ?? []).map((a) => a.id)) })
@@ -115,24 +120,37 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
     }
     return true
   })
-  const todayCount = visible.filter((a) => a.activity_date === today).length
-  const list = visible.slice(0, todayCount + shown)
+  // Eventos pontuais (sem recorrência) do ciclo vão para o bloco "Em destaque"; o resto segue por dia.
+  const specials = visible.filter((a) => isSpecial(a) && (!a.cycle_id || a.cycle_id === cycleId)).slice(0, 12)
+  const specialIds = new Set(specials.map((a) => a.id))
+  const regular = visible.filter((a) => !specialIds.has(a.id) && a.activity_date <= horizon)
+  const todayCount = regular.filter((a) => a.activity_date === today).length
+  const list = regular.slice(0, todayCount + shown)
   const days = [...new Set(list.map((a) => a.activity_date))]
+  const dayOf = (day: string) => (
+    <section key={day} className="space-y-2">
+      <h4 className="capitalize">{day === today ? 'Hoje · ' : ''}{formatDayLong(day)}</h4>
+      {/* Eventos no mesmo horário viram um cartão só. */}
+      {groupSimultaneous(list.filter((a) => a.activity_date === day)).map((g, i) => g.items.length > 1
+        ? <MergedEventCard key={g.key} items={g.items} index={i} onOpen={(a) => setSheet({ activity: a })} />
+        : <EventCard key={g.key} a={g.items[0]} index={i} onOpen={() => setSheet({ activity: g.items[0] })} onEdit={() => setSheet({ activity: g.items[0], edit: true })} />)}
+    </section>
+  )
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between"><h3>Próximos eventos</h3><Link className="text-primary hover:underline" to={`/${slug}/eventos`}>Ver agenda</Link></div>
       {(isLoading || (filterByMine && my.isLoading)) && <Skeleton className="h-16" />}
       {data && visible.length === 0 && <p className="text-muted-foreground">Nenhum evento agendado.</p>}
-      {days.map((day) => (
-        <section key={day} className="space-y-2">
-          <h4 className="capitalize">{day === today ? 'Hoje · ' : ''}{formatDayLong(day)}</h4>
-          {/* Eventos no mesmo horário viram um cartão só. */}
-          {groupSimultaneous(list.filter((a) => a.activity_date === day)).map((g, i) => g.items.length > 1
-            ? <MergedEventCard key={g.key} items={g.items} index={i} onOpen={(a) => setSheet({ activity: a })} />
-            : <EventCard key={g.key} a={g.items[0]} index={i} onOpen={() => setSheet({ activity: g.items[0] })} onEdit={() => setSheet({ activity: g.items[0], edit: true })} />)}
+      {/* Ordem: o que acontece hoje (a aula, por exemplo), depois os destaques, depois os próximos dias. */}
+      {days.filter((d) => d === today).map(dayOf)}
+      {specials.length > 0 && (
+        <section className="space-y-2">
+          <h4 className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-primary" aria-hidden /> Em destaque</h4>
+          <HighlightCards items={specials} today={today} onPick={(a) => setSheet({ activity: a })} />
         </section>
-      ))}
-      {visible.length > list.length && <Button variant="outline" className="w-full" onClick={() => setShown((n) => n + 3)}>Carregar mais...</Button>}
+      )}
+      {days.filter((d) => d !== today).map(dayOf)}
+      {regular.length > list.length && <Button variant="outline" className="w-full" onClick={() => setShown((n) => n + 3)}>Carregar mais...</Button>}
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <EventSheet key={sheet.activity.id} startEditing={sheet.edit} activity={sheet.activity} defaultDate={today} onClose={() => setSheet(null)} />}
       </Sheet>

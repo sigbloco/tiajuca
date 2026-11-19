@@ -7,7 +7,7 @@ import { StepNav } from '@/components/shared/StepNav'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCompetence, formatDayLong, formatDayShort, formatTime, monthGridDays, todayIso } from '@/core/format'
+import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { useIsDirection, usePermission } from '@/core/permissions'
@@ -16,18 +16,12 @@ import { useMemberStatus } from '@/modules/members/useMemberStatus'
 import { EventCard } from './EventCard'
 import { EventSheet } from './EventSheet'
 import { EventsArchive } from './EventsArchive'
+import { HighlightCards, isSpecial } from './Highlights'
 import { RecurrenceDay } from './RecurrenceDay'
 import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
-/** Evento pontual: não vem de uma recorrência. */
-const isSpecial = (a: Activity) => !a.recurrence_rule_id
-/** "hoje", "amanhã" ou "faltam N dias" para uma data. */
-function daysUntilText(date: string, today: string): string {
-  const n = Math.round((Date.parse(date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000)
-  return n <= 0 ? 'Hoje' : n === 1 ? 'Amanhã' : `Faltam ${n} dias`
-}
 
 export function EventsPage() {
   const orgId = useOrgId()
@@ -227,15 +221,7 @@ export function EventsPage() {
         <Collapsible open={highOpen} onToggle={() => setHighOpen(!highOpen)} count={highlights.data?.length ?? 0}
           title={<span className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-primary" aria-hidden /> Em destaque</span>}>
           {highlights.data && highlights.data.length === 0 && <p className="px-1 text-sm text-muted-foreground">Nenhum evento em destaque.</p>}
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {(highlights.data ?? []).map((a) => (
-              <button key={a.id} type="button" onClick={() => goTo(a)} className="w-44 shrink-0 rounded-xl border border-primary/40 bg-primary/5 p-2.5 text-left transition hover:bg-primary/10">
-                <p className="text-xs font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ' · ' + formatTime(a.start_time) : ''}</p>
-                <p className="line-clamp-2 break-words font-semibold leading-tight">{a.title}</p>
-                <p className="mt-0.5 text-xs font-semibold text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · à confirmar' : ''}</p>
-              </button>
-            ))}
-          </div>
+          <HighlightCards items={highlights.data ?? []} today={today} onPick={goTo} />
         </Collapsible>
       )}
 

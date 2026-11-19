@@ -218,12 +218,14 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
         }} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="ev-title" required>Título</Label><Input id="ev-title" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <TypePicker types={types.data ?? []} ids={labelIds} onChange={changeTypes} />
-        <label className="flex items-center gap-2 font-semibold">
-          <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
-        </label>
-        <label className="flex items-center gap-2 font-semibold">
-          <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> À confirmar
-        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-2 font-semibold">
+            <input type="checkbox" className="h-4 w-4" checked={f.has_attendance} onChange={(e) => setF({ ...f, has_attendance: e.target.checked })} /> Presença
+          </label>
+          <label className="flex items-center gap-2 font-semibold">
+            <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> À confirmar
+          </label>
+        </div>
         {f.to_confirm && (
           <div className="space-y-1.5"><Label htmlFor="ev-confirm-note">O que falta confirmar</Label>
             <Input id="ev-confirm-note" maxLength={200} placeholder="Ex.: horário, local" value={f.to_confirm_note} onChange={(e) => setF({ ...f, to_confirm_note: e.target.value })} /></div>
@@ -249,14 +251,14 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
           </>
         )}
         <ItineraryEditor steps={steps} onChange={setSteps} />
-        <div className="space-y-3">
-          <div className="space-y-1.5">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="ev-cycle" required>Ciclo</Label>
             <Select id="ev-cycle" required value={f.cycle_id} onChange={(e) => setF({ ...f, cycle_id: e.target.value })}>
               {cycles.data?.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </div>
-          <div className="space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="ev-vis">Quem vê</Label>
             <Select id="ev-vis" value={f.visibility} onChange={(e) => setF({ ...f, visibility: e.target.value as Activity['visibility'] })}>
               {Object.entries(VISIBILITY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -265,17 +267,18 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
         </div>
         <AudiencePicker value={auds} onChange={setAuds} />
         <StickySave bleed={false}>
-        <div className="flex gap-2">
-          <Button type="submit" className="flex-1" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4" /> Salvar</Button>
+        {/* Salvar, Voltar e Apagar lado a lado, com a mesma largura. */}
+        <div className={isNew ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-3 gap-2'}>
+          <Button type="submit" disabled={save.isPending} aria-label="Salvar" title="Salvar"><Save className="h-4 w-4 shrink-0" /> Salvar</Button>
           {!isNew && <Button type="button" variant="outline" onClick={() => setEditing(false)}>Voltar</Button>}
+          {!isNew && (
+            <Button type="button" variant="outline" className="text-destructive" disabled={remove.isPending} aria-label="Apagar evento" title="Apagar evento"
+              onClick={async () => { if (await confirmBox('Apagar este evento? Ele vai para a lixeira, de onde dá para restaurar. Se já tiver presença registrada, use Cancelar.')) remove.mutate() }}>
+              <Trash2 className="h-4 w-4 shrink-0" /> Apagar
+            </Button>
+          )}
         </div>
         </StickySave>
-        {!isNew && (
-          <Button type="button" variant="outline" className="w-full text-destructive" disabled={remove.isPending}
-            onClick={async () => { if (await confirmBox('Apagar este evento? Ele vai para a lixeira, de onde dá para restaurar. Se já tiver presença registrada, use Cancelar.')) remove.mutate() }}>
-            <Trash2 className="h-4 w-4" /> Apagar evento
-          </Button>
-        )}
       </form>
     </SheetContent>
   )
