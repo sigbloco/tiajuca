@@ -10,19 +10,19 @@ export function daysUntilText(date: string, today: string): string {
   return n <= 0 ? 'Hoje' : n === 1 ? 'Amanhã' : `Faltam ${n} dias`
 }
 
-/** Eventos em destaque, um por linha, com data/horário, título e contagem lado a lado. Usada no Calendário e no Início. */
+/** "14:00" → "14h", "14:30" → "14h30". */
+const hourLabel = (t: string) => { const [h, m] = formatTime(t).split(':'); return m === '00' ? `${Number(h)}h` : `${Number(h)}h${m}` }
+
+/** Eventos em destaque, um por linha: "sáb · 13/02 · 14h · Cortejo  FALTAM 86 DIAS". Usada no Calendário e no Início. */
 export function HighlightCards({ items, today, onPick }: { items: Activity[]; today: string; onPick: (a: Activity) => void }) {
   return (
     <div className="space-y-2">
       {items.map((a) => (
-        <button key={a.id} type="button" onClick={() => onPick(a)} className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-left transition hover:bg-primary/10">
-          <span className="text-xs font-semibold capitalize leading-tight text-muted-foreground">
-            {formatDayShort(a.activity_date)}{a.start_time && <span className="block">{formatTime(a.start_time)}</span>}
-          </span>
-          <span className="min-w-0 break-words font-semibold leading-tight">{a.title}</span>
-          <span className="text-right text-xs font-semibold leading-tight text-primary">
-            {daysUntilText(a.activity_date, today)}{a.to_confirm && <span className="block">à confirmar</span>}
-          </span>
+        // Tudo numa linha: "sáb · 13/02 · 14h · Cortejo  FALTAM 86 DIAS" (quebra só se não couber).
+        <button key={a.id} type="button" onClick={() => onPick(a)} className="flex w-full flex-wrap items-baseline gap-x-1.5 gap-y-0.5 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-left transition hover:bg-primary/10">
+          <span className="text-sm font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ` · ${hourLabel(a.start_time)}` : ''} ·</span>
+          <span className="font-semibold">{a.title}</span>
+          <span className="text-xs font-bold uppercase text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · à confirmar' : ''}</span>
         </button>
       ))}
     </div>
