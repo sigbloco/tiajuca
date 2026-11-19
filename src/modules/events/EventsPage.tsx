@@ -7,7 +7,7 @@ import { StepNav } from '@/components/shared/StepNav'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
+import { addDaysIso, formatCompetence, formatDayLong, formatDayShort, monthGridDays, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { useIsDirection, usePermission } from '@/core/permissions'
@@ -173,7 +173,7 @@ export function EventsPage() {
         <div className="space-y-4">
           {[...new Set(pending.map((a) => a.activity_date))].sort().map((day) => (
             <section key={day} className="space-y-2">
-              <h3 className="capitalize">{formatDayLong(day)}</h3>
+              <h3>{formatDayShort(day).toUpperCase()}</h3>
               {pending.filter((a) => a.activity_date === day).map((a, ai) => <EventCard key={a.id} a={a} presence="day" index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
             </section>
           ))}
@@ -240,7 +240,7 @@ export function EventsPage() {
       <div className="space-y-4">
         {selectedDay && listDays.map((day) => (
           <section key={day} className="space-y-2">
-            <h3 className="capitalize">{formatDayLong(day)}</h3>
+            <h3>{formatDayShort(day).toUpperCase()}</h3>
             {byDay[day].map((a, ai) => <EventCard key={a.id} a={a} presence="day" index={ai} onOpen={() => setSheet({ activity: a })} onEdit={() => setSheet({ activity: a, edit: true })} />)}
           </section>
         ))}

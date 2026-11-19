@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useCycles } from '@/modules/cycles/service'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCurrency, formatDate, formatDayLong, todayIso } from '@/core/format'
+import { addDaysIso, formatCurrency, formatDate, formatDayShort, todayIso } from '@/core/format'
 import { useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -129,7 +129,7 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
   const days = [...new Set(list.map((a) => a.activity_date))]
   const dayOf = (day: string) => (
     <section key={day} className="space-y-2">
-      <h4 className="capitalize">{day === today ? 'Hoje · ' : ''}{formatDayLong(day)}</h4>
+      <h4>{day === today ? 'HOJE · ' : ''}{formatDayShort(day).toUpperCase()}</h4>
       {/* Eventos no mesmo horário viram um cartão só. */}
       {groupSimultaneous(list.filter((a) => a.activity_date === day)).map((g, i) => g.items.length > 1
         ? <MergedEventCard key={g.key} items={g.items} index={i} onOpen={(a) => setSheet({ activity: a })} />
