@@ -270,17 +270,17 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         <div className="space-y-1.5"><Label htmlFor="pr-desc">Descrição</Label>
           <textarea id="pr-desc" rows={3} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}
             className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
-        <div className="grid grid-cols-2 items-end gap-3">
-          <div className="space-y-1.5"><Label htmlFor="pr-price" required>Preço público</Label><MoneyInput id="pr-price" value={f.price} onChange={(v) => setF({ ...f, price: v })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="pr-disc">Desconto de integrante</Label>
-            <div className="flex items-center gap-2"><Input id="pr-disc" inputMode="decimal" className="w-16 text-center" maxLength={5} value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value.replace(/[^\d.,]/g, '') })} /><span className="font-semibold">%</span></div></div>
+        {/* Preço público, desconto e o valor do integrante já calculado, tudo numa linha: R$ 60 · 20% · R$ 48. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
+          <div className="min-w-0 space-y-1.5"><Label htmlFor="pr-price" required>Preço público</Label><MoneyInput id="pr-price" value={f.price} onChange={(v) => setF({ ...f, price: v })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="pr-disc">Desconto</Label>
+            <div className="flex items-center gap-1"><Input id="pr-disc" inputMode="decimal" className="w-16 text-center" maxLength={5} value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value.replace(/[^\d.,]/g, '') })} /><span className="font-semibold">%</span></div></div>
+          <div className="min-w-0 space-y-1.5"><Label>Integrante paga</Label>
+            <p className="flex h-10 items-center whitespace-nowrap rounded-lg bg-muted px-3 font-semibold">{publicCents !== null && discount >= 0 && discount <= 100 ? formatCurrency(fromCents(memberPriceCents(publicCents, discount))) : '—'}</p></div>
         </div>
-        {publicCents !== null && discount > 0 && discount <= 100 && (
-          <p className="text-sm text-muted-foreground">Integrante ativo paga {formatCurrency(fromCents(memberPriceCents(publicCents, discount)))}.</p>
-        )}
         <div className="space-y-1.5"><Label htmlFor="pr-special">Preço especial (direção, professores e monitores)</Label>
           <MoneyInput id="pr-special" value={f.special} onChange={(v) => setF({ ...f, special: v })} />
-          <p className="text-xs text-muted-foreground">Valor em reais digitado por você, no lugar do desconto em %. Deixe vazio para eles pagarem o preço de integrante.</p></div>
+          <p className="text-xs text-muted-foreground">Deixe vazio para eles pagarem o preço de integrante.</p></div>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" className="h-4 w-4" checked={f.is_featured} onChange={(e) => setF({ ...f, is_featured: e.target.checked })} />
           Produto em destaque (aparece na seção do alto da loja)
