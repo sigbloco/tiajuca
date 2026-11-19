@@ -30,3 +30,35 @@ export function FitText({ children, className, min = 9 }: { children: ReactNode;
 export function FitWord({ children }: { children: string }) {
   return /\s/.test(children.trim()) ? <>{children}</> : <FitText>{children}</FitText>
 }
+
+/**
+ * Texto que ocupa a MAIOR fonte possível dentro da área que o pai (position: relative, com altura própria) oferece:
+ * quebra só entre palavras (nunca no meio) e a fonte cresce até a largura e a altura acabarem. Centralizado na vertical.
+ */
+export function FitBox({ children, className, min = 9, max = 44 }: { children: ReactNode; className?: string; min?: number; max?: number }) {
+  const wrap = useRef<HTMLDivElement>(null)
+  const text = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const w = wrap.current, t = text.current
+    if (!w || !t) return
+    const fit = () => {
+      let lo = min, hi = max
+      while (hi - lo > 0.5) {
+        const mid = (lo + hi) / 2
+        t.style.fontSize = `${mid}px`
+        if (t.scrollWidth <= w.clientWidth + 0.5 && t.scrollHeight <= w.clientHeight + 0.5) lo = mid
+        else hi = mid
+      }
+      t.style.fontSize = `${lo}px`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(w)
+    return () => ro.disconnect()
+  }, [children, min, max])
+  return (
+    <div ref={wrap} className="absolute inset-0 flex items-center">
+      <span ref={text} className={cn('block w-full min-w-0 break-normal [overflow-wrap:normal] leading-[1.05]', className)}>{children}</span>
+    </div>
+  )
+}
