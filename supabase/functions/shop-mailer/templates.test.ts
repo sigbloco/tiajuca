@@ -176,3 +176,16 @@ describe('inscrição aprovada', () => {
     for (const part of ['Olá, Maria!', 'foi aprovada', 'wa.me/5521990698483', 'contato@ex.com']) { expect(m.html).toContain(part); expect(m.text).toContain(part) }
   })
 })
+
+describe('cupom no e-mail', () => {
+  it('mostra o desconto de integrante e o do cupom em linhas separadas', () => {
+    const m = buildEmail(ctx({}, { discount_cents: 3000, coupon_discount_cents: 1800, coupon_code: 'BLOCO20' }))
+    expect(m.text).toContain('Desconto de integrante: - R$ 12,00')
+    expect(m.text).toContain('Cupom BLOCO20: - R$ 18,00')
+  })
+  it('sem cupom, tudo é desconto de integrante', () => {
+    const m = buildEmail(ctx({}, { discount_cents: 1200 }))
+    expect(m.text).toContain('Desconto de integrante: - R$ 12,00')
+    expect(m.text).not.toContain('Cupom')
+  })
+})

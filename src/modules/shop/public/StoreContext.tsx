@@ -26,6 +26,11 @@ interface StoreContextValue {
   isMember: boolean
   /** Direção, professor ou monitor: paga o preço especial dos produtos que têm um. */
   isSpecial: boolean
+  /** Cupom aplicado (conferido no servidor; o preço final é recalculado de novo ao finalizar). */
+  coupon: { code: string; pct: number } | null
+  /** Confere o código; devolve a mensagem de erro ou nulo se aplicou. */
+  applyCoupon: (code: string) => Promise<string | null>
+  clearCoupon: () => void
   cart: PricedCart
   notices: string[]
   dismissNotices: () => void
@@ -51,6 +56,13 @@ export async function fetchStore(slug: string): Promise<StoreData | null> {
   return (data as StoreData | null) ?? null
 }
 
+const couponKey = (slug: string) => `shop:coupon:${slug}`
+function readCoupon(slug: string): { code: string; pct: number } | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(couponKey(slug)) ?? 'null') as { code?: unknown; pct?: unknown } | null
+    return raw && typeof raw.code === 'string' && typeof raw.pct === 'number' ? { code: raw.code, pct: raw.pct } : null
+  } catch { return null }
+}
 const cartKey = (slug: string) => `shop:cart:${slug}`
 function readCart(slug: string): CartLine[] {
   try {
@@ -70,6 +82,20 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
   const index = useMemo(() => indexCatalog(store.products), [store.products])
   const [lines, setLines] = useState<CartLine[]>(() => readCart(slug))
   const [notices, setNotices] = useState<string[]>([])
+  const [coupon, setCouponState] = useState<{ code: string; pct: number } | null>(() => readCoupon(slug))
+  const setCoupon = useCallback((c: { code: string; pct: number } | null) => {
+    setCouponState(c)
+    try { if (c) localStorage.setItem(couponKey(slug), JSON.stringify(c)); else localStorage.removeItem(couponKey(slug)) } catch { /* sem armazenamento: vale só nesta aba */ }
+  }, [slug])
+  const applyCoupon = useCallback(async (raw: string) => {
+    const code = raw.trim().toUpperCase()
+    if (!code) return 'Digite o código do cupom.'
+    const { data, error } = await supabase.rpc('shop_coupon_check', { p_slug: slug, p_code: code })
+    if (error) return 'Não foi possível conferir o cupom agora.'
+    if (data === null || data === undefined) return 'Cupom inválido ou desativado.'
+    setCoupon({ code, pct: Number(data) })
+    return null
+  }, [slug, setCoupon])
   const [loginOpen, setLoginOpen] = useState(false)
 
   // Integrante ATIVO logado? (o servidor volta a conferir isso no checkout; aqui só decide o que exibir)
@@ -109,13 +135,14 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
 
   const value = useMemo<StoreContextValue>(() => ({
     store, index, isMember, isSpecial, basePath, notices, loginOpen, setLoginOpen,
-    cart: priceCart(lines, index, isMember, isSpecial),
+    cart: priceCart(lines, index, isMember, isSpecial, coupon?.pct ?? 0),
+    coupon, applyCoupon, clearCoupon: () => setCoupon(null),
     dismissNotices: () => setNotices([]),
     add: (id, qty) => update((l) => addToCart(l, id, qty, index)),
     setQty: (id, qty) => update((l) => setQuantity(l, id, qty, index)),
     remove: (id) => update((l) => removeLine(l, id)),
     clear: () => update(() => []),
-  }), [store, index, isMember, isSpecial, basePath, notices, loginOpen, lines, update])
+  }), [store, index, isMember, isSpecial, coupon, applyCoupon, setCoupon, basePath, notices, loginOpen, lines, update])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

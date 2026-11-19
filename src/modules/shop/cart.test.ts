@@ -83,3 +83,19 @@ describe('commonPickupIds', () => {
     expect(commonPickupIds([{ pickup_ids: ['a'] }, { pickup_ids: ['b'] }], all)).toEqual([])
   })
 })
+
+import { couponUnitCents } from './cart'
+describe('cupom no carrinho', () => {
+  it('vale o menor preço: não acumula com o preço de integrante', () => {
+    expect(couponUnitCents(6000, 6000, 20)).toBe(4800) // visitante: cupom vale
+    expect(couponUnitCents(6000, 5400, 20)).toBe(4800) // integrante (10%): o cupom é melhor
+    expect(couponUnitCents(6000, 4000, 20)).toBe(4000) // preço especial já é menor: o cupom não muda
+    expect(couponUnitCents(6000, 6000, 0)).toBe(6000)
+  })
+  it('priceCart separa o desconto do cupom do de integrante', () => {
+    const c = priceCart([{ variantId: 'v-m', quantity: 2 }], idx, false, false, 20)
+    expect(c.totalCents).toBe(Math.round(6000 * 0.8) * 2)
+    expect(c.couponCents).toBe(6000 * 2 - c.totalCents)
+    expect(priceCart([{ variantId: 'v-m', quantity: 1 }], idx, false).couponCents).toBe(0)
+  })
+})

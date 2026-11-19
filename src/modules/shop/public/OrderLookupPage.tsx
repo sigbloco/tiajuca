@@ -24,7 +24,7 @@ const KEY = 'shop:lookup'
 interface LookupResult {
   order: {
     code: string; status: OrderStatus; payment_method: 'pix' | 'infinitepay'; customer_name: string; pickup_point_id?: string
-    subtotal_cents: number; discount_cents: number; total_cents: number; created_at: string; expires_at: string | null; paid_at: string | null
+    subtotal_cents: number; discount_cents: number; coupon_code?: string | null; coupon_discount_cents?: number; total_cents: number; created_at: string; expires_at: string | null; paid_at: string | null
     payment_url: string | null; cancel_reason: string | null
   }
   items: { name: string; variant: string; quantity: number; unit_final_cents: number; kind: ProductKind; product_id?: string; progress?: { min_units: number; confirmed_units: number } | null }[]
@@ -149,7 +149,8 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
         <ul className="space-y-1 text-sm">
           {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-3"><span className="min-w-0">{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span className="shrink-0 whitespace-nowrap">{money(i.unit_final_cents * i.quantity)}</span></li>)}
         </ul>
-        {order.discount_cents > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(order.discount_cents)}</span></div>}
+        {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></div>}
+        {(order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Cupom {order.coupon_code}</span><span className="shrink-0 whitespace-nowrap">− {money(order.coupon_discount_cents ?? 0)}</span></div>}
         {withFee && <div className="flex justify-between gap-3 text-sm"><span className="min-w-0">Taxa do cartão de crédito à vista ({formatPct(CREDIT_FEES_PCT[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(feeCents)}</span></div>}
         <div className="flex justify-between gap-3 text-lg font-extrabold"><span>Total</span><span className="shrink-0 whitespace-nowrap">{money(payCents)}</span></div>
         {status === 'cancelled' && order.cancel_reason && <p className="text-sm text-muted-foreground">Motivo: {order.cancel_reason}</p>}

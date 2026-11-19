@@ -57,7 +57,8 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
               <li key={i.id} className="flex justify-between gap-2"><span>{i.quantity}× {i.product_name} ({i.variant_label}){i.kind === 'made_to_order' ? ' · encomenda' : ''}</span><span>{money(i.unit_final_cents * i.quantity)}</span></li>
             ))}
           </ul>
-          {order.discount_cents > 0 && <p className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents)}</span></p>}
+          {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <p className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></p>}
+          {(order.coupon_discount_cents ?? 0) > 0 && <p className="flex justify-between text-primary"><span>Cupom {order.coupon_code}</span><span>− {money(order.coupon_discount_cents ?? 0)}</span></p>}
           <p className="flex justify-between text-base font-extrabold"><span>Total</span><span>{money(order.total_cents)}</span></p>
         </section>
 
