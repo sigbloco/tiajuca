@@ -23,6 +23,7 @@ import { useSetCrumbOverride } from '@/core/breadcrumb'
 import { usePermission } from '@/core/permissions'
 import { notifyChange } from '@/core/undo'
 import { GroupLink } from '@/modules/members/GroupLink'
+import { MemberAvatar } from '@/modules/members/MemberAvatar'
 
 interface Status { id: string; key: string; name: string; counts_as_present: boolean }
 interface RosterRow {
@@ -594,6 +595,8 @@ export function AttendanceRosterPage() {
           {hasBoth && (oi === 0 || isStaff(ordered[oi - 1]) !== isStaff(r)) && <p className="mt-1 font-semibold text-muted-foreground">{isStaff(r) ? 'Professores e monitores' : 'Integrantes'}</p>}
           <Card className="p-3">
             <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-start gap-2.5">
+              <MemberAvatar memberId={r.member_id} name={null} className="h-10 w-10" />
               <div className="min-w-0">
                 <p className="font-semibold"><MemberLink id={r.member_id}>{r.display_name}</MemberLink></p>
                 <p className="break-words text-muted-foreground">{r.instruments ? r.instruments.split(', ').map((n, i) => <span key={n}>{i > 0 && ', '}<GroupLink naipe={catalog.data?.byName.get(n)?.section} inst={n}>{n}</GroupLink></span>) : '—'}{r.is_off_roster ? ' · fora da lista' : ''}</p>
@@ -602,6 +605,7 @@ export function AttendanceRosterPage() {
                     {[...(isStaff(r) && staffKind(r.member_id) ? [staffKind(r.member_id)!] : []), ...(regentes.data?.has(r.member_id) ? ['Regente'] : []), ...(memberCats.data?.get(r.member_id) ?? [])].map((c) => <Badge key={c} className="bg-muted">{c}</Badge>)}
                   </div>
                 )}
+              </div>
               </div>
             </div>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${statuses.data?.length ?? 3}, minmax(0, 1fr))` }}>

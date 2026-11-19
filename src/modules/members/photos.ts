@@ -60,7 +60,7 @@ export async function removeMemberPhoto(memberId: string): Promise<void> {
   if (old) await supabase.storage.from(BUCKET).remove([old as string])
 }
 
-/** Endereços temporários das fotos de todos do bloco (id do integrante → URL). Buscados uma vez e guardados por ~45 min. */
+/** Fotos (endereços temporários) e iniciais do nome completo de todos do bloco, por id do integrante. Buscados uma vez e guardados por ~45 min. */
 export function useMemberPhotos() {
   const { membership } = useOrganization()
   const orgId = membership?.organization_id
@@ -71,14 +71,17 @@ export function useMemberPhotos() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('member_photos', { p_org: orgId! })
       if (error) throw error
-      const rows = (data ?? []) as { member_id: string; photo_path: string }[]
-      const out = new Map<string, string>()
-      if (rows.length === 0) return out
-      const signed = await supabase.storage.from(BUCKET).createSignedUrls(rows.map((r) => r.photo_path), 3600)
-      if (signed.error) throw signed.error
-      const byPath = new Map((signed.data ?? []).map((s) => [s.path, s.signedUrl]))
-      for (const r of rows) { const u = byPath.get(r.photo_path); if (u) out.set(r.member_id, u) }
-      return out
+      const rows = (data ?? []) as { member_id: string; photo_path: string | null; initials: string }[]
+      const urls = new Map<string, string>()
+      const initials = new Map(rows.map((r) => [r.member_id, r.initials] as const))
+      const withPhoto = rows.filter((r) => r.photo_path)
+      if (withPhoto.length > 0) {
+        const signed = await supabase.storage.from(BUCKET).createSignedUrls(withPhoto.map((r) => r.photo_path!), 3600)
+        if (signed.error) throw signed.error
+        const byPath = new Map((signed.data ?? []).map((s) => [s.path, s.signedUrl]))
+        for (const r of withPhoto) { const u = byPath.get(r.photo_path!); if (u) urls.set(r.member_id, u) }
+      }
+      return { urls, initials }
     },
   })
 }
