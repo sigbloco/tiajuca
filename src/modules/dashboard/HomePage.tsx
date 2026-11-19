@@ -25,7 +25,7 @@ function Stat({ label, labelShort, value, hint, tone, compact, size, onSize }: {
   if (compact) {
     // Título (mesmo tamanho em todas), valor (mesma fonte em todas, a menor que cabe) e linha pequena: o valor fica colado no título, alinhado pelo topo.
     return (
-      <Card className="flex h-full min-h-[5rem] min-w-0 flex-1 flex-col p-1.5">
+      <Card className="flex h-full min-w-0 flex-1 flex-col p-1.5">
         <FitLabel full={label} short={labelShort ?? label} minFull={11} className="text-[11px] leading-none text-muted-foreground" />
         <div className="relative h-6 shrink-0">
           <FitBox min={9} max={26} align="start" forceSize={size} onFit={onSize} className={cn('px-1 font-display font-bold text-foreground', tone)}>{value}</FitBox>
@@ -201,10 +201,10 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
       {!staff && !direction && <Stat compact size={valueSize} onSize={fit('freq')} label="Frequência" labelShort="Freq." value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
       <Link to={`/${slug}/cobrancas`} className="flex min-w-0">
         {receives ? (
-          <Stat compact size={valueSize} onSize={fit('valor')} label="Pagamento" labelShort="Pgto." value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
+          <Stat compact size={valueSize} onSize={fit('valor')} label="Pagamento" labelShort="Pgto." value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · ${data.pay.due_on < todayIso() ? "venceu" : "vence"} ${formatDate(data.pay.due_on)}` : undefined} />
         ) : (
           <Stat compact size={valueSize} onSize={fit('valor')} label="Mensalidade" labelShort="Mensal." value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
-            hint={!data.exempt && data.charge ? (data.charge.count > 1 ? `${data.charge.count} em aberto · desde ${formatDate(data.charge.due_on)}` : `vence ${formatDate(data.charge.due_on)}`) : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
+            hint={!data.exempt && data.charge ? (data.charge.count > 1 ? `${data.charge.count} em aberto · desde ${formatDate(data.charge.due_on)}` : `${data.charge.due_on < todayIso() ? "venceu" : "vence"} ${formatDate(data.charge.due_on)}`) : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
         )}
       </Link>
     </div>
