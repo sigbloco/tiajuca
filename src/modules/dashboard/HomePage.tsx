@@ -173,32 +173,6 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
   )
 }
 
-/** Professor/Monitor: seu grupo (RLS já limita às pessoas acompanhadas). */
-function GroupCard({ orgId, slug }: { orgId: string; slug: string }) {
-  const today = todayIso()
-  const { data } = useQuery({
-    queryKey: ['group-summary', orgId, today],
-    queryFn: async () => {
-      const total = (await supabase.from('members').select('id', { count: 'exact', head: true }).eq('organization_id', orgId).is('archived_at', null)).count ?? 0
-      const rep = await supabase.rpc('attendance_report', { p_org: orgId, p_from: addDaysIso(today, -60), p_to: today, p_group: 'member' })
-      const low = ((rep.data ?? []) as { label: string; pct: number }[]).sort((a, b) => Number(a.pct) - Number(b.pct)).slice(0, 5)
-      return { total, low }
-    },
-  })
-  return (
-    <Card className="space-y-2 p-4">
-      <div className="flex items-center justify-between"><h3>Meu grupo</h3><Link className="text-primary hover:underline" to={`/${slug}/relatorios`}>Ver relatórios</Link></div>
-      <p className="text-muted-foreground">{data ? `${data.total} integrante(s) acompanhados (incluindo você)` : '—'}</p>
-      {data?.low.length ? (
-        <>
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Menor presença nos últimos 60 dias</p>
-          {data.low.map((r) => <div key={r.label} className="flex justify-between"><span>{r.label}</span><strong>{Number(r.pct).toLocaleString('pt-BR')}%</strong></div>)}
-        </>
-      ) : <p className="text-muted-foreground">Sem registros de presença recentes.</p>}
-    </Card>
-  )
-}
-
 interface DirectionData {
   cycle: { name: string } | null
   members_total: number; members_active: number; members_inactive: number; members_waitlist: number
@@ -278,7 +252,6 @@ export function HomePage() {
       <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} direction={isDirection} />
       <BirthdaysToday orgId={membership.organization_id} tz={membership.timezone} />
       <UpcomingEvents orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} tz={membership.timezone} filterByMine={!isDirection} />
-      {isStaff && !isDirection && <GroupCard orgId={membership.organization_id} slug={membership.slug} />}
       {isDirection && <DirectionDashboard orgId={membership.organization_id} />}
     </div>
   )
