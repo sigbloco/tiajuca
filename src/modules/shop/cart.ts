@@ -1,4 +1,4 @@
-import { memberPriceCents, type ProductKind } from './catalog'
+import { buyerPriceCents, type ProductKind } from './catalog'
 
 /** Carrinho puro (sem rede/React). O servidor SEMPRE recalcula preço e estoque no checkout; aqui é só para exibir e limitar. */
 
@@ -9,7 +9,7 @@ export interface CartLine { variantId: string; quantity: number }
 export interface StoreVariant { id: string; label: string; available: number | null } // null = sob encomenda
 export interface StoreProduct {
   id: string; slug: string; name: string; description: string; kind: ProductKind
-  price_cents: number; member_discount_pct: number; lead_time_days: string | null; is_featured?: boolean
+  price_cents: number; member_discount_pct: number; special_price_cents?: number | null; show_remaining?: boolean; show_remaining_when?: number | null; lead_time_days: string | null; is_featured?: boolean
   pickup_ids?: string[]; is_kit?: boolean; components?: { name: string; quantity: number }[] | null; min_units?: number | null; confirmed_units?: number | null; suggested_ids?: string[]
   images: string[]; variants: StoreVariant[]
 }
@@ -81,12 +81,12 @@ export interface PricedCart {
 }
 
 /** Totais para exibição. `isMember` = integrante ATIVO logado (o servidor confirma isso de verdade no checkout). */
-export function priceCart(lines: CartLine[], index: CatalogIndex, isMember: boolean): PricedCart {
+export function priceCart(lines: CartLine[], index: CatalogIndex, isMember: boolean, isSpecial = false): PricedCart {
   const priced: PricedLine[] = []
   for (const l of lines) {
     const e = index.get(l.variantId)
     if (!e) continue
-    const unitFinal = isMember ? memberPriceCents(e.product.price_cents, e.product.member_discount_pct) : e.product.price_cents
+    const unitFinal = buyerPriceCents(e.product, { isMember, isSpecial })
     priced.push({
       variantId: l.variantId, productId: e.product.id, slug: e.product.slug, name: e.product.name, variantLabel: e.variant.label, kind: e.product.kind,
       image: e.product.images[0] ?? null, quantity: l.quantity, unitPriceCents: e.product.price_cents, unitFinalCents: unitFinal, lineTotalCents: unitFinal * l.quantity,

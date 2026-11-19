@@ -5,9 +5,19 @@
 export type ProviderName = 'smtp' | 'resend' | 'log'
 export interface Env { get(key: string): string | undefined }
 
+/** Imagem embutida no corpo do e-mail (referenciada no HTML por `cid:<cid>`), como o QR code do Pix. */
+export interface InlineImage { cid: string; filename: string; contentType: string; content: Uint8Array }
+
 export interface OutgoingMail {
   to: string; subject: string; html: string; text: string
   fromName: string; fromEmail: string; replyTo: string | null
+  inline?: InlineImage[]
+}
+
+export function toBase64(bytes: Uint8Array): string {
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(bin)
 }
 
 /** MAIL_PROVIDER manda; sem ele, usa o que tiver credenciais (SMTP primeiro). Sem credenciais → null (a fila espera). */
@@ -44,6 +54,7 @@ export function resendBody(m: OutgoingMail) {
   return {
     from: formatFrom(m.fromName, m.fromEmail), to: [m.to], subject: m.subject, html: m.html, text: m.text,
     ...(m.replyTo ? { reply_to: m.replyTo } : {}),
+    ...(m.inline?.length ? { attachments: m.inline.map((i) => ({ filename: i.filename, content: toBase64(i.content), content_type: i.contentType, content_id: i.cid })) } : {}),
   }
 }
 

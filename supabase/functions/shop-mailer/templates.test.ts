@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { brl, buildEmail, buildFormEmail, escapeHtml, type MailContext, type TemplateKey } from './templates'
+import { pixCopyPaste as sitePix } from '../../../src/modules/shop/payments/pix'
+import { brl, buildEmail, buildFormEmail, escapeHtml, pixCodeFor, PIX_QR_CID, type MailContext, type TemplateKey } from './templates'
 
 const ctx = (over: Partial<MailContext> = {}, order: Partial<MailContext['order']> = {}): MailContext => ({
   outbox_id: 'o1', template: 'order_created', to_email: 'maria@ex.com', kind: null, cancel_reason: null,
@@ -40,6 +41,26 @@ describe('pedido criado', () => {
   it('Pix: chave, valor exato, referência e prazo de reserva', () => {
     for (const part of ['pix@tiajuca.com.br', 'Rafael', 'Referência', 'HN5XCGA4', 'reservados até']) expect(m.text).toContain(part)
     expect(m.text).toContain('Valor exato: R$ 143,00')
+  })
+  it('Pix: copia e cola igual ao do site, QR embutido e como mandar o comprovante', () => {
+    const code = pixCodeFor(ctx())!
+    expect(code).toBe(sitePix({ key: 'pix@tiajuca.com.br', beneficiary: 'Rafael', amountCents: 14300, txid: 'HN5XCGA4' }))
+    expect(m.text).toContain(code)
+    expect(m.html).toContain(code)
+    expect(m.html).not.toContain('cid:pixqr')
+    const withQr = buildEmail(ctx(), { qrCid: PIX_QR_CID })
+    expect(withQr.html).toContain('<img src="cid:pixqr"')
+    expect(withQr.text).not.toContain('cid:')
+    for (const part of ['Responda este e-mail com o comprovante', 'https://wa.me/5521990698483?text=', encodeURIComponent('pedido HN5XCGA4 (R$ 143,00), em nome de Maria')]) expect(m.text).toContain(part)
+  })
+  it('comprovante: com o favorecido na Direção, o WhatsApp é o dele', () => {
+    const e = buildEmail(ctx({ settings: { ...ctx().settings!, pix_beneficiary: 'Maira Souza' } }))
+    expect(e.text).toContain('https://wa.me/5521984843223?text=')
+  })
+  it('InfinitePay não leva QR nem copia e cola', () => {
+    const ip = buildEmail(ctx({}, { payment_method: 'infinitepay', payment_url: 'https://checkout.infinitepay.io/abc' }), { qrCid: PIX_QR_CID })
+    expect(ip.html).not.toContain('cid:')
+    expect(ip.text).not.toContain('copia e cola')
   })
   it('rodapé com contatos, Direção e link da loja sem barra final', () => {
     expect(m.text).toContain('https://wa.me/5521990698483')
@@ -88,6 +109,16 @@ describe('demais avisos por mudança de status', () => {
     expect(ready.text).toContain('sob encomenda')
     expect(buildEmail(ctx({ template: 'cancelled', cancel_reason: 'Prazo para pagamento expirado' })).text).toContain('Motivo: Prazo para pagamento expirado.')
     expect(buildEmail(ctx({ template: 'cancelled' })).text).not.toContain('Motivo:')
+  })
+  it('pagamento confirmado avisa quanto falta para a produção começar (um aviso por produto)', () => {
+    const bone = { name: 'Boné', variant: 'Único', quantity: 1, unit_final_cents: 3500, kind: 'made_to_order' as const, product_id: 'p2', progress: { min_units: 50, confirmed_units: 38 } }
+    const m = buildEmail(ctx({ template: 'paid' }, { items: [bone, { ...bone, variant: 'G' }] }))
+    expect(m.text).toContain('Faltam 12 unidades pagas para a produção de Boné começar (38 de 50). Avisaremos quando começar.')
+    expect(m.text.match(/Faltam 12/g)).toHaveLength(1)
+    const done = buildEmail(ctx({ template: 'paid' }, { items: [{ ...bone, progress: { min_units: 50, confirmed_units: 50 } }] }))
+    expect(done.text).toContain('A produção de Boné já começou')
+    expect(buildEmail(ctx({ template: 'paid' })).text).not.toContain('Faltam')
+    expect(buildEmail(ctx({ template: 'order_created' }, { items: [bone] })).text).not.toContain('Faltam')
   })
   it('todo e-mail traz o código para consulta e o nome do bloco', () => {
     const keys: TemplateKey[] = ['order_created', 'payment_review', 'paid', 'cancelled', 'fulfillment_in_preparation', 'fulfillment_ready', 'fulfillment_picked_up']

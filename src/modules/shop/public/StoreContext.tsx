@@ -24,6 +24,8 @@ interface StoreContextValue {
   store: StoreData
   index: CatalogIndex
   isMember: boolean
+  /** Direção, professor ou monitor: paga o preço especial dos produtos que têm um. */
+  isSpecial: boolean
   cart: PricedCart
   notices: string[]
   dismissNotices: () => void
@@ -81,6 +83,17 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
     },
   })
   const isMember = !!session && !!member.data
+  // Direção, professores e monitores têm o preço especial (se o produto tiver). Também conferido de verdade no servidor.
+  const special = useQuery({
+    queryKey: ['shop', 'my-special', store.org.id, session?.user.id],
+    enabled: !authLoading && !!session && isMember,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('shop_my_is_special', { p_org: store.org.id })
+      if (error) throw error
+      return data === true
+    },
+  })
+  const isSpecial = isMember && special.data === true
 
   // Confere o carrinho guardado contra o catálogo atual (item sumiu, esgotou, passou do estoque).
   useEffect(() => {
@@ -95,14 +108,14 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
   }, [slug])
 
   const value = useMemo<StoreContextValue>(() => ({
-    store, index, isMember, basePath, notices, loginOpen, setLoginOpen,
-    cart: priceCart(lines, index, isMember),
+    store, index, isMember, isSpecial, basePath, notices, loginOpen, setLoginOpen,
+    cart: priceCart(lines, index, isMember, isSpecial),
     dismissNotices: () => setNotices([]),
     add: (id, qty) => update((l) => addToCart(l, id, qty, index)),
     setQty: (id, qty) => update((l) => setQuantity(l, id, qty, index)),
     remove: (id) => update((l) => removeLine(l, id)),
     clear: () => update(() => []),
-  }), [store, index, isMember, basePath, notices, loginOpen, lines, update])
+  }), [store, index, isMember, isSpecial, basePath, notices, loginOpen, lines, update])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

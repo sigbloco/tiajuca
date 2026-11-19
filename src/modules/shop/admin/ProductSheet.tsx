@@ -93,7 +93,9 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   const [f, setF] = useState({
     name: product?.name ?? '', description: product?.description ?? '', kind: (product?.kind ?? 'stock') as ProductKind,
     price: product ? fromCents(product.price_cents) : (null as number | null),
-    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '', minUnits: product?.min_units ? String(product.min_units) : '', notifyMin: product?.notify_min_reached ?? true, suggested: product?.suggested_ids ?? ([] as string[]),
+    discount: String(product?.member_discount_pct ?? defaultDiscount).replace('.', ','), leadTime: product?.lead_time_days ?? '', minUnits: product?.min_units ? String(product.min_units) : '', notifyMin: product?.notify_min_reached ?? true,
+    special: product?.special_price_cents ? fromCents(product.special_price_cents) : (null as number | null),
+    showRemaining: product?.show_remaining ?? true, showRemainingWhen: product?.show_remaining_when ? String(product.show_remaining_when) : '', suggested: product?.suggested_ids ?? ([] as string[]),
     is_active: product?.is_active ?? true, is_featured: product?.is_featured ?? false,
   })
   const isKit = product ? product.is_kit : kit
@@ -134,7 +136,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
     mutationFn: async () => {
       const draft = {
         name: f.name, kind: f.kind, priceCents: f.price === null ? null : toCents(f.price), discountPct: discount,
-        leadTimeDays: f.leadTime.trim() || null,
+        leadTimeDays: f.leadTime.trim() || null, specialPriceCents: f.special === null || f.special === 0 ? null : toCents(f.special),
         variants: variants.map((v) => ({ label: v.label, items: v.uses.filter((u) => u.stock_item_id).length })),
       }
       const errs = validateProductDraft(draft)
@@ -149,6 +151,8 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
       if (errs.length) return null
       const input = {
         name: f.name.trim(), description: f.description.trim(), price_cents: draft.priceCents!, member_discount_pct: discount,
+        special_price_cents: draft.specialPriceCents,
+        show_remaining: f.showRemaining, show_remaining_when: isStock || !f.minUnits || !f.showRemainingWhen ? null : Number(f.showRemainingWhen),
         lead_time_days: isStock ? null : draft.leadTimeDays, min_units: isStock || !f.minUnits ? null : Number(f.minUnits), notify_min_reached: f.notifyMin, suggested_ids: f.suggested.filter((id) => id !== product?.id), is_active: f.is_active, is_featured: f.is_featured,
         ...(isKit ? { is_kit: true, kit_component_photos: photos } : {}),
       }
@@ -274,6 +278,9 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         {publicCents !== null && discount > 0 && discount <= 100 && (
           <p className="text-sm text-muted-foreground">Integrante ativo paga {formatCurrency(fromCents(memberPriceCents(publicCents, discount)))}.</p>
         )}
+        <div className="space-y-1.5"><Label htmlFor="pr-special">Preço especial (direção, professores e monitores)</Label>
+          <MoneyInput id="pr-special" value={f.special} onChange={(v) => setF({ ...f, special: v })} />
+          <p className="text-xs text-muted-foreground">Valor em reais digitado por você, no lugar do desconto em %. Deixe vazio para eles pagarem o preço de integrante.</p></div>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" className="h-4 w-4" checked={f.is_featured} onChange={(e) => setF({ ...f, is_featured: e.target.checked })} />
           Produto em destaque (aparece na seção do alto da loja)
@@ -286,6 +293,19 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
           <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir</Label>
             <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
             <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p>
+            {f.minUnits && (
+              <div className="space-y-1.5 pt-1">
+                <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.showRemaining} onChange={(e) => setF({ ...f, showRemaining: e.target.checked })} />
+                  <span>Mostrar na página do produto quantas unidades faltam para a produção começar.</span></label>
+                {f.showRemaining && (
+                  <div className="flex flex-wrap items-center gap-2 pl-7">
+                    <Label htmlFor="pr-when">Só mostrar quando faltarem até</Label>
+                    <Input id="pr-when" inputMode="numeric" className="w-20 text-center" placeholder="Ex.: 10" value={f.showRemainingWhen} onChange={(e) => setF({ ...f, showRemainingWhen: e.target.value.replace(/\D/g, '') })} />
+                    <span className="text-xs text-muted-foreground">unidades. Vazio = sempre. Faltando pouco, o contador ganha destaque.</span>
+                  </div>
+                )}
+              </div>
+            )}
             {f.minUnits && (
               <label className="flex items-start gap-2 pt-1"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={f.notifyMin} onChange={(e) => setF({ ...f, notifyMin: e.target.checked })} />
                 <span>Avisar por e-mail quem comprou quando o mínimo for atingido (uma vez só, para todos os pedidos pagos deste produto).</span></label>

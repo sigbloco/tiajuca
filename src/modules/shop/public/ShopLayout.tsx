@@ -14,10 +14,10 @@ import { StoreProvider, fetchStore, useStore } from './StoreContext'
 
 /** Aviso de preço de integrante, logo abaixo do "Voltar": quem entrou vê que o preço dele está valendo; quem não entrou, o convite. */
 function MemberNotice() {
-  const { store, isMember, setLoginOpen } = useStore()
+  const { store, isMember, isSpecial, setLoginOpen } = useStore()
   const { session } = useAuth()
-  const hasDiscount = store.products.some((p) => p.member_discount_pct > 0)
-  if (isMember) return <p role="status" className="mb-4 inline-block rounded-full bg-secondary px-3 py-1 text-sm font-bold text-secondary-foreground">Preço de integrante ativo</p>
+  const hasDiscount = store.products.some((p) => p.member_discount_pct > 0 || !!p.special_price_cents)
+  if (isMember) return <p role="status" className="mb-4 inline-block rounded-full bg-secondary px-3 py-1 text-sm font-bold text-secondary-foreground">{isSpecial ? 'Preço especial ativo' : 'Preço de integrante ativo'}</p>
   if (session || !hasDiscount) return null
   return (
     <div className="mb-4 space-y-2">
