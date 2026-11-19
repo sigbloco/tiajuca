@@ -18,7 +18,7 @@ const ENTITY_LABEL: Record<string, string> = {
   cycles: 'Ciclo', cycle_types: 'Tipo de ciclo', member_cycles: 'Status no ciclo', member_cycle_statuses: 'Status de ciclo', instrument_cycle_capacity: 'Limite de vagas',
   staff_assignments: 'Atribuição da equipe', activities: 'Evento', activity_types: 'Tipo de evento', recurrence_rules: 'Recorrência', activity_audiences: 'Público do evento',
   event_attendance: 'Presença', attendance_statuses: 'Status de presença', activity_checklist_items: 'Checklist do evento', checklist_templates: 'Modelo de checklist',
-  checklist_template_items: 'Item de modelo', fee_categories: 'Categoria de contribuição', fee_category_prices: 'Valor da categoria', member_fee_assignments: 'Categoria do integrante',
+  checklist_template_items: 'Item de modelo', fee_categories: 'Categoria de contribuição', fee_category_prices: 'Valor da categoria', shop_coupons: 'Cupom da loja', member_fee_assignments: 'Categoria do integrante',
   scholarships: 'Bolsa', scholarship_types: 'Tipo de bolsa', monthly_charges: 'Mensalidade', charge_adjustments: 'Ajuste de mensalidade', financial_entries: 'Lançamento financeiro',
   finance_categories: 'Categoria financeira', distribution_destinations: 'Destino de distribuição', distribution_rules: 'Regra de distribuição', member_pix_keys: 'Chave PIX',
   staff_payments: 'Pagamento da equipe', repertoires: 'Repertório', songs: 'Música', song_attachments: 'Anexo de música', integrations: 'Integração',
