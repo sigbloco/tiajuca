@@ -1,7 +1,18 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { applyTheme } from '@/core/theme'
 import { readBrand } from '@/modules/auth/AuthLayout'
+
+/** Na primeira abertura do app (por aba), segura a tela de carregando por um instante, para dar tempo de ver a logo e a barrinha. */
+export function useSplashHold(ms = 900): boolean {
+  const [hold, setHold] = useState(() => { try { return sessionStorage.getItem('sigbloco:splash') !== '1' } catch { return false } })
+  useEffect(() => {
+    if (!hold) return
+    const t = setTimeout(() => { try { sessionStorage.setItem('sigbloco:splash', '1') } catch { /* ignorar */ } setHold(false) }, ms)
+    return () => clearTimeout(t)
+  }, [hold, ms])
+  return hold
+}
 
 /**
  * Tela de carregando, centralizada: logo do bloco (a última conhecida, guardada no aparelho) e uma barrinha correndo na cor do bloco.
