@@ -2,11 +2,11 @@ import { ButtonRow } from '@/components/shared/ButtonRow'
 import { SettingsButton } from '@/components/shared/SettingsButton'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MemberLink } from '@/modules/members/MemberLink'
-import { Cake, Plus } from 'lucide-react'
+import { Cake, Plus, Star } from 'lucide-react'
 import { StepNav } from '@/components/shared/StepNav'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCompetence, formatDayLong, monthGridDays, todayIso } from '@/core/format'
+import { addDaysIso, formatCompetence, formatDayLong, formatDayShort, formatTime, monthGridDays, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { useIsDirection, usePermission } from '@/core/permissions'
@@ -19,6 +19,14 @@ import { RecurrenceDay } from './RecurrenceDay'
 import { COLOR_DOT, listActivities, materialize, type Activity } from './service'
 
 const WEEK_HEAD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+
+/** Evento pontual: não vem de uma recorrência. */
+const isSpecial = (a: Activity) => !a.recurrence_rule_id
+/** "hoje", "amanhã" ou "faltam N dias" para uma data. */
+function daysUntilText(date: string, today: string): string {
+  const n = Math.round((Date.parse(date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000)
+  return n <= 0 ? 'Hoje' : n === 1 ? 'Amanhã' : `Faltam ${n} dias`
+}
 
 export function EventsPage() {
   const orgId = useOrgId()
@@ -95,11 +103,26 @@ export function EventsPage() {
     return out.map((p) => ({ ...p, age: p.year === null ? null : y - p.year })).filter((p) => (p.age === null || p.age >= 0) && !(memberStatus.ready && memberStatus.isInactive(p.id)))
   }
 
+  // Pontual = evento que não vem de recorrência (apresentação, confraternização, Cortejo...).
+  const [onlySpecial, setOnlySpecial] = useState(false)
+  const view = useMemo(() => (onlySpecial ? (data ?? []).filter(isSpecial) : data), [data, onlySpecial])
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
-    for (const a of data ?? []) (map[a.activity_date] ??= []).push(a)
+    for (const a of view ?? []) (map[a.activity_date] ??= []).push(a)
     return map
-  }, [data])
+  }, [view])
+  // Próximos eventos pontuais do ciclo (de hoje em diante), mesmo que estejam em meses lá na frente.
+  const upcomingFrom = selCycle && selCycle.ends_on >= today ? (selCycle.starts_on > today ? selCycle.starts_on : today) : today
+  const upcomingTo = selCycle?.ends_on && selCycle.ends_on >= upcomingFrom ? selCycle.ends_on : addDaysIso(today, 365)
+  const highlights = useQuery({
+    queryKey: ['activities', orgId, 'highlights', upcomingFrom, upcomingTo, cycleId],
+    queryFn: async () => (await listActivities({ orgId, from: upcomingFrom, to: upcomingTo })).filter((a) => isSpecial(a) && a.status !== 'cancelled' && (a.cycle_id ? a.cycle_id === cycleId : true)).slice(0, 12),
+  })
+  const goTo = (a: Activity) => {
+    setYm({ y: Number(a.activity_date.slice(0, 4)), m: Number(a.activity_date.slice(5, 7)) - 1 })
+    setSelectedDay(a.activity_date)
+    setSheet({ activity: a })
+  }
 
   const [onlyPending, setOnlyPending] = useState(false)
   const pending = useMemo(() => (data ?? []).filter((a) => a.to_confirm), [data])
@@ -146,11 +169,28 @@ export function EventsPage() {
         <p className="text-muted-foreground">Ensaios, aulas, apresentações e aniversários do ciclo.</p>
       </div>
       {header}
-      {pending.length > 0 && (
-        <Button variant={onlyPending ? 'default' : 'outline'} className="w-full" aria-pressed={onlyPending} onClick={() => setOnlyPending(!onlyPending)}>
-          À confirmar ({pending.length})
-        </Button>
+      {(highlights.data?.length ?? 0) > 0 && (
+        <section className="space-y-1.5" aria-label="Em destaque">
+          <h3 className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-primary" aria-hidden /> Em destaque</h3>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+            {highlights.data!.map((a) => (
+              <button key={a.id} type="button" onClick={() => goTo(a)} className="w-44 shrink-0 rounded-xl border border-primary/40 bg-primary/5 p-2.5 text-left transition hover:bg-primary/10">
+                <p className="text-xs font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ' · ' + formatTime(a.start_time) : ''}</p>
+                <p className="line-clamp-2 break-words font-semibold leading-tight">{a.title}</p>
+                <p className="mt-0.5 text-xs font-semibold text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · à confirmar' : ''}</p>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
+      <ButtonRow>
+        <Button variant={onlySpecial ? 'default' : 'outline'} aria-pressed={onlySpecial} onClick={() => setOnlySpecial(!onlySpecial)}><Star className="h-4 w-4 shrink-0" /> Só eventos pontuais</Button>
+        {pending.length > 0 && (
+          <Button variant={onlyPending ? 'default' : 'outline'} aria-pressed={onlyPending} onClick={() => setOnlyPending(!onlyPending)}>
+            À confirmar ({pending.length})
+          </Button>
+        )}
+      </ButtonRow>
       {onlyPending && (
         <div className="space-y-4">
           {[...new Set(pending.map((a) => a.activity_date))].sort().map((day) => (
@@ -187,7 +227,9 @@ export function EventsPage() {
                 <span className={cn('text-xs font-semibold leading-none', holidayOf(d.iso) && 'rounded-full bg-destructive px-1.5 py-0.5 text-destructive-foreground')}>{Number(d.iso.slice(8))}</span>
                 <span className="mt-0.5 flex h-1.5 flex-wrap items-center justify-center gap-0.5">
                   {birthdaysOn(d.iso).length > 0 && <Cake className="-my-0.5 h-3 w-3 text-foreground" strokeWidth={2.75} aria-hidden="true" />}
-                  {list.slice(0, 4).map((a) => (
+                  {list.slice(0, 4).map((a) => isSpecial(a) ? (
+                    <Star key={a.id} className={cn('-my-0.5 h-3 w-3 fill-current', a.status === 'cancelled' && 'opacity-30')} style={{ color: 'rgb(var(--primary))' }} aria-hidden="true" />
+                  ) : (
                     <span key={a.id} className={cn('h-1.5 w-1.5 rounded-full', COLOR_DOT[a.activity_types?.color ?? 'muted'], a.status === 'cancelled' && 'opacity-30', a.to_confirm && 'border border-foreground/60 bg-transparent')} />
                   ))}
                 </span>
