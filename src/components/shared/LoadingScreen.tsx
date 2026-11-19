@@ -1,8 +1,18 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { applyTheme } from '@/core/theme'
 import { readBrand } from '@/modules/auth/AuthLayout'
 import { RaysBackdrop } from '@/modules/site/Rays'
+
+/** A logo guardada começa a baixar já na abertura do app; a tela de carregando só começa (logo, raios, barra e contagem) quando ela estiver pronta (ou passados 2,5 s). */
+export const brandReady: Promise<void> = new Promise((resolve) => {
+  const logo = readBrand()?.logo_path
+  if (!logo || typeof Image === 'undefined') { resolve(); return }
+  const img = new Image()
+  img.onload = img.onerror = () => resolve()
+  img.src = logo
+  setTimeout(resolve, 2500)
+})
 
 /** Vale por carga da página: ao recarregar volta a valer; ao navegar dentro do app, não. */
 let splashShown = false
@@ -12,8 +22,11 @@ export function useSplashHold(ms = 3000): boolean {
   const [hold, setHold] = useState(!splashShown)
   useEffect(() => {
     if (!hold) return
-    const t = setTimeout(() => { splashShown = true; setHold(false) }, ms)
-    return () => clearTimeout(t)
+    let t: ReturnType<typeof setTimeout> | undefined
+    let on = true
+    // O tempo mínimo conta a partir de a logo estar pronta.
+    void brandReady.then(() => { if (on) t = setTimeout(() => { splashShown = true; setHold(false) }, ms) })
+    return () => { on = false; clearTimeout(t) }
   }, [hold, ms])
   return hold
 }
@@ -46,8 +59,16 @@ function useCountUp(ms?: number): number {
  */
 export function LoadingScreen({ children, fillMs }: { children?: ReactNode; fillMs?: number }) {
   const brand = readBrand()
-  useEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const pct = useCountUp(fillMs)
+  useLayoutEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    let on = true
+    void brandReady.then(() => { if (on) setReady(true) })
+    return () => { on = false }
+  }, [])
+  const pct = useCountUp(ready ? fillMs : undefined)
+  // Até a logo estar pronta, só o fundo: nada aparece pela metade e a barra só começa a encher depois.
+  if (!ready) return <div role="status" aria-live="polite" className="min-h-screen" style={{ backgroundColor: 'rgb(var(--secondary))' }}><p className="sr-only">Carregando</p></div>
   return (
     <div role="status" aria-live="polite" className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center" style={{ backgroundColor: 'rgb(var(--secondary))' }}>
       {/* Fundo na cor secundária (100%) e 9 raios na cor principal, em SVG (bordas lisas), saindo do centro da logo. */}
