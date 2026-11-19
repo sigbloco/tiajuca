@@ -95,7 +95,8 @@ export function crumbsFor(segs: string[], base: string): { label: string; to?: s
     out.push({ label: HUBS[hubKey].label, to: segs.length > 1 ? `${base}/${hubKey}` : undefined })
   } else if (item) {
     if (item.group) out.push({ label: HUBS[item.group].label, to: `${base}/${item.group}` })
-    out.push({ label: item.crumb ?? item.label, to: segs.length > 1 ? `${base}/${first}` : undefined })
+    // "Presença" dentro de uma chamada volta para a lista do dia (sem ?lista, a página abriria de novo na chamada do naipe).
+    out.push({ label: item.crumb ?? item.label, to: segs.length > 1 ? `${base}/${first}${first === 'presenca' ? '?lista=1' : ''}` : undefined })
   }
   if (segs.length > 1 && !hubKey) {
     let path = `${base}/${first}`

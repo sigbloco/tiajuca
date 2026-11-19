@@ -266,7 +266,7 @@ function useMySectionIds(cycleId: string | null | undefined) {
  */
 export function AttendanceListPage({ mode: modeProp = 'day' }: { mode?: 'day' | 'mine' } = {}) {
   const [params] = useSearchParams()
-  const mode = params.get('dia') ? 'day' : modeProp // vindo do Calendário (com o dia na URL): o dia inteiro
+  const mode = params.get('dia') || params.get('lista') ? 'day' : modeProp // vindo do Calendário (com o dia na URL): o dia inteiro
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const today = todayIso(membership?.timezone)
@@ -520,7 +520,12 @@ export function AttendanceRosterPage() {
   const chipCls = (on: boolean) => cn('relative flex min-h-8 items-center justify-center break-words rounded-full border px-2 py-0 text-center text-sm font-medium leading-[1.05]', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted')
   const cancelled = activity.data?.status === 'cancelled'
   // Evento que não é aula/oficina (ex.: Cortejo): o caminho vem do Calendário, não da Oficina.
-  useSetCrumbOverride(activity.data && !isClass && membership ? [{ label: 'Calendário', to: `/${membership.slug}/eventos` }, { label: activity.data.title }, { label: 'Presença' }] : null)
+  // Aula/oficina: "Presença" no caminho abre a lista do dia (todos os naipes), mesmo quando se chegou direto na chamada do naipe.
+  useSetCrumbOverride(activity.data && membership
+    ? (isClass
+      ? [{ label: 'Oficina', to: `/${membership.slug}/oficina` }, { label: 'Presença', to: `/${membership.slug}/presenca?dia=${activity.data.activity_date}` }, { label: 'Chamada' }]
+      : [{ label: 'Calendário', to: `/${membership.slug}/eventos` }, { label: activity.data.title }, { label: 'Presença' }])
+    : null)
 
   return (
     <div className="space-y-3">

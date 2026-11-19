@@ -100,7 +100,7 @@ export function AppShell() {
     if (pathname !== lastPath.current) {
       if (popping.current) popping.current = false // foi um Voltar: a página que se deixou não volta para a pilha
       else if (/\/alunos$/.test(lastPath.current)) { /* Oficina → Alunos só redireciona para Integrantes: não conta como página visitada */ }
-      else if (/\/presenca$/.test(lastPath.current) && !/[?&]dia=/.test(lastUrl.current)) { /* Oficina → Presença redireciona direto para a chamada: não conta como página visitada (o Voltar não pode cair de novo no redirecionamento) */ }
+      else if (/\/presenca$/.test(lastPath.current) && !/[?&](dia|lista)=/.test(lastUrl.current)) { /* Oficina → Presença redireciona direto para a chamada: não conta como página visitada (o Voltar não pode cair de novo no redirecionamento) */ }
       else {
         const left: Visit = { path: lastPath.current, url: lastUrl.current, trail: trailCommitted.current }
         setStack((st) => [...(st[st.length - 1]?.path === left.path ? st.slice(0, -1) : st), left].slice(-BACK_LIMIT))
