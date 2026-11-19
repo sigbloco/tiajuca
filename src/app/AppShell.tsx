@@ -1,5 +1,5 @@
 import { OrgName } from '@/components/shared/OrgName'
-import { LoadingScreen, SPIN_OUT_MS, useSplashHold } from '@/components/shared/LoadingScreen'
+import { LoadingScreen, useSplashHold } from '@/components/shared/LoadingScreen'
 import { ArrowLeft, Construction, Globe, LogOut, Menu, Store, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useCrumbOverride, useExtraCrumbs } from '@/core/breadcrumb'
@@ -127,16 +127,7 @@ export function AppShell() {
   // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0
-  // Ao terminar de carregar, os raios dão uma girada rápida antes de a tela sumir (só quando a tela de carregando chegou a aparecer).
-  const loadingNow = !membership || !rel.ready || splash
-  const [phase, setPhase] = useState<'loading' | 'leaving' | 'done'>(loadingNow ? 'loading' : 'done')
-  if (!loadingNow && phase === 'loading') setPhase('leaving')
-  useEffect(() => {
-    if (phase !== 'leaving') return
-    const t = setTimeout(() => setPhase('done'), SPIN_OUT_MS)
-    return () => clearTimeout(t)
-  }, [phase])
-  if (loadingNow || phase === 'leaving') return <LoadingScreen fillMs={3000} finishing={!loadingNow} />
+  if (!membership || !rel.ready || splash) return <LoadingScreen fillMs={3000} />
   // Nenhuma página liberada para este perfil (a liberação fica em Acesso e papéis): só o aviso, a loja, o site e o Sair.
   // O Titular que está "visualizando como" esse perfil continua com a barra para voltar; o inativo ainda pode pedir para voltar.
   if (!rel.all && !rel.anyPage) {
