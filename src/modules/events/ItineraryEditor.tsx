@@ -14,7 +14,8 @@ export function ItineraryEditor({ steps, onChange, defaultLocation }: { steps: I
           onClick={() => onChange([...steps, { time: '', label: '' }])}><Plus className="h-3.5 w-3.5" /></button>
       </div>
       {steps.map((x, i) => (
-        <div key={i} className="space-y-2 rounded-md bg-muted/40 p-2">
+        <div key={i} className="relative space-y-2 rounded-md bg-muted/40 p-2">
+          <span aria-hidden className="absolute -left-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground">{i + 1}</span>
           {/* Celular: início, fim e item numa linha; o local embaixo. Computador: tudo numa linha só, com a lixeira no fim. */}
           <div className="grid grid-cols-[4.5rem_4.5rem_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[4.5rem_4.5rem_minmax(0,1fr)_minmax(0,1fr)_auto]">
             <div className="space-y-1"><Label htmlFor={`it-start-${i}`} className="text-xs">Início</Label><TimeInput id={`it-start-${i}`} value={x.time} onChange={(v) => setStep(i, { time: v })} /></div>

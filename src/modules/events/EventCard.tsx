@@ -54,7 +54,7 @@ export function EventCard({ a, index = 0, onOpen, onEdit, presence = 'roster' }:
                 return (
                   <div key={k}>
                     {showLoc && <p className="font-medium text-foreground">{loc}</p>}
-                    <p>{x.time.slice(0, 5)}{x.end ? ' – ' + x.end.slice(0, 5) : ''} · {x.label}</p>
+                    <p><span className="mr-1.5 font-bold text-foreground">{k + 1}.</span>{x.time.slice(0, 5)}{x.end ? ' – ' + x.end.slice(0, 5) : ''} · {x.label}</p>
                     {x.description && <p className="whitespace-pre-wrap text-sm">{x.description}</p>}
                   </div>
                 )

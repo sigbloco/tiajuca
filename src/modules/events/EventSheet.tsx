@@ -169,7 +169,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             <h3>Roteiro</h3>
             <ol className="divide-y divide-border rounded-lg border border-border">
               {[...activity.itinerary].sort((a, b) => a.time.localeCompare(b.time)).map((x, i) => (
-                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span className="w-24 shrink-0 font-display font-bold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span><span className="min-w-0"><span className="font-semibold">{x.label}</span>{x.location && x.location.trim() !== activity.location?.trim() && <span className="block text-muted-foreground">{x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span></li>
+                <li key={i} className={cn('flex gap-3 px-3 py-2', i % 2 === 1 && 'bg-muted/50')}><span aria-hidden className="mt-0.5 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground">{i + 1}</span><span className="w-24 shrink-0 font-display font-bold">{x.time.slice(0, 5)}{x.end ? `–${x.end.slice(0, 5)}` : ''}</span><span className="min-w-0"><span className="font-semibold">{x.label}</span>{x.location && x.location.trim() !== activity.location?.trim() && <span className="block text-muted-foreground">{x.location}</span>}{x.description && <span className="block whitespace-pre-wrap text-muted-foreground">{x.description}</span>}</span></li>
               ))}
             </ol>
           </section>
