@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/primitives'
 import { MyBilling } from '@/modules/billing/BillingPage'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
+import { useMyReleases } from '@/modules/access/releaseData'
 import { HUBS, NAV_ITEMS, type HubKey, type NavItem } from './navigation'
 
 /** Páginas do hub que a pessoa pode abrir (só o que o acesso dela permite). */
@@ -23,20 +24,25 @@ export function HubLayout({ hub }: { hub: HubKey }) {
 export function HubCards({ hub }: { hub: HubKey }) {
   const { membership } = useOrganization()
   const items = useHubItems(hub)
+  const rel = useMyReleases()
   const base = `/${membership?.slug}`
   return (
       <BalancedGrid>
-        {items.map((i) => (
-          <NavLink key={i.to} to={`${base}/${i.to}`}>
-            <Card className="flex h-full items-start gap-3 p-4 hover:bg-muted/50">
+        {items.map((i) => {
+          const card = (off: boolean) => (
+            <Card className={off ? 'flex h-full items-start gap-3 p-4' : 'flex h-full items-start gap-3 p-4 hover:bg-muted/50'}>
               <i.icon className="mt-0.5 h-6 w-6 shrink-0 text-primary" />
               <div>
                 <p className="font-display text-lg font-bold">{i.label}</p>
                 {i.description && <p className="text-muted-foreground">{i.description}</p>}
               </div>
             </Card>
-          </NavLink>
-        ))}
+          )
+          // Subpágina não liberada para o perfil: cartão apagado, sem link.
+          return rel.released(i.to)
+            ? <NavLink key={i.to} to={`${base}/${i.to}`}>{card(false)}</NavLink>
+            : <div key={i.to} aria-disabled="true" title="Ainda não liberado para o seu perfil" className="cursor-not-allowed select-none opacity-40">{card(true)}</div>
+        })}
         {items.length === 0 && <Card className="p-6 text-muted-foreground">Você não tem acesso a nenhuma página desta área.</Card>}
       </BalancedGrid>
   )

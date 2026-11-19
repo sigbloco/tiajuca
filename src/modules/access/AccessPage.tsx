@@ -13,6 +13,7 @@ import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { PeopleTab } from './PeopleTab'
 import { PermissionsMatrix } from './PermissionsMatrix'
+import { ReleasesTab } from './ReleasesTab'
 
 function useIsTitular() {
   const { membership } = useOrganization()
@@ -64,18 +65,18 @@ function PeopleTabContainer() {
 }
 
 export function AccessPage() {
-  const [tab, setTab] = useRememberedState<'people' | 'perms'>('acesso-aba', 'people', ['people', 'perms'])
-  useRegisterCrumb(tab === 'people' ? 'Pessoas' : 'Permissões dos papéis', () => setTab('people'), true, 0)
+  const [tab, setTab] = useRememberedState<'people' | 'perms' | 'releases'>('acesso-aba', 'people', ['people', 'perms', 'releases'])
+  useRegisterCrumb(tab === 'people' ? 'Pessoas' : tab === 'perms' ? 'Permissões dos papéis' : 'Liberação de páginas', () => setTab('people'), true, 0)
   return (
     <div className="space-y-4">
       <h1>Acesso e papéis</h1>
       <ButtonRow role="tablist">
-        {[['people', 'Pessoas'], ['perms', 'Permissões dos papéis']].map(([k, l]) => (
+        {[['people', 'Pessoas'], ['perms', 'Permissões dos papéis'], ['releases', 'Liberação de páginas']].map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k as typeof tab)}
             className={cn('rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === k && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{l}</FitWord></button>
         ))}
       </ButtonRow>
-      {tab === 'people' ? <PeopleTabContainer /> : <PermissionsMatrix />}
+      {tab === 'people' ? <PeopleTabContainer /> : tab === 'perms' ? <PermissionsMatrix /> : <ReleasesTab />}
     </div>
   )
 }

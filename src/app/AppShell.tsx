@@ -18,15 +18,30 @@ import { HUBS, NAV_ITEMS, crumbsFor, type CameFrom, type HubKey, type NavItem } 
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { BulletTrail } from '@/components/shared/BulletTrail'
 import { ViewAsBar } from './ViewAsBar'
+import { ReleaseBar } from './ReleaseBar'
+import { useMyReleases } from '@/modules/access/releaseData'
+import { pageKeyForPath } from '@/modules/access/releases'
+import { Lock } from 'lucide-react'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 
-interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; /** Traço separador acima do item. */ sep?: boolean }
+interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; /** Traço separador acima do item. */ sep?: boolean; /** Página não liberada para o perfil: item apagado, sem link. */ off?: boolean }
 
 // Itens que ficam na barra inferior do celular; o resto vai em "Mais".
 const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
 
 /** Quantas páginas o Voltar lembra. */
 const BACK_LIMIT = 20
+
+function NotReleased({ base }: { base: string }) {
+  return (
+    <div className="mx-auto max-w-md space-y-3 py-10 text-center">
+      <Lock className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden />
+      <h1 className="font-display text-2xl font-extrabold">Página ainda não liberada</h1>
+      <p className="text-muted-foreground">Esta página ainda não foi liberada para o seu perfil. Em breve ela estará disponível.</p>
+      <Link to={base} className="inline-block font-semibold text-primary hover:underline">Voltar ao início</Link>
+    </div>
+  )
+}
 
 export function AppShell() {
   const topRef = useRef<HTMLDivElement>(null)
@@ -35,6 +50,17 @@ export function AppShell() {
     const el = topRef.current
     if (!el) return
     const set = () => document.documentElement.style.setProperty('--topbar-h', el.offsetHeight + 'px')
+    set()
+    const ro = new ResizeObserver(set)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
+  // Altura da barra fixa de cima (links, nome, Sair e a linha de liberação): o topo seguinte fica logo abaixo dela.
+  const appbarRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = appbarRef.current
+    if (!el) return
+    const set = () => document.documentElement.style.setProperty('--appbar-h', el.offsetHeight + 'px')
     set()
     const ro = new ResizeObserver(set)
     ro.observe(el)
@@ -51,7 +77,8 @@ export function AppShell() {
     ro.observe(el)
     return () => ro.disconnect()
   })
-  const { membership, realMembership } = useOrganization()
+  const { membership } = useOrganization()
+  const rel = useMyReleases()
   const { signOut } = useAuth()
   const { pathname, search, state } = useLocation()
   const navigate = useNavigate()
@@ -97,19 +124,24 @@ export function AppShell() {
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0
   if (!membership) return <div className="p-8 text-muted-foreground">Carregando</div>
-  // Área dos integrantes em construção: só Titular e direção entram (vale pelo acesso real, não pela simulação).
-  const realRoles = (realMembership ?? membership).roles
-  if (!realRoles.includes('titular') && !realRoles.includes('direcao')) {
+  if (!rel.ready) return <div className="p-8 text-muted-foreground">Carregando</div>
+  // Nenhuma página liberada para este perfil (a liberação fica em Acesso e papéis): só o aviso, a loja, o site e o Sair.
+  // O Titular que está "visualizando como" esse perfil continua com a barra para voltar; o inativo ainda pode pedir para voltar.
+  if (!rel.all && !rel.anyPage) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-        <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-20 w-20" />
-        <Construction className="h-10 w-10 text-primary" />
-        <h1 className="font-display text-2xl font-extrabold">Área em construção</h1>
-        <p className="max-w-sm text-muted-foreground">A área dos integrantes ainda está sendo construída. Em breve estará disponível por aqui.</p>
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <Link to={`/${membership.slug}/loja`}><Button className="w-full"><Store className="h-4 w-4" /> Ir para a loja</Button></Link>
-          <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Visitar site</Button></Link>
-          <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+      <div className="min-h-screen bg-background">
+        <ViewAsBar />
+        <div className="mx-auto flex max-w-md flex-col items-center gap-4 p-6 pt-12 text-center">
+          <OrgLogo name={membership.name} logoPath={membership.logo_path} className="h-20 w-20" />
+          <Construction className="h-10 w-10 text-primary" />
+          <h1 className="font-display text-2xl font-extrabold">Nenhuma página liberada ainda</h1>
+          <p className="text-muted-foreground">As páginas do sistema para o seu perfil ainda não foram liberadas. Em breve estarão disponíveis por aqui.</p>
+          <div className="w-full text-left"><InactiveNotice /></div>
+          <div className="flex w-full flex-col gap-2">
+            <Link to={`/${membership.slug}/loja`}><Button className="w-full"><Store className="h-4 w-4" /> Ir para a loja</Button></Link>
+            <Link to="/site"><Button variant="outline" className="w-full"><Globe className="h-4 w-4" /> Visitar site</Button></Link>
+            <Button variant="ghost" onClick={() => signOut()}><LogOut className="h-4 w-4" /> Sair</Button>
+          </div>
         </div>
       </div>
     )
@@ -128,22 +160,26 @@ export function AppShell() {
   const visible = (i: NavItem) => (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
-  const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.to === 'perfil' && isTitular ? 'Perfil do bloco' : i.label, icon: i.icon }))
+  // Item não liberado para o perfil (Acesso e papéis → Liberação de páginas): continua no menu, só apagado e sem link.
+  const off = (to: string) => !rel.released(pageKeyForPath(to) ?? to)
+  const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.to === 'perfil' && isTitular ? 'Perfil do bloco' : i.label, icon: i.icon, off: off(i.to) }))
   // Organização só para Titular e direção. O Financeiro fica embaixo de Calendário para todos, menos para eles (onde sempre esteve, junto da Organização).
   const bossView = membership.roles.includes('direcao') || membership.roles.includes('titular')
   const hubEntry = (hub: HubKey): MenuEntry[] => {
     if (hub === 'organizacao' && !bossView) return []
     const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
     const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
-    return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to)] }]
+    return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to)], off: off(hub) }]
   }
   const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
     ...direct(''), ...direct('perfil'), ...direct('eventos'), ...(bossView ? [] : hubEntry('financeiro')), ...hubEntry('oficina'), ...direct('membros'), ...direct('formularios'), ...direct('repertorio'), ...direct('naipes').map((e) => ({ ...e, also: ['vagas'] })),
     ...withSep([...hubEntry('organizacao'), ...(bossView ? hubEntry('financeiro') : [])]),
-    ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon }))),
+    ...withSep(NAV_ITEMS.filter((i) => i.admin && visible(i)).map((i) => ({ to: i.to, label: i.label, icon: i.icon, off: off(i.to) }))),
   ]
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
+  // Página que a pessoa tem permissão para abrir, mas ainda não foi liberada para o perfil dela: aviso no lugar da página.
+  const blocked = rel.blockedFor(pathname.slice(base.length))
 
   const crumbs = crumbOverride ?? crumbsFor(segs, base)
   // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
@@ -166,10 +202,16 @@ export function AppShell() {
     cn('flex items-center gap-3 rounded-lg px-3 py-2 font-semibold hover:bg-muted', isActive(e) && 'bg-primary text-primary-foreground hover:bg-primary')
   const renderEntries = (list: MenuEntry[], onClick?: () => void) => list.map((e, idx) => (
     <div key={e.to || 'home'} className={cn(e.sep && idx > 0 && 'mt-2 border-t border-border pt-3')}>
-      <NavLink to={`${base}/${e.to}`} className={link(e)} onClick={onClick}>
-        <e.icon className="h-5 w-5" /> {e.label}
-        {e.to === 'perfil' && hasGaps && <span className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full bg-warning ring-2 ring-background" role="img" aria-label="Perfil incompleto" title="Perfil incompleto" />}
-      </NavLink>
+      {e.off ? (
+        <div aria-disabled="true" title="Ainda não liberado para o seu perfil" className="flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2 font-semibold opacity-40">
+          <e.icon className="h-5 w-5" /> {e.label}
+        </div>
+      ) : (
+        <NavLink to={`${base}/${e.to}`} className={link(e)} onClick={onClick}>
+          <e.icon className="h-5 w-5" /> {e.label}
+          {e.to === 'perfil' && hasGaps && <span className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full bg-warning ring-2 ring-background" role="img" aria-label="Perfil incompleto" title="Perfil incompleto" />}
+        </NavLink>
+      )}
     </div>
   ))
   const primary = [...MOBILE_PRIMARY].map((to) => entries.find((e) => e.to === to)).filter((e): e is MenuEntry => !!e)
@@ -193,13 +235,17 @@ export function AppShell() {
       <SelectedCycleProvider>
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
         {/* Site, nome e Sair: fixos no topo da página (no celular, também dentro do menu). */}
-        <div className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 mb-3 flex h-12 items-center gap-2 border-b border-border bg-background px-4 md:-mx-8 md:-mt-8 md:px-8">
-          {quickLinks()}
-          <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
-          <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" aria-label="Sair" title="Sair" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /><span className="hidden md:inline">Sair</span></Button>
+        <div ref={appbarRef} className="sticky top-[var(--viewas-h,0px)] z-40 -mx-4 -mt-4 mb-3 border-b border-border bg-background px-4 md:-mx-8 md:-mt-8 md:px-8">
+          <div className="flex h-12 items-center gap-2">
+            {quickLinks()}
+            <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
+            <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" aria-label="Sair" title="Sair" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /><span className="hidden md:inline">Sair</span></Button>
+          </div>
+          {/* Titular marca para quem a página aberta está liberada; a Direção só vê. */}
+          <ReleaseBar base={base} />
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
-        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+3rem)] z-30 -mx-4 -mt-3 mb-3 [&:not(:has(>:not(#edit-actions-slot:empty)))]:hidden border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+3rem)] md:-mx-8 md:-mt-3 md:px-8 md:pt-3">
+        <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+var(--appbar-h,3rem))] z-30 -mx-4 -mt-3 mb-3 [&:not(:has(>:not(#edit-actions-slot:empty)))]:hidden border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+var(--appbar-h,3rem))] md:-mx-8 md:-mt-3 md:px-8 md:pt-3">
           <CycleBar base={base} />
           {pathname.replace(/\/+$/, '') !== base.replace(/\/+$/, '') && (
             <button type="button" className="mb-1 flex w-full items-start gap-1 text-left text-sm font-normal text-muted-foreground hover:text-foreground hover:underline"
@@ -222,14 +268,18 @@ export function AppShell() {
         <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">
           <InactiveNotice />
-          <Outlet />
+          {blocked ? <NotReleased base={base} /> : <Outlet />}
         </div>
       </main>
       </SelectedCycleProvider>
 
       {/* Mobile: barra inferior fixa + "Mais" */}
       <nav ref={bottomRef} className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-header text-header-foreground pb-[env(safe-area-inset-bottom)] md:hidden">
-        {primary.map((e) => (
+        {primary.map((e) => e.off ? (
+          <div key={e.to || 'home'} aria-disabled="true" title="Ainda não liberado para o seu perfil" className="flex flex-1 cursor-not-allowed select-none flex-col items-center gap-0.5 py-2 text-xs font-semibold text-muted-foreground opacity-40">
+            <e.icon className="h-5 w-5" /> {e.label}
+          </div>
+        ) : (
           <NavLink
             key={e.to || 'home'}
             to={`${base}/${e.to}`}
