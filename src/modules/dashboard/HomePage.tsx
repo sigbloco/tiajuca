@@ -27,10 +27,10 @@ function Stat({ label, labelShort, value, hint, tone, compact, size, onSize }: {
     return (
       <Card className="flex h-full min-h-[5rem] min-w-0 flex-1 flex-col p-1.5">
         <FitLabel full={label} short={labelShort ?? label} minFull={11} className="text-[11px] leading-none text-muted-foreground" />
-        <div className="relative h-8 shrink-0">
+        <div className="relative h-6 shrink-0">
           <FitBox min={9} max={26} align="start" forceSize={size} onFit={onSize} className={cn('px-1 font-display font-bold text-foreground', tone)}>{value}</FitBox>
         </div>
-        <div className="h-3.5"><FitText min={8} className="text-[10px] leading-snug text-muted-foreground">{hint ?? ' '}</FitText></div>
+        <div className="h-3.5 -mt-0.5"><FitText min={8} className="text-[10px] leading-snug text-muted-foreground">{hint ?? ' '}</FitText></div>
       </Card>
     )
   }
