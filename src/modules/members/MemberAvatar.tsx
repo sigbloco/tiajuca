@@ -11,12 +11,14 @@ import { initialsOf, neutralTone, removeMemberPhoto, saveMemberPhoto, useMemberP
 /** Foto em círculo; sem foto, as iniciais num tom neutro (como o Google). O nome aparece ao lado na tela, então a imagem é decorativa. */
 export function MemberAvatar({ memberId, name, className }: { memberId?: string | null; name: string | null | undefined; className?: string }) {
   const photos = useMemberPhotos()
-  const url = memberId ? photos.data?.get(memberId) : undefined
-  const tone = neutralTone(name)
+  const url = memberId ? photos.data?.urls.get(memberId) : undefined
+  // As iniciais vêm do nome COMPLETO (calculadas no servidor): telas que só têm o nome chamado não mostram iniciais dele.
+  const known = memberId ? photos.data?.initials.get(memberId) : undefined
+  const tone = neutralTone(memberId ?? name)
   if (url) return <img src={url} alt="" aria-hidden loading="lazy" className={cn('h-9 w-9 shrink-0 rounded-full bg-muted object-cover', className)} />
   return (
     <span aria-hidden className={cn('inline-flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full text-sm font-bold', className)} style={{ background: tone.bg, color: tone.fg }}>
-      {initialsOf(name)}
+      {known ?? initialsOf(name)}
     </span>
   )
 }
@@ -27,7 +29,7 @@ export function MemberPhotoEditor({ memberId, name, canEdit }: { memberId: strin
   const qc = useQueryClient()
   const photos = useMemberPhotos()
   const fileRef = useRef<HTMLInputElement>(null)
-  const has = !!photos.data?.get(memberId)
+  const has = !!photos.data?.urls.get(memberId)
   const refresh = () => qc.invalidateQueries({ queryKey: ['member-photos', membership?.organization_id] })
   const upload = useMutation({
     mutationFn: (file: File) => saveMemberPhoto(membership!.organization_id, memberId, file),
