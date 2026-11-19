@@ -20,16 +20,16 @@ import { audienceSectionIds, getAudiencesFor, listActivities, type Activity } fr
 
 const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
 
-function Stat({ label, labelShort, value, hint, tone, compact }: { label: string; /** Forma curta do título, usada só se o completo não couber (compact). */ labelShort?: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
+function Stat({ label, labelShort, value, hint, tone, compact, size, onSize }: { /** Fonte única do valor, escolhida pela linha de caixas (a menor que cabe em todas). */ size?: number; onSize?: (n: number) => void; label: string; /** Forma curta do título, usada só se o completo não couber (compact). */ labelShort?: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
   if (compact) {
-    // Título sempre no topo; o valor ocupa a maior fonte que cabe no espaço que sobra (largura e altura), quebrando só entre palavras.
+    // Título (mesmo tamanho em todas), valor (mesma fonte em todas, a menor que cabe) e linha pequena: as bases ficam alinhadas entre as caixas.
     return (
       <Card className="flex h-full min-h-[5rem] min-w-0 flex-1 flex-col p-1.5">
-        <FitLabel full={label} short={labelShort ?? label} className="text-sm leading-none text-muted-foreground" />
+        <FitLabel full={label} short={labelShort ?? label} minFull={11} className="text-[11px] leading-none text-muted-foreground" />
         <div className="relative min-h-[2rem] flex-1">
-          <FitBox min={9} max={36} className={cn('px-1 font-display font-bold', tone)}>{value}</FitBox>
+          <FitBox min={9} max={26} align="end" forceSize={size} onFit={onSize} className={cn('px-1 font-display font-bold', tone)}>{value}</FitBox>
         </div>
-        {hint && <FitText min={7} className="text-xs leading-none text-muted-foreground">{hint}</FitText>}
+        <div className="mt-0.5 h-3.5"><FitText min={8} className="text-[10px] leading-snug text-muted-foreground">{hint ?? ' '}</FitText></div>
       </Card>
     )
   }
@@ -146,6 +146,10 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
  */
 function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; memberId: string; slug: string; staff: boolean; direction: boolean }) {
   const cycles = useCycles()
+  // Cada caixa informa a maior fonte que cabe no valor dela; todas usam a menor delas (mesmo tamanho, bases alinhadas).
+  const [fits, setFits] = useState<Record<string, number>>({})
+  const valueSize = Object.values(fits).length > 0 ? Math.min(...Object.values(fits)) : undefined
+  const fit = (id: string) => (n: number) => setFits((cur) => (cur[id] === n ? cur : { ...cur, [id]: n }))
   const sel = (cycles.data ?? []).find((c) => c.is_current) ?? (cycles.data ?? []).find((c) => c.is_active)
   const { data } = useQuery({
     queryKey: ['my-status', orgId, memberId, sel?.id],
@@ -172,14 +176,14 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
   return (
     // Uma linha só, ocupando toda a largura: caixas iguais, com fonte que encolhe conforme a tela.
     <div className="grid grid-flow-col auto-cols-fr items-stretch gap-1.5">
-      <Stat compact label="Ciclo" value={data.cycle?.name ?? '—'} />
-      <Stat compact label="Status" value={data.status ?? 'Sem registro'} />
-      {!staff && !direction && <Stat compact label="Frequência" labelShort="Freq." value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
+      <Stat compact size={valueSize} onSize={fit('ciclo')} label="Ciclo" value={data.cycle?.name ?? '—'} />
+      <Stat compact size={valueSize} onSize={fit('status')} label="Status" value={data.status ?? 'Sem registro'} />
+      {!staff && !direction && <Stat compact size={valueSize} onSize={fit('freq')} label="Frequência" labelShort="Freq." value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
       <Link to={`/${slug}/cobrancas`} className="flex min-w-0">
         {receives ? (
-          <Stat compact label="Pagamento" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
+          <Stat compact size={valueSize} onSize={fit('valor')} label="Pagamento" labelShort="Pgto." value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
         ) : (
-          <Stat compact label="Mensalidade" value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
+          <Stat compact size={valueSize} onSize={fit('valor')} label="Mensalidade" labelShort="Mensal." value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
             hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
         )}
       </Link>

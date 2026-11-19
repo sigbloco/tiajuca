@@ -35,7 +35,7 @@ export function FitWord({ children }: { children: string }) {
  * Texto que ocupa a MAIOR fonte possível dentro da área que o pai (position: relative, com altura própria) oferece:
  * quebra só entre palavras (nunca no meio) e a fonte cresce até a largura e a altura acabarem. Centralizado na vertical.
  */
-export function FitBox({ children, className, min = 9, max = 44 }: { children: ReactNode; className?: string; min?: number; max?: number }) {
+export function FitBox({ children, className, min = 9, max = 44, align = 'center', onFit, forceSize }: { children: ReactNode; className?: string; min?: number; max?: number; /** Posição vertical do texto na área: no centro ou embaixo (bases alinhadas entre caixas). */ align?: 'center' | 'end'; /** Avisa a maior fonte que coube (para várias caixas usarem a mesma). */ onFit?: (size: number) => void; /** Se dada, o texto usa no máximo esta fonte (a menor entre as caixas). */ forceSize?: number }) {
   const wrap = useRef<HTMLDivElement>(null)
   const text = useRef<HTMLSpanElement>(null)
   useLayoutEffect(() => {
@@ -49,15 +49,17 @@ export function FitBox({ children, className, min = 9, max = 44 }: { children: R
         if (t.scrollWidth <= w.clientWidth + 0.5 && t.scrollHeight <= w.clientHeight + 0.5) lo = mid
         else hi = mid
       }
-      t.style.fontSize = `${lo}px`
+      const best = Math.floor(lo)
+      onFit?.(best)
+      t.style.fontSize = `${forceSize ? Math.min(best, forceSize) : best}px`
     }
     fit()
     const ro = new ResizeObserver(fit)
     ro.observe(w)
     return () => ro.disconnect()
-  }, [children, min, max])
+  }, [children, min, max, forceSize]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div ref={wrap} className="absolute inset-0 flex items-center">
+    <div ref={wrap} className={cn('absolute inset-0 flex', align === 'end' ? 'items-end' : 'items-center')}>
       <span ref={text} className={cn('block w-full min-w-0 break-normal [overflow-wrap:normal] leading-none', className)}>{children}</span>
     </div>
   )
@@ -83,5 +85,5 @@ export function FitLabel({ full, short, className, minFull = 10 }: { full: strin
     ro.observe(el)
     return () => ro.disconnect()
   }, [full, short, minFull])
-  return <div ref={ref} className="min-w-0"><FitText min={7} className={className}>{text}</FitText></div>
+  return <div ref={ref} className="min-w-0"><FitText min={minFull} className={className}>{text}</FitText></div>
 }
