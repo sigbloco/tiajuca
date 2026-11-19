@@ -111,7 +111,9 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
   const orgId = useOrgId()
   const qc = useQueryClient()
   const wantedCategory = lockedCategory ?? ''
-  const memberView = !useIsDirection()
+  // Direção, professores e monitores veem todos os filtros (situação e todos os tipos); o que cada um enxerga continua vindo do acesso.
+  const roleKeys = useOrganization().membership?.roles ?? []
+  const memberView = !(useIsDirection() || roleKeys.includes('professor') || roleKeys.includes('monitor'))
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
   const [search, setSearch] = useState('')

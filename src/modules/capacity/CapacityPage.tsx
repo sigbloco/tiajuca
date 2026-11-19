@@ -1,5 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-import { useProgressive } from '@/components/shared/LoadMore'
+import { useLayoutEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
@@ -93,23 +92,11 @@ function FitName({ children }: { children: string }) {
 /** Quadro "ocupadas/vagas": largura fixa e nunca quebra, igual nos cartões e nos títulos dos naipes (ficam alinhados). */
 const TOTAL_BOX = 'flex w-[4.75rem] shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-muted/60 px-1 font-display text-xl font-bold'
 
-/** Cartões de um naipe: mostra 2 linhas por vez (o número por linha depende da largura da tela) e "Ver mais" libera mais 2 linhas. */
+/** Cartões de um naipe: mostra todos os instrumentos (sem "Ver mais"). */
 function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: string; canManage: boolean }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [cols, setCols] = useState(2)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const measure = () => setCols(Math.max(1, getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length))
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  const { visible, button } = useProgressive(rows, cols * 2)
   return (
-    <div ref={ref} className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
-      {visible.map((r) => (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
+      {rows.map((r) => (
         <Card key={r.instrument_id} className={cn('flex items-stretch gap-2 p-2.5', r.is_full && 'border-destructive/50')}>
           {/* Esquerda: nome (quebra de linha se faltar espaço) e, embaixo, o número de vagas. Direita: ocupadas/vagas, que nunca quebra. */}
           <div className="min-w-0 space-y-1.5">
@@ -122,7 +109,6 @@ function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: strin
           </div>
         </Card>
       ))}
-      {button}
     </div>
   )
 }

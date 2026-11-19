@@ -20,7 +20,7 @@ export function ReleaseBar({ base }: { base: string }) {
   const set = useSetReleases()
   const key = pageKeyForPath(pathname.slice(base.length))
   const page = key ? releasePage(key) : undefined
-  if (!seen || !page) return null
+  if (!seen || !page || page.alias) return null
   const ready = !!rows.data && !!access.data
 
   return (

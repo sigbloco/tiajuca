@@ -1,3 +1,4 @@
+import { isAlunoCategory } from '@/modules/members/categoryKind'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check, Pencil, Search, Undo2 } from 'lucide-react'
@@ -85,10 +86,11 @@ function useStudentInstruments(cycleId: string | null | undefined) {
         supabase.from('cycle_participations').select('member_id, instrument_id').eq('cycle_id', cycleId!).not('instrument_id', 'is', null).limit(5000),
         supabase.from('member_cycles').select('member_id, status_id').eq('cycle_id', cycleId!).limit(5000),
         supabase.from('member_cycle_statuses').select('id').eq('organization_id', orgId).eq('counts_as_active', true),
-        supabase.from('fee_categories').select('name').eq('organization_id', orgId).eq('system_key', 'aluno'),
+        supabase.from('fee_categories').select('name, system_key').eq('organization_id', orgId),
       ])
       if (alunoCat.error) throw alunoCat.error
-      const alunoNames = new Set((alunoCat.data ?? []).map((x) => x.name as string)) // a categoria Aluno, mesmo que tenha sido renomeada
+      // Todas as categorias de Aluno: a de chave fixa (mesmo renomeada) e as irmãs sem chave, como "Aluno (percussão)".
+      const alunoNames = new Set((alunoCat.data ?? []).filter((x) => isAlunoCategory({ name: x.name as string, system_key: x.system_key as string | null })).map((x) => x.name as string))
       if (mc.error) throw mc.error
       if (sts.error) throw sts.error
       if (cats.error) throw cats.error

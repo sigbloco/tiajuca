@@ -30,14 +30,22 @@ export interface ReleasePage {
   minScope?: PermissionScope
   /** Organização só existe para Titular e Direção. */
   bossOnly?: boolean
+  /** Redirecionamento para outra página (chave de destino): sem caixa própria, vale a do destino. */
+  alias?: string
 }
 
 const pageKey = (to: string) => (to === '' ? 'inicio' : to)
 const item = (to: string) => NAV_ITEMS.find((i) => i.to === to)!
 const asPage = (to: string): ReleasePage => { const i = item(to); return { key: pageKey(to), label: i.label, permission: i.permission, minScope: i.minScope, hub: i.group } }
+/**
+ * Itens do menu que são só um redirecionamento para outra página (não têm página própria, então não têm caixa):
+ * valem o que vale a página de destino e, por estarem dentro de uma área, também dependem da área.
+ * Ex.: Oficina → Alunos abre Integrantes já filtrado.
+ */
+const ALIASES: Record<string, string> = { alunos: 'membros' }
 const hubRows = (hub: HubKey): ReleasePage[] => [
   { key: hub, label: HUBS[hub].label, isHub: true, bossOnly: hub === 'organizacao' },
-  ...NAV_ITEMS.filter((i) => i.group === hub).map((i) => asPage(i.to)),
+  ...NAV_ITEMS.filter((i) => i.group === hub && !(i.to in ALIASES)).map((i) => asPage(i.to)),
 ]
 
 /** Todas as páginas liberáveis, na ordem em que aparecem na tabela. */
@@ -48,7 +56,7 @@ export const RELEASE_PAGES: ReleasePage[] = [
   ...hubRows('organizacao'), ...hubRows('financeiro'),
   ...NAV_ITEMS.filter((i) => i.admin).map((i) => asPage(i.to)),
 ]
-const BY_KEY = new Map(RELEASE_PAGES.map((p) => [p.key, p]))
+const BY_KEY = new Map<string, ReleasePage>([...RELEASE_PAGES, ...Object.keys(ALIASES).map((to) => ({ ...asPage(to), alias: ALIASES[to] }))].map((p) => [p.key, p]))
 export const releasePage = (key: string): ReleasePage | undefined => BY_KEY.get(key)
 
 /** Página (da lista) a que um caminho da URL pertence; nulo se não for uma página liberável. `rest` = o que vem depois de /:slug. */
@@ -83,7 +91,8 @@ export function rawReleased(rows: ReleaseRows, page: string, cat: ReleaseCategor
 export function chainReleased(rows: ReleaseRows, page: string, cat: ReleaseCategory): boolean {
   const p = BY_KEY.get(page)
   if (!p) return true
-  return rawReleased(rows, page, cat) && (!p.hub || rawReleased(rows, p.hub, cat))
+  const own = p.alias ? chainReleased(rows, p.alias, cat) : rawReleased(rows, page, cat)
+  return own && (!p.hub || rawReleased(rows, p.hub, cat))
 }
 
 export interface Access { permissions: GrantedPermission[]; roles: string[] }
