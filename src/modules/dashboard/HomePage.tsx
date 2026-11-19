@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Cake, UserRound } from 'lucide-react'
+import { Cake, ChevronRight, UserRound } from 'lucide-react'
 import { useParticipationLine } from '@/modules/profile/participationLine'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 import { useState } from 'react'
@@ -267,14 +267,13 @@ export function HomePage() {
         <p className="text-muted-foreground">{line || `${membership.roles.length ? membership.roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') : 'Sem papel de acesso atribuído.'} em ${membership.name}`}</p>
       </div>
       {gaps && gaps.length > 0 && (
-        <Card className="flex items-start gap-3 border-primary/40 bg-primary/5 p-4">
-          <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
-          <div className="min-w-0 space-y-1">
-            <p className="font-semibold">Termine o seu perfil</p>
-            <p className="text-sm text-muted-foreground">Ainda faltam {gaps.length === 1 ? 'uma informação' : `${gaps.length} informações`}: {gaps.join(', ')}. Tudo é opcional, mas ajuda o bloco a te conhecer melhor.</p>
-            <Link to={`/${membership.slug}/perfil`} className="inline-block text-sm font-semibold text-primary underline">Completar agora</Link>
-          </div>
-        </Card>
+        <Link to={`/${membership.slug}/perfil`} className="block" title={`Faltam: ${gaps.join(', ')}`}>
+          <Card className="flex items-center gap-3 border-primary/40 bg-primary/5 p-4 transition hover:bg-primary/10">
+            <UserRound className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <p className="flex-1 font-semibold">Termine seu perfil</p>
+            <ChevronRight className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+          </Card>
+        </Link>
       )}
       <MyStatus orgId={membership.organization_id} memberId={membership.member_id} slug={membership.slug} staff={isStaff && !isDirection} direction={isDirection} />
       <BirthdaysToday orgId={membership.organization_id} tz={membership.timezone} />
