@@ -54,7 +54,7 @@ export function ProductPage() {
         <div className="space-y-4">
           <h1>{product.is_kit && <KitChip />}{product.name}</h1>
           <Price product={product} isMember={isMember} />
-          {!isMember && !session && product.member_discount_pct > 0 && (
+          {!isMember && !session && (product.member_discount_pct > 0 || !!product.special_price_cents) && (
             <p className="text-sm text-muted-foreground">Integrante do bloco? <button type="button" className="font-semibold text-primary hover:underline" onClick={() => setLoginOpen(true)}>Entre</button> para ver o seu preço.</p>
           )}
           <div className="flex flex-wrap gap-2">

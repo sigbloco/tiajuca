@@ -43,6 +43,11 @@ describe('Resend', () => {
   it('monta o corpo da API', () => {
     expect(resendBody(mail)).toEqual({ from: '"Tia JucaX" <loja@ex.com>', to: ['maria@ex.com'], subject: 'Oi', html: '<p>x</p>', text: 'x', reply_to: 'contato@ex.com' })
     expect(resendBody({ ...mail, replyTo: null })).not.toHaveProperty('reply_to')
+    expect(resendBody(mail)).not.toHaveProperty('attachments')
+  })
+  it('imagem embutida (QR) vai como anexo com content_id', () => {
+    const b = resendBody({ ...mail, inline: [{ cid: 'pixqr', filename: 'pix.png', contentType: 'image/png', content: new Uint8Array([137, 80, 78, 71]) }] })
+    expect(b.attachments).toEqual([{ filename: 'pix.png', content: 'iVBORw==', content_type: 'image/png', content_id: 'pixqr' }])
   })
   it('envia com a chave e falha com status não-OK', async () => {
     let seen: { url: string; auth: string | null } | null = null

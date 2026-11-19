@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ButtonRow } from '@/components/shared/ButtonRow'
-import { ChevronDown, Copy, Mail } from 'lucide-react'
+import { ChevronDown, Copy, Flame, Mail } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -27,7 +27,7 @@ interface LookupResult {
     subtotal_cents: number; discount_cents: number; total_cents: number; created_at: string; expires_at: string | null; paid_at: string | null
     payment_url: string | null; cancel_reason: string | null
   }
-  items: { name: string; variant: string; quantity: number; unit_final_cents: number; kind: ProductKind }[]
+  items: { name: string; variant: string; quantity: number; unit_final_cents: number; kind: ProductKind; product_id?: string; progress?: { min_units: number; confirmed_units: number } | null }[]
   fulfillments: { kind: ProductKind; status: FulfillmentStatus }[]
   pickup: { name: string; address: string; opening_hours: string }
   timeline: TimelineEntry[]
@@ -58,6 +58,31 @@ function Progress({ kind, status }: { kind: ProductKind; status: FulfillmentStat
 const METHOD_NAME = { pix: 'Pix', infinitepay: 'Cartão de crédito (InfinitePay)' } as const
 const METHOD_SHORT = { pix: 'Pix', infinitepay: 'Cartão de crédito' } as const
 const linkBtn = 'inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 font-semibold hover:bg-muted'
+
+/** Contador da meta mínima dos itens sob encomenda do pedido: aparece sempre (um aviso por produto), no cartão do pedido. */
+function MinProgress({ items }: { items: LookupResult['items'] }) {
+  const seen = new Set<string>()
+  const lines = items.flatMap((i) => {
+    const key = i.product_id ?? i.name
+    if (!i.progress || seen.has(key)) return []
+    seen.add(key)
+    const left = Math.max(0, i.progress.min_units - i.progress.confirmed_units)
+    return [{ key, name: i.name, left, min: i.progress.min_units, done: i.progress.confirmed_units }]
+  })
+  if (lines.length === 0) return null
+  return (
+    <div className="space-y-1 px-4 pb-4">
+      {lines.map((l) => (
+        <p key={l.key} className={cn('flex items-start gap-2 rounded-lg px-3 py-2 text-sm', l.left === 0 ? 'bg-muted' : 'border border-primary bg-primary/10')}>
+          <Flame className={cn('mt-0.5 h-4 w-4 shrink-0', l.left === 0 ? 'text-muted-foreground' : 'text-primary')} aria-hidden />
+          <span>{l.left === 0
+            ? <><strong>{l.name}:</strong> mínimo atingido, a produção já começou.</>
+            : <><strong>{l.name}:</strong> faltam <strong>{l.left}</strong> {l.left === 1 ? 'unidade' : 'unidades'} pagas ({l.done} de {l.min}) para a produção começar.</>}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
 
 function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp, onToggle }: { data: LookupResult; phone: string; onRefresh: () => void; refreshing?: boolean; defaultOpen?: boolean; open?: boolean; onToggle?: () => void }) {
   const { store } = useStore()
@@ -116,6 +141,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
         <span className="shrink-0 whitespace-nowrap text-lg font-extrabold">{money(payCents)}</span>
         <ChevronDown className={cn('mt-1 h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
       </div>
+      {status !== 'cancelled' && <MinProgress items={data.items} />}
       {payUrl && <div className="px-4 pb-4"><a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={payUrl}>Ir para o pagamento · <span className="whitespace-nowrap">{money(payCents)}</span></a></div>}
       {open && <div className="divide-y divide-border border-t border-border">
       <section className="space-y-3 p-5">

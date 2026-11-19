@@ -4,7 +4,17 @@
 
 export type TemplateKey = 'order_created' | 'payment_review' | 'paid' | 'cancelled' | 'fulfillment_in_preparation' | 'fulfillment_ready' | 'fulfillment_picked_up' | 'production_started'
 
-export interface MailItem { name: string; variant: string; quantity: number; unit_final_cents: number; kind: 'stock' | 'made_to_order' }
+import { pixCopyPaste } from './pix.ts'
+
+/** Id da imagem do QR code embutida no e-mail (`<img src="cid:pixqr">`). */
+export const PIX_QR_CID = 'pixqr'
+
+export interface MailItem {
+  name: string; variant: string; quantity: number; unit_final_cents: number; kind: 'stock' | 'made_to_order'
+  product_id?: string | null
+  /** Meta mínima do produto sob encomenda: unidades pagas até agora (nulo = sem meta). */
+  progress?: { min_units: number; confirmed_units: number } | null
+}
 export interface MailContext {
   outbox_id: string
   template: TemplateKey
@@ -64,7 +74,7 @@ function pickupSection(c: MailContext): Section {
     `Retirada: ${line}\nA retirada é combinada: avisaremos quando o pedido estiver pronto.`)
 }
 
-function paymentSection(c: MailContext): Section {
+function paymentSection(c: MailContext, qrCid: string | null): Section {
   const o = c.order
   const s = c.settings
   const deadline = o.expires_at ? ` Os itens ficam reservados até ${when(o.expires_at)}.` : ''
@@ -75,11 +85,64 @@ function paymentSection(c: MailContext): Section {
       `Pagar ${brl(o.total_cents)} (cartão de crédito ou Pix, página segura da InfinitePay): ${o.payment_url}${deadline}`)
   }
   const key = s?.pix_key ?? ''
+  const code = pixCodeFor(c)
+  const proof = proofSection(c)
+  const qr = code && qrCid ? `<p style="margin:0 0 12px"><img src="cid:${escapeHtml(qrCid)}" width="200" height="200" alt="QR code do Pix" style="display:block;border:1px solid #ddd;border-radius:8px"></p>` : ''
+  const copy = code
+    ? `<p style="margin:0 0 4px">Pix copia e cola:</p><p style="margin:0 0 12px;padding:8px;background:#f3f3f3;border-radius:6px;font-family:monospace;font-size:12px;word-break:break-all">${escapeHtml(code)}</p>`
+    : ''
   return raw(
     `<p style="margin:0 0 4px"><strong>Pague com Pix</strong></p>`
     + `<p style="margin:0 0 12px">Valor exato: <strong>${brl(o.total_cents)}</strong><br>Chave Pix: <strong>${escapeHtml(key)}</strong>${s?.pix_beneficiary ? ` (${escapeHtml(s.pix_beneficiary)})` : ''}<br>`
-    + `Referência: <strong>${escapeHtml(o.code)}</strong><br>Depois de pagar, envie o comprovante por WhatsApp ou e-mail.${escapeHtml(deadline)}</p>`,
-    `Pague com Pix\nValor exato: ${brl(o.total_cents)}\nChave Pix: ${key}${s?.pix_beneficiary ? ` (${s.pix_beneficiary})` : ''}\nReferência: ${o.code}\nDepois de pagar, envie o comprovante por WhatsApp ou e-mail.${deadline}`)
+    + `Referência: <strong>${escapeHtml(o.code)}</strong>${escapeHtml(deadline)}</p>`
+    + qr + copy + proof.html,
+    `Pague com Pix\nValor exato: ${brl(o.total_cents)}\nChave Pix: ${key}${s?.pix_beneficiary ? ` (${s.pix_beneficiary})` : ''}\nReferência: ${o.code}${deadline}`
+    + (code ? `\n\nPix copia e cola:\n${code}` : '') + `\n\n${proof.text}`)
+}
+
+/** Pix "copia e cola" do pedido (valor exato e código do pedido); nulo se a chave Pix da loja não estiver cadastrada. */
+export function pixCodeFor(c: MailContext): string | null {
+  const s = c.settings
+  if (c.order.payment_method !== 'pix' || !s?.pix_key) return null
+  return pixCopyPaste({ key: s.pix_key, beneficiary: s.pix_beneficiary ?? '', amountCents: c.order.total_cents, txid: c.order.code })
+}
+
+/** WhatsApp de quem recebe o comprovante: a direção com o primeiro nome do favorecido da chave; senão o contato da loja; senão a primeira da direção. */
+function proofWhatsApp(c: MailContext): string | null {
+  const s = c.settings
+  const first = (s?.pix_beneficiary?.trim().split(/\s+/)[0] ?? '').toLowerCase()
+  const dir = first ? s?.directors?.find((d) => d.name.toLowerCase().includes(first)) : undefined
+  return dir?.whatsapp || s?.contact_whatsapp || s?.directors?.[0]?.whatsapp || null
+}
+
+function proofSection(c: MailContext): Section {
+  const o = c.order
+  const s = c.settings
+  const text = `Olá! Segue o comprovante do Pix do pedido ${o.code} (${brl(o.total_cents)}), em nome de ${o.customer_name}.`
+  const zap = proofWhatsApp(c)
+  const link = zap ? `https://wa.me/${zap}?text=${encodeURIComponent(text)}` : null
+  const byMail = !!(s?.contact_email || s?.mail_from_email)
+  if (!byMail && !link) return raw('', 'Depois de pagar, envie o comprovante para a gente.')
+  const html = `<p style="margin:0 0 12px"><strong>Já pagou?</strong> ${byMail ? 'Responda este e-mail com o comprovante' : 'Envie o comprovante'}${link ? ` ou mande pelo WhatsApp: <a href="${escapeHtml(link)}" style="color:#E93D2B;font-weight:bold">enviar comprovante</a>` : ''}.</p>`
+  const plain = `Já pagou? ${byMail ? 'Responda este e-mail com o comprovante' : 'Envie o comprovante'}${link ? ` ou mande pelo WhatsApp: ${link}` : ''}.`
+  return raw(html, plain)
+}
+
+/** Aviso da meta mínima dos produtos sob encomenda do pedido (um por produto): quanto falta para a produção começar. */
+function remainingSection(c: MailContext): Section | null {
+  const seen = new Set<string>()
+  const lines: string[] = []
+  for (const i of c.order.items) {
+    const key = i.product_id ?? i.name
+    if (!i.progress || seen.has(key)) continue
+    seen.add(key)
+    const left = Math.max(0, i.progress.min_units - i.progress.confirmed_units)
+    lines.push(left === 0
+      ? `A produção de ${i.name} já começou. Avisaremos quando estiver pronto para retirada.`
+      : `Faltam ${left} ${left === 1 ? 'unidade paga' : 'unidades pagas'} para a produção de ${i.name} começar (${i.progress.confirmed_units} de ${i.progress.min_units}). Avisaremos quando começar.`)
+  }
+  if (lines.length === 0) return null
+  return { html: lines.map((l) => `<p style="margin:0 0 12px;padding:10px;border:1px solid #E93D2B;border-radius:8px;background:#fdecea">${escapeHtml(l)}</p>`).join(''), text: lines.join('\n') }
 }
 
 function footerSection(c: MailContext): Section {
@@ -96,7 +159,8 @@ function footerSection(c: MailContext): Section {
   return raw(html, text)
 }
 
-export function buildEmail(c: MailContext): BuiltEmail {
+/** `qrCid`: id da imagem do QR code do Pix anexada ao e-mail (sem ele, só vai o código "copia e cola"). */
+export function buildEmail(c: MailContext, opts: { qrCid?: string | null } = {}): BuiltEmail {
   const o = c.order
   const hello = p(`Olá, ${o.customer_name}!`)
   const code = o.code
@@ -107,7 +171,7 @@ export function buildEmail(c: MailContext): BuiltEmail {
   switch (c.template) {
     case 'order_created':
       subject = `Pedido ${code} recebido — falta o pagamento`
-      body = [hello, p(`Recebemos o seu pedido ${code}. Ele só é confirmado depois do pagamento, que é antecipado e integral.`), itemsSection(c), paymentSection(c), pickupSection(c)]
+      body = [hello, p(`Recebemos o seu pedido ${code}. Ele só é confirmado depois do pagamento, que é antecipado e integral.`), itemsSection(c), paymentSection(c, opts.qrCid ?? null), pickupSection(c)]
       break
     case 'payment_review':
       subject = `Pedido ${code}: pagamento em conferência`
@@ -115,7 +179,7 @@ export function buildEmail(c: MailContext): BuiltEmail {
       break
     case 'paid':
       subject = `Pedido ${code}: pagamento confirmado`
-      body = [hello, p(`O pagamento do pedido ${code} foi confirmado. Obrigado! Avisaremos quando os itens estiverem prontos para retirada.`), itemsSection(c), pickupSection(c)]
+      body = [hello, p(`O pagamento do pedido ${code} foi confirmado. Obrigado! Avisaremos quando os itens estiverem prontos para retirada.`), ...(remainingSection(c) ? [remainingSection(c)!] : []), itemsSection(c), pickupSection(c)]
       break
     case 'cancelled':
       subject = `Pedido ${code} cancelado`

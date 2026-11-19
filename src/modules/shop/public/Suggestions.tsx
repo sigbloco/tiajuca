@@ -1,28 +1,37 @@
 import { KitChip } from '@/modules/shop/KitChip'
+import { Flame } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Button, Card } from '@/components/ui/primitives'
+import { Button, Card, cn } from '@/components/ui/primitives'
+import { remainingView } from '../catalog'
 import { imageUrl } from '../admin/service'
 import type { StoreProduct } from '../cart'
 import { Price } from './Price'
 import { useStore } from './StoreContext'
 
-/** Meta mínima: só aparece quando a direção preencheu o mínimo do produto. */
+/**
+ * Meta mínima: só aparece quando a direção preencheu o mínimo do produto E ligou o contador.
+ * Se definiu "só quando faltarem até N", some até chegar perto. Faltando pouco, ganha destaque.
+ */
 export function MinUnitsBar({ product }: { product: StoreProduct }) {
-  const min = product.min_units
-  if (!min) return null
-  const done = product.confirmed_units ?? 0
-  const reached = done >= min
+  const v = remainingView(product)
+  if (!v || !v.visible) return null
+  const { min, done, remaining, reached, urgent } = v
   return (
-    <div className="space-y-1.5 rounded-lg bg-muted p-3 text-sm">
+    <div className={cn('space-y-1.5 rounded-lg p-3 text-sm', urgent ? 'border-2 border-primary bg-primary/10' : 'bg-muted')}>
+      {urgent && (
+        <p className="flex items-center gap-2 text-base font-extrabold text-primary">
+          <Flame className="h-5 w-5 shrink-0" aria-hidden /> Faltam só {remaining} {remaining === 1 ? 'unidade' : 'unidades'} para a produção começar!
+        </p>
+      )}
       <div role="progressbar" aria-valuemin={0} aria-valuemax={min} aria-valuenow={Math.min(done, min)} aria-label="Unidades pagas até o mínimo para produzir"
         className="h-2 overflow-hidden rounded-full bg-border">
         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.round((done / min) * 100))}%` }} />
       </div>
       <p><strong>{done} de {min}</strong> unidades pagas. {reached
         ? 'Mínimo atingido, a produção já pode começar.'
-        : `A produção só começa quando chegarmos a ${min}, e o prazo conta a partir daí.`}</p>
+        : urgent ? 'O prazo de produção conta a partir daí.' : `Faltam ${remaining} para a produção começar, e o prazo conta a partir daí.`}</p>
     </div>
   )
 }

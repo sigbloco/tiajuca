@@ -8,8 +8,8 @@
 // Sem credenciais, nada é enviado e os avisos continuam esperando na fila.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { buildEmail, buildFormEmail, type FormMailContext, type MailContext } from './templates.ts'
-import { pickProvider, resolveSender, sendViaResend, formatFrom, type OutgoingMail } from './providers.ts'
+import { buildEmail, buildFormEmail, pixCodeFor, PIX_QR_CID, type FormMailContext, type MailContext } from './templates.ts'
+import { pickProvider, resolveSender, sendViaResend, formatFrom, toBase64, type InlineImage, type OutgoingMail } from './providers.ts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -21,7 +21,22 @@ async function sendViaSmtp(m: OutgoingMail) {
     auth: { user: Deno.env.get('SMTP_USER'), pass: Deno.env.get('SMTP_PASS') },
     connectionTimeout: 10_000, socketTimeout: 20_000,
   })
-  await transport.sendMail({ from: formatFrom(m.fromName, m.fromEmail), to: m.to, replyTo: m.replyTo ?? undefined, subject: m.subject, html: m.html, text: m.text })
+  await transport.sendMail({
+    from: formatFrom(m.fromName, m.fromEmail), to: m.to, replyTo: m.replyTo ?? undefined, subject: m.subject, html: m.html, text: m.text,
+    attachments: m.inline?.map((i) => ({ filename: i.filename, content: toBase64(i.content), encoding: 'base64', contentType: i.contentType, cid: i.cid, contentDisposition: 'inline' as const })),
+  })
+}
+
+/** QR code do Pix como PNG embutido no e-mail. Se falhar, o e-mail segue só com o código "copia e cola". */
+async function pixQrImage(code: string): Promise<InlineImage | null> {
+  try {
+    const { default: QRCode } = await import('npm:qrcode@1.5.4')
+    const png: Uint8Array = await QRCode.toBuffer(code, { type: 'png', margin: 1, width: 360 })
+    return { cid: PIX_QR_CID, filename: 'pix-qrcode.png', contentType: 'image/png', content: new Uint8Array(png) }
+  } catch (e) {
+    console.error('QR do Pix indisponível', (e as Error).message)
+    return null
+  }
 }
 
 Deno.serve(async (req) => {
@@ -40,8 +55,10 @@ Deno.serve(async (req) => {
     try {
       const sender = resolveSender(provider, ctx.settings, ctx.org.name, { get: (k) => Deno.env.get(k) })
       if (!sender.valid) throw new Error('remetente não configurado (Loja → Pagamentos e contatos)')
-      const built = buildEmail(ctx)
-      const mail: OutgoingMail = { to: ctx.to_email, ...built, fromName: sender.fromName, fromEmail: sender.fromEmail, replyTo: sender.replyTo }
+      const pixCode = pixCodeFor(ctx)
+      const qr = pixCode ? await pixQrImage(pixCode) : null
+      const built = buildEmail(ctx, { qrCid: qr ? PIX_QR_CID : null })
+      const mail: OutgoingMail = { to: ctx.to_email, ...built, fromName: sender.fromName, fromEmail: sender.fromEmail, replyTo: sender.replyTo, inline: qr ? [qr] : undefined }
       if (provider === 'smtp') await sendViaSmtp(mail)
       else if (provider === 'resend') await sendViaResend(mail, Deno.env.get('RESEND_API_KEY')!)
       else console.log('[mail:log]', ctx.template, ctx.order.code, '→', mail.to.replace(/^(.).*(@.*)$/, '$1***$2'), '|', mail.subject)

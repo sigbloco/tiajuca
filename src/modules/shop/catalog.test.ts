@@ -76,3 +76,39 @@ describe('variantUnits', () => {
     expect(variantUnits([], map)).toBe(0)
   })
 })
+
+import { buyerPriceCents, remainingView } from './catalog'
+
+describe('preço de quem compra', () => {
+  const p = { price_cents: 6000, member_discount_pct: 10, special_price_cents: 4000 }
+  it('visitante paga o público; integrante o desconto; direção/professor/monitor o especial', () => {
+    expect(buyerPriceCents(p, { isMember: false })).toBe(6000)
+    expect(buyerPriceCents(p, { isMember: true })).toBe(5400)
+    expect(buyerPriceCents(p, { isMember: true, isSpecial: true })).toBe(4000)
+  })
+  it('sem preço especial no produto, quem tem direito paga o de integrante; especial nunca passa do público', () => {
+    expect(buyerPriceCents({ ...p, special_price_cents: null }, { isMember: true, isSpecial: true })).toBe(5400)
+    expect(buyerPriceCents({ ...p, special_price_cents: 9000 }, { isMember: true, isSpecial: true })).toBe(6000)
+  })
+  it('valida o preço especial no cadastro', () => {
+    const d: ProductDraft = { name: 'x', kind: 'stock', priceCents: 6000, discountPct: 0, leadTimeDays: null, variants: [{ label: 'U', items: 1 }] }
+    expect(validateProductDraft({ ...d, specialPriceCents: 4000 })).toEqual([])
+    expect(validateProductDraft({ ...d, specialPriceCents: 6000 })).toHaveLength(1)
+    expect(validateProductDraft({ ...d, specialPriceCents: null })).toEqual([])
+  })
+})
+
+describe('contador de unidades que faltam', () => {
+  it('sem meta mínima não há contador', () => expect(remainingView({ min_units: null })).toBeNull())
+  it('desligado não aparece; ligado sem limite aparece sempre', () => {
+    expect(remainingView({ min_units: 50, confirmed_units: 10, show_remaining: false })!.visible).toBe(false)
+    expect(remainingView({ min_units: 50, confirmed_units: 10, show_remaining: true })!.visible).toBe(true)
+  })
+  it('"só quando faltarem até N" esconde até chegar perto e então destaca', () => {
+    expect(remainingView({ min_units: 50, confirmed_units: 30, show_remaining: true, show_remaining_when: 10 })).toMatchObject({ remaining: 20, visible: false, urgent: false })
+    expect(remainingView({ min_units: 50, confirmed_units: 40, show_remaining: true, show_remaining_when: 10 })).toMatchObject({ remaining: 10, visible: true, urgent: true })
+  })
+  it('mínimo atingido: sem destaque de urgência', () => {
+    expect(remainingView({ min_units: 50, confirmed_units: 55, show_remaining: true })).toMatchObject({ remaining: 0, reached: true, urgent: false })
+  })
+})

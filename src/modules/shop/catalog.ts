@@ -17,6 +17,30 @@ export function memberPriceCents(priceCents: number, discountPct: number): numbe
   return Math.round((priceCents * (100 - pct)) / 100)
 }
 
+/**
+ * Preço de quem compra: direção, professores e monitores pagam o preço especial (valor em reais digitado no produto, se houver);
+ * os demais integrantes ativos pagam o desconto %; visitante paga o público. O servidor repete esta regra no checkout.
+ */
+export function buyerPriceCents(
+  p: { price_cents: number; member_discount_pct: number; special_price_cents?: number | null },
+  who: { isMember: boolean; isSpecial?: boolean },
+): number {
+  if (who.isSpecial && p.special_price_cents) return Math.min(p.special_price_cents, p.price_cents)
+  return who.isMember ? memberPriceCents(p.price_cents, p.member_discount_pct) : p.price_cents
+}
+
+/** Contador "faltam N" da meta mínima. `visible` segue as opções do produto; `urgent` = falta pouco (destaque). */
+export function remainingView(p: { min_units?: number | null; confirmed_units?: number | null; show_remaining?: boolean | null; show_remaining_when?: number | null }) {
+  const min = p.min_units ?? 0
+  if (!min) return null
+  const done = p.confirmed_units ?? 0
+  const remaining = Math.max(0, min - done)
+  const when = p.show_remaining_when ?? null
+  const visible = (p.show_remaining ?? true) && (when === null || remaining <= when)
+  const urgent = remaining > 0 && remaining <= (when ?? Math.max(1, Math.ceil(min * 0.2)))
+  return { min, done, remaining, reached: remaining === 0, visible, urgent }
+}
+
 /** Unidades que ainda podem ser vendidas de uma variação em estoque (nunca negativo). */
 export function availableUnits(v: Pick<VariantStock, 'stock' | 'reserved'>): number {
   return v.stock === null ? Infinity : Math.max(0, v.stock - v.reserved)
@@ -37,6 +61,7 @@ export function slugify(name: string): string {
 
 export interface ProductDraft {
   name: string; kind: ProductKind; priceCents: number | null; discountPct: number; leadTimeDays: string | null
+  specialPriceCents?: number | null
   variants: { label: string; items: number }[]
 }
 
@@ -47,6 +72,7 @@ export function validateProductDraft(d: ProductDraft): string[] {
   else if (!slugify(d.name)) errors.push('O nome precisa ter letras ou números.')
   if (!d.priceCents || d.priceCents <= 0) errors.push('Informe o preço público.')
   if (!(d.discountPct >= 0 && d.discountPct <= 100)) errors.push('O desconto de integrante deve ficar entre 0% e 100%.')
+  if (d.specialPriceCents != null && (d.specialPriceCents <= 0 || (d.priceCents && d.specialPriceCents >= d.priceCents))) errors.push('O preço especial deve ser maior que zero e menor que o preço público.')
   if (d.kind === 'made_to_order' && !d.leadTimeDays?.trim()) errors.push('Informe o prazo de produção (ex.: 10-15 dias úteis).')
   const labels = d.variants.map((v) => v.label.trim().toLowerCase())
   if (d.variants.length === 0) errors.push('Cadastre ao menos uma variação (ex.: Único, ou os tamanhos).')
