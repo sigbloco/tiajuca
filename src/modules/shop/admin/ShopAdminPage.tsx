@@ -9,6 +9,7 @@ import { ButtonRow } from '@/components/shared/ButtonRow'
 import { Button, Card } from '@/components/ui/primitives'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
+import { CouponsTab } from './CouponsTab'
 import { OrdersTab } from './OrdersTab'
 import { PaymentsTab } from './PaymentsTab'
 import { PickupPointsTab } from './PickupPointsTab'
@@ -22,16 +23,17 @@ const TABS = [
   { key: 'kits', label: 'Kits' },
   { key: 'stock', label: 'Estoque' },
   { key: 'pickup', label: 'Retiradas' },
+  { key: 'coupons', label: 'Cupons' },
 ] as const
 type TabKey = (typeof TABS)[number]['key'] | 'payments'
-const TAB_LABEL: Record<TabKey, string> = { orders: 'Pedidos', products: 'Produtos', kits: 'Kits', stock: 'Estoque', pickup: 'Pontos de retirada', payments: 'Configurações' }
+const TAB_LABEL: Record<TabKey, string> = { orders: 'Pedidos', products: 'Produtos', kits: 'Kits', stock: 'Estoque', pickup: 'Pontos de retirada', coupons: 'Cupons', payments: 'Configurações' }
 
 /** Painel da loja (exige `shop.manage`, filtrado no menu; o RLS é a barreira real). */
 export function ShopAdminPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const canTheme = usePermission('org.manage')
-  const [tab, setTab] = useRememberedState<TabKey>('loja-aba', 'orders', ['orders', 'products', 'kits', 'stock', 'pickup', 'payments'])
+  const [tab, setTab] = useRememberedState<TabKey>('loja-aba', 'orders', ['orders', 'products', 'kits', 'stock', 'pickup', 'coupons', 'payments'])
   useRegisterCrumb(TAB_LABEL[tab], () => setTab('orders'), true, 0)
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const pending = settings.data ? missingSetup(settings.data) : []
@@ -57,14 +59,14 @@ export function ShopAdminPage() {
           <ul className="mt-2 list-disc pl-5 text-sm">{pending.map((p) => <li key={p}>{p}</li>)}</ul>
         </Card>
       )}
-      <ButtonRow role="tablist" aria-label="Seções da loja" split={[3, 2]}>
+      <ButtonRow role="tablist" aria-label="Seções da loja" split={[3, 3]}>
         {TABS.map((t) => (
           <Button key={t.key} role="tab" aria-selected={tab === t.key} variant={tab === t.key ? 'default' : 'outline'} className="min-h-11" onClick={() => setTab(t.key)}>
             <FitWord>{t.label}</FitWord>
           </Button>
         ))}
       </ButtonRow>
-      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'kits' ? <ProductsTab kits /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : <PaymentsTab />}
+      {tab === 'orders' ? <OrdersTab /> : tab === 'products' ? <ProductsTab /> : tab === 'kits' ? <ProductsTab kits /> : tab === 'stock' ? <StockTab /> : tab === 'pickup' ? <PickupPointsTab /> : tab === 'coupons' ? <CouponsTab /> : <PaymentsTab />}
     </div>
   )
 }

@@ -118,7 +118,7 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
               ? <img src={imageUrl(p.shop_product_images[0].storage_path)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-contain bg-muted" />
               : <div aria-hidden className="h-16 w-16 shrink-0 rounded-lg bg-muted" />}
             <div className="flex">
-              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
+              <Button size="icon" variant="ghost" className="h-8 w-16" aria-label={`Mover ${p.name} para a lixeira`} title="Mover para a lixeira" disabled={trash.isPending}
                 onClick={async () => await confirmBox('Mover este produto para a lixeira? Ele sai da loja, os pedidos já feitos não mudam e você pode restaurar depois.') && trash.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
             </div>
           </div>
