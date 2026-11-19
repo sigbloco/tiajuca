@@ -71,7 +71,7 @@ type Scope = 'own' | 'group' | 'org'
 const SCOPE_RANK: Record<Scope, number> = { own: 1, group: 2, org: 3 }
 
 /** Permissões de um conjunto de papéis do bloco (para visualizar como um perfil que ninguém ocupa). */
-async function loadRolesAccess(orgId: string, roleKeys: string[], ownOnly: boolean): Promise<TargetAccess> {
+export async function loadRolesAccess(orgId: string, roleKeys: string[], ownOnly: boolean): Promise<TargetAccess> {
   const { data, error } = await supabase.from('access_roles').select('key, rank, role_permissions(permission_key, scope)').eq('organization_id', orgId).in('key', roleKeys)
   if (error) throw error
   interface RoleRow { key: string; rank: number; role_permissions: { permission_key: string; scope: Scope }[] }

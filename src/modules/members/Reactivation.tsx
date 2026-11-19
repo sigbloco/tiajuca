@@ -36,25 +36,28 @@ function useRequests() {
 /** Aviso fixo para quem está inativo: acesso limitado e pedido de volta (a direção ou um professor autoriza). */
 export function InactiveNotice() {
   const orgId = useOrgId()
-  const { realMembership } = useOrganization()
+  // O aviso segue o acesso EFETIVO: ao "visualizar como" um inativo, aparece igual ao que ele vê (só como prévia, sem pedido real).
+  const { membership, realMembership, viewAs } = useOrganization()
   const qc = useQueryClient()
   const { data } = useRequests()
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
-  const mine = (data ?? []).find((r) => r.member_id === realMembership?.member_id)
+  const preview = !!viewAs
+  const mine = preview ? undefined : (data ?? []).find((r) => r.member_id === realMembership?.member_id)
   const send = useMutation({
     mutationFn: async () => { const { error } = await supabase.rpc('request_reactivation', { p_org: orgId, p_message: message }); if (error) throw error },
     onSuccess: () => { toast.success('Pedido enviado. A direção ou um professor vai analisar.'); setOpen(false); setMessage(''); qc.invalidateQueries({ queryKey: ['reactivation', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  if (!realMembership?.inactive) return null
+  if (!membership?.inactive) return null
   return (
     <Card className="mb-4 space-y-2 border-warning bg-warning/10 p-4">
       <p className="font-semibold">Sua participação está inativa neste ciclo.</p>
       <p>Seu acesso está limitado ao seu perfil, à sua frequência e às suas mensalidades. Para voltar a participar, é preciso a autorização da direção ou de um professor.</p>
       {mine?.status === 'pending' && <p><Badge className="bg-warning/30">Pedido em análise</Badge> enviado em {formatDate(mine.created_at.slice(0, 10))}.</p>}
       {mine?.status === 'rejected' && <p className="text-muted-foreground">Seu último pedido não foi aprovado{mine.decision_note ? `: ${mine.decision_note}` : '.'} Você pode pedir de novo.</p>}
-      {mine?.status !== 'pending' && !open && <Button onClick={() => setOpen(true)}>Pedir para voltar</Button>}
+      {preview && <p className="text-sm text-muted-foreground">Prévia: é assim que a pessoa inativa vê este aviso. O botão de pedir para voltar só funciona para ela.</p>}
+      {!preview && mine?.status !== 'pending' && !open && <Button onClick={() => setOpen(true)}>Pedir para voltar</Button>}
       {open && (
         <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); send.mutate() }}>
           <textarea rows={3} className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm" placeholder="Quer deixar um recado?"
