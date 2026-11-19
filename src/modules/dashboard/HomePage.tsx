@@ -176,7 +176,9 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
       const cycle = sel ? { id: sel.id, name: sel.name } : null
       const mc = cycle ? (await supabase.from('member_cycles').select('member_cycle_statuses(name)').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { member_cycle_statuses: { name: string } | null } | null : null
       const att = cycle ? (await supabase.from('v_attendance_member_cycle').select('pct_present, records').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data : null
-      const charge = (await supabase.from('monthly_charges').select('competence, final_amount, status, due_on').eq('member_id', memberId).in('status', ['pending']).order('competence').limit(1).maybeSingle()).data as { final_amount: number; due_on: string } | null
+      const pend = ((await supabase.from('monthly_charges').select('competence, final_amount, status, due_on').eq('member_id', memberId).in('status', ['pending']).order('competence')).data ?? []) as { final_amount: number; due_on: string }[]
+      // Várias em aberto: soma o total e mostra a quantidade e a mais antiga.
+      const charge = pend.length > 0 ? { final_amount: pend.reduce((t, c) => t + Number(c.final_amount), 0), due_on: pend[0].due_on, count: pend.length } : null
       const sch = cycle ? (await supabase.from('cycle_scholarships').select('percent').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()).data as { percent: number } | null : null
       // Categorias do ciclo: remunerada (recebe) ou isenta (não paga mensalidade), com o Isento escolhido para o ciclo.
       const parts = cycle ? ((await supabase.from('cycle_participations').select('function_id, artistic_functions(kind, is_exempt, exempt_locked)').eq('member_id', memberId).eq('cycle_id', cycle.id).not('function_id', 'is', null)).data ?? []) as unknown as { function_id: string; artistic_functions: { kind: string | null; is_exempt: boolean; exempt_locked: boolean } | null }[] : []
@@ -202,7 +204,7 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
           <Stat compact size={valueSize} onSize={fit('valor')} label="Pagamento" labelShort="Pgto." value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · vence ${formatDate(data.pay.due_on)}` : undefined} />
         ) : (
           <Stat compact size={valueSize} onSize={fit('valor')} label="Mensalidade" labelShort="Mensal." value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
-            hint={!data.exempt && data.charge ? `vence ${formatDate(data.charge.due_on)}` : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
+            hint={!data.exempt && data.charge ? (data.charge.count > 1 ? `${data.charge.count} em aberto · desde ${formatDate(data.charge.due_on)}` : `vence ${formatDate(data.charge.due_on)}`) : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />
         )}
       </Link>
     </div>
