@@ -68,3 +68,14 @@ describe('caminhos', () => {
     expect(ch).toEqual([{ page: 'inicio', category: 'ativo', released: true }, { page: 'perfil', category: 'ativo', released: true }])
   })
 })
+
+describe('redirecionamentos (Oficina → Alunos)', () => {
+  it('não tem caixa própria na tabela', () => expect(RELEASE_PAGES.some((p) => p.key === 'alunos')).toBe(false))
+  it('vale Integrantes e depende da área Oficina', () => {
+    const r = rows({ [rowKey('membros', 'ativo')]: true, [rowKey('oficina', 'ativo')]: true })
+    expect(chainReleased(r, 'alunos', 'ativo')).toBe(true)
+    expect(chainReleased(rows({ [rowKey('membros', 'ativo')]: true }), 'alunos', 'ativo')).toBe(false) // Oficina não liberada
+    expect(chainReleased(rows({ [rowKey('oficina', 'ativo')]: true }), 'alunos', 'ativo')).toBe(false) // Integrantes não liberado
+  })
+  it('o caminho /oficina/alunos... é reconhecido (para o aviso de página não liberada)', () => expect(pageKeyForPath('alunos')).toBe('alunos'))
+})
