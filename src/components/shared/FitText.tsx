@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/components/ui/primitives'
 
 /**
@@ -58,7 +58,30 @@ export function FitBox({ children, className, min = 9, max = 44 }: { children: R
   }, [children, min, max])
   return (
     <div ref={wrap} className="absolute inset-0 flex items-center">
-      <span ref={text} className={cn('block w-full min-w-0 break-normal [overflow-wrap:normal] leading-[1.05]', className)}>{children}</span>
+      <span ref={text} className={cn('block w-full min-w-0 break-normal [overflow-wrap:normal] leading-none', className)}>{children}</span>
     </div>
   )
+}
+
+/** Rótulo de uma linha: se o texto completo não coubesse nem com a fonte mínima, usa a forma curta (ex.: "Frequência" → "Freq."). */
+export function FitLabel({ full, short, className, minFull = 10 }: { full: string; short: string; className?: string; /** Menor fonte (px) aceita para o texto completo. */ minFull?: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [text, setText] = useState(full)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const decide = () => {
+      const cs = getComputedStyle(el)
+      const ctx = document.createElement('canvas').getContext('2d')
+      if (!ctx) return
+      ctx.font = `${cs.fontWeight} ${minFull}px ${cs.fontFamily}`
+      const avail = el.clientWidth - 8 // FitText tem 4px de folga de cada lado
+      setText(ctx.measureText(full).width <= avail ? full : short)
+    }
+    decide()
+    const ro = new ResizeObserver(decide)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [full, short, minFull])
+  return <div ref={ref} className="min-w-0"><FitText min={7} className={className}>{text}</FitText></div>
 }
