@@ -251,8 +251,6 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
           </>
         )}
         <ItineraryEditor steps={steps} onChange={setSteps} defaultLocation={fromRule ? '' : f.location.trim()} />
-        {/* Checklist também na edição (grava na hora, por isso não conta como alteração a salvar). Em evento novo aparece depois do primeiro Salvar. */}
-        {activity && <ChecklistSection activityId={activity.id} />}
         <div className="grid grid-cols-2 gap-2">
           <div className="min-w-0 space-y-1.5">
             <Label htmlFor="ev-cycle" required>Ciclo</Label>
@@ -268,6 +266,8 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
           </div>
         </div>
         <AudiencePicker value={auds} onChange={setAuds} />
+        {/* Checklist por último na edição (grava na hora, por isso não conta como alteração a salvar). Em evento novo aparece depois do primeiro Salvar. */}
+        {activity && <ChecklistSection activityId={activity.id} />}
         <StickySave bleed={false}>
         {/* Salvar, Voltar e Apagar lado a lado, com a mesma largura. */}
         <div className={isNew ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-3 gap-2'}>
