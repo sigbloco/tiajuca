@@ -410,7 +410,7 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
           onClick={async () => { if (await confirmBox(`Excluir ${labeler(member)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
       </>
     )} description={!staffView || ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
-      <MemberPhotoEditor memberId={member.id} name={labeler(member)} canEdit={canManage || member.id === realMemberId} />
+      <MemberPhotoEditor memberId={member.id} name={member.full_name} canEdit={canManage || member.id === realMemberId} />
       <ContactLinks member={member} />
       {canSensitive && <MemberSection collapsible title="Dados sensíveis"><MySensitiveData memberId={member.id} admin readOnly={!editing} /></MemberSection>}
       {canManage && <RegistrationEditor key={member.id} member={member} onChanged={onChanged} open={editing} setOpen={setEditing} />}

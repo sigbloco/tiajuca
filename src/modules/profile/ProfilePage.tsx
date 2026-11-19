@@ -115,7 +115,7 @@ export function ProfilePage() {
         <h1>Meu perfil</h1>
         {head.data?.joined_at && <p className="text-sm text-muted-foreground">Inscrição em {formatDate(head.data.joined_at)}</p>}
       </div>
-      <Card className="space-y-2 p-4"><h3>Foto</h3><MemberPhotoEditor memberId={memberId} name={membership.display_name} canEdit /></Card>
+      <Card className="space-y-2 p-4"><h3>Foto</h3><MemberPhotoEditor memberId={memberId} name={head.data?.full_name ?? ""} canEdit /></Card>
       <MyData memberId={memberId} bind={bindData} />
       <MySensitiveData memberId={memberId} bind={bindSens} />
       <MyParticipation memberId={memberId} />

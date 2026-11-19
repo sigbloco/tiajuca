@@ -350,7 +350,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const wa = m.phone ? hrefOf({ kind: 'whatsapp', label: '', value: m.phone }) : null
     return (
       <div key={m.id} className={cn('flex items-center justify-between gap-2 rounded-md px-3 py-2', dim ? 'bg-muted/60 text-muted-foreground opacity-75' : 'bg-card')}>
-        <MemberAvatar memberId={m.id} name={rowName(m)} />
+        <MemberAvatar memberId={m.id} name={m.full_name} />
         <div className="min-w-0 flex-1">
           <button type="button" className="block w-full min-w-0 text-left" onClick={() => setSelected(m)}>
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>

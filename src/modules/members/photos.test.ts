@@ -19,3 +19,12 @@ describe('tom neutro', () => {
   it('o mesmo nome sempre cai no mesmo tom', () => expect(neutralTone('Rafael Braz')).toEqual(neutralTone('rafael braz')))
   it('sempre devolve fundo e letra', () => { const t = neutralTone('x'); expect(t.bg).toMatch(/^#/); expect(t.fg).toMatch(/^#/) })
 })
+
+describe('iniciais ignoram o apelido e símbolos', () => {
+  it('apelido entre parênteses não entra', () => {
+    expect(initialsOf('Rafael Braz (Rafa)')).toBe('RB')
+    expect(initialsOf('Rafael (Rafa)')).toBe('R')
+    expect(initialsOf('Rafael (')).toBe('R')
+  })
+  it('palavras sem letra no início são ignoradas', () => expect(initialsOf('Ana - Souza')).toBe('AS'))
+})
