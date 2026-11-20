@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/core/supabase'
+import { fetchSensitive } from './sensitive'
 
 interface MeRow { email: string | null; phone: string | null; social_handle: string | null; birth_date: string | null; affective_relation: string | null; other_blocks: string | null; played_instrument: string | null }
 interface SensRow { gender: string | null; is_trans: boolean | null; race_color: string | null; is_pcd: boolean | null }
@@ -21,11 +22,7 @@ export function useProfileGaps(orgId: string | undefined, memberId: string | und
   })
   const sens = useQuery({
     queryKey: ['my-sensitive', orgId, memberId], enabled: on,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('member_sensitive_data').select('gender, is_trans, race_color, is_pcd, pcd_description').eq('member_id', memberId!).maybeSingle()
-      if (error) throw error
-      return data as unknown as SensRow | null
-    },
+    queryFn: async () => (await fetchSensitive(memberId!)) as SensRow | null,
   })
   if (!on || !me.data || !sens.isSuccess) return null
   const m = me.data, s = sens.data

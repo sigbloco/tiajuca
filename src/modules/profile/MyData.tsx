@@ -20,6 +20,7 @@ import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { ExtraEmails } from '@/modules/members/ExtraEmails'
+import { fetchSensitive, saveSensitive } from './sensitive'
 
 interface Me {
   full_name: string; display_name: string | null; email: string | null; phone: string | null; social_handle: string | null
@@ -217,7 +218,7 @@ const fromTri = (v: string) => (v === '' ? null : v === 'yes')
 /** Dados pessoais sensíveis (LGPD): opcionais; só o titular e a direção veem; nunca em listas, chamadas, financeiro ou painéis. */
 export function MySensitiveData({ memberId, admin = false, readOnly = false, bind }: { memberId: string; /** Sem botão próprio de salvar: quem salva é o botão único da página. */ bind?: SaveBinder; /** Só leitura: os campos ficam travados até a pessoa clicar no lápis de editar. */ readOnly?: boolean; /** Visão da Direção na ficha do integrante: sem moldura/título (fica numa seção recolhível). */ admin?: boolean }) {
   const orgId = useOrgId()
-  useEffect(() => { if (admin) void supabase.rpc('log_sensitive_access', { p_member: memberId }) }, [admin, memberId])
+  // A leitura de outra pessoa é registrada pelo próprio banco (get_member_sensitive).
   const { membership } = useOrganization()
   const qc = useQueryClient()
   const open = true
@@ -226,11 +227,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
   const row = useQuery({
     queryKey: ['my-sensitive', orgId, memberId],
     enabled: open,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('member_sensitive_data').select('gender, is_trans, race_color, is_pcd, pcd_description').eq('member_id', memberId).maybeSingle()
-      if (error) throw error
-      return data as { gender: string | null; is_trans: boolean | null; race_color: string | null; is_pcd: boolean | null; pcd_description: string | null } | null
-    },
+    queryFn: () => fetchSensitive(memberId),
   })
   const consents = useQuery({
     queryKey: ['my-consents', orgId, memberId],
@@ -252,8 +249,7 @@ export function MySensitiveData({ memberId, admin = false, readOnly = false, bin
       const payload = clear
         ? { gender: null, is_trans: null, race_color: null, is_pcd: null, pcd_description: null }
         : { gender: f.gender || null, is_trans: fromTri(f.is_trans), race_color: f.race_color || null, is_pcd: pcd, pcd_description: pcd ? (f.pcd_description.trim() || null) : null }
-      const { error } = await supabase.from('member_sensitive_data').upsert({ member_id: memberId, organization_id: orgId, ...payload }, { onConflict: 'member_id' })
-      if (error) throw error
+      await saveSensitive(memberId, payload)
       return clear
     },
     onSuccess: (clear) => { toast.success(clear ? 'Seus dados sensíveis foram apagados.' : 'Dados sensíveis salvos.'); qc.invalidateQueries({ queryKey: ['my-sensitive', orgId, memberId] }) },

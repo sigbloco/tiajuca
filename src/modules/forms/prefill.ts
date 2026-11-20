@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/core/supabase'
 import type { AnswerValue, Answers } from './types'
+import { fetchSensitive } from '@/modules/profile/sensitive'
 
 type Raw = string | boolean | null | undefined
 export interface Prefill { by: Record<string, Raw>; names: Record<string, string | undefined>; /** Naipe vigente do integrante (para as seções por naipe). */ sectionId: string | null }
@@ -29,7 +30,7 @@ export function useMemberPrefill(memberId: string | undefined) {
     queryFn: async (): Promise<Prefill> => {
       const [m, s, l, st, fa] = await Promise.all([
         supabase.from('members').select('full_name, display_name, email, phone, social_handle, birth_date, affective_relation, other_blocks').eq('id', memberId!).maybeSingle(),
-        supabase.from('member_sensitive_data').select('gender, is_trans, race_color, is_pcd, pcd_description').eq('member_id', memberId!).maybeSingle(),
+        fetchSensitive(memberId!).then((data) => ({ data, error: null })),
         supabase.from('member_artistic_links').select('instrument_id, function_id, skill_level_id, is_primary, instruments(name, section_id), artistic_functions(name), skill_levels(name)').eq('member_id', memberId!).is('ended_at', null).order('is_primary', { ascending: false }),
         supabase.from('staff_assignments').select('section_id, instruments(section_id)').eq('member_id', memberId!).is('valid_to', null).limit(1),
         supabase.from('member_fee_assignments').select('fee_categories(name, function_id)').eq('member_id', memberId!).is('valid_to', null).limit(1),
