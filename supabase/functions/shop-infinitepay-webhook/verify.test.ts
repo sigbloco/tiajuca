@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isPaymentConfirmed, parseWebhook } from './verify'
+import { isPaymentConfirmed, parseWebhook, paymentVerdict } from './verify'
 
 const good = { invoice_slug: 'abc123', amount: 14300, paid_amount: 14300, installments: 1, capture_method: 'pix', transaction_nsu: 'tx-1', order_nsu: 'HN5XCGA4', receipt_url: 'https://r.infinitepay.io/x', items: [] }
 
@@ -38,5 +38,16 @@ describe('confirmação via payment_check', () => {
     expect(isPaymentConfirmed({ success: false, paid: true, amount: 14300, paid_amount: 14300 }, 14300)).toBe(false)
     expect(isPaymentConfirmed({ paid: true }, 14300)).toBe(false)
     expect(isPaymentConfirmed(null, 14300)).toBe(false)
+  })
+})
+
+describe('veredito do payment_check (LOJA-05)', () => {
+  it('ainda não pago (ou resposta estranha) pede nova tentativa; pago com valor errado não', () => {
+    expect(paymentVerdict({ success: true, paid: true, amount: 14300, paid_amount: 14300 }, 14300)).toBe('paid')
+    expect(paymentVerdict({ success: true, paid: false, amount: 14300 }, 14300)).toBe('not_paid')
+    expect(paymentVerdict({ success: false }, 14300)).toBe('not_paid')
+    expect(paymentVerdict(null, 14300)).toBe('not_paid')
+    expect(paymentVerdict({ success: true, paid: true, amount: 100, paid_amount: 100 }, 14300)).toBe('mismatch')
+    expect(paymentVerdict({ paid: true }, 14300)).toBe('mismatch')
   })
 })
