@@ -17,7 +17,8 @@ interface Participation {
   artistic: { id: string; name: string; section: string | null; level: string | null }[]
   collab: { id: string; name: string; exempt: boolean }[]
   paid: { id: string; name: string }[]
-  category: string | null; price: number | null; percent: number; exempt_by: string | null
+  /** Mensalidade do ciclo atual, pela mesma regra da geração de cobranças. */
+  cycle: string | null; category: string | null; price: number | null; percent: number; exempt_by: string | null; paid_by: string | null; active: boolean
   requests: { id: string; kind: 'artistic' | 'collab'; action: 'add' | 'remove'; status: 'pending' | 'approved' | 'rejected'; created_at: string; label: string | null }[]
 }
 const REQ_LABEL = { pending: 'Aguardando a direção', approved: 'Aprovado', rejected: 'Recusado' } as const
@@ -139,12 +140,13 @@ export function MyParticipation({ memberId }: { memberId: string }) {
       )}
 
       <section className="space-y-1 border-t border-border pt-3">
-        {head('Categoria e mensalidade')}
+        {head(d.cycle ? `Categoria e mensalidade · ${d.cycle}` : 'Categoria e mensalidade')}
         {d.category ? <p>Categoria: <strong>{d.category}</strong></p> : <p className="text-muted-foreground">Você ainda não tem categoria de contribuição. A direção define.</p>}
         {d.percent > 0 && <p>Bolsa: <strong>{d.percent}%</strong></p>}
         {d.exempt_by ? <p>Mensalidade: <strong>isento</strong> <span className="text-muted-foreground">(pela função {d.exempt_by})</span></p>
-          : d.paid.length > 0 ? <p>Mensalidade: <strong>não contribui</strong> <span className="text-muted-foreground">(atividade remunerada)</span></p>
+          : d.paid_by || d.paid.length > 0 ? <p>Mensalidade: <strong>não contribui</strong> <span className="text-muted-foreground">(atividade remunerada)</span></p>
           : final != null && <p>Mensalidade: <strong>{formatCurrency(final)}</strong>{d.percent > 0 && <span className="text-muted-foreground"> (de {formatCurrency(d.price!)}, com a bolsa)</span>}</p>}
+        {d.category && !d.active && !d.exempt_by && !d.paid_by && <p className="text-sm text-muted-foreground">Sem cobrança enquanto você não estiver ativo no ciclo.</p>}
       </section>
 
       {d.requests.length > 0 && (

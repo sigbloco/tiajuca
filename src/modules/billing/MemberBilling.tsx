@@ -5,10 +5,11 @@ import { Input, Label, Select, cn } from '@/components/ui/primitives'
 import { useCycles } from '@/modules/cycles/service'
 import { MemberSection } from '@/modules/members/MemberSection'
 import { OkSelect } from '@/components/shared/ConfirmField'
+import { PageLink } from '@/components/shared/PageLink'
 import { friendlyError } from '@/core/errors'
 import { notifyChange } from '@/core/undo'
-import { formatCurrency, todayIso } from '@/core/format'
-import { useOrgId, useOrganization } from '@/core/organization'
+import { formatCurrency } from '@/core/format'
+import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
@@ -18,7 +19,6 @@ import { Plus } from 'lucide-react'
 const isentoKey = (c: { system_key?: string | null; base_key?: string | null }) => c.base_key ?? c.system_key ?? ''
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['isento']
-/** Categoria escolhível na ficha: pela chave fixa (renomear "Músico" para "Músico convidado" não tira ela da lista). */
 /** Escolhíveis: as categorias dos contribuintes (grupo Contribuintes em Organização → Categorias) e a fixa "Isento". */
 function useIsMemberCategory() {
   const funcs = useCatalog('artistic_functions')
@@ -26,30 +26,34 @@ function useIsMemberCategory() {
   return (c: { system_key?: string | null; base_key?: string | null; function_id?: string | null }) => (c.function_id ? payerFns.has(c.function_id) : false) || MEMBER_CATEGORIES.includes(isentoKey(c))
 }
 
-/** Categoria isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria. */
+/** Categoria isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria.
+ *  Mesma regra da geração: isenção travada sempre vale; senão, a escolha do ciclo (Financeiro → Valores) vence a padrão da categoria. */
 function useExemptFunction(memberId: string, cycleId: string | undefined) {
   return useQuery({
     queryKey: ['exempt-function', memberId, cycleId],
     enabled: Boolean(cycleId),
     queryFn: async () => {
-      const { data, error } = await supabase.from('cycle_participations').select('artistic_functions(name, is_exempt, exempt_locked)').eq('member_id', memberId).eq('cycle_id', cycleId!).not('function_id', 'is', null)
-      if (error) throw error
-      const f = ((data ?? []) as unknown as { artistic_functions: { name: string; is_exempt: boolean; exempt_locked: boolean } | null }[]).map((r) => r.artistic_functions).find((x) => x && (x.is_exempt || x.exempt_locked))
-      return f?.name ?? null
+      const [parts, cyc] = await Promise.all([
+        supabase.from('cycle_participations').select('function_id, artistic_functions(name, is_exempt, exempt_locked)').eq('member_id', memberId).eq('cycle_id', cycleId!).not('function_id', 'is', null),
+        supabase.from('fee_cycle_exempt').select('function_id, is_exempt').eq('cycle_id', cycleId!),
+      ])
+      if (parts.error) throw parts.error
+      if (cyc.error) throw cyc.error
+      const byCycle = new Map((cyc.data ?? []).map((r) => [r.function_id as string, !!r.is_exempt]))
+      const rows = (parts.data ?? []) as unknown as { function_id: string; artistic_functions: { name: string; is_exempt: boolean; exempt_locked: boolean } | null }[]
+      const f = rows.find((r) => r.artistic_functions && (r.artistic_functions.exempt_locked || (byCycle.get(r.function_id) ?? r.artistic_functions.is_exempt)))
+      return f?.artistic_functions?.name ?? null
     },
   }).data ?? null
 }
 
-/** Quem é remunerado não contribui: a "Categoria" dele é a dos vínculos de participação (remunerada e colaborativa) — a principal e as outras. Sem menu de contribuição. */
-function ParticipationCategories({ memberId, cycleId, current }: { memberId: string; cycleId?: string; current: boolean }) {
+/** Quem é remunerado não contribui (nem é cobrado): a "Categoria" dele é a dos vínculos de participação do ciclo (remunerada e colaborativa). Sem menu de contribuição. */
+function ParticipationCategories({ memberId, cycleId }: { memberId: string; cycleId: string }) {
   const rows = useQuery({
-    queryKey: ['member-categories', memberId, cycleId ?? 'now'],
+    queryKey: ['member-categories', memberId, cycleId],
     queryFn: async () => {
-      const sel = 'is_primary, is_paid, created_at, artistic_functions(name, kind)'
-      const base = current
-        ? supabase.from('member_artistic_links').select(sel).eq('member_id', memberId).is('ended_at', null)
-        : supabase.from('cycle_participations').select(sel).eq('member_id', memberId).eq('cycle_id', cycleId!)
-      const { data, error } = await base.not('function_id', 'is', null).is('instrument_id', null).order('created_at')
+      const { data, error } = await supabase.from('cycle_participations').select('is_primary, is_paid, created_at, artistic_functions(name, kind)')
+        .eq('member_id', memberId).eq('cycle_id', cycleId).not('function_id', 'is', null).is('instrument_id', null).order('created_at')
       if (error) throw error
       return (data ?? []) as unknown as { is_primary: boolean; is_paid: boolean; artistic_functions: { name: string; kind: string } | null }[]
     },
@@ -148,15 +152,14 @@ function ExtraCategories({ memberId, cycleId, primaryId }: { memberId: string; c
   )
 }
 
-/** Formulário de bolsa (0–100%). 0% encerra a bolsa. Usado na ficha do integrante e na página de Bolsas. */
-export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: { memberId: string; onSaved?: () => void; /** Avisa o percentual válido a cada digitação (o valor da mensalidade acompanha). */ onPercent?: (n: number) => void; /** Grava ao sair do campo (sem botão): usado na ficha do integrante. */ auto?: boolean }) {
+/** Formulário de bolsa do ciclo (0–100%), grava ao sair do campo. 0% remove a bolsa do ciclo. Usado na ficha do integrante e na página de Bolsas. */
+export function ScholarshipForm({ memberId, cycleId, onSaved, onPercent, auto = false }: { memberId: string; cycleId: string; onSaved?: () => void; /** Avisa o percentual válido a cada digitação (o valor da mensalidade acompanha). */ onPercent?: (n: number) => void; /** Versão compacta, dentro da ficha do integrante. */ auto?: boolean }) {
   const orgId = useOrgId()
-  const { membership } = useOrganization()
   const qc = useQueryClient()
-  const { data: current } = useQuery({
-    queryKey: ['scholarship', orgId, memberId],
+  const { data: current, isSuccess } = useQuery({
+    queryKey: ['scholarship', orgId, memberId, cycleId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('scholarships').select('percent, reason, scholarship_type_id').eq('member_id', memberId).is('valid_to', null).maybeSingle()
+      const { data, error } = await supabase.from('cycle_scholarships').select('percent, reason, scholarship_type_id').eq('member_id', memberId).eq('cycle_id', cycleId).maybeSingle()
       if (error) throw error
       return data as { percent: number; reason: string | null; scholarship_type_id: string | null } | null
     },
@@ -172,77 +175,72 @@ export function ScholarshipForm({ memberId, onSaved, onPercent, auto = false }: 
   useEffect(() => { if (valid) onPercent?.(n) }, [n, valid]) // eslint-disable-line react-hooks/exhaustive-deps
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('set_scholarship', {
-        p_member: memberId, p_percent: n, p_from: todayIso(membership?.timezone), p_type: current?.scholarship_type_id ?? null, p_reason: reason.trim() || null,
+      const { error } = await supabase.rpc('set_cycle_scholarship', {
+        p_member: memberId, p_cycle: cycleId, p_percent: n, p_type: current?.scholarship_type_id ?? null, p_reason: reason.trim() || null,
       })
       if (error) throw error
     },
     onSuccess: () => {
-      toast.success(n === 0 ? 'Bolsa encerrada.' : 'Bolsa atualizada. Vale a partir das próximas cobranças geradas.')
-      qc.invalidateQueries({ queryKey: ['scholarship', orgId, memberId] })
+      toast.success(n === 0 ? 'Bolsa removida do ciclo.' : 'Bolsa do ciclo atualizada. Vale a partir das próximas cobranças geradas.')
+      qc.invalidateQueries({ queryKey: ['scholarship', orgId, memberId, cycleId] })
       qc.invalidateQueries({ queryKey: ['scholarships', orgId] })
+      qc.invalidateQueries({ queryKey: ['members'] })
       onSaved?.()
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
   const changed = valid && (n !== Math.round(Number(current?.percent ?? 0)) || reason.trim() !== (current?.reason ?? ''))
-  const autoSave = () => { if (changed && !save.isPending) save.mutate() }
+  const autoSave = () => { if (isSuccess && changed && !save.isPending) save.mutate() }
   return (
     <div className="space-y-2">
       <div className="flex items-end gap-2">
-      <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}`} className={auto ? 'text-xs' : undefined}>Percentual (%)</Label>
-        <Input id={`pct-${memberId}`} className={cn('w-16 px-2 text-center', auto && 'h-8 text-sm')} inputMode="numeric" maxLength={3} value={percent} onBlur={autoSave}
+      <div className="space-y-1.5"><Label htmlFor={`pct-${memberId}-${cycleId}`} className={auto ? 'text-xs' : undefined}>Percentual (%)</Label>
+        <Input id={`pct-${memberId}-${cycleId}`} className={cn('w-16 px-2 text-center', auto && 'h-8 text-sm')} inputMode="numeric" maxLength={3} value={percent} onBlur={autoSave}
           onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPercent(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
-      <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={`reason-${memberId}`} className={auto ? 'text-xs' : undefined}>Motivo</Label>
-        <Input id={`reason-${memberId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
+      <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={`reason-${memberId}-${cycleId}`} className={auto ? 'text-xs' : undefined}>Motivo</Label>
+        <Input id={`reason-${memberId}-${cycleId}`} className={auto ? 'h-8 text-sm' : undefined} placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
       </div>
       {!valid && <p className="text-xs text-destructive">Informe um valor entre 0 e 100.</p>}
     </div>
   )
 }
 
-/** Seção "Contribuição" da ficha do integrante (somente direção): categoria e bolsa. Dados sensíveis NÃO aparecem aqui. */
 type CycleWindow = { id: string; name?: string; starts_on: string; ends_on: string; is_current: boolean }
 
-/** Contribuição de um ciclo que não é o atual (passado ou futuro): categoria e bolsa daquele ciclo, editáveis. */
+/** Seção "Contribuição" da ficha do integrante (quem cuida das cobranças), num ciclo: categoria e bolsa daquele ciclo, editáveis.
+ *  O ciclo atual e os outros seguem a mesma regra e as mesmas tabelas (cycle_fee_assignments, fee_cycle_prices, cycle_scholarships). */
 function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindow }) {
   const orgId = useOrgId()
-  const { membership } = useOrganization()
   const qc = useQueryClient()
-  const canBilling = usePermission('billing.manage')
   const canSchol = usePermission('scholarships.manage')
   const categories = useCatalog('fee_categories')
   const isMemberCategory = useIsMemberCategory()
   const mySections = useMemberSections(memberId, cycle.id)
-  const today = todayIso(membership?.timezone)
+  const [livePct, setLivePct] = useState(0)
   const info = useQuery({
     queryKey: ['cycle-billing', orgId, memberId, cycle.id],
     queryFn: async () => {
-      const a = await supabase.from('cycle_fee_assignments').select('fee_category_id').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
+      const [a, l] = await Promise.all([
+        supabase.from('cycle_fee_assignments').select('fee_category_id').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle(),
+        supabase.from('cycle_participations').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('cycle_id', cycle.id).eq('is_paid', true),
+      ])
       if (a.error) throw a.error
-      const s = await supabase.from('cycle_scholarships').select('percent, reason').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
-      if (s.error) throw s.error
-      const l = await supabase.from('cycle_participations').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('cycle_id', cycle.id).eq('is_paid', true)
       if (l.error) throw l.error
-      return { catId: (a.data as { fee_category_id: string } | null)?.fee_category_id ?? '', sch: s.data as { percent: number; reason: string | null } | null, paid: (l.count ?? 0) > 0 }
+      return { catId: (a.data as { fee_category_id: string } | null)?.fee_category_id ?? '', paid: (l.count ?? 0) > 0 }
     },
   })
   const catId = info.data?.catId ?? ''
   const exemptBy = useExemptFunction(memberId, cycle.id)
-  const priceDate = cycle.ends_on < today ? cycle.ends_on : today
   const price = useQuery({
-    queryKey: ['cycle-price', orgId, catId, priceDate],
+    queryKey: ['cycle-price', orgId, catId, cycle.id],
     enabled: !!catId,
     queryFn: async () => {
-      const { data, error } = await supabase.from('fee_category_prices').select('amount').eq('fee_category_id', catId).lte('valid_from', priceDate).or('valid_to.is.null,valid_to.gte.' + priceDate).order('valid_from', { ascending: false }).limit(1)
+      const { data, error } = await supabase.from('fee_cycle_prices').select('amount').eq('fee_category_id', catId).eq('cycle_id', cycle.id).maybeSingle()
       if (error) throw error
-      return data?.[0] ? Number(data[0].amount) : null
+      return data ? Number(data.amount) : null
     },
   })
-  const [pct, setPct] = useState('0')
-  const [reason, setReason] = useState('')
-  useEffect(() => { setPct(String(Math.round(Number(info.data?.sch?.percent ?? 0)))); setReason(info.data?.sch?.reason ?? '') }, [info.data])
   const refresh = () => { qc.invalidateQueries({ queryKey: ['cycle-billing', orgId, memberId, cycle.id] }); qc.invalidateQueries({ queryKey: ['members'] }) }
 
   const setCategory = useMutation({
@@ -261,143 +259,47 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
     },
     onError: (e) => toast.error(friendlyError(e)),
   })
-  const n = Number(pct)
-  const valid = pct !== '' && Number.isInteger(n) && n >= 0 && n <= 100
-  const saveSch = useMutation({
-    mutationFn: async () => {
-      const ex = await supabase.from('cycle_scholarships').select('id').eq('member_id', memberId).eq('cycle_id', cycle.id).maybeSingle()
-      if (ex.error) throw ex.error
-      if (n === 0) { const { error } = await supabase.from('cycle_scholarships').delete().eq('member_id', memberId).eq('cycle_id', cycle.id); if (error) throw error; return }
-      const row = { percent: n, reason: reason.trim() || null }
-      if (ex.data) { const { error } = await supabase.from('cycle_scholarships').update(row).eq('id', (ex.data as { id: string }).id); if (error) throw error }
-      else { const { error } = await supabase.from('cycle_scholarships').insert({ organization_id: orgId, member_id: memberId, cycle_id: cycle.id, ...row }); if (error) throw error }
-    },
-    onSuccess: () => { toast.success(n === 0 ? 'Bolsa removida do ciclo.' : 'Bolsa do ciclo atualizada.'); refresh() },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const changed = valid && (n !== Math.round(Number(info.data?.sch?.percent ?? 0)) || reason.trim() !== (info.data?.sch?.reason ?? ''))
-  const autoSave = () => { if (changed && !saveSch.isPending) saveSch.mutate() }
 
-  if (!canBilling || !info.data) return null
+  if (!info.data) return null
   if (info.data.paid) {
     return (
       <MemberSection title="Categoria">
-        <ParticipationCategories memberId={memberId} cycleId={cycle.id} current={false} />
+        <ParticipationCategories memberId={memberId} cycleId={cycle.id} />
+        <p className="pt-1 text-xs text-muted-foreground">Atividade remunerada no ciclo: não paga mensalidade.</p>
       </MemberSection>
     )
   }
-  const catName = categories.data?.find((c) => c.id === catId)?.name
+  const cat = categories.data?.find((c) => c.id === catId)
+  const isIsento = cat ? isentoKey(cat) === 'isento' : false
+  const hint = exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.`
+    : catId && price.isSuccess && price.data == null ? <>Categoria sem valor neste ciclo: defina em <PageLink to="valores">Financeiro → Valores</PageLink>.</>
+    : 'Só ela define o valor cobrado.'
   return (
-    <MemberSection title={<>Contribuição mensal{exemptBy ? <span className="font-normal text-muted-foreground"> • Isento</span> : price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - (valid ? n : 0))) / 100)}</span>}</>}>
+    <MemberSection title={<>Contribuição mensal{exemptBy ? <span className="font-normal text-muted-foreground"> • Isento</span> : price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
       <div className="space-y-1">
-        <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
+        <Label htmlFor={'cc-cat-' + cycle.id} className="block">Categoria principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
             {!catId && <option value="">Escolha a categoria</option>}
             {categories.data?.filter((c) => ((isMemberCategory(c) && isentoKey(c) !== 'isento') || c.id === catId) && fitsSections(c, mySections.data, catId)).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
-        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
       </div>
       {catId && <ExtraCategories memberId={memberId} cycleId={cycle.id} primaryId={catId} />}
-      {canSchol && catId && catName !== 'Isento' && !exemptBy && (
+      {canSchol && catId && !isIsento && !exemptBy && (
         <div className="space-y-1.5 border-t border-border pt-3">
           <p className="text-sm font-semibold">Bolsa</p>
-          <div className="flex items-end gap-2">
-            <div className="space-y-1.5"><Label htmlFor={'cc-pct-' + cycle.id} className="text-xs">Percentual (%)</Label>
-              <Input id={'cc-pct-' + cycle.id} className="h-8 w-16 px-2 text-center text-sm" inputMode="numeric" maxLength={3} value={pct} onBlur={autoSave}
-                onChange={(e) => { const d = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); setPct(d === '' ? '' : String(Math.min(100, Number(d)))) }} /></div>
-            <div className="min-w-0 flex-1 space-y-1.5"><Label htmlFor={'cc-reason-' + cycle.id} className="text-xs">Motivo</Label>
-              <Input id={'cc-reason-' + cycle.id} className="h-8 text-sm" placeholder="Motivo" value={reason} onBlur={autoSave} onChange={(e) => setReason(e.target.value)} /></div>
-          </div>
+          <ScholarshipForm memberId={memberId} cycleId={cycle.id} auto onPercent={setLivePct} />
         </div>
       )}
     </MemberSection>
   )
 }
 
-export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo mostrado; os que já passaram aparecem só para leitura. */ cycle?: CycleWindow }) {
-  const orgId = useOrgId()
-  const { membership } = useOrganization()
-  const qc = useQueryClient()
+/** Contribuição na ficha do integrante: a do ciclo mostrado (ou a do atual). Só para quem cuida das cobranças. */
+export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo mostrado; sem ele, o atual. */ cycle?: CycleWindow }) {
   const canBilling = usePermission('billing.manage')
-  const canSchol = usePermission('scholarships.manage')
-  const categories = useCatalog('fee_categories')
-  const isMemberCategory = useIsMemberCategory()
-  const [livePct, setLivePct] = useState(0)
-  const currentCycleId = useCycles().data?.find((c) => c.is_current)?.id ?? ''
-  const mySections = useMemberSections(memberId, currentCycleId || undefined)
-  const exemptBy = useExemptFunction(memberId, currentCycleId || undefined)
-  // Quem tem atividade remunerada não contribui: a seção some.
-  const paid = useQuery({
-    queryKey: ['member-links', orgId, memberId, 'has-paid'],
-    queryFn: async () => {
-      const { count, error } = await supabase.from('member_artistic_links').select('id', { count: 'exact', head: true }).eq('member_id', memberId).eq('is_paid', true).is('ended_at', null)
-      if (error) throw error
-      return (count ?? 0) > 0
-    },
-  })
-
-  const { data: assignment } = useQuery({
-    queryKey: ['fee-assignment', orgId, memberId],
-    enabled: canBilling,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('member_fee_assignments').select('fee_category_id').eq('member_id', memberId).is('valid_to', null).maybeSingle()
-      if (error) throw error
-      return data as { fee_category_id: string } | null
-    },
-  })
-  const price = useQuery({
-    queryKey: ['fee-price', orgId, assignment?.fee_category_id],
-    enabled: Boolean(assignment?.fee_category_id),
-    queryFn: async () => {
-      const { data, error } = await supabase.from('fee_category_prices').select('amount').eq('fee_category_id', assignment!.fee_category_id).is('valid_to', null).maybeSingle()
-      if (error) throw error
-      return data ? Number(data.amount) : null
-    },
-  })
-  const assign = useMutation({
-    mutationFn: async (category: string) => {
-      const { error } = await supabase.rpc('assign_fee_category', { p_member: memberId, p_category: category || null, p_from: todayIso(membership?.timezone) })
-      if (error) throw error
-    },
-    onSuccess: (_d, category) => {
-      const before = assignment?.fee_category_id ?? ''
-      const refresh = () => { qc.invalidateQueries({ queryKey: ['fee-assignment', orgId, memberId] }); qc.invalidateQueries({ queryKey: ['members'] }) }
-      refresh()
-      notifyChange(category ? 'Categoria atualizada.' : 'Pessoa sem contribuição.', async () => {
-        const { error } = await supabase.rpc('assign_fee_category', { p_member: memberId, p_category: before || null, p_from: todayIso(membership?.timezone) })
-        if (error) throw error
-        refresh()
-      })
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-
-  if (canBilling && cycle && !cycle.is_current) return <CycleBilling memberId={memberId} cycle={cycle} />
-  if (!canBilling) return null
-  if (paid.data) {
-    return (
-      <MemberSection title="Categoria">
-        <ParticipationCategories memberId={memberId} current />
-      </MemberSection>
-    )
-  }
-  return (
-    <MemberSection title={<>Contribuição mensal{exemptBy ? <span className="font-normal text-muted-foreground"> • Isento</span> : price.data != null && <span className="font-normal text-muted-foreground"> • {formatCurrency(Math.round(price.data * (100 - livePct)) / 100)}</span>}</>}>
-      <div className="space-y-1">
-        <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
-          <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
-            {!assignment?.fee_category_id && <option value="">Escolha a categoria</option>}
-            {categories.data?.filter((c) => ((isMemberCategory(c) && isentoKey(c) !== 'isento') || c.id === assignment?.fee_category_id) && fitsSections(c, mySections.data, assignment?.fee_category_id ?? '')).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </OkSelect>
-        <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
-      </div>
-      {assignment?.fee_category_id && currentCycleId && <ExtraCategories memberId={memberId} cycleId={currentCycleId} primaryId={assignment.fee_category_id} />}
-      {canSchol && assignment?.fee_category_id && categories.data?.find((c) => c.id === assignment.fee_category_id)?.name !== 'Isento' && !exemptBy && (
-        <div className="space-y-1.5 border-t border-border pt-3">
-          <p className="text-sm font-semibold">Bolsa</p>
-          <ScholarshipForm memberId={memberId} auto onPercent={setLivePct} />
-        </div>
-      )}
-    </MemberSection>
-  )
+  const cycles = useCycles()
+  const shown = cycle ?? cycles.data?.find((c) => c.is_current)
+  if (!canBilling || !shown) return null
+  return <CycleBilling key={shown.id} memberId={memberId} cycle={shown} />
 }

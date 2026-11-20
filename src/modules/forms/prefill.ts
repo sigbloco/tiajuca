@@ -33,7 +33,7 @@ export function useMemberPrefill(memberId: string | undefined) {
         fetchSensitive(memberId!).then((data) => ({ data, error: null })),
         supabase.from('member_artistic_links').select('instrument_id, function_id, skill_level_id, is_primary, instruments(name, section_id), artistic_functions(name), skill_levels(name)').eq('member_id', memberId!).is('ended_at', null).order('is_primary', { ascending: false }),
         supabase.from('staff_assignments').select('section_id, instruments(section_id)').eq('member_id', memberId!).is('valid_to', null).limit(1),
-        supabase.from('member_fee_assignments').select('fee_categories(name, function_id)').eq('member_id', memberId!).is('valid_to', null).limit(1),
+        supabase.from('cycle_fee_assignments').select('fee_categories(name, function_id), cycles!inner(is_current)').eq('member_id', memberId!).eq('cycles.is_current', true).limit(1),
       ])
       for (const r of [m, s, l, st, fa]) if (r.error) throw r.error
       const by: Record<string, Raw> = {}

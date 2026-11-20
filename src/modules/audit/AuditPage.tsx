@@ -19,7 +19,7 @@ const ENTITY_LABEL: Record<string, string> = {
   staff_assignments: 'Atribuição da equipe', activities: 'Evento', activity_types: 'Tipo de evento', recurrence_rules: 'Recorrência', activity_audiences: 'Público do evento',
   event_attendance: 'Presença', attendance_statuses: 'Status de presença', activity_checklist_items: 'Checklist do evento', checklist_templates: 'Modelo de checklist',
   checklist_template_items: 'Item de modelo', fee_categories: 'Categoria de contribuição', fee_category_prices: 'Valor da categoria', shop_coupons: 'Cupom da loja', member_fee_assignments: 'Categoria do integrante',
-  scholarships: 'Bolsa', scholarship_types: 'Tipo de bolsa', monthly_charges: 'Mensalidade', charge_adjustments: 'Ajuste de mensalidade', financial_entries: 'Lançamento financeiro',
+  scholarships: 'Bolsa', cycle_scholarships: 'Bolsa no ciclo', cycle_fee_assignments: 'Categoria no ciclo', fee_cycle_prices: 'Valor da categoria no ciclo', fee_cycle_exempt: 'Isenção da categoria no ciclo', cycle_extra_categories: 'Categoria extra no ciclo', scholarship_types: 'Tipo de bolsa', monthly_charges: 'Mensalidade', charge_adjustments: 'Ajuste de mensalidade', financial_entries: 'Lançamento financeiro',
   finance_categories: 'Categoria financeira', distribution_destinations: 'Destino de distribuição', distribution_rules: 'Regra de distribuição', member_pix_keys: 'Chave PIX',
   staff_payments: 'Pagamento da equipe', repertoires: 'Repertório', songs: 'Música', song_attachments: 'Anexo de música', integrations: 'Integração',
 }

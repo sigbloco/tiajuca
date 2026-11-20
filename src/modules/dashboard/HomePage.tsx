@@ -214,7 +214,8 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
 interface DirectionData {
   cycle: { name: string } | null
   members_total: number; members_active: number; members_inactive: number; members_waitlist: number
-  by_classification: { name: string; count: number }[]
+  /** Ativos no ciclo pelo Tipo da categoria de contribuição (sem Tipo: o nome da categoria). */
+  by_type: { name: string; count: number }[]
   by_section: { name: string; active: number }[]
   capacity: { limited: number; full: number; capacity: number; occupied: number }
   billing: { previsto: number; recebido: number; pendente: number; inadimplentes: number; bolsas: number }
@@ -245,7 +246,7 @@ function DirectionDashboard({ orgId }: { orgId: string }) {
       </div>
       <Card className="space-y-2 p-4">
         <h3>Perfil do bloco</h3>
-        <div className="flex flex-wrap gap-2">{data.by_classification.map((c) => <Badge key={c.name}>{c.name}: {c.count}</Badge>)}</div>
+        <div className="flex flex-wrap gap-2">{(data.by_type ?? []).map((c) => <Badge key={c.name}>{c.name}: {c.count}</Badge>)}</div>
         <p className="pt-1 text-xs font-semibold uppercase text-muted-foreground">Ativos por naipe</p>
         {data.by_section.map((s) => (
           <div key={s.name} className="space-y-0.5">

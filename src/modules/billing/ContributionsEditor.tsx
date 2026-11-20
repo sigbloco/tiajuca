@@ -7,33 +7,27 @@ import { MoneyInput } from '@/components/ui/masked-inputs'
 import { Button, Card, Skeleton } from '@/components/ui/primitives'
 import { useCycles } from '@/modules/cycles/service'
 import { friendlyError } from '@/core/errors'
-import { todayIso } from '@/core/format'
-import { useOrgId, useOrganization } from '@/core/organization'
+import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { notifySaved } from '@/core/undo'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { invalidateCatalog, mirrorFunctionToFees, type CatalogItem } from '@/modules/structure/service'
 
-/** Grava o valor: com ciclo, é o valor DO CICLO (não depende de datas); sem ciclo, vale daqui para frente. */
-function useSetPrice(cycleId: string | undefined, from: string) {
-  return async (category: string, amount: number) => {
-    const { error } = cycleId
-      ? await supabase.rpc('set_cycle_fee_price', { p_category: category, p_cycle: cycleId, p_amount: amount })
-      : await supabase.rpc('set_fee_price', { p_category: category, p_amount: amount, p_from: from })
-    if (error) throw error
-  }
+/** Grava o valor DO CICLO (não depende de datas): é o que a geração de cobranças usa. */
+async function setCyclePrice(cycleId: string, category: string, amount: number) {
+  const { error } = await supabase.rpc('set_cycle_fee_price', { p_category: category, p_cycle: cycleId, p_amount: amount })
+  if (error) throw error
 }
 
 /** Uma linha de contribuinte: nome, a variável dos formulários e o valor mensal (grava ao sair do campo). */
-function PayerRow({ item, current, canEdit, from, cycleId }: { item: CatalogItem; current: number | null; canEdit: boolean; from: string; cycleId?: string }) {
+function PayerRow({ item, current, canEdit, cycleId }: { item: CatalogItem; current: number | null; canEdit: boolean; cycleId: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
-  const setPrice = useSetPrice(cycleId, from)
   const [value, setValue] = useState<number | null>(current)
   useEffect(() => setValue(current), [current])
   const dirty = value !== null && value !== current
   const save = useMutation({
-    mutationFn: async () => { if (value !== null) await setPrice(item.id, value) },
+    mutationFn: async () => { if (value !== null) await setCyclePrice(cycleId, item.id, value) },
     onSuccess: () => { invalidateCatalog(qc, orgId); qc.invalidateQueries({ queryKey: ['fee-prices', orgId] }); notifySaved('Valor gravado.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
@@ -57,20 +51,12 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   const qc = useQueryClient()
   const cats = useCatalog('fee_categories')
   const funcs = useCatalog('artistic_functions')
-  const { membership } = useOrganization()
-  const today = todayIso(membership?.timezone)
-  const ref = cycle ? (today < cycle.starts_on ? cycle.starts_on : today > cycle.ends_on ? cycle.ends_on : today) : today
   const allCycles = useCycles()
-  const from = cycle && today < cycle.starts_on ? cycle.starts_on : today
   const prices = useQuery({
-    queryKey: ['fee-prices', orgId, cycle?.id ?? ref],
+    queryKey: ['fee-prices', orgId, cycle?.id],
+    enabled: Boolean(cycle),
     queryFn: async () => {
-      if (cycle) {
-        const { data, error } = await supabase.from('fee_cycle_prices').select('fee_category_id, amount').eq('cycle_id', cycle.id)
-        if (error) throw error
-        return Object.fromEntries((data ?? []).map((p) => [p.fee_category_id as string, Number(p.amount)]))
-      }
-      const { data, error } = await supabase.from('fee_category_prices').select('fee_category_id, amount').eq('organization_id', orgId).lte('valid_from', ref).or(`valid_to.is.null,valid_to.gte.${ref}`)
+      const { data, error } = await supabase.from('fee_cycle_prices').select('fee_category_id, amount').eq('cycle_id', cycle!.id)
       if (error) throw error
       return Object.fromEntries((data ?? []).map((p) => [p.fee_category_id as string, Number(p.amount)]))
     },
@@ -107,6 +93,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
       <p className="text-sm text-muted-foreground">
         Valor mensal de cada contribuinte no ciclo escolhido. Cobranças já geradas não mudam. A categoria de cada pessoa se define na ficha do integrante.
       </p>
+      {!cycle && <p className="text-muted-foreground">Escolha um ciclo para ver e definir os valores.</p>}
       {canEdit && noOwnPrices && previous && (
         <Card className="flex flex-wrap items-center justify-between gap-2 border-primary/30 bg-primary/5 p-3">
           <p className="min-w-0 flex-1 basis-56">Este ciclo ainda não tem valores. Copie os de <strong>{previous.name}</strong> e ajuste o que mudou.</p>
@@ -121,7 +108,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
           {payers.map((f) => {
             const c = byFn.get(f.id) ?? byName.get(f.name.toLowerCase())
             return c
-              ? <PayerRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={canEdit} from={from} cycleId={cycle?.id} />
+              ? cycle && <PayerRow key={f.id} item={c} current={prices.data?.[c.id] ?? null} canEdit={canEdit} cycleId={cycle.id} />
               : <p key={f.id} className="px-3 py-2.5 text-muted-foreground"><span className="font-semibold text-foreground">{f.name}</span> · criando a categoria</p>
           })}
         </Card>

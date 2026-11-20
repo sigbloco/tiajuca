@@ -25,10 +25,13 @@ export interface Charge {
   notes: string | null
   members: { full_name: string; display_name: string | null } | null
   fee_categories: { name: string } | null
+  pay_link_url?: string | null
+  /** Avisos da InfinitePay guardados na cobrança: links antigos (ajuste), divergências de valor, pagamento com a cobrança já fechada. */
+  pay_ref?: { divergences?: { amount?: number | null; paid_amount?: number | null; at?: string }[]; paid_while?: string; old_codes?: unknown[] } | null
 }
 
 const SELECT =
-  'id, member_id, competence, cycle_id, base_amount, scholarship_percent, scholarship_discount, final_amount, status, due_on, paid_on, payment_method, manual_adjustment, notes, members!inner(full_name, display_name), fee_categories(name)'
+  'id, member_id, competence, cycle_id, base_amount, scholarship_percent, scholarship_discount, final_amount, status, due_on, paid_on, payment_method, manual_adjustment, notes, pay_link_url, pay_ref, members!inner(full_name, display_name), fee_categories(name)'
 
 export async function listCharges(p: {
   orgId: string; competence: string; status: ChargeStatus | ''; search: string; page: number; pageSize: number
