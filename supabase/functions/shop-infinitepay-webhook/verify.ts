@@ -40,11 +40,20 @@ export interface PaymentCheck { success?: boolean; paid?: boolean; amount?: numb
  * `paid_amount` pode ser maior (parcelamento com juros repassado ao cliente), nunca menor.
  */
 export function isPaymentConfirmed(check: unknown, expectedTotalCents: number): boolean {
-  if (!check || typeof check !== 'object') return false
+  return paymentVerdict(check, expectedTotalCents) === 'paid'
+}
+
+/**
+ * Veredito do payment_check: 'paid' = confirmado e valor certo; 'not_paid' = a InfinitePay ainda não diz "pago" (o aviso pode ter
+ * chegado antes de ela refletir o pagamento, então o webhook responde 400 e ela tenta de novo, LOJA-05); 'mismatch' = diz pago,
+ * mas o valor não bate (tentar de novo não muda nada).
+ */
+export function paymentVerdict(check: unknown, expectedTotalCents: number): 'paid' | 'not_paid' | 'mismatch' {
+  if (!check || typeof check !== 'object') return 'not_paid'
   const c = check as PaymentCheck
-  if (c.success === false || c.paid !== true) return false
+  if (c.success === false || c.paid !== true) return 'not_paid'
   const amount = typeof c.amount === 'number' ? c.amount : null
   const paid = typeof c.paid_amount === 'number' ? c.paid_amount : amount
-  if (amount === null || paid === null) return false
-  return amount === expectedTotalCents && paid >= expectedTotalCents
+  if (amount === null || paid === null) return 'mismatch'
+  return amount === expectedTotalCents && paid >= expectedTotalCents ? 'paid' : 'mismatch'
 }

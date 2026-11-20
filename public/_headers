@@ -1,0 +1,8 @@
+# Cabeçalhos de segurança de todas as páginas e arquivos (Cloudflare Workers com assets). SEG-04 da revisão.
+# As rotas "/" e "/site" passam pelo Worker (worker/index.js), que aplica os mesmos cabeçalhos.
+# A CSP fica para a etapa 5 (precisa de teste com o script inline do index.html).
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()

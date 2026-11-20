@@ -1,9 +1,10 @@
 // Edge Function: aviso da InfinitePay de "pagamento aprovado" para MENSALIDADES. Pública: verify_jwt = false.
 //
 // SEGURANÇA: o aviso não é assinado; o corpo é só uma dica. O pagamento só é baixado depois de a própria InfinitePay confirmar
-// (`payment_check`) e de o valor bater com a cobrança. Respostas: 200 = tratado/nada a fazer; 400 = falha temporária (ela tenta de novo).
+// (`payment_check`) e de o valor bater com a cobrança. Respostas: 200 = tratado/nada a fazer; 400 = falha temporária ou ainda não pago (ela tenta de novo).
+// Cada transaction_nsu só dá baixa uma vez (tabela infinitepay_transactions, compartilhada com a loja).
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { PAYMENT_CHECK_ENDPOINT, isPaymentConfirmed, parseWebhook } from './verify.ts'
+import { PAYMENT_CHECK_ENDPOINT, parseWebhook, paymentVerdict } from './verify.ts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -33,7 +34,15 @@ Deno.serve(async (req) => {
     console.error('payment_check', (e as Error).message)
     return json({ error: 'temporário' }, 400)
   }
-  if (!isPaymentConfirmed(check, charge.amount_cents)) { console.warn('pagamento não confirmado', hook.order_nsu); return json({ ignored: 'não confirmado' }) }
+  const verdict = paymentVerdict(check, charge.amount_cents)
+  // Ainda não pago pode ser cedo demais: 400 faz a InfinitePay reenviar o aviso (LOJA-05).
+  if (verdict === 'not_paid') { console.warn('pagamento ainda não confirmado', hook.order_nsu); return json({ error: 'ainda não confirmado' }, 400) }
+  if (verdict === 'mismatch') { console.warn('valor confirmado não bate com a cobrança', hook.order_nsu); return json({ ignored: 'valor diferente' }) }
+
+  // Uma transação dá baixa em uma só cobrança/pedido (SUS-01).
+  const { data: claimed, error: claimErr } = await admin.rpc('infinitepay_claim_transaction', { p_tx: hook.transaction_nsu, p_kind: 'charge', p_code: hook.order_nsu })
+  if (claimErr) { console.error('infinitepay_claim_transaction', claimErr.message); return json({ error: 'temporário' }, 400) }
+  if (claimed !== true) { console.warn('transação já usada', hook.order_nsu, hook.transaction_nsu); return json({ ignored: 'transação já usada' }) }
 
   const c = check as { paid_amount?: number; installments?: number; capture_method?: string }
   const { data: result, error } = await admin.rpc('charge_mark_paid_by_link', {
