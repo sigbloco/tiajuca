@@ -37,7 +37,17 @@ Deno.serve(async (req) => {
   const verdict = paymentVerdict(check, charge.amount_cents)
   // Ainda não pago pode ser cedo demais: 400 faz a InfinitePay reenviar o aviso (LOJA-05).
   if (verdict === 'not_paid') { console.warn('pagamento ainda não confirmado', hook.order_nsu); return json({ error: 'ainda não confirmado' }, 400) }
-  if (verdict === 'mismatch') { console.warn('valor confirmado não bate com a cobrança', hook.order_nsu); return json({ ignored: 'valor diferente' }) }
+  if (verdict === 'mismatch') {
+    // Ex.: pagou pelo link antigo depois de um ajuste de valor (COB-07). Não dá baixa; fica registrado na cobrança para a direção conferir.
+    console.warn('valor confirmado não bate com a cobrança', hook.order_nsu)
+    const p = check as { paid?: boolean; amount?: number; paid_amount?: number }
+    const { error: divErr } = await admin.rpc('charge_note_divergence', {
+      p_code: hook.order_nsu,
+      p_ref: { transaction_nsu: hook.transaction_nsu, invoice_slug: hook.invoice_slug, receipt_url: hook.receipt_url, paid: p.paid ?? null, amount: p.amount ?? null, paid_amount: p.paid_amount ?? null, expected: charge.amount_cents },
+    })
+    if (divErr) { console.error('charge_note_divergence', divErr.message); return json({ error: 'temporário' }, 400) }
+    return json({ ignored: 'valor diferente' })
+  }
 
   // Uma transação dá baixa em uma só cobrança/pedido (SUS-01).
   const { data: claimed, error: claimErr } = await admin.rpc('infinitepay_claim_transaction', { p_tx: hook.transaction_nsu, p_kind: 'charge', p_code: hook.order_nsu })
