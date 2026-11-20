@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
 import { useOrganization } from './organization'
 
 // Espelha o catálogo `permissions` do banco. O BANCO decide (RLS); aqui só controlamos a interface.
@@ -12,6 +11,7 @@ export type PermissionKey =
   | 'billing.read' | 'billing.manage' | 'scholarships.manage'
   | 'finance.read' | 'finance.manage' | 'staff_payments.read' | 'staff_payments.manage' | 'pix.manage'
   | 'repertoire.read' | 'repertoire.manage' | 'forms.manage' | 'suppliers.read' | 'suppliers.manage' | 'drive.read' | 'drive.manage' | 'shop.manage'
+  | 'staff_assignments.manage'
 
 export type PermissionScope = 'own' | 'group' | 'org'
 const RANK: Record<PermissionScope, number> = { own: 1, group: 2, org: 3 }
@@ -50,17 +50,5 @@ export function Can({
   return usePermission(permission, scope) ? <>{children}</> : <>{fallback}</>
 }
 
-/** Direção e Titular: os únicos que veem as páginas de Configurações. */
-export function useIsDirection(): boolean {
-  const { membership } = useOrganization()
-  const roles = membership?.roles ?? []
-  return roles.includes('direcao') || roles.includes('titular')
-}
-
-/** Guarda de rota: quem não é direção nem Titular volta ao início. */
-export function DirectionOnly({ children }: { children: ReactNode }) {
-  const { membership } = useOrganization()
-  const ok = useIsDirection()
-  if (!membership) return null
-  return ok ? <>{children}</> : <Navigate to={`/${membership.slug}`} replace />
-}
+/** Permissões em que 'Meu grupo' tem efeito no banco (espelha public.group_scoped_permissions()). Nas outras, só 'Só o próprio' ou 'Tudo'. */
+export const GROUP_SCOPED: ReadonlySet<string> = new Set(['members.read', 'attendance.read', 'attendance.record', 'member_cycles.read', 'member_cycles.manage'])
