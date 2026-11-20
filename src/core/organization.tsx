@@ -43,6 +43,9 @@ interface OrgContextValue {
 
 const OrgContext = createContext<OrgContextValue | null>(null)
 
+/** Contas já vinculadas nesta carga da página: o vínculo (que grava no banco) roda uma vez, não a cada nova busca dos acessos. */
+const linkedUsers = new Set<string>()
+
 export function useMemberships() {
   const { session } = useAuth()
   return useQuery({
@@ -50,7 +53,11 @@ export function useMemberships() {
     enabled: Boolean(session),
     queryFn: async () => {
       // Entrada só com Google: quem tem cadastro com o mesmo e-mail é vinculado sozinho (o servidor confere e-mail verificado).
-      await supabase.rpc('link_my_member_by_email')
+      const uid = session!.user.id
+      if (!linkedUsers.has(uid)) {
+        const { error: linkError } = await supabase.rpc('link_my_member_by_email')
+        if (!linkError) linkedUsers.add(uid)
+      }
       const { data, error } = await supabase.rpc('get_my_memberships')
       if (error) throw error
       return (data ?? []) as Membership[]

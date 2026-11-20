@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/core/supabase'
+import { fetchSensitive } from './sensitive'
 
 export type Gender = 'f' | 'm' | null
 
@@ -97,13 +98,13 @@ export function useParticipationLine(orgId: string, memberId: string | undefined
       const [part, staff, sens] = await Promise.all([
         supabase.rpc('my_participation', { p_member: memberId }),
         supabase.from('staff_assignments').select('staff_kind, instruments(name), sections(name), cycles!inner(is_current)').eq('organization_id', orgId).eq('member_id', memberId!).is('valid_to', null).eq('cycles.is_current', true),
-        supabase.from('member_sensitive_data').select('gender').eq('member_id', memberId!).maybeSingle(),
+        fetchSensitive(memberId!),
       ])
       if (part.error) throw part.error
       const p = part.data as Participation
       const staffRows = ((staff.data ?? []) as unknown as { staff_kind: string; instruments: { name: string } | null; sections: { name: string } | null }[])
         .map((r) => ({ kind: r.staff_kind, instrument: r.instruments?.name ?? null, section: r.sections?.name ?? null }))
-      return { artistic: p.artistic ?? [], staff: staffRows, functions: [...(p.collab ?? []), ...(p.paid ?? [])].map((x) => x.name), gender: genderOf((sens.data as { gender: string | null } | null)?.gender) }
+      return { artistic: p.artistic ?? [], staff: staffRows, functions: [...(p.collab ?? []), ...(p.paid ?? [])].map((x) => x.name), gender: genderOf(sens?.gender) }
     },
   })
   if (!q.data) return null

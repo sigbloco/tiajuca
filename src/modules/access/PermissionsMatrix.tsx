@@ -7,6 +7,7 @@ import { ReadMore } from '@/components/shared/ReadMore'
 import { Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
+import { GROUP_SCOPED } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 
 /** Uma linha por página do sistema. `see` = permissões de ver (a página aparece no menu); `edit` = de editar. */
@@ -116,7 +117,7 @@ export function PermissionsMatrix() {
     return (
       <Select className="h-8" aria-label={`${kind === 'see' ? 'Ver' : 'Editar'} ${area.label} — ${role.name}`} disabled={set.isPending} value={v} onChange={(e) => change(area, kind, e.target.value)}>
         {v === 'mixed' && <option value="mixed" disabled>Misto</option>}
-        {SCOPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        {SCOPES.filter(([k]) => k !== 'group' || keys.every((x) => GROUP_SCOPED.has(x))).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
       </Select>
     )
   }
@@ -125,7 +126,7 @@ export function PermissionsMatrix() {
     <div className="space-y-3">
       <ReadMore>
         Escolha o papel e defina, página por página, o que ele pode <strong>ver</strong> (a página aparece no menu) e o que pode <strong>editar</strong>, com o alcance: só o próprio, o meu grupo ou tudo.
-        A <strong>direção</strong> sempre tem tudo. O que tem cadeado é exclusivo da direção e não muda. Editar liga o ver automaticamente.
+        "Meu grupo" só aparece onde ele vale (cadastros, presença e participação no ciclo). A <strong>direção</strong> sempre tem tudo. O que tem cadeado é exclusivo da direção e não muda. Editar liga o ver automaticamente.
       </ReadMore>
       {isLoading && <Skeleton className="h-24" />}
       {role && (

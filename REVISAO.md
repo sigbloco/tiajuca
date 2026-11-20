@@ -56,7 +56,22 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
   - advisors: definer executáveis por `anon` 31 → 10 (todas públicas de propósito, mais a `rls_auto_enable` do próprio Supabase), por `authenticated` 162 → 141; nova tabela sem policy só a `infinitepay_transactions` (de propósito).
 - **Achado novo (SEG-16, abaixo):** o backup mais recente (15/11, e os anteriores) não restaura mais.
 - **Passo 8 (do usuário, no painel do Supabase → Authentication → Sign In / Providers):** desligar o provedor **Email** (D7). Das 3 contas com senha, 2 também têm Google e continuam entrando; 1 não tem cadastro de integrante. Se preferir manter o provedor, ao menos ligar "Leaked password protection".
-| 2 | Área dos integrantes: permissões, telas e LGPD | pendente | Opus 5.5, alto | — | — |
+| 2 | Área dos integrantes: permissões, telas e LGPD | **concluída** em 20/11/2026 (branch `revisao-etapa2`, mergeada na `main`); fica pendente só a página Integrantes do integrante comum (D13) | Opus 5.5, alto | ver "Etapa 2: o que foi feito" | D1: **sim** (Professor reativa do próprio grupo); D4: **só ativos, nome de exibição**; D5: **backups 12 meses, auditoria 24 meses**, log mascarado (inclusive o antigo); LGPD-08: **diário**; D13: **deixar para o fim** |
+
+### Etapa 2: o que foi feito (20/11/2026)
+
+- **Banco (aplicado em produção, versões iguais aos arquivos):** `20261120024206_int_permissoes` (INT-01, INT-05, INT-06, INT-10, SEG-08), `20261120024254_lgpd_integrantes` (LGPD-02, LGPD-03, LGPD-04, LGPD-05, LGPD-08 e a tarefa `daily-privacy-maintenance`, todo dia às 06:15 UTC), `20261120024353_formularios_backups` (SEG-15, SEG-16).
+- **Permissões:** a matriz só oferece "Meu grupo" onde o banco usa o escopo (`members.read`, `attendance.read/record`, `member_cycles.read/manage`); as duas linhas sem efeito foram alinhadas (Professor perdeu `events.manage` de grupo, que nunca valeu; Monitor `capacity.read` passou a "Tudo", que é o que já via). Professor reativa inativo do próprio grupo (pedido ou direto), mas não inativa nem mexe fora do grupo.
+- **Telas:** `canOpenPath` (`src/app/navigation.ts`) aplica a regra do menu às URLs: sem permissão aparece "Sem acesso a esta página". Menu, áreas e liberação de páginas decidem por permissão (Organização = quem tem `cycles/structure/suppliers/drive.manage`; Financeiro junto da Organização para quem tem `finance.read`); `useIsDirection`/`DirectionOnly` removidos. `errorElement` na raiz (`RouteError`). Colaborador no "Visualizar como". Vínculo por e-mail uma vez por carga. Categoria isenta pelo Tipo. Links de campo livre só http(s) (`safeHttpUrl`).
+- **LGPD:** auditoria mascara e-mail (`r***@dominio`), telefone (`***1234`), Pix e nascimento (`***` + 4 caracteres de hash); as linhas antigas foram mascaradas (sem volta, aprovado). Dados sensíveis de terceiros só por `get_member_sensitive` (registra `sensitive_read`, no máximo 1 por 10 min por pessoa lida) e gravação por `save_member_sensitive`; a leitura direta da tabela ficou só para o próprio. Aniversários do integrante comum: só ativos, nome de exibição (ou primeiro nome), sem ano. Arquivos de inscrições anonimizadas pela tarefa diária vão para `storage_delete_queue` e são apagados do Storage na próxima vez que alguém usar "Limpar antigas" (hoje não há nenhum arquivo).
+- **Formulário público:** 10 envios por hora por IP em cada formulário (IP só como hash, guardado 1 dia). Sem formulário publicado hoje, então o limite não foi testado com envio real (só a função).
+- **Backups:** o restore usa só as colunas do backup, traduz valores antigos (`kind 'artistic'`, categorias por naipe), reaproveita ids de linhas recriadas e diz qual tabela falhou. Os 4 backups manuais de 15/11 restauram (teste desfeito). Os automáticos de 05/11 e 08/11 continuam sem restaurar (ciclos apagados e recriados com o mesmo nome; regra de `staff_assignments`), agora com mensagem clara.
+- **Testado:**
+  - banco, se passando por contas reais em transações sempre desfeitas: integrante bloqueado em ler/gravar dados sensíveis de outros (REST e RPC), editar permissões, resgatar convite, reativar, rodar a tarefa diária; vê 60 aniversários sem ano e o próprio dado sensível. Professor reativa do grupo e é bloqueado fora dele e ao inativar; vê 183 aniversários com ano; não lê dados sensíveis. Diretor lê/grava dados sensíveis de outros (leitura registrada uma vez em duas chamadas), não lê direto pela tabela, "Meu grupo" recusado em `events.manage` e aceito em `attendance.read`. Inativo não vê arquivo do repertório; visitante bloqueado em tudo. Telefone novo grava `***4321` no log; nenhuma linha antiga sem máscara. Tarefa diária roda e hoje não apaga nada;
+  - `tsc`, `vite build`, `vitest` (29 arquivos, 208 testes, com os novos de acesso por URL e de `safeHttpUrl`); site e loja carregam no navegador; URL da área sem login vai para a entrada e `/convite/...` volta ao início;
+  - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): menus por papel e o aviso "Sem acesso" estão cobertos pelos testes automáticos; vale conferir no uso real, inclusive pelo "Visualizar como".
+- **Advisors:** sem novidade de risco; as tabelas novas sem policy (`form_submit_attempts`, `storage_delete_queue`) são de propósito (só funções do banco usam).
+- **D13 (pendente, deixar para o fim da revisão):** o Titular liberou a página Integrantes para o Integrante ativo, mas o banco só mostra a ele o próprio cadastro (a lista sai com uma pessoa). Opções: tirar do menu dele ou transformar numa lista de nomes de exibição dos ativos.
 | 3 | Área dos integrantes: cobranças com fonte única por ciclo | pendente | Opus 5.5, alto | — | — |
 | 4 | Loja | pendente | Opus 5.5 ou Sonnet 5.5, médio a alto | — | — |
 | 5 | Site e partes compartilhadas | pendente | Sonnet 5.5, médio | — | — |
@@ -110,13 +125,13 @@ Legenda: **DB** = imposto por RLS/RPC no banco; **F** = só o front esconde. Esc
 |---|---|---|---|---|---|---|---|---|
 | Ver cadastro completo (e-mail, telefone, nascimento) | próprio | próprio | próprio | grupo | grupo | todos | todos | DB |
 | Ver nome de exibição de todos (diretório) | sim | sim | sim | sim | sim | sim | sim | DB (view definer, conforme configuração) |
-| Ver nome completo + dia/mês de nascimento de todos | **sim** | **sim** | **sim** | sim (com ano) | sim (com ano) | sim | sim | DB (`birthday_list`, LGPD-04) |
+| Aniversários | ativos, nome de exibição, sem ano | idem | idem | todos, nome completo e ano | idem | idem | idem | DB (`birthday_list`, etapa 2) |
 | Editar próprio perfil | sim | sim | sim | sim | sim | qualquer | qualquer | DB (`update_my_profile`) |
 | Criar/editar/arquivar integrantes (todas as colunas, inclusive `user_id`) | — | — | — | — | — | sim | sim | DB (SEG-02) |
-| Dados sensíveis (gênero, raça, PCD): ver/editar | próprio | próprio | próprio | próprio | próprio | todos | todos | DB |
+| Dados sensíveis (gênero, raça, PCD): ver/editar | próprio | próprio | próprio | próprio | próprio | todos (só por RPC, leitura registrada) | todos | DB |
 | Chave Pix: ver | própria | própria | própria | própria | própria | todas | todas | DB |
 | Chave Pix: cadastrar | — | — | — | própria | própria | qualquer | qualquer | DB |
-| Status no ciclo / reativar | — | pede | — | — | decide (**quebrado**, INT-01) | sim | sim | DB |
+| Status no ciclo / reativar | — | pede | — | — | reativa do grupo | sim | sim | DB |
 | Presença: ver | própria | própria | própria | grupo | grupo | toda | toda | DB |
 | Presença: registrar | — | — | — | grupo | qualquer integrante | toda | toda | DB |
 | Relatórios de presença | — | — | — | grupo | grupo | todos | todos | DB |
@@ -126,10 +141,10 @@ Legenda: **DB** = imposto por RLS/RPC no banco; **F** = só o front esconde. Esc
 | Financeiro (receitas, despesas, distribuição) | — | — | — | — | — | sim | sim | DB |
 | Pagamentos da equipe: ver | próprios | próprios | próprios | próprios | próprios | todos | todos | DB |
 | Eventos: ver | visíveis a integrantes | — | visíveis a integrantes | + só equipe | + só equipe | todos | todos | DB |
-| Eventos: criar/editar | — | — | — | — | — (escopo grupo ignorado, INT-05) | sim | sim | DB |
+| Eventos: criar/editar | — | — | — | — | — | sim | sim | DB |
 | Checklist: marcar tarefa | se responsável | — | se responsável | se responsável | se responsável | sim | sim | DB |
 | Formulários: editar/aprovar | — | — | — | — | — | sim | sim | DB + F (configurações por nome de papel) |
-| Repertório: ver / arquivos | sim / sim | — / **sim** (SEG-08) | sim / sim | sim / sim | sim / sim | sim | sim | DB |
+| Repertório: ver / arquivos | sim / sim | — / — | sim / sim | sim / sim | sim / sim | sim | sim | DB |
 | Repertório: editar | — | — | — | — | — | sim | sim | DB |
 | Estrutura, ciclos, vagas, fornecedores: editar | — | — | — | — | — | sim | sim | DB |
 | Vagas, fornecedores: ver | — | — | — | sim | sim | sim | sim | DB |

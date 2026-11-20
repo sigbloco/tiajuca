@@ -68,6 +68,7 @@ export function ReleasesTab() {
             <li>O Titular vê tudo.</li>
             <li>Desmarcar uma área (Oficina, Financeiro, Organização) apaga também as páginas dela. Marcar a área não libera as páginas: cada uma tem a sua caixa.</li>
             <li>Professor e Monitor não herdam de Integrante ativo: marque cada coluna.</li>
+            <li>Colaborador segue a coluna Integrante ativo.</li>
           </ul>
         )}
         <button type="button" className="text-sm font-semibold text-primary hover:underline" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Ocultar' : 'Ler mais'}</button>

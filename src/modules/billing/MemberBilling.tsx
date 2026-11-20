@@ -14,6 +14,8 @@ import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { Plus } from 'lucide-react'
 
+/** Tipo da categoria (base_key); a chave fixa antiga (system_key) só vale enquanto a categoria não tiver Tipo. */
+const isentoKey = (c: { system_key?: string | null; base_key?: string | null }) => c.base_key ?? c.system_key ?? ''
 /** Categorias de contribuição que se escolhem na ficha do integrante. */
 const MEMBER_CATEGORIES = ['isento']
 /** Categoria escolhível na ficha: pela chave fixa (renomear "Músico" para "Músico convidado" não tira ela da lista). */
@@ -21,7 +23,7 @@ const MEMBER_CATEGORIES = ['isento']
 function useIsMemberCategory() {
   const funcs = useCatalog('artistic_functions')
   const payerFns = new Set((funcs.data ?? []).filter((f) => f.kind === 'payer').map((f) => f.id))
-  return (c: { system_key?: string | null; function_id?: string | null }) => (c.function_id ? payerFns.has(c.function_id) : false) || MEMBER_CATEGORIES.includes(c.system_key ?? '')
+  return (c: { system_key?: string | null; base_key?: string | null; function_id?: string | null }) => (c.function_id ? payerFns.has(c.function_id) : false) || MEMBER_CATEGORIES.includes(isentoKey(c))
 }
 
 /** Categoria isenta (ex.: Monitor) que a pessoa tem no ciclo: enquanto houver, ela não é cobrada, qualquer que seja a categoria. */
@@ -291,7 +293,7 @@ function CycleBilling({ memberId, cycle }: { memberId: string; cycle: CycleWindo
         <Label htmlFor={'cc-cat-' + cycle.id} className="block">Principal</Label>
           <OkSelect id={'cc-cat-' + cycle.id} value={catId} disabled={setCategory.isPending} onSave={(v) => setCategory.mutateAsync(v)}>
             {!catId && <option value="">Escolha a categoria</option>}
-            {categories.data?.filter((c) => ((isMemberCategory(c) && c.system_key !== 'isento') || c.id === catId) && fitsSections(c, mySections.data, catId)).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.data?.filter((c) => ((isMemberCategory(c) && isentoKey(c) !== 'isento') || c.id === catId) && fitsSections(c, mySections.data, catId)).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
         <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>
@@ -385,7 +387,7 @@ export function MemberBilling({ memberId, cycle }: { memberId: string; /** Ciclo
         <Label htmlFor="fee-cat" className="block">Categoria principal</Label>
           <OkSelect id="fee-cat" value={assignment?.fee_category_id ?? ''} disabled={assign.isPending} onSave={(v) => assign.mutateAsync(v)}>
             {!assignment?.fee_category_id && <option value="">Escolha a categoria</option>}
-            {categories.data?.filter((c) => ((isMemberCategory(c) && c.system_key !== 'isento') || c.id === assignment?.fee_category_id) && fitsSections(c, mySections.data, assignment?.fee_category_id ?? '')).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.data?.filter((c) => ((isMemberCategory(c) && isentoKey(c) !== 'isento') || c.id === assignment?.fee_category_id) && fitsSections(c, mySections.data, assignment?.fee_category_id ?? '')).slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </OkSelect>
         <p className="text-xs text-muted-foreground">{exemptBy ? `Isento pela categoria ${exemptBy}: não é cobrado enquanto tiver essa função.` : 'Só ela define o valor cobrado.'}</p>
       </div>

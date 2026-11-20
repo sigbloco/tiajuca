@@ -22,13 +22,14 @@ const CATEGORIES = [
   { key: 'direcao', label: 'Direção' },
   { key: 'professor', label: 'Professor' },
   { key: 'monitor', label: 'Monitor' },
+  { key: 'colaborador', label: 'Colaborador' },
   { key: 'ativo', label: 'Integrante ativo' },
   { key: 'inativo', label: 'Integrante inativo' },
 ] as const
 type CatKey = (typeof CATEGORIES)[number]['key']
 
 // Sem ninguém na categoria, dá para visualizar mesmo assim: simula só os papéis (os dados continuam os seus).
-const virtualRoles = (key: CatKey) => (key === 'direcao' ? ['direcao', 'integrante'] : key === 'professor' ? ['professor', 'integrante'] : key === 'monitor' ? ['monitor', 'integrante'] : ['integrante'])
+const virtualRoles = (key: CatKey) => (key === 'direcao' ? ['direcao', 'integrante'] : key === 'professor' ? ['professor', 'integrante'] : key === 'monitor' ? ['monitor', 'integrante'] : key === 'colaborador' ? ['colaborador'] : ['integrante'])
 
 /** Barra fixa no topo (só Titular/Direção): escolhe uma CATEGORIA e, depois, uma pessoa dela; a interface passa a mostrar o que ela veria. */
 export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à coluna do formulário (max-w-xl, com o mesmo respiro lateral). */ contained?: boolean } = {}) {
@@ -102,7 +103,8 @@ export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à col
       direcao: activeOthers.filter((r) => rolesOf(r).has('direcao')).map((r) => person(r)),
       professor: staffOf('professor'),
       monitor: staffOf('monitor'),
-      ativo: others.filter((r) => !isInactive(r.id) && !isStaff(r) && !rolesOf(r).has('direcao')).map((r) => person(r, catOf.get(r.id))),
+      colaborador: activeOthers.filter((r) => rolesOf(r).has('colaborador') && !isStaff(r) && !rolesOf(r).has('direcao')).map((r) => person(r)),
+      ativo: others.filter((r) => !isInactive(r.id) && !isStaff(r) && !rolesOf(r).has('direcao') && !rolesOf(r).has('colaborador')).map((r) => person(r, catOf.get(r.id))),
       inativo: others.filter((r) => isInactive(r.id) && !rolesOf(r).has('direcao')).map((r) => person(r, catOf.get(r.id))),
     }
     for (const c of CATEGORIES) {

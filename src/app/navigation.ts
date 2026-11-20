@@ -2,14 +2,21 @@ import {
   Award, Banknote, BarChart3, CircleDollarSign, Building2, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList, Drum, FolderOpen, GraduationCap, History,
   Globe, HandCoins, Home, PieChart, Hourglass, Music2, Palette, ShieldCheck, Store, Tags, TrendingDown, TrendingUp, Truck, UserRound, UserRoundCheck, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
-import type { PermissionKey, PermissionScope } from '@/core/permissions'
+import { hasPermission, type GrantedPermission, type PermissionKey, type PermissionScope } from '@/core/permissions'
 
 /** Áreas do menu: cada uma é UM item à esquerda; as subpáginas ficam dentro dela (página inicial com cartões). */
 export type HubKey = 'oficina' | 'financeiro' | 'organizacao'
-export const HUBS: Record<HubKey, { label: string; icon: LucideIcon; description: string; /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */ homePermission?: PermissionKey }> = {
+export const HUBS: Record<HubKey, {
+  label: string; icon: LucideIcon; description: string
+  /** Quem tem esta permissão vê a área mesmo sem subpáginas (a página inicial dela tem conteúdo próprio). */
+  homePermission?: PermissionKey
+  /** A área só existe para quem tem ao menos uma destas permissões (em toda a organização), além de ter alguma subpágina. */
+  requiresAny?: PermissionKey[]
+}> = {
   oficina: { label: 'Oficina', icon: GraduationCap, description: 'Alunos, presença, lista de espera e relatórios.' },
   financeiro: { label: 'Financeiro', icon: Banknote, description: 'Receitas, despesas, distribuição, pagamentos, valores, cobranças e bolsas.', homePermission: 'finance.read' },
-  organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, categorias e Google Drive.' },
+  // Área de administração: quem só vê fornecedores ou pastas do Drive não a tem no menu (as páginas abrem por link).
+  organizacao: { label: 'Organização', icon: Building2, description: 'Ciclos, fornecedores, categorias e Google Drive.', requiresAny: ['cycles.manage', 'structure.manage', 'suppliers.manage', 'drive.manage'] },
 }
 export const HUB_ORDER: HubKey[] = ['oficina', 'financeiro', 'organizacao']
 
@@ -66,6 +73,41 @@ export const NAV_ITEMS: NavItem[] = [
   { to: 'acesso', label: 'Acesso e papéis', icon: ShieldCheck, admin: true, permission: 'roles.manage' },
   { to: 'auditoria', label: 'Auditoria e backups', icon: History, admin: true, permission: 'audit.read' },
 ]
+
+/** O item do menu aparece para quem tem estas permissões? Sem permissão exigida, sim. */
+export function navItemVisible(i: Pick<NavItem, 'permission' | 'minScope'>, granted: GrantedPermission[]): boolean {
+  return !i.permission || hasPermission(granted, i.permission, i.minScope ?? 'own')
+}
+
+/** A área aparece? Precisa de alguma subpágina visível (ou da permissão da página inicial) e, se houver, de uma das permissões exigidas. */
+export function hubVisible(hub: HubKey, granted: GrantedPermission[]): boolean {
+  const h = HUBS[hub]
+  if (h.requiresAny && !h.requiresAny.some((p) => hasPermission(granted, p))) return false
+  const home = h.homePermission ? hasPermission(granted, h.homePermission, 'own') : false
+  return home || NAV_ITEMS.some((i) => i.group === hub && navItemVisible(i, granted))
+}
+
+/** Subpáginas com permissão própria (a de configurações exige a de editar). Chave: primeiro segmento / segundo segmento. */
+const SUB_ROUTE_PERMISSION: Record<string, { permission: PermissionKey; minScope?: PermissionScope }> = {
+  'formularios/configuracoes': { permission: 'forms.manage' },
+  'naipes/configuracoes': { permission: 'structure.manage' },
+  'eventos/configuracoes': { permission: 'events.manage' },
+}
+
+/**
+ * A pessoa pode abrir esta página? `rest` = caminho depois de /:slug. Mesma regra do menu (fonte única: NAV_ITEMS e HUBS).
+ * Só decide a INTERFACE (quem digita a URL vê o aviso de sem acesso em vez de uma tela vazia); quem protege os dados é o banco.
+ */
+export function canOpenPath(rest: string, granted: GrantedPermission[]): boolean {
+  const segs = rest.split('/').filter(Boolean)
+  const first = segs[0] ?? ''
+  if (first === '') return true
+  if ((HUB_ORDER as string[]).includes(first)) return hubVisible(first as HubKey, granted)
+  const sub = segs[1] ? SUB_ROUTE_PERMISSION[`${first}/${segs[1]}`] : undefined
+  if (sub && !hasPermission(granted, sub.permission, sub.minScope ?? 'org')) return false
+  const item = NAV_ITEMS.find((i) => i.to === first)
+  return item ? navItemVisible(item, granted) : true
+}
 
 const SUB_LABEL: Record<string, string> = { configuracoes: 'Configurações', organograma: 'Organograma', nomes: 'Nomes de naipes', funcoes: 'Categorias', listas: 'Listas do cadastro', modelos: 'Seções modelo', envio: 'Textos padrão' }
 

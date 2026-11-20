@@ -43,12 +43,12 @@ describe('acesso por permissão (a liberação nunca concede)', () => {
     expect(pageAccessible(releasePage('eventos')!, ativo)).toBe(true)
     expect(pageAccessible(releasePage('membros')!, ativo)).toBe(false)
   })
-  it('Organização é só da direção; Oficina existe se algum item for acessível', () => {
-    const prof: Access = { roles: ['professor', 'integrante'], permissions: [{ key: 'attendance.record', scope: 'own' }, { key: 'cycles.manage', scope: 'org' }] }
+  it('Organização é de quem administra (permissão, não nome do papel); Oficina existe se algum item for acessível', () => {
+    const prof: Access = { roles: ['professor', 'integrante'], permissions: [{ key: 'attendance.record', scope: 'own' }, { key: 'suppliers.read', scope: 'org' }, { key: 'drive.read', scope: 'org' }] }
     expect(pageAccessible(releasePage('organizacao')!, prof)).toBe(false)
     expect(pageAccessible(releasePage('oficina')!, prof)).toBe(true)
     expect(pageAccessible(releasePage('oficina')!, ativo)).toBe(false)
-    expect(pageAccessible(releasePage('organizacao')!, { ...prof, roles: ['direcao'] })).toBe(true)
+    expect(pageAccessible(releasePage('organizacao')!, { ...prof, permissions: [...prof.permissions, { key: 'cycles.manage', scope: 'org' }] })).toBe(true)
   })
 })
 

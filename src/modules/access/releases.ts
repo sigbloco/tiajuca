@@ -1,5 +1,5 @@
 import { hasPermission, type GrantedPermission, type PermissionKey, type PermissionScope } from '@/core/permissions'
-import { HUBS, HUB_ORDER, NAV_ITEMS, type HubKey } from '@/app/navigation'
+import { HUBS, HUB_ORDER, NAV_ITEMS, hubVisible, type HubKey } from '@/app/navigation'
 
 /**
  * Liberação de páginas por categoria. Só RESTRINGE a interface: a página precisa estar liberada E a pessoa precisa ter a
@@ -28,8 +28,6 @@ export interface ReleasePage {
   isHub?: boolean
   permission?: PermissionKey
   minScope?: PermissionScope
-  /** Organização só existe para Titular e Direção. */
-  bossOnly?: boolean
   /** Redirecionamento para outra página (chave de destino): sem caixa própria, vale a do destino. */
   alias?: string
 }
@@ -44,7 +42,7 @@ const asPage = (to: string): ReleasePage => { const i = item(to); return { key: 
  */
 const ALIASES: Record<string, string> = { alunos: 'membros' }
 const hubRows = (hub: HubKey): ReleasePage[] => [
-  { key: hub, label: HUBS[hub].label, isHub: true, bossOnly: hub === 'organizacao' },
+  { key: hub, label: HUBS[hub].label, isHub: true },
   ...NAV_ITEMS.filter((i) => i.group === hub && !(i.to in ALIASES)).map((i) => asPage(i.to)),
 ]
 
@@ -96,15 +94,10 @@ export function chainReleased(rows: ReleaseRows, page: string, cat: ReleaseCateg
 }
 
 export interface Access { permissions: GrantedPermission[]; roles: string[] }
-const isBoss = (roles: string[]) => roles.includes('direcao') || roles.includes('titular')
 
-/** A pessoa (ou a categoria) tem a permissão da página em "Acesso e papéis"? Sem permissão exigida, sim. */
+/** A pessoa (ou a categoria) tem a permissão da página em "Acesso e papéis"? Sem permissão exigida, sim. Mesma regra do menu. */
 export function pageAccessible(p: ReleasePage, a: Access): boolean {
-  if (p.isHub) {
-    if (p.bossOnly && !isBoss(a.roles)) return false
-    const home = HUBS[p.key as HubKey]?.homePermission
-    return (home ? hasPermission(a.permissions, home, 'own') : false) || NAV_ITEMS.some((i) => i.group === p.key && (!i.permission || hasPermission(a.permissions, i.permission, i.minScope ?? 'own')))
-  }
+  if (p.isHub) return hubVisible(p.key as HubKey, a.permissions)
   return !p.permission || hasPermission(a.permissions, p.permission, p.minScope ?? 'own')
 }
 
