@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useOrganization } from '@/core/organization'
-import { useIsDirection } from '@/core/permissions'
+import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { CycleSelect } from './CycleSelect'
 import { pickDefaultCycle, useCycles, useCycleStatuses, type Cycle } from './service'
@@ -95,7 +95,8 @@ export function CycleBar({ base }: { base: string }) {
   const { cycleId, setCycleId } = useSelectedCycle()
   const rest = pathname.slice(base.length).split('/').filter(Boolean)
   const first = rest[0] ?? ''
-  const isDirection = useIsDirection()
+  // Quem administra os ciclos vê todos; os demais, só os ciclos em que participaram.
+  const isDirection = usePermission('cycles.manage')
   const { data: cycles } = useCycles()
   const mine = useMyCycleIds(!isDirection)
   const allowed = mine && mine.length > 0 ? mine : null

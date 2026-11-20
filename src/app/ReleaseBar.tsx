@@ -2,6 +2,7 @@ import { Lock } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
+import { hasPermission } from '@/core/permissions'
 import { useCategoryAccess, usePageReleaseRows, useSetReleases } from '@/modules/access/releaseData'
 import { RELEASE_CATEGORIES, pageAccessible, pageKeyForPath, rawReleased, releasePage } from '@/modules/access/releases'
 
@@ -14,7 +15,7 @@ export function ReleaseBar({ base }: { base: string }) {
   const { realMembership } = useOrganization()
   const { pathname } = useLocation()
   const isTitular = !!realMembership?.roles.includes('titular')
-  const seen = isTitular || !!realMembership?.roles.includes('direcao')
+  const seen = isTitular || (!!realMembership && hasPermission(realMembership.permissions, 'roles.manage'))
   const rows = usePageReleaseRows()
   const access = useCategoryAccess(seen)
   const set = useSetReleases()

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/primitives'
 import { useOrgId, useOrganization } from '@/core/organization'
+import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
@@ -13,6 +14,7 @@ export function AlunosRedirect() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const instruments = useCatalog('instruments')
+  const seesAll = usePermission('members.read')
   const mine = useQuery({
     queryKey: ['staff-redirect', orgId, membership?.member_id],
     enabled: Boolean(membership?.member_id),
@@ -23,10 +25,10 @@ export function AlunosRedirect() {
     },
   })
   if (mine.isLoading || instruments.isLoading) return <Skeleton className="h-10" />
-  const roles = membership?.roles ?? []
   const params = new URLSearchParams({ tipo: 'aluno' })
   const list = mine.data ?? []
-  if (!roles.includes('direcao') && !roles.includes('titular') && list.length > 0) {
+  // Quem vê todos os integrantes (Direção) abre a lista inteira; professor/monitor abre já em "Meus alunos".
+  if (!seesAll && list.length > 0) {
     if (list.length === 1) {
       const a = list[0]
       const sec = a.section_id ?? instruments.data?.find((i) => i.id === a.instrument_id)?.section_id

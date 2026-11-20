@@ -15,14 +15,14 @@ import { useAuth } from '@/core/auth'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { applyBrandToDocument, cacheBrand } from '@/modules/auth/AuthLayout'
-import { HUBS, NAV_ITEMS, crumbsFor, type CameFrom, type HubKey, type NavItem } from './navigation'
+import { HUBS, NAV_ITEMS, canOpenPath, crumbsFor, hubVisible, navItemVisible, type CameFrom, type HubKey, type NavItem } from './navigation'
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { BulletTrail } from '@/components/shared/BulletTrail'
 import { ViewAsBar } from './ViewAsBar'
 import { ReleaseBar } from './ReleaseBar'
 import { useMyReleases } from '@/modules/access/releaseData'
 import { pageKeyForPath } from '@/modules/access/releases'
-import { Lock } from 'lucide-react'
+import { Lock, ShieldOff } from 'lucide-react'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 
 interface MenuEntry { to: string; label: string; icon: LucideIcon; /** Caminhos (além de `to`) que deixam o item marcado. */ also?: string[]; /** Traço separador acima do item. */ sep?: boolean; /** Página não liberada para o perfil: item apagado, sem link. */ off?: boolean }
@@ -32,6 +32,18 @@ const MOBILE_PRIMARY = new Set(['', 'eventos', 'oficina', 'repertorio'])
 
 /** Quantas páginas o Voltar lembra. */
 const BACK_LIMIT = 20
+
+/** Página que a pessoa não tem permissão para abrir (URL digitada ou link antigo): aviso no lugar da tela vazia. */
+function NoAccess({ base }: { base: string }) {
+  return (
+    <div className="mx-auto max-w-md space-y-3 py-10 text-center">
+      <ShieldOff className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden />
+      <h1 className="font-display text-2xl font-extrabold">Sem acesso a esta página</h1>
+      <p className="text-muted-foreground">O seu perfil não tem permissão para abrir esta página. Se precisar dela, fale com a Direção.</p>
+      <Link to={base} className="inline-block font-semibold text-primary hover:underline">Voltar ao início</Link>
+    </div>
+  )
+}
 
 function NotReleased({ base }: { base: string }) {
   return (
@@ -160,19 +172,18 @@ export function AppShell() {
     </Link>
   ))
   const isTitular = membership.roles.includes('titular') // o titular é o usuário do bloco: o perfil dele é o perfil do bloco (contatos usados pela Loja e pelo Site)
-  const visible = (i: NavItem) => (!i.permission || hasPermission(membership.permissions, i.permission, i.minScope ?? 'own'))
+  const visible = (i: NavItem) => navItemVisible(i, membership.permissions)
 
   // Menu: itens diretos, depois as áreas (Organização, Oficina) com as subpáginas dentro, e a administração no fim.
   // Item não liberado para o perfil (Acesso e papéis → Liberação de páginas): continua no menu, só apagado e sem link.
   const off = (to: string) => !rel.released(pageKeyForPath(to) ?? to)
   const direct = (to: string): MenuEntry[] => NAV_ITEMS.filter((i) => i.to === to && visible(i)).map((i) => ({ to: i.to, label: i.to === 'perfil' && isTitular ? 'Perfil do bloco' : i.label, icon: i.icon, off: off(i.to) }))
-  // Organização só para Titular e direção. O Financeiro fica embaixo de Calendário para todos, menos para eles (onde sempre esteve, junto da Organização).
-  const bossView = membership.roles.includes('direcao') || membership.roles.includes('titular')
+  // O Financeiro fica embaixo de Calendário para todos, menos para quem administra as finanças (junto da Organização, onde sempre esteve).
+  const bossView = hasPermission(membership.permissions, 'finance.read')
   const hubEntry = (hub: HubKey): MenuEntry[] => {
-    if (hub === 'organizacao' && !bossView) return []
+    if (!hubVisible(hub, membership.permissions)) return []
     const children = NAV_ITEMS.filter((i) => i.group === hub && visible(i))
-    const homeOk = HUBS[hub].homePermission ? hasPermission(membership.permissions, HUBS[hub].homePermission!, 'own') : false
-    return children.length === 0 && !homeOk ? [] : [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to)], off: off(hub) }]
+    return [{ to: hub, label: HUBS[hub].label, icon: HUBS[hub].icon, also: [...children.map((c) => c.to)], off: off(hub) }]
   }
   const withSep = (list: MenuEntry[]): MenuEntry[] => list.map((e, i) => (i === 0 ? { ...e, sep: true } : e))
   const entries: MenuEntry[] = [
@@ -183,6 +194,8 @@ export function AppShell() {
   const segs = pathname.slice(base.length).split('/').filter(Boolean)
   // Página que a pessoa tem permissão para abrir, mas ainda não foi liberada para o perfil dela: aviso no lugar da página.
   const blocked = rel.blockedFor(pathname.slice(base.length))
+  // Página sem permissão (URL digitada): o mesmo critério do menu decide; o banco continua sendo quem protege os dados.
+  const denied = !canOpenPath(pathname.slice(base.length), membership.permissions)
 
   const crumbs = crumbOverride ?? crumbsFor(segs, base)
   // "Voltar para Início • Loja": o caminho completo da página anterior, para não haver dúvida de onde se vai parar.
@@ -271,7 +284,7 @@ export function AppShell() {
         <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">
           <InactiveNotice />
-          {blocked ? <NotReleased base={base} /> : <Outlet />}
+          {denied ? <NoAccess base={base} /> : blocked ? <NotReleased base={base} /> : <Outlet />}
         </div>
       </main>
       </SelectedCycleProvider>

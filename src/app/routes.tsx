@@ -1,11 +1,10 @@
-import { DirectionOnly } from '@/core/permissions'
 import { useEffect, useState } from 'react'
 import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
 import { LoadingScreen } from '@/components/shared/LoadingScreen'
 import { isSigningOut, takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
-import { ClaimInvitePage, NoOrganizationPage } from '@/modules/auth/pages'
+import { NoOrganizationPage } from '@/modules/auth/pages'
 import { HomePage } from '@/modules/dashboard/HomePage'
 import { CapacityPage } from '@/modules/capacity/CapacityPage'
 import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
@@ -50,6 +49,7 @@ import { ShopLayout } from '@/modules/shop/public/ShopLayout'
 import { LandingPage } from '@/modules/site/LandingPage'
 import { AlbumsPage } from '@/modules/site/AlbumsPage'
 import { AppShell } from './AppShell'
+import { RouteError } from './RouteError'
 import { FinanceHome, HubHome, HubLayout } from './Hub'
 import { LedgerPage } from '@/modules/finance/LedgerPage'
 import { PaymentsPage } from '@/modules/finance/PaymentsPage'
@@ -139,14 +139,13 @@ function ConfigMissing() {
 
 export const router = createBrowserRouter(
   isSupabaseConfigured
-    ? [
+    ? [{ errorElement: <RouteError />, children: [ // erro de qualquer tela: aviso com Recarregar, nunca página em branco
         { path: '/entrar', element: <Navigate to="/?entrar=1" replace /> },
         // Sem cadastro aberto nem senha: só entrada com Google (links antigos caem no início).
         { path: '/cadastro', element: <Navigate to="/?entrar=1" replace /> },
         { path: '/verifique-seu-email', element: <Navigate to="/?entrar=1" replace /> },
         { path: '/recuperar-senha', element: <Navigate to="/?entrar=1" replace /> },
         { path: '/redefinir-senha', element: <Navigate to="/?entrar=1" replace /> },
-        { path: '/convite/:token', element: <ClaimInvitePage /> },
         { path: '/f/:orgSlug/:formSlug', element: <PublicFormPage /> },
         { path: '/:orgSlug/fotos', element: <AlbumsPage /> }, // álbuns públicos, fora do guard de login
         {
@@ -178,17 +177,17 @@ export const router = createBrowserRouter(
                 { path: 'financeiro', element: <HubLayout hub="financeiro" />, children: [{ index: true, element: <FinanceHome /> }] },
                 { path: 'membros', element: <MembersPage /> },
                 { path: 'formularios', element: <FormsPage /> },
-                { path: 'formularios/configuracoes', element: <DirectionOnly><SectionTemplatesPage /></DirectionOnly> },
-                { path: 'formularios/configuracoes/listas', element: <DirectionOnly><FormListsPage /></DirectionOnly> },
-                { path: 'formularios/configuracoes/envio', element: <DirectionOnly><SendDefaultsPage /></DirectionOnly> },
-                { path: 'formularios/configuracoes/modelos/:templateId', element: <DirectionOnly><TemplateEditorPage /></DirectionOnly> },
+                { path: 'formularios/configuracoes', element: <SectionTemplatesPage /> },
+                { path: 'formularios/configuracoes/listas', element: <FormListsPage /> },
+                { path: 'formularios/configuracoes/envio', element: <SendDefaultsPage /> },
+                { path: 'formularios/configuracoes/modelos/:templateId', element: <TemplateEditorPage /> },
                 { path: 'formularios/:formId', element: <FormEditorPage /> },
                 // Endereços antigos (quando a área se chamava Inscrições) seguem funcionando.
                 { path: 'inscricoes', element: <OldFormsRedirect /> },
                 { path: 'inscricoes/*', element: <OldFormsRedirect /> },
                 { path: 'naipes', element: <NaipesPage /> },
                 { path: 'naipes/organograma', element: <Organogram /> },
-                { path: 'naipes/configuracoes', element: <DirectionOnly><SectionNamesPage /></DirectionOnly> },
+                { path: 'naipes/configuracoes', element: <SectionNamesPage /> },
                 {
                   element: <HubLayout hub="organizacao" />,
                   children: [
@@ -230,7 +229,7 @@ export const router = createBrowserRouter(
                 { path: 'repertorio/:repertoireId', element: <RepertoireDetailPage /> },
                 { path: 'perfil', element: <ProfilePage /> },
                 { path: 'eventos', element: <EventsPage /> },
-                { path: 'eventos/configuracoes', element: <DirectionOnly><EventSettingsPage /></DirectionOnly> },
+                { path: 'eventos/configuracoes', element: <EventSettingsPage /> },
                 { path: 'gerenciar-loja', element: <ShopAdminPage /> },
                 { path: 'site', element: <SiteSettings /> },
                 { path: 'interface', element: <InterfacePage /> },
@@ -240,6 +239,6 @@ export const router = createBrowserRouter(
           ],
         },
         { path: '*', element: <Navigate to="/" replace /> },
-      ]
+      ] }]
     : [{ path: '*', element: <ConfigMissing /> }],
 )
