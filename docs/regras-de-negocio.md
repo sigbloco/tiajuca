@@ -51,7 +51,7 @@ Fonte da verdade: o banco de produção (Supabase `dzyvtqrxmladsxceqzud`). Muita
 - Pedidos de mudança de participação feitos pelo integrante e aprovados pela Direção; o integrante pode abrir mão de uma função colaborativa não remunerada.
 - Categorias extras acumuláveis por ciclo.
 - Status no ciclo (ativo, inativo, lista de espera) com histórico. Inativar não muda o passado.
-- ⚠ conflito (COB-01): os dados do ciclo atual também são mantidos em tabelas antigas por data (`member_artistic_links`, `member_fee_assignments`, `scholarships`) e um gatilho apaga e recria os dados do ciclo atual a partir delas.
+- A participação atual fica em `member_artistic_links` e um gatilho a espelha no ciclo atual (`cycle_participations`). Categoria e bolsa ficam só nas tabelas por ciclo (etapa 3): quem entra no ciclo atual começa com a categoria e a bolsa do último ciclo em que tinha categoria (`carry_member_fee_to_cycle`).
 
 ### 2.5 Vagas e lista de espera
 - Limite por instrumento e ciclo; vazio ou 0 = sem limite. Vaga lotada bloqueia a ativação, salvo exceção forçada por quem tem `capacity.manage`. Arquivado não ocupa vaga.
@@ -74,18 +74,20 @@ Fonte da verdade: o banco de produção (Supabase `dzyvtqrxmladsxceqzud`). Muita
 - **Categoria de contribuição** = oficina/naipe que dita o valor. Cada categoria tem **Tipo** (`fee_categories.base_key`: aluno, senior, musico, isento) e **Naipe** opcional (`section_id`). O sistema reconhece aluno/sênior/músico pelo Tipo, nunca pelo nome.
 - Valores do ciclo 2026/27: Aluno (sopro/percussão) R$ 150; Sênior (sopro/percussão) R$ 50; Músico convidado (sopro/percussão) R$ 50; Pernalta R$ 35 (sênior ou não). Ninguém toca em dois naipes; se acontecer, vale o maior valor. Direção é isenta qualquer que seja a categoria.
 - O banco barra categoria principal de naipe diferente do instrumento (e troca de instrumento nesse caso), só no ciclo atual e nos futuros.
-- **Geração mensal** (`generate_monthly_charges`) por competência, só para quem tem categoria principal no ciclo e status ativo; exclui funções isentas no ciclo (`fee_cycle_exempt` vence `is_exempt`; `exempt_locked` sempre vale); valor do ciclo (`fee_cycle_prices`) ou, na falta, o vigente por data; aplica a bolsa do ciclo; vencimento no dia configurado ajustado para dia útil (feriados); não duplica.
+- **Fonte única por ciclo:** categoria `cycle_fee_assignments`, valor `fee_cycle_prices`, bolsa `cycle_scholarships`, isenção da função `fee_cycle_exempt`. A regra da mensalidade de uma pessoa num ciclo está numa função só (`billing_member_fee`), usada pela geração e por "Minha participação". Não há mais valor por data.
+- **Geração mensal** (`generate_monthly_charges`) por competência, só para quem tem categoria principal no ciclo e status ativo; exclui funções isentas no ciclo (`fee_cycle_exempt` vence `is_exempt`; `exempt_locked` sempre vale) e **quem tem atividade remunerada no ciclo** (vínculo marcado como remunerado; D3); valor do ciclo (categoria sem valor no ciclo é pulada e contada); aplica a bolsa do ciclo; vencimento no dia configurado ajustado para dia útil (feriados); não duplica.
 - Baixa manual, ajuste com motivo, cancelar e reabrir.
 - **Link InfinitePay** por cobrança (`charge_pay_info`, edge `billing-pay-link`) com baixa automática pelo webhook, só depois de confirmar na InfinitePay (`payment_check`) e com valor igual ao da cobrança.
-- ⚠ conflitos (COB-01 a COB-05): "Minha participação", o preço na ficha, a tela de Bolsas e os indicadores leem as tabelas antigas por data; a geração usa as tabelas por ciclo. O front esconde a contribuição de quem é remunerado, mas a geração não o exclui. Pagamento pelo link antigo depois de um ajuste não é baixado.
+- Ajustar o valor tira o link (o próximo sai com o valor novo); o código antigo fica guardado e, se alguém pagar por ele, o aviso da InfinitePay fica registrado na cobrança como divergência (sem baixa), com aviso para a direção conferir.
 - Lembrete por e-mail das mensalidades: **ainda não existe** (planejado em `docs/COBRANCA_INFINITEPAY.md`).
 
 ### 2.9 Bolsas
-- Percentual por ciclo (`cycle_scholarships`), com tipo e motivo; indicadores. ⚠ a tela e os indicadores leem a tabela antiga `scholarships` (COB-03).
+- Percentual por ciclo (`cycle_scholarships`), com tipo e motivo, gravado por `set_cycle_scholarship` (0% remove); indicadores do ciclo escolhido (`scholarship_indicators`), com o valor do ciclo de cada categoria.
 
 ### 2.10 Financeiro
 - Receitas e despesas lançadas e canceladas com motivo (nada se apaga). Livro-caixa (`v_finance_ledger`) inclui as mensalidades pagas sem duplicar.
-- **Distribuição/Equipe:** regras por pessoa e ciclo (valor fixo, % da receita do bloco/naipe/instrumento, hora-aula × aulas não canceladas, divisão de grupo, "Caixa do bloco"). O cálculo é feito **no navegador** (`TeamPage.tsx`), que grava `create_staff_payment`. ⚠ a função antiga `compute_distribution` e as tabelas `distribution_rules/destinations` continuam no banco sem uso (COB-06).
+- **Distribuição/Equipe:** regras por pessoa e ciclo (valor fixo, % da receita do bloco/naipe/instrumento, hora-aula × aulas não canceladas, divisão de grupo, "Caixa do bloco"). O cálculo é feito **no navegador** (`TeamPage.tsx`), que grava `create_staff_payment`. O calculador antigo (`compute_distribution`, `distribution_rules`) foi apagado na etapa 3; os destinos (`distribution_destinations`) ficam, usados pelos pagamentos da equipe.
+- Painel da direção: perfil do bloco pelo Tipo da categoria do ciclo (ativos); as classificações antigas foram apagadas.
 - Pagamentos da equipe com cópia da chave Pix no momento do pagamento.
 - Regência é atividade artística e não é remunerada.
 

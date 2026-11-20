@@ -72,7 +72,26 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
   - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): menus por papel e o aviso "Sem acesso" estão cobertos pelos testes automáticos; vale conferir no uso real, inclusive pelo "Visualizar como".
 - **Advisors:** sem novidade de risco; as tabelas novas sem policy (`form_submit_attempts`, `storage_delete_queue`) são de propósito (só funções do banco usam).
 - **D13 (pendente, deixar para o fim da revisão):** o Titular liberou a página Integrantes para o Integrante ativo, mas o banco só mostra a ele o próprio cadastro (a lista sai com uma pessoa). Opções: tirar do menu dele ou transformar numa lista de nomes de exibição dos ativos.
-| 3 | Área dos integrantes: cobranças com fonte única por ciclo | pendente | Opus 5.5, alto | — | — |
+| 3 | Área dos integrantes: cobranças com fonte única por ciclo | **concluída** em 20/11/2026 (branch `revisao-etapa3`, mergeada na `main`) | Opus 5.5, alto | ver "Etapa 3: o que foi feito" | D3: **remunerado nunca é cobrado**; tabelas antigas: **apagar após backup**; valores de 2024/25 e 2025/26: **pelo valor mais cobrado**; COB-06: **remover** |
+
+### Etapa 3: o que foi feito (20/11/2026)
+
+- **Banco (aplicado em produção, versões iguais aos arquivos):** `20261120031552_cob_fonte_unica_ciclo` e `20261120032022_cob_remove_tabelas_antigas` (esta depois do backup manual "Antes da etapa 3: tabelas antigas de cobrança", que guarda as 101/10/7 linhas antigas, as 6 classificações e as 4 regras de distribuição).
+- **Fonte única (COB-01 a COB-04):** a regra da mensalidade de uma pessoa num ciclo está numa função só, `billing_member_fee` (só para o banco), usada por `generate_monthly_charges` e `my_participation`. Sem valor por data: `fee_category_prices`, `member_fee_assignments` e `scholarships` foram apagadas, com `_sync_price_range`, `assign_fee_category`, `set_scholarship` e `set_fee_price` (que serviram de ponte até o merge). O gatilho de sincronização só espelha a participação; quem entra no ciclo atual herda categoria e bolsa do último ciclo (`carry_member_fee_to_cycle`, sem copiar categoria de outro naipe). Auditoria ligada em `cycle_fee_assignments`, `cycle_scholarships`, `fee_cycle_prices`, `fee_cycle_exempt` e `cycle_extra_categories`. Formulários (`form_vars`, `get_public_form`) usam o valor do ciclo do formulário ou do atual.
+- **Valores dos ciclos passados:** 2024/25 e 2025/26 ganharam valor por ciclo (6 categorias cada, o valor-base mais cobrado). Cobranças já geradas não mudaram.
+- **D3 (COB-05):** quem tem vínculo remunerado no ciclo fica fora da geração. Hoje não muda nada na prática (os 10 remunerados também têm função isenta travada).
+- **COB-07:** `adjust_charge` tira o link e guarda o código antigo em `pay_ref.old_codes`; o webhook (`billing-infinitepay-webhook` v4) reconhece o código antigo e, com valor diferente, registra a divergência (`charge_note_divergence`, só `service_role`). A cobrança mostra "Pagamento pela InfinitePay sem baixa: confira" (também para pagamento que chega com a cobrança cancelada).
+- **COB-08:** o painel da direção conta os ativos do ciclo pelo Tipo da categoria (Aluno 32, Sênior 22, Músico 6, Pernalta 1, Isento 1 hoje); `classifications`/`member_classifications` (vazia) apagadas; o público "classificação" saiu da chamada e da restrição de `activity_audiences`; `seed_org_defaults` não cria mais classificações.
+- **COB-06:** `compute_distribution`, `replicate_distribution_rules`, `check_distribution_percent_sum` e `distribution_rules` apagados; `distribution_destinations` fica (pagamentos da equipe).
+- **Telas:** a ficha do integrante usa o mesmo caminho para o ciclo atual e os outros (categoria, valor e bolsa do ciclo; isenção pela regra do ciclo; aviso com link para Financeiro → Valores quando a categoria não tem valor no ciclo); Bolsas lista e calcula os indicadores do ciclo escolhido; Valores só por ciclo; pré-preenchimento do formulário pela categoria do ciclo atual; "Minha participação" mostra o ciclo e avisa quando a pessoa não está ativa.
+- **Testado:**
+  - antes × depois (ensaio desfeito, com as tabelas antigas ainda presentes): 191 integrantes comparados, nenhuma diferença de categoria, valor, bolsa, isenção ou remunerado depois de usar a marca do vínculo (3 pessoas estão ligadas à categoria "Monitor" do tipo remunerado com o vínculo não remunerado; isentas de qualquer jeito);
+  - geração simulada de dezembro (desfeita), antes e depois de apagar as tabelas antigas: 47 cobranças, R$ 5.450, igual ao que "Minha participação" mostra para cada um;
+  - banco, se passando por contas reais em transações desfeitas: integrante vê a própria mensalidade e é bloqueado em ver a de outro, conceder bolsa (RPC, ponte e INSERT direto), indicadores, gerar, mudar a própria categoria (0 linhas), chamar a regra interna, o código do webhook e o registro de divergência; não vê bolsa nem categoria de outros; visitante bloqueado em tudo. Direção concede e remove bolsa (com auditoria), indicadores e painel por ciclo, categoria trocada no ciclo sobrevive a mudança no vínculo (COB-04), ajuste limpa link e guarda o código, entrada no ciclo herda categoria e bolsa; como serviço, o código antigo é achado e a divergência é registrada uma vez só. Restore do backup novo pelo titular funciona (nada muda, as tabelas antigas do backup são ignoradas). Chamada continua montando (62 pessoas no último evento). Nada ficou gravado;
+  - `tsc`, `vite build`, `vitest` (29 arquivos, 208 testes);
+  - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): ficha, Bolsas, Valores, painel e o aviso de pagamento sem baixa; vale conferir no uso real;
+  - advisors: definer executáveis por `anon` continuam 10; por `authenticated` 141 → 137.
+- **Atenção ao deploy do site:** as tabelas antigas já foram apagadas. Enquanto o site publicado for o anterior ao merge, a ficha (contribuição), Bolsas e Valores sem ciclo dão erro; com o deploy da `main` volta ao normal.
 | 4 | Loja | pendente | Opus 5.5 ou Sonnet 5.5, médio a alto | — | — |
 | 5 | Site e partes compartilhadas | pendente | Sonnet 5.5, médio | — | — |
 | 6 | Qualidade, faxina e `CLAUDE.md` | pendente | Sonnet 5.5, médio | — | — |
@@ -163,9 +182,9 @@ Legenda: **DB** = imposto por RLS/RPC no banco; **F** = só o front esconde. Esc
 
 Descrição completa em `docs/regras-de-negocio.md`. Regras que hoje têm **duas versões ativas** ou divergem entre front e banco:
 
-1. **Cobrança em dois modelos** (COB-01 a COB-04): geração usa `cycle_fee_assignments`, `fee_cycle_prices`, `cycle_scholarships`, `fee_cycle_exempt`; "Minha participação", ficha do integrante, tela de Bolsas e indicadores leem `member_fee_assignments`, `fee_category_prices`, `scholarships` (101/10/7 linhas, contra 363/20/30 nas tabelas por ciclo). Um gatilho apaga e recria o ciclo atual a partir das tabelas antigas.
-2. **Remunerado** (COB-05): o front esconde a contribuição de quem é remunerado; a geração de cobranças não exclui.
-3. **Distribuição** (COB-06): calculada no navegador; `compute_distribution` e suas tabelas continuam no banco sem uso.
+1. **(Resolvido na etapa 3.) Cobrança em dois modelos** (COB-01 a COB-04): geração usa `cycle_fee_assignments`, `fee_cycle_prices`, `cycle_scholarships`, `fee_cycle_exempt`; "Minha participação", ficha do integrante, tela de Bolsas e indicadores leem `member_fee_assignments`, `fee_category_prices`, `scholarships` (101/10/7 linhas, contra 363/20/30 nas tabelas por ciclo). Um gatilho apaga e recria o ciclo atual a partir das tabelas antigas.
+2. **(Resolvido na etapa 3.) Remunerado** (COB-05): o front esconde a contribuição de quem é remunerado; a geração de cobranças não exclui.
+3. **(Calculador antigo apagado na etapa 3.) Distribuição** (COB-06): calculada no navegador; `compute_distribution` e suas tabelas continuam no banco sem uso.
 4. **Classificações** (COB-08): o painel da Direção agrupa por `classifications` (Aluno/Músico/Sênior antigos), paralelo ao Tipo da categoria (`base_key`); o front ainda usa `system_key` em lugares onde a regra é `base_key` (INT-08).
 5. **Reativação** (INT-01): `can_decide_reactivation` autoriza Professor; `set_member_cycle_status` exige `member_cycles.manage`, que o Professor perdeu.
 6. **Permissões no front** (INT-07): por permissão × por nome de papel; menu com escopo mínimo `own` × páginas com `org`.
@@ -312,7 +331,7 @@ Já configurável: nome da loja, cores (`organizations.theme`), logo, Pix, Infin
 |---|---|---|
 | D1 | Professor pode reativar integrante inativo do próprio grupo? (sim → consertar; não → tirar o botão e a regra) | INT-01 |
 | D2 | Preço especial deve ser o menor entre especial e preço de integrante? | LOJA-11 |
-| D3 | Quem tem atividade remunerada deve ficar fora da geração de cobranças? | COB-05 |
+| D3 | Quem tem atividade remunerada deve ficar fora da geração de cobranças? **Respondida (etapa 3): sim, nunca é cobrado.** | COB-05 |
 | D4 | Lista de aniversários: todos com nome completo, ou só ativos com nome de exibição? | LGPD-04 |
 | D5 | Retenção da loja: implementar a anonimização após N anos (pedidos antigos deixam de ser consultáveis) ou mudar o texto do aviso? Qual prazo para backups manuais e log de auditoria? | LGPD-01, LGPD-02, LGPD-03 |
 | D6 | "Avisei que paguei": desligar de vez (recomendado) ou reativar o botão com expiração do "em conferência"? | LOJA-02, LOJA-14 |
