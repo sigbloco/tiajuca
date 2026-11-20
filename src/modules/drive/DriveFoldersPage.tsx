@@ -19,6 +19,7 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { formatDateTime } from '@/core/format'
 import { driveSync } from './sync'
 import { IntegrationsSettings } from '@/modules/integrations/IntegrationsSettings'
+import { safeHttpUrl } from '@/core/safeUrl'
 
 interface Folder {
   id: string; name: string; description: string | null; url: string; drive_folder_id: string | null; is_active: boolean; sort_order: number
@@ -272,7 +273,7 @@ export function DriveFoldersPage() {
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <a href={f.url} target="_blank" rel="noreferrer noopener"
+                <a href={safeHttpUrl(f.url) ?? '#'} target="_blank" rel="noreferrer noopener"
                   className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 font-semibold text-primary-foreground hover:opacity-90">
                   <ExternalLink className="h-4 w-4" /> Abrir no Drive
                 </a>

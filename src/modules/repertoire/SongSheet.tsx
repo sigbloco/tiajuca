@@ -17,6 +17,7 @@ import { DrivePicker } from './DrivePicker'
 import { DriveRootTree } from './DriveFolderTree'
 import { getDriveConfig, type DriveFile } from './drive'
 import { KIND_LABEL, TUNINGS, hasTuning, guessTarget, listAttachments, openAttachment, uploadSongFile, type Attachment, type AttachmentKind, type Song } from './service'
+import { safeHttpUrl } from '@/core/safeUrl'
 
 const field = (v: string) => v.trim() || null
 
@@ -248,10 +249,10 @@ export function SongSheet({ repertoireId, song, onClose }: { repertoireId: strin
         </form>
       ) : (
         <dl className="space-y-1">
-          {(song?.guide_url || song?.drive_folder_url) && (
+          {(safeHttpUrl(song?.guide_url) || safeHttpUrl(song?.drive_folder_url)) && (
             <div className="flex flex-wrap gap-2">
-              {song.guide_url && <Button asChild variant="outline"><a href={song.guide_url} target="_blank" rel="noreferrer noopener"><ExternalLink className="h-4 w-4" /> Guia</a></Button>}
-              {song.drive_folder_url && <Button asChild variant="outline"><a href={song.drive_folder_url} target="_blank" rel="noreferrer noopener"><ExternalLink className="h-4 w-4" /> Pasta no Drive</a></Button>}
+              {safeHttpUrl(song?.guide_url) && <Button asChild variant="outline"><a href={safeHttpUrl(song?.guide_url)} target="_blank" rel="noreferrer noopener"><ExternalLink className="h-4 w-4" /> Guia</a></Button>}
+              {safeHttpUrl(song?.drive_folder_url) && <Button asChild variant="outline"><a href={safeHttpUrl(song?.drive_folder_url)} target="_blank" rel="noreferrer noopener"><ExternalLink className="h-4 w-4" /> Pasta no Drive</a></Button>}
             </div>
           )}
           {song?.genre && <div><dt className="text-muted-foreground">Gênero</dt><dd>{song.genre}</dd></div>}

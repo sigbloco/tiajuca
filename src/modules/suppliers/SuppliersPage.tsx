@@ -17,6 +17,7 @@ import { useOrgId } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
 import { listSupplierCategories, listSuppliers, whatsappUrl, type Supplier, type SupplierCategory } from './service'
+import { safeHttpUrl } from '@/core/safeUrl'
 
 function SupplierSheet({ sup, categories, defaultCategory, onClose }: {
   sup: Supplier | null; categories: SupplierCategory[]; defaultCategory: string; onClose: () => void
@@ -159,7 +160,7 @@ function SupplierRow({ s, canManage, onEdit }: { s: Supplier; canManage: boolean
       <div className="mt-2 flex flex-wrap gap-2">
         {s.phone && <a className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted" href={`tel:+55${s.phone.replace(/\D/g, '')}`}><Phone className="h-4 w-4" /> {maskPhone(s.phone)}</a>}
         {wa && <a className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted" href={wa} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp</a>}
-        {s.website && <a className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted" href={s.website} target="_blank" rel="noreferrer noopener"><ExternalLink className="h-4 w-4" /> Site</a>}
+        {safeHttpUrl(s.website) && <a className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted" href={safeHttpUrl(s.website)} target="_blank" rel="noreferrer noopener"><ExternalLink className="h-4 w-4" /> Site</a>}
         {s.email && <a className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm hover:bg-muted" href={`mailto:${s.email}`}>{s.email}</a>}
       </div>
     </Card>
