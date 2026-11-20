@@ -57,7 +57,7 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
     mutationFn: (s: 'cancelled' | 'pending') => rpc('change_charge_status', { p_charge: charge.id, p_status: s, p_notes: null })(),
     onSuccess: (_d, s) => done(s === 'cancelled' ? 'Cobrança cancelada.' : 'Cobrança reaberta.'), onError: (e) => toast.error(friendlyError(e)),
   })
-  const [link, setLink] = useState((charge as Charge & { pay_link_url?: string | null }).pay_link_url ?? '')
+  const [link, setLink] = useState(charge.pay_link_url ?? '')
   const makeLink = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('billing-pay-link', { body: { charge_id: charge.id } })
@@ -87,13 +87,23 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
         {charge.manual_adjustment && <p className="text-xs text-warning">Valor ajustado manualmente.</p>}
         {charge.paid_on && <p className="text-muted-foreground">Pago em {formatDate(charge.paid_on)}{charge.payment_method ? ` via ${charge.payment_method}` : ''}.</p>}
       </Card>
+      {(charge.pay_ref?.divergences?.length || charge.pay_ref?.paid_while) && (
+        <Card className="space-y-1 border-warning/40 bg-warning/10 p-3 text-sm">
+          <p className="font-semibold">Pagamento pela InfinitePay sem baixa: confira</p>
+          {(charge.pay_ref?.divergences ?? []).map((d, i) => (
+            <p key={i}>{d.at ? `${formatDate(d.at.slice(0, 10))}: ` : ''}pago {d.paid_amount != null ? formatCurrency(d.paid_amount / 100) : d.amount != null ? formatCurrency(d.amount / 100) : 'valor desconhecido'}, diferente do valor da cobrança (link antigo ou valor ajustado).</p>
+          ))}
+          {charge.pay_ref?.paid_while && <p>Chegou um pagamento com a cobrança {CHARGE_STATUS_LABEL[charge.pay_ref.paid_while as ChargeStatus]?.toLowerCase() ?? charge.pay_ref.paid_while}.</p>}
+          <p className="text-muted-foreground">Se o dinheiro entrou, registre o pagamento abaixo ou ajuste o valor; se não, ignore.</p>
+        </Card>
+      )}
 
       {charge.status === 'pending' && charge.final_amount > 0 && (
         <section className="space-y-2">
           <h3>Link de pagamento</h3>
           {link && <div className="flex items-center gap-2"><Input readOnly value={link} onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" size="icon" aria-label="Copiar link" onClick={copyLink}><ClipboardCopy className="h-4 w-4" /></Button></div>}
           <Button variant="outline" className="w-full" disabled={makeLink.isPending} onClick={() => makeLink.mutate()}>{link ? 'Gerar novo link' : 'Gerar link de pagamento'}</Button>
-          <p className="text-xs text-muted-foreground">Pix ou cartão pela InfinitePay. Quando o pagamento é aprovado, a cobrança é baixada sozinha. Se ajustar o valor, gere um novo link.</p>
+          <p className="text-xs text-muted-foreground">Pix ou cartão pela InfinitePay. Quando o pagamento é aprovado, a cobrança é baixada sozinha. Ao ajustar o valor, o link antigo deixa de dar baixa: gere um novo.</p>
         </section>
       )}
 
