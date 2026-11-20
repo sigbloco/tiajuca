@@ -40,7 +40,15 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 | Etapa | Nome | Status | Modelo / esforço | Testado | Decisões do usuário |
 |---|---|---|---|---|---|
 | Fase 1 | Diagnóstico (só leitura) | **concluída**, commitada na branch `revisao-geral` (não mergeada: a Fase 1 só escreve na branch) | Opus 5.5, alto | typecheck, build, testes, `npm audit`, advisors do Supabase, leitura de policies/funções em produção (só SELECT) | aguardando aprovação do plano e respostas da seção 9 |
-| 1 | Segurança crítica (banco, Auth, webhooks) | pendente | Opus 5.5 ou Fable 5.2, alto | — | — |
+| 1 | Segurança crítica (banco, Auth, webhooks) | **em andamento** na branch `revisao-etapa1` (ver "Etapa 1: onde parou") | Opus 5.5 ou Fable 5.2, alto | — | travar `members.manage` e `backups.manage`: **sim**; D7: **desligar login por senha** (o usuário faz no painel) |
+
+### Etapa 1: onde parou (19/11/2026, conversa cortada por limite de uso)
+
+- Branch `revisao-etapa1` (criada da `main` em `e0a2c78` + merge da `revisao-geral`), no worktree `.claude/worktrees/revisao-geral`. Nada aplicado no banco, nada mergeado na `main`.
+- Feito: passo 1 (DRIFT-01, commit "traz para o repositório as 7 migrations…").
+- Escrito, **não aplicado**: `supabase/migrations/20261120000001_seg_roles_user_link_backups.sql` (SEG-01, SEG-02, SEG-03 e as duas permissões travadas). Falta mostrar o SQL ao usuário, aplicar e testar por papel via REST.
+- Webhooks (passo 5): a URL do link guardada tem o formato `https://checkout.infinitepay.io/<handle>?lenc=…` e **não contém o `invoice_slug`**, então não dá para amarrar o slug pela URL. Plano: guardar `transaction_nsu` com índice único (em `shop_orders.payment_ref` e `monthly_charges.pay_ref`, ou coluna própria), recusar transação já usada em outro pedido/cobrança, e responder 400 quando o `payment_check` disser `paid !== true` (LOJA-05). `verify.ts` é igual nas duas pastas.
+- Faltam ainda os passos 6 (LOJA-04, SEG-06, SEG-09, SEG-10, LGPD-06), 7 (`public/_headers`) e 8 (orientar desligar o provedor e-mail no painel: das 3 contas com senha, 2 têm Google e 1 não tem cadastro).
 | 2 | Área dos integrantes: permissões, telas e LGPD | pendente | Opus 5.5, alto | — | — |
 | 3 | Área dos integrantes: cobranças com fonte única por ciclo | pendente | Opus 5.5, alto | — | — |
 | 4 | Loja | pendente | Opus 5.5 ou Sonnet 5.5, médio a alto | — | — |
