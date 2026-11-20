@@ -1,4 +1,4 @@
--- Etapa 1 da revisão (SEG-01, SEG-02, SEG-03). AINDA NÃO APLICADA: o usuário precisa ver este SQL antes.
+-- Etapa 1 da revisão (SEG-01, SEG-02, SEG-03). Aplicada em 20/11/2026.
 
 -- SEG-01: uma concessão de papel não muda de papel, pessoa ou organização, e papel revogado não "desrevoga" por UPDATE.
 -- A interface usa só as RPCs (grant/revoke/transfer), que inserem linhas novas e só preenchem revoked_at.

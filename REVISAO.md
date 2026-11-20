@@ -40,15 +40,22 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 | Etapa | Nome | Status | Modelo / esforço | Testado | Decisões do usuário |
 |---|---|---|---|---|---|
 | Fase 1 | Diagnóstico (só leitura) | **concluída**, commitada na branch `revisao-geral` (não mergeada: a Fase 1 só escreve na branch) | Opus 5.5, alto | typecheck, build, testes, `npm audit`, advisors do Supabase, leitura de policies/funções em produção (só SELECT) | aguardando aprovação do plano e respostas da seção 9 |
-| 1 | Segurança crítica (banco, Auth, webhooks) | **em andamento** na branch `revisao-etapa1` (ver "Etapa 1: onde parou") | Opus 5.5 ou Fable 5.2, alto | — | travar `members.manage` e `backups.manage`: **sim**; D7: **desligar login por senha** (o usuário faz no painel) |
+| 1 | Segurança crítica (banco, Auth, webhooks) | **concluída** em 20/11/2026 (branch `revisao-etapa1`, mergeada na `main`); falta só o passo 8, que é do usuário no painel | Opus 5.5, alto | ver "Etapa 1: o que foi feito" | travar `members.manage` e `backups.manage`: **sim**; D7: **desligar login por senha** (o usuário faz no painel) |
 
-### Etapa 1: onde parou (19/11/2026, conversa cortada por limite de uso)
+### Etapa 1: o que foi feito (20/11/2026)
 
-- Branch `revisao-etapa1` (criada da `main` em `e0a2c78` + merge da `revisao-geral`), no worktree `.claude/worktrees/revisao-geral`. Nada aplicado no banco, nada mergeado na `main`.
-- Feito: passo 1 (DRIFT-01, commit "traz para o repositório as 7 migrations…").
-- Escrito, **não aplicado**: `supabase/migrations/20261120000001_seg_roles_user_link_backups.sql` (SEG-01, SEG-02, SEG-03 e as duas permissões travadas). Falta mostrar o SQL ao usuário, aplicar e testar por papel via REST.
-- Webhooks (passo 5): a URL do link guardada tem o formato `https://checkout.infinitepay.io/<handle>?lenc=…` e **não contém o `invoice_slug`**, então não dá para amarrar o slug pela URL. Plano: guardar `transaction_nsu` com índice único (em `shop_orders.payment_ref` e `monthly_charges.pay_ref`, ou coluna própria), recusar transação já usada em outro pedido/cobrança, e responder 400 quando o `payment_check` disser `paid !== true` (LOJA-05). `verify.ts` é igual nas duas pastas.
-- Faltam ainda os passos 6 (LOJA-04, SEG-06, SEG-09, SEG-10, LGPD-06), 7 (`public/_headers`) e 8 (orientar desligar o provedor e-mail no painel: das 3 contas com senha, 2 têm Google e 1 não tem cadastro).
+- **Banco (aplicado em produção, versões iguais aos arquivos):** `20261120012134_seg_roles_user_link_backups` (SEG-01, SEG-02, SEG-03, `members.manage` e `backups.manage` travadas), `20261120012206_infinitepay_transacao_unica` (SUS-01: tabela `infinitepay_transactions` + RPC `infinitepay_claim_transaction`, só `service_role`), `20261120012215_seg_ajustes_menores` (LOJA-04, SEG-06, SEG-09 parcial, SEG-10, LGPD-06). DRIFT-01 também feito (7 migrations trazidas do banco).
+- **Edge Functions publicadas:** `shop-infinitepay-webhook` (v6) e `billing-infinitepay-webhook` (v2): transação usada uma vez só (SUS-01) e 400 quando a InfinitePay ainda não diz "pago" (LOJA-05); valor diferente continua 200 (tentar de novo não muda nada).
+- **Site:** `public/_headers` e o mesmo conjunto no `worker/index.js` (SEG-04: `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`). Vale a partir do próximo deploy do site. CSP fica para a etapa 5.
+- **SEG-09 ficou parcial:** só o `anon` perdeu acesso a `instrument_occupied`. Exigir vínculo com a organização quebraria o formulário público (`get_public_form` usa a função para quem ainda não é integrante, e dentro de função definer não se distingue chamada direta de aninhada).
+- **Testado** (no banco de produção, se passando por contas reais do titular, de um diretor e de um integrante, dentro de transações sempre desfeitas; conferido depois que nada ficou gravado):
+  - bloqueados: diretor trocar a própria concessão para Titular, trocar a pessoa da linha do titular, "desrevogar" Direção, ligar a própria conta ao cadastro do titular; Direção e até o Titular delegarem `members.manage`/`backups.manage` (RPC e INSERT direto); integrante reescrever o próprio aceite ou desfazer a revogação; integrante chamar `sync_staff_compensation`; visitante ler produto oculto (0), chamar `instrument_occupied` e reservar transação; `authenticated` reservar transação; integrante baixar backup;
+  - funcionando: diretor editar integrante; conceder e revogar Monitor pelas RPCs; integrante revogar o próprio aceite; `link_my_member_by_email` religando a conta; diretor baixar backup; restore pelo titular (restaura dados, não mexe em papéis nem em `user_id`); backup forjado com linha de outra organização ignorado; trava de transação (mesmo pedido de novo: sim; outra mensalidade ou outro pedido: não); visitante continua vendo os 10 produtos visíveis;
+  - gatilho dispara sem EXECUTE para `authenticated` (base do SEG-06), conferido com objetos temporários desfeitos;
+  - webhooks publicados respondem a pedido inexistente (200, "desconhecido"); typecheck, build e `vitest` (27 arquivos, 201 testes) passam; Worker conferido em Node (cabeçalhos presentes, inclusive quando a consulta ao banco falha);
+  - advisors: definer executáveis por `anon` 31 → 10 (todas públicas de propósito, mais a `rls_auto_enable` do próprio Supabase), por `authenticated` 162 → 141; nova tabela sem policy só a `infinitepay_transactions` (de propósito).
+- **Achado novo (SEG-16, abaixo):** o backup mais recente (15/11, e os anteriores) não restaura mais.
+- **Passo 8 (do usuário, no painel do Supabase → Authentication → Sign In / Providers):** desligar o provedor **Email** (D7). Das 3 contas com senha, 2 também têm Google e continuam entrando; 1 não tem cadastro de integrante. Se preferir manter o provedor, ao menos ligar "Leaked password protection".
 | 2 | Área dos integrantes: permissões, telas e LGPD | pendente | Opus 5.5, alto | — | — |
 | 3 | Área dos integrantes: cobranças com fonte única por ciclo | pendente | Opus 5.5, alto | — | — |
 | 4 | Loja | pendente | Opus 5.5 ou Sonnet 5.5, médio a alto | — | — |
@@ -223,6 +230,7 @@ Cada item foi confirmado lendo o código e/ou a definição em produção. "Muda
 | SEG-13 | Integrantes | `SuppliersPage.tsx:162`, `SongSheet.tsx:253-254`, `DriveFoldersPage.tsx:275` | `href` de campo livre sem checar esquema (`javascript:` gravado por alguém da equipe). Validar `^https?://` |
 | SEG-14 | Site | bucket `site-public` aceita SVG | Só usado em `<img>` (sem XSS no app); risco no domínio do Storage (SUS-03) |
 | SEG-15 | Formulários | limite só por formulário (30/min) | Robô lota `max_responses` com pendências falsas. Limite por IP na borda |
+| SEG-16 | Backups | `restore_backup` × mudanças de esquema | Achado na etapa 1: o backup mais recente (15/11) tem `artistic_functions.kind = 'artistic'`, que a restrição atual não aceita; o restore aborta (nada é gravado). Backups antigos ficam inúteis a cada mudança de esquema. Fazer um backup novo já; na etapa 2 ou 6, mapear valores antigos no restore ou avisar na tela |
 | INT-04 | Integrantes | `organization.tsx:53` | `link_my_member_by_email` (escreve) roda a cada refetch de memberships. Uma vez por sessão |
 | INT-05 | Integrantes | `events.manage` group (Professor) e `capacity.read` group (Monitor) | Escopos que o banco ignora; alinhar matriz ou policies |
 | INT-06 | Integrantes | `purge_trashed` (`20261119000014:8,14`) | Permissão da lixeira diferente da policy (checklists, níveis) |
@@ -320,7 +328,7 @@ Ordem: segurança crítica → área dos integrantes (permissões; depois cobran
 
 ### Etapa 2 — Área dos integrantes: permissões, telas e LGPD
 **Modelo:** Opus 5.5, esforço **alto**. Autorização e dados pessoais.
-INT-01 (D1), INT-02 (guarda por rota), INT-03 (errorElement), INT-07 (um modelo de permissão), INT-04, INT-05, INT-06, INT-08, INT-09, INT-10, LGPD-03 (máscara no audit), LGPD-04 (D4), LGPD-05 (RPC de dados sensíveis), LGPD-02 (D5), LGPD-08, SEG-08, SEG-13, SEG-15.
+INT-01 (D1), INT-02 (guarda por rota), INT-03 (errorElement), INT-07 (um modelo de permissão), INT-04, INT-05, INT-06, INT-08, INT-09, INT-10, LGPD-03 (máscara no audit), LGPD-04 (D4), LGPD-05 (RPC de dados sensíveis), LGPD-02 (D5), LGPD-08, SEG-08, SEG-13, SEG-15, SEG-16 (restore de backups antigos).
 **Testes:** cada papel navegando por URL direta (bloqueado/redirecionado) e chamando o banco direto; aniversários; leitura de dados sensíveis registrada.
 
 ### Etapa 3 — Área dos integrantes: cobranças com fonte única por ciclo
