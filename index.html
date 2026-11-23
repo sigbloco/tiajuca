@@ -26,12 +26,6 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Se o app não aparecer (arquivo ainda sendo publicado, rede falhou), tenta de novo uma vez em vez de deixar a tela em branco.
-      setTimeout(function () {
-        var r = document.getElementById('root')
-        if (r && !r.firstChild) { try { if (sessionStorage.getItem('sigbloco:empty-reload')) return; sessionStorage.setItem('sigbloco:empty-reload', '1') } catch (e) {} location.reload() }
-      }, 4000)
-    </script>
+    <script src="/empty-reload.js"></script>
   </body>
 </html>

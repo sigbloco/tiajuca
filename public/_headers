@@ -1,8 +1,10 @@
 # Cabeçalhos de segurança de todas as páginas e arquivos (Cloudflare Workers com assets). SEG-04 da revisão.
 # As rotas "/" e "/site" passam pelo Worker (worker/index.js), que aplica os mesmos cabeçalhos.
-# A CSP fica para a etapa 5 (precisa de teste com o script inline do index.html).
+# CSP (etapa 5): sem script inline (o do index.html virou /empty-reload.js); estilo inline liberado porque o React usa style="";
+# imagens de qualquer https, porque fotos e capas vêm de endereços escolhidos pela direção. Se mudar o projeto do Supabase, troque o endereço em connect-src (aqui e no worker).
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://dzyvtqrxmladsxceqzud.supabase.co wss://dzyvtqrxmladsxceqzud.supabase.co; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
