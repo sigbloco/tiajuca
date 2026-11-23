@@ -125,7 +125,19 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
   - `tsc`, `vite build`, `vitest` (29 arquivos, 212 testes); advisors sem novidade (definer por `anon` 10, por `authenticated` 137);
   - **não testado:** pedido real até o pagamento (Pix e InfinitePay) e "Meus pedidos" aberto mais de 10 minutos com pedido real (não criei pedido real em produção; a criação foi testada no banco e o `status` nas funções); painel logado (Cupons, Pagamentos e contatos, Reativar), porque o Google só volta para o endereço cadastrado. Vale conferir no uso real depois do deploy.
 - **Atenção ao deploy do site:** as funções já estão no ar. Até o site ser publicado a partir da `main`, a loja publicada segue com a taxa fixa (igual à do banco hoje) e com a consulta antiga, que continua funcionando.
-| 5 | Site e partes compartilhadas | pendente | Sonnet 5.5, médio | — | — |
+| 5 | Site e partes compartilhadas | **concluída** em 23/11/2026 (branch `revisao-etapa5`, mergeada na `main`) | Sonnet 5.5, médio | ver "Etapa 5: o que foi feito" | D11: **5 em 5 em tudo**; SEG-14: **manter SVG**; migration aplicada |
+### Etapa 5: o que foi feito (23/11/2026)
+
+- **Banco (aplicado em produção, versão igual ao arquivo):** `20261123122905_site_etapa5`.
+- **SITE-02:** `get_public_site` lista as 31 colunas públicas uma a uma (conferido: não expõe `organization_id`, `updated_at`, `header_color`, `page_color`). **SITE-03:** checks novos em `organizations.logo_path` (https ou /), `site_albums.cover_url` (https) e nas duas cores dos raios (#RRGGBB); os dados atuais passam.
+- **SITE-01:** todas as rotas, menos a página inicial e o login, carregam sob demanda (`lazy`); o pacote inicial caiu de 1,6 MB para 323 KB (100 KB comprimido).
+- **SEG-04 (CSP):** `script-src 'self'` (o script inline do `index.html` virou `public/empty-reload.js`), `connect-src` só com o site e o Supabase, `frame-src` só YouTube nocookie, `frame-ancestors 'none'`, `object-src 'none'`; estilo inline e imagens https liberados de propósito. No `_headers` e no Worker (iguais).
+- **SITE-04** link de tipo desconhecido é ignorado (não derruba a página); **SITE-06** zoom liberado no celular; **SITE-07** botão "em construção" vira texto desabilitado (sem link, nem por teclado); **SITE-08** aviso no editor de álbuns ("álbum sem data não aparece na página pública"); **SITE-05** `album-preview` não devolve mais o detalhe do erro; **SITE-09** a imagem da prévia do link (`og:image`) acompanha o endereço do site; `docs/SITE.md` lista o que é configurável e o que é fixo.
+- **D11 (respondida): não há exceção, tudo de 5 em 5:** vídeos da página inicial, álbuns, vídeos do editor e vitrine da loja (destaques e demais, cada um com "Ver mais N").
+- **SEG-14 (respondida): manter SVG** no bucket; risco aceito (só a direção envia, uso em `<img>`).
+- **SITE-10:** não apagado. `header_color`/`page_color` do site têm 1 valor cada no banco e o painel ainda os grava; só deixaram de ser públicos. `shop_settings.theme_*` já não existe. Apagar as duas colunas de `site_settings` fica para a etapa 6, se o usuário confirmar.
+- **Pendente do usuário:** publicar a Edge Function `album-preview` (SITE-05; o código já está na `main`, a publicação foi negada na sessão) e publicar o site a partir da `main` (CSP, lazy, vitrine 5 em 5 só valem depois disso).
+- **Testado:** `tsc`, `vitest` e `vite build`; Worker local (`wrangler dev`) servindo o build: cabeçalhos com CSP em `/entrar`, página inicial com dados do Supabase e vídeo, loja, fotos (imagens do Storage carregam) sem erro no console nem violação de CSP; prévia local: "Ver mais" nos vídeos (5 + "Ver mais 2"), vitrine e álbuns; banco: 31 chaves públicas e 4 checks. **Não testado:** formulário público e login Google sob CSP; PDFs (jspdf/html2canvas) sob CSP; celular real. Vale olhar o console depois do deploy.
 | 6 | Qualidade, faxina e `CLAUDE.md` | pendente | Sonnet 5.5, médio | — | — |
 
 ---
@@ -371,7 +383,7 @@ Já configurável: nome da loja, cores (`organizations.theme`), logo, Pix, Infin
 | D8 | Apagar `supabase/apply_all.sql` e `apply_phase2.sql`? | DRIFT-04 |
 | D9 | Adicionar ESLint (dependência de desenvolvimento) ou remover os 41 comentários `eslint-disable`? | QUAL-06 |
 | D10 | Taxa do cartão configurável no painel da loja? **Respondida (etapa 4): sim.** | LOJA-13 |
-| D11 | Listas públicas (vídeos 3 em 3, álbuns 6 em 6, vitrine da loja) são exceção à regra "5 em 5"? | SITE |
+| D11 | Listas públicas (vídeos 3 em 3, álbuns 6 em 6, vitrine da loja) são exceção à regra "5 em 5"?  **Respondida (etapa 5): não, tudo de 5 em 5.** | SITE |
 | D12 | Cupom: incluir validade e limite de usos? **Respondida (etapa 4): sim.** | LOJA-06 |
 
 ---

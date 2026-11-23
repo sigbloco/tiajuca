@@ -50,7 +50,7 @@ const pill = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-ful
 export function LandingPage() {
   const { data, isLoading, isError } = usePublicSite(DEFAULT_ORG_SLUG)
   const { session } = useAuth()
-  const [shown, setShown] = useState(3)
+  const [shown, setShown] = useState(5)
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const [loginOpen, setLoginOpen] = useState(params.has('entrar'))
@@ -160,7 +160,7 @@ export function LandingPage() {
               </figure>
             ))}
             {videos.length > shown && (
-              <button type="button" onClick={() => setShown((n) => n + 3)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Carregar mais</button>
+              <button type="button" onClick={() => setShown((n) => n + 5)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Ver mais {Math.min(5, videos.length - shown)}</button>
             )}
           </section>
         )}

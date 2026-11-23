@@ -42,7 +42,7 @@ export function AlbumsPage() {
   // Botão de inverter: mostra do mais antigo ao mais novo (ou o contrário, se já estiver invertido).
   const [reversed, setReversed] = useState(false)
   const ordered = reversed ? [...shown].reverse() : shown
-  const prog = useProgressive(ordered, 6, year + String(reversed))
+  const prog = useProgressive(ordered, 5, year + String(reversed))
   const heroColor = data ? areaOverrides(data.org.theme, 'site').header ?? null : null
   const heroText = heroColor ? areaOverrides(data!.org.theme, 'site').headerText ?? textOn(heroColor) : undefined
 
