@@ -2,7 +2,7 @@
 
 Data: 23/11/2026. Só leitura: nada foi corrigido.
 
-**Feitas: 3a (Integrante) mais as causas comuns da área toda, só pelo código; 3b (Professor/Monitor), 3c-1 (Direção/Titular: pessoas, ciclos, presença e estrutura) e 3c-2 (dinheiro), vistas na tela (seções "Etapa 3b" e "Etapa 3c", mais abaixo). Falta a 3c-3 (formulários, loja, site, interface, acesso e auditoria).** A área tem cerca de 18 mil linhas em uns 100 arquivos (rotas `/:org/*`), grande demais para uma conversa; ficou dividida em 3a (Integrante), 3b (Professor/Monitor) e 3c (Direção/Titular), como combinado. A 3c está no fim, como "a fazer", com os indícios já encontrados.
+**Feitas: 3a (Integrante) mais as causas comuns da área toda, só pelo código; 3b (Professor/Monitor) e 3c (Direção/Titular, em três partes: pessoas, ciclos, presença e estrutura; dinheiro; formulários, loja, site, interface, acesso e auditoria), vistas na tela (seções "Etapa 3b" e "Etapa 3c", mais abaixo). A área 3 está concluída; a ordem sugerida de correção fica no fim da 3c.** A área tem cerca de 18 mil linhas em uns 100 arquivos (rotas `/:org/*`), grande demais para uma conversa; ficou dividida em 3a (Integrante), 3b (Professor/Monitor) e 3c (Direção/Titular), como combinado. A 3c está no fim, como "a fazer", com os indícios já encontrados.
 
 **Nada foi visto na tela.** O navegador embutido não tinha sessão aberta (nem em 5173, 5174 ou 5175) e a revisão seguiu sem login, só pelo código. Todo achado abaixo é **"não verificado na tela"**: as larguras são deduzidas das classes do Tailwind (ex.: `h-9` = 36 px), não medidas. Para saber o que o papel Integrante vê, consultei no banco (só leitura) as permissões do papel e a liberação de páginas (`role_permissions`, `page_releases`) e o tema do bloco (`organizations.theme`), para calcular os contrastes.
 
@@ -324,7 +324,7 @@ Confirmados na tela, da 3a: C1 (dias com 36 px), C2 (pontos sem legenda), C3 (li
 
 ## Etapa 3c: Direção/Titular
 
-A 3c é grande demais para uma conversa e ficou dividida em três partes: **3c-1** (pessoas, ciclos, presença e estrutura) e **3c-2** (dinheiro), feitas abaixo, e **3c-3** (formulários, loja, site, interface, acesso e auditoria), a fazer.
+A 3c é grande demais para uma conversa e ficou dividida em três partes: **3c-1** (pessoas, ciclos, presença e estrutura), **3c-2** (dinheiro) e **3c-3** (formulários, loja, site, interface, acesso e auditoria, mais Calendário e Repertório em modo de edição), todas abaixo.
 
 ### Etapa 3c-1: pessoas, ciclos, presença e estrutura (vista na tela)
 
@@ -585,6 +585,166 @@ Bem resolvido: quatro caixas de resumo (pessoas, soma, equivalente em bolsas int
 - **Fileira de filtros em `flex` sem quebra** (Cobranças), mesma causa do DF1 da 3c-1 (Fornecedores).
 - **`MonthNav` dentro de um contêiner sem largura:** as setas encolhem para 22 px (Distribuição).
 
+### Etapa 3c-3: formulários, loja, site, interface, acesso e auditoria (vista na tela)
+
+Data: 23/11/2026. Só leitura: nada foi corrigido.
+
+**Como foi feita.** Como na 3c-1 e na 3c-2: logado como Titular no site publicado, em 375, 768 e 1280 px, com as medidas tiradas na página. Nada foi gravado. Não publiquei nem arquivei formulário, não mexi em seletor da matriz de permissões, em caixa de liberação, em papel de ninguém, em cor, foto, controle deslizante do site, cupom nem configuração da loja; não criei, baixei, carreguei nem restaurei backup. Abri só abas, listas, o painel de um evento e a lixeira do Calendário, fechados pelo X. Em Auditoria, uma recarga da página (só leitura) serviu para ver as requisições. Também entraram o Calendário e o Repertório em modo de edição, que tinham ficado fora da lista. Os números de linha são da `main`.
+
+Telas cobertas: Formulários (lista; editor com Configurações, Cabeçalho, Campos, Envio e Respostas; Seções modelo, Listas do cadastro e Textos padrão), Loja (`gerenciar-loja`: Pedidos, Produtos, Kits, Estoque, Retiradas, Cupons e Configurações), Site, Interface (Cores de fábrica, Sistema, Site e Loja), Acesso e papéis (Pessoas, Permissões dos papéis, Liberação de páginas), Auditoria e backups, Calendário da direção (botões do topo, lixeira, painel do evento), Configurações do Calendário (Tipos de evento) e Repertório.
+
+#### Resumo 3c-3: os problemas mais importantes
+
+1. **(alta, todas) A Auditoria não carrega em produção e a tela finge que está vazia.** A consulta a `audit_logs` voltou com **erro 500** nas duas tentativas (recarga às 23/11, conferida pelas requisições da página). Durante as novas tentativas automáticas, por cerca de 20 s, a tela mostra "0 registro(s)" e "1 / 1", sem esqueleto e sem a mensagem de vazio; só depois aparece "Algo deu errado. Tente novamente.", e o "0 registro(s)" continua embaixo. A causa está no banco (não investigada: esta fase é só de tela), e é a principal ferramenta de LGPD da direção. `AuditPage.tsx:65-79,110-128`.
+2. **(alta, todas) Mudanças de acesso e publicações num toque, sem confirmação.**
+   - "Publicar" um formulário (que abre o link ao público) grava na hora; só "Apagar" pede confirmação.
+   - Na matriz de permissões, cada seletor "Ver/Editar" grava ao trocar, para o papel inteiro.
+   - Em Pessoas, dar Direção ou Professor/Monitor a alguém é um toque; só tirar a Direção confirma.
+   - Em Interface, "× Tirar" uma cor grava sozinho; tirar a "Principal" troca a cor dos botões do sistema, do site e da loja de uma vez.
+   - No Site, tudo grava 0,8 s depois da mudança, inclusive os controles deslizantes, e vai direto para a página pública.
+   - Na Loja, o cupom (ativo, desconto, validade e limite) grava a cada mudança; a validade usa o `type="date"` do navegador e grava a cada dígito.
+
+   `SettingsTab.tsx:118`, `PermissionsMatrix.tsx:96-121`, `PeopleTab.tsx:126-131`, `InterfacePage.tsx:46-50,57`, `SiteSettings.tsx:85`, `CouponsTab.tsx:133-148`.
+3. **(alta, 375 px) Acesso e papéis: a frase do titular quebra no meio da palavra.** "O bloco tem um **titular**: só ele concede…" é um `<p>` em `flex`, então cada pedaço vira uma coluna: "O bloco / tem um", "titul / ar" e ": só ele concede / ou remove a direção." O "titular" parte em "titul" e "ar" (regra: palavra não se quebra). `PeopleTab.tsx:146`.
+4. **(alta, todas) A barra "Página liberada para" aparece nas subpáginas e muda a página-mãe.** A chave vem só do primeiro trecho do endereço. Nas Configurações do Calendário, de Formulários e de Naipes, no editor de um formulário e na chamada, as caixas valem para Calendário, Formulários ou Naipes inteiros. Nas Configurações do Calendário, "Integrante ativo" aparece marcado e ativo: um toque ali tira o Calendário de todos os integrantes (DT2 da 3c-1). `access/pageReleases.ts:60-65`, `app/PageReleaseBar.tsx:22`.
+5. **(média, todas) Três jeitos de salvar na mesma área de configuração.**
+   - Liberação de páginas marca e espera o "Salvar" fixo (o padrão certo), enquanto a barra do topo grava ao toque.
+   - Interface: "Cores de fábrica" grava sozinha ("As mudanças são salvas sozinhas."); Sistema, Site e Loja esperam o "Salvar" fixo.
+   - O editor de formulário tem "Salvar" fixo e, no meio da página, "Publicar" e "Arquivar". Na aba Cabeçalho, o texto diz "Vale na hora, sem republicar. Salve para aplicar.", que se contradiz.
+
+   `PageReleasesTab.tsx:35-55`, `InterfacePage.tsx:57,146`, `SettingsTab.tsx:118-121,156`.
+6. **(média, 375 px) Liberação de páginas no celular.**
+   - A tabela tem 544 px numa área de 339 px: só aparecem "Página", "Dir." e metade de "Prof./Mon.", com rolagem lateral.
+   - O "Desmarcar tudo (todas as categorias, menos Direção)" tem o texto mais largo que o botão: as letras passam por cima das duas bordas.
+   - "Marcar tudo" tem 84 × 22 px; as 116 caixas têm 20 × 20 px.
+
+   Em 768 px ainda há rolagem (445 de 544 px); em 1280 px cabe. `PageReleasesTab.tsx:76,81,93-95,116`.
+7. **(média, 375 px) Alvos minúsculos nas telas de configuração.**
+   - Interface: "× Tirar" tem **39 × 16 px**.
+   - Loja → Configurações: "Remover" pessoa de contato tem **18 × 40 px**.
+   - Subir/Descer: 28 × 20 px em Formulários (seções e modelos), 28 × 24 px no Site, 32 × 28 px em Produtos e Kits, 40 × 40 px no Repertório.
+   - Formulários → Envio: as dezenas de botões de variável têm 22 px de altura (o mesmo painel se repete em cada caixa de texto).
+   - Os controles deslizantes do Site e do Cabeçalho têm 16 px de altura.
+
+   `InterfacePage.tsx:48`, `PaymentsTab.tsx:155`, `StructureManagers.tsx:63`, `SendSection.tsx`.
+8. **(média, todas) Respostas de formulário e Auditoria paginam de 20 e 25, com "1 / 1".** As duas usam "Página anterior/Próxima página", e não o "Ver mais 5" (regra 3). Com zero itens, mostram "Nenhuma resposta.", "0 resposta(s)" e "1 / 1" ao mesmo tempo. `SubmissionsTab.tsx:18,204,234`, `AuditPage.tsx:13,92,128-129`.
+9. **(média, todas) Painel do evento: ações só com ícone e duas sem nome.** Em 375 px, a fileira Presença/Editar/Cancelar/Apagar vira quatro ícones de 79 × 40 px (o `ActionRow` esconde todos os rótulos quando um não cabe). "Presença" e "Cancelar" não têm `aria-label` nem `title`: o leitor de tela lê só "link" e "botão". `EventSheet.tsx:179-197`, `ActionRow.tsx:27`.
+10. **(baixa, todas) Textos desatualizados ou com "(s)".**
+    - A confirmação de apagar formulário diz "vai para a lixeira (em Inscrições)", mas a página se chama Formulários.
+    - "0 resposta(s)", "15 kit(s) possível(is)", "0 registro(s)" e "1 músicas".
+    - Os backups mostram "4.1 MB" com ponto, e não "4,1 MB".
+
+    `SettingsTab.tsx:121`, `FormsPage.tsx:128,141`, `ProductsTab.tsx:22`, `AuditPage.tsx:128`, `BackupsTab.tsx:15-17`.
+
+#### O que não deu para verificar (3c-3)
+
+- **Causa do erro 500 da Auditoria:** não olhei o banco (esta fase é só de tela). Fica como primeira coisa a investigar.
+- **Todas as gravações:** publicar e arquivar formulário, salvar campos e textos, respostas (aprovar, rejeitar, CSV, retenção), pedidos da loja (mudar status, retirada, PDF, arquivar), produtos, kits, estoque, cupons, configurações da loja, site, cores, papéis, matriz, liberação, transferência de titularidade, criar, baixar, carregar, restaurar e excluir backup, criar, editar, cancelar e apagar evento, tipos de evento, repertório. Toasts e erros: só pelo código.
+- **Respostas de formulário com itens:** os três formulários estão em rascunho, sem respostas.
+- **Painéis de produto, kit, pedido e evento em edição:** não abertos (o de pedido mostra dados de clientes).
+- **Recorrências, Checklists e Feriados** das Configurações do Calendário, e o detalhe de um repertório em edição: não abertos.
+- **Direção:** pelo código, a única diferença de tela nesta parte é em Pessoas (a Direção não concede nem tira Direção: o botão vem desabilitado, com cadeado e o motivo no `title`) e na barra de liberação (DX2 da 3c-1).
+
+#### Achados por tela (3c-3)
+
+##### Formulários — `FormsPage.tsx`, `FormEditorPage.tsx`, `SettingsTab.tsx`, `FieldsTab.tsx`, `SendSection.tsx`, `SubmissionsTab.tsx`, `SectionTemplatesPage.tsx`, `FormListsPage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| FO1 | alta | todas | "Publicar" grava num toque (ver resumo 2). | `SettingsTab.tsx:118` |
+| FO2 | média | todas | Editor com "Salvar" fixo, mais "Publicar" e "Arquivar" no meio da página e "Vale na hora, sem republicar. Salve para aplicar." (ver resumo 5). | `SettingsTab.tsx:118-121,156` |
+| FO3 | média | todas | Respostas de 20 em 20, com página e "1 / 1" mesmo vazia (ver resumo 8). | `SubmissionsTab.tsx:18,204,234` |
+| FO4 | média | 375 | Envio: quatro caixas de texto, cada uma com a barra de formatação (32 px) e o painel "Inserir variável", que abre dezenas de botões de 22 px; em Textos padrão, o mesmo painel se repete. | `SendSection.tsx` |
+| FO5 | média | 375 | Campos e Seções modelo: Subir/Descer com 28 × 20 px; Duplicar e Restaurar com 28 × 28 px; três botões ("Salvar … como modelo", "Ocultar", "Apagar") de 101 × 36 px por seção. | `FieldsTab.tsx`, `SectionTemplatesPage.tsx` |
+| FO6 | baixa | 375 | Abas do editor em 2+3 (Configurações e Cabeçalho em cima; Campos, Envio e Respostas embaixo); a regra pede 3+2. | `FormSettingsTabs.tsx` |
+| FO7 | baixa | todas | Dois "voltar": o "Voltar para Formulários" do topo e uma seta de 40 px ao lado do título (mesma causa do R2 da 3a). | `FormEditorPage.tsx` |
+| FO8 | baixa | 375 | Na lista, o link completo de cada formulário ocupa três linhas, partido no meio das palavras (`break-all`), em vermelho. | `FormsPage.tsx:122` |
+| FO9 | baixa | todas | Listas do cadastro mostra as 6 listas de uma vez (regra 3) e a lixeira aparece vazia ("Lixeira 0"), enquanto nas outras páginas ela some quando está vazia. | `FormListsPage.tsx` |
+| FO10 | baixa | todas | Confirmação com "(em Inscrições)" e "resposta(s)" (ver resumo 10). | `SettingsTab.tsx:121`, `FormsPage.tsx:128,141` |
+
+Bem resolvido: Configurações e "Novo formulário" em 2 colunas iguais sob o título; "Apagar" vai para a lixeira, com confirmação; "Vale para todos os ciclos" no lugar do seletor de ciclo; aviso de que mudar o endereço quebra links já divulgados; "Seções modelo" com "Ver mais 1".
+
+##### Loja (`gerenciar-loja`) — `ShopAdminPage.tsx`, `OrdersTab.tsx`, `ProductsTab.tsx`, `StockTab.tsx`, `PickupPointsTab.tsx`, `CouponsTab.tsx`, `PaymentsTab.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| LJ1 | média | todas | Cupom grava a cada mudança, e a validade a cada dígito, pelo `type="date"` do navegador (o resto do app usa o `DateInput` com máscara) (ver resumo 2). | `CouponsTab.tsx:133-148` |
+| LJ2 | média | 375 | Configurações: "Remover" pessoa de contato com 18 × 40 px; a tabela de taxas tem 12 campos de 88 px. | `PaymentsTab.tsx:155` |
+| LJ3 | média | 375 | Pedidos: "Exportar PDF", "Arquivar encerrados" e cinco filtros empilhados (cerca de 340 px) antes do primeiro pedido. | `OrdersTab.tsx:52-60` |
+| LJ4 | baixa | todas | "Configurações" é uma engrenagem com `role="tab"` fora da fileira de abas (`tablist`): para o leitor de tela, é uma aba solta. | `ShopAdminPage.tsx:48,62` |
+| LJ5 | baixa | 375 | Produtos e Kits: alça de 28 px, Subir/Descer de 32 × 28 px e "Mover para a lixeira" de 64 × 32 px; selo "KIT" de 10,4 px. | `ProductsTab.tsx` |
+| LJ6 | baixa | todas | "15 kit(s) possível(is)"; "0 reservado" (com zero, o plural é "0 reservados"). | `ProductsTab.tsx:22`, `StockTab.tsx:103` |
+
+Bem resolvido: as seis abas em 3+3 com 44 px de altura (as maiores da área); "Arquivar encerrados" com confirmação; "Ver mais 5" nos pedidos; Configurações com asterisco nos obrigatórios e "Salvar" fixo; Estoque explica o que cada item consome.
+
+##### Site e Interface — `SiteSettings.tsx`, `InterfacePage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| SI1 | média | todas | Site: tudo grava 0,8 s depois de mudar, até o arrastar de um controle deslizante, e vai direto para a página pública, sem prévia nem desfazer (ver resumo 2). | `SiteSettings.tsx:85,196-203` |
+| SI2 | média | 375 | Site: Subir/Descer item com 28 × 24 px; controles deslizantes com 16 px de altura; caixas de marcar espremidas a 12 × 20 e 14 × 20 px. | `SiteSettings.tsx` |
+| IN1 | média | todas | Interface com dois jeitos de salvar (ver resumo 5); "× Tirar" a cor grava sozinho, e tirar a "Principal" troca a cor dos botões em todo lugar (ver resumo 2). | `InterfacePage.tsx:46-50,57,146` |
+| IN2 | média | 375 | "× Tirar" com 39 × 16 px (ver resumo 7). | `InterfacePage.tsx:48` |
+| IN3 | baixa | 375 | Sistema, Site e Loja: 10 linhas de cor, cada uma com 6 amostras de 28 × 28 px e um "+": 70 alvos pequenos por aba. | `InterfacePage.tsx` |
+
+Bem resolvido: prévia ao vivo das cores, que dá para tocar para escolher; "Restaurar cores de fábrica"; o Site diz "Tudo salvo automaticamente" no topo e "Salvando…" enquanto grava.
+
+##### Acesso e papéis — `AccessPage.tsx`, `PeopleTab.tsx`, `PermissionsMatrix.tsx`, `PageReleasesTab.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| AC1 | alta | 375 | "titul / ar": a frase do titular em colunas (ver resumo 3). | `PeopleTab.tsx:146` |
+| AC2 | alta | todas | Papéis e matriz gravam num toque (ver resumo 2). | `PeopleTab.tsx:126-131`, `PermissionsMatrix.tsx:96-121` |
+| AC3 | média | 375 | As três abas (Pessoas, Permissões dos papéis, Liberação de páginas) ficam uma por linha, com 38 px (mesma causa do `ButtonRow` da 3b). | `AccessPage.tsx:73-78` |
+| AC4 | média | 375 | Liberação de páginas: tabela com rolagem lateral, "Desmarcar tudo" com texto vazando do botão, "Marcar tudo" de 84 × 22 px (ver resumo 6). | `PageReleasesTab.tsx:76,81,93-95` |
+| AC5 | média | 375 | Matriz: 19 seletores de 32 px por papel, que gravam ao trocar. | `PermissionsMatrix.tsx:118` |
+| AC6 | baixa | todas | Pessoas: "Direção" (77 px) e "Professor/Monitor" (151 px) lado a lado, com larguras desiguais e 36 px de altura (regra 2). | `PeopleTab.tsx:123-136` |
+
+Bem resolvido: Liberação de páginas marca e espera o "Salvar" fixo, avisa ao sair sem salvar (`UnsavedGuard`) e explica que só vale para quem tem acesso em Permissões; tirar a Direção pede confirmação; a matriz mostra "Só a direção" com cadeado nas permissões travadas.
+
+##### Auditoria e backups — `AuditBackupsPage.tsx`, `AuditPage.tsx`, `BackupsTab.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| AU1 | alta | todas | Auditoria com erro 500 e "0 registro(s)" na tela (ver resumo 1). | `AuditPage.tsx:65-79,110-128` |
+| AU2 | média | todas | Paginação de 25 em 25 com "1 / 1" (ver resumo 8). | `AuditPage.tsx:13,129` |
+| AU3 | baixa | 375 | Cada backup tem "Baixar" (92 px), "Restaurar" (115 px) e a lixeira (40 px) com larguras desiguais (regra 2). | `BackupsTab.tsx:113-121` |
+| AU4 | baixa | todas | "4.1 MB" com ponto e "1 músicas" (ver resumo 10). | `BackupsTab.tsx:15-17` |
+
+Bem resolvido: o texto "Como funciona" explica o que o restore faz e o cuidado com a LGPD; restaurar e excluir backup pedem confirmação; "Ver mais 4" nos backups.
+
+##### Calendário e Repertório em modo de edição — `EventsPage.tsx`, `EventSheet.tsx`, `EventSettingsPage.tsx`, `RepertoirePage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| CE1 | média | todas | Painel do evento com ações só com ícone, e "Presença" e "Cancelar" sem nome (ver resumo 9). | `EventSheet.tsx:179-197` |
+| CE2 | média | todas | A barra "Página liberada para" nas Configurações do Calendário muda o Calendário inteiro (ver resumo 4). | `access/pageReleases.ts:60-65` |
+| CE3 | baixa | todas | "Lixeira" é um botão do topo, ao lado de "Novo evento", "Cancelados" e "Configurações", e abre um painel; a regra pede a lixeira como grupo recolhível no fim da página (`TrashGroup`). | `EventsPage.tsx:134-150` |
+| CE4 | baixa | 375 | Tipos de evento: 6 amostras de cor de 30 × 30 px por tipo (36 no total) e "Desativar" de 32 px. | `EventSettingsPage.tsx` |
+| CE5 | baixa | todas | Repertório: Subir/Descer de 40 × 40 px aqui, contra 20 a 32 px nas outras listas (mesma causa do DC1 da 3c-1). | `RepertoirePage.tsx` |
+
+Bem resolvido: "Novo evento" no padrão tracejado; a lixeira vazia diz o que guarda ("Eventos apagados ficam aqui até você restaurar…"); apagar e cancelar evento pedem confirmação, e o cancelamento pede o motivo.
+
+#### Causas repetidas novas (3c-3)
+
+- **Erro de consulta que parece lista vazia:** a contagem ("0 registro(s)", "0 resposta(s)") e a paginação aparecem mesmo sem dados carregados, e o erro só aparece depois das novas tentativas automáticas. Vale um padrão: enquanto não há `data`, mostrar esqueleto e esconder contagem e paginação; no erro, mostrar só o aviso, com "Tentar de novo".
+- **Texto com `<strong>` ou link dentro de um `flex`:** cada pedaço vira uma coluna e a palavra pode partir no meio (Acesso e papéis). Procurar outros `<p className="flex …">` com texto misto.
+- **Barra de liberação por primeiro trecho do endereço:** subpáginas mostram a barra da página-mãe.
+- **Botão com texto fixo mais largo que ele** ("Desmarcar tudo (…)"): sem `FitText` nem quebra de linha.
+- **Paginação por página** (Respostas, Auditoria) convivendo com o "Ver mais 5" do resto do app.
+
+### Área 3 concluída: o que atacar primeiro
+
+Lista curta para os pedidos de correção, pela ordem de risco:
+
+1. **Auditoria fora do ar** (erro 500): investigar no banco.
+2. **Gravar num toque o que mexe com dinheiro, acesso ou o que é público:** marcar como pago, gerar pagamentos, ajustar valor, publicar formulário, papéis e matriz, caixas da "Página liberada para" (inclusive nas subpáginas), cores e site. Um padrão só de confirmação ou desfazer.
+3. **Distribuição com déficit escondido** ("Não distribuído R$ 0,00").
+4. **Topo fixo do Titular** (294 a 350 px no celular) e a barra de liberação.
+5. **Alvos de toque:** os "+" de 20 px, Subir/Descer de 20 a 28 px, "× Tirar" de 16 px, "Remover" de 18 px, os botões da chamada (36 px) e o X de cancelar aula (22 px).
+6. **Quebras de layout no celular:** "titul / ar", "Novo" fora da margem em Fornecedores, busca de 50 px em Cobranças, "Desmarcar tudo" vazando, `ButtonRow` com 3 ou 5 itens indo para 1 coluna.
+7. **Regras de interface em série:** botão de adicionar (regra 7), última linha da grade (regra 5), "(opcional)", plurais com "(s)", "Ver mais 5" e paginação.
+
 ## Próxima etapa
 
-**3c-3: Formulários, Loja (`gerenciar-loja`), Site, Interface, Acesso e papéis (matriz de permissões e liberação de páginas), Auditoria e backups (Direção/Titular).** Sugiro incluir o Calendário e o Repertório em modo de edição, que ficaram fora da lista da 3c. Mesmo jeito: logado como Titular no site publicado, só olhando. Cuidados redobrados: a matriz de permissões e a liberação de páginas gravam ao toque; não fazer backup nem restore, não publicar o site nem mudar o tema. Com ela, termina a área 3.
+**Revisão visual concluída nas três áreas** (site, loja e área dos integrantes). O próximo passo é o usuário escolher, em pedidos separados, o que corrigir primeiro; a lista "Área 3 concluída: o que atacar primeiro", logo acima, sugere a ordem. Antes de qualquer correção de tela, vale investigar o erro 500 da Auditoria, que é falha de funcionamento e não de aparência.
