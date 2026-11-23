@@ -642,7 +642,8 @@ Telas cobertas: Formulários (lista; editor com Configurações, Cabeçalho, Cam
 - **Por quê:** a política `audit_select` é `using (has_permission(organization_id, 'audit.read'))`. `has_permission` → `permission_scope_of` → `member_is_inactive` são `security definer` com `search_path` fixo, então o Postgres não as embute na consulta e roda tudo **uma vez por linha**. A tela pede o total exato (`count: 'exact'`), o que obriga a passar pelas 15.439 linhas. Medido como o Titular, numa transação desfeita no fim: **17,7 s** só a contagem (cerca de 1,1 ms por linha).
 - **Correção testada (sem aplicar):** avaliar a permissão uma vez por organização, com `organization_id in (select … organizações em que eu tenho a permissão)`. A mesma contagem caiu para **7 ms**. Proposta: uma função `orgs_with_permission(p_perm)` (`security definer`, `search_path` fixo, só para `authenticated`) e a política `using (organization_id in (select public.orgs_with_permission('audit.read')))`. O resultado é o mesmo da regra atual.
 - **Mesma armadilha, ainda abaixo do limite:** `event_attendance` (cerca de 4.300 linhas, `ea_select`) e `monthly_charges` (cerca de 1.600, `mc_charges_select`) usam `has_permission`/`permission_scope_of` por linha. Uma consulta que varra a tabela inteira de presença já gastaria uns 5 s; vale corrigir junto.
-- **Migration preparada, ainda não aplicada:** `supabase/migrations/20261123230000_rls_permissao_por_organizacao.sql` (funções `my_orgs_with_scope` e `my_member_ids` e as três políticas por `alter policy`). Testada sem alterar o banco: zero diferença de linhas visíveis em relação à regra atual para Titular, Direção, Professor/Monitor e integrante ativo (não havia integrante inativo com login para testar). Tempos com o Titular: Auditoria de 17,7 s para 7 ms, presença de 4,9 s para 2 ms e cobranças de 1,6 s para 2 ms. Depois de aplicar, renomear o arquivo para a versão registrada.
+- **Aplicada em 23/11/2026** (versão `20261123225937`, `supabase/migrations/20261123225937_rls_permissao_por_organizacao.sql`). Depois de aplicar, a Auditoria abriu na tela com os 15.442 registros e resposta em 89 ms, e a contagem com a política real levou 7 ms. As funções novas só aparecem no aviso de segurança já conhecido (função `security definer` executável por `authenticated`, o mesmo de `has_permission`), não no de `anon`. A tela ainda mostra "0 registro(s)" durante as novas tentativas quando há erro; isso fica para as correções de tela.
+- **Migration:** funções `my_orgs_with_scope` e `my_member_ids` e as três políticas por `alter policy`. Antes de aplicar, testada sem alterar o banco: zero diferença de linhas visíveis em relação à regra atual para Titular, Direção, Professor/Monitor e integrante ativo (não havia integrante inativo com login para testar). Tempos com o Titular: Auditoria de 17,7 s para 7 ms, presença de 4,9 s para 2 ms e cobranças de 1,6 s para 2 ms.
 - **Na tela (à parte):** enquanto o React Query tenta de novo, a página mostra "0 registro(s)" e "1 / 1" (ver o resumo 1 e as "Causas repetidas novas").
 
 #### O que não deu para verificar (3c-3)
@@ -744,7 +745,7 @@ Bem resolvido: "Novo evento" no padrão tracejado; a lixeira vazia diz o que gua
 
 Lista curta para os pedidos de correção, pela ordem de risco:
 
-1. **Auditoria fora do ar** (erro 500): política de RLS avaliada linha a linha; correção testada mais acima, em "Causa do erro 500 da Auditoria".
+1. **Auditoria fora do ar** (erro 500, já resolvido): política de RLS avaliada linha a linha; corrigida e aplicada em 23/11 (ver "Causa do erro 500 da Auditoria").
 2. **Gravar num toque o que mexe com dinheiro, acesso ou o que é público:** marcar como pago, gerar pagamentos, ajustar valor, publicar formulário, papéis e matriz, caixas da "Página liberada para" (inclusive nas subpáginas), cores e site. Um padrão só de confirmação ou desfazer.
 3. **Distribuição com déficit escondido** ("Não distribuído R$ 0,00").
 4. **Topo fixo do Titular** (294 a 350 px no celular) e a barra de liberação.
@@ -754,4 +755,4 @@ Lista curta para os pedidos de correção, pela ordem de risco:
 
 ## Próxima etapa
 
-**Revisão visual concluída nas três áreas** (site, loja e área dos integrantes). O próximo passo é o usuário escolher, em pedidos separados, o que corrigir primeiro; a lista "Área 3 concluída: o que atacar primeiro", logo acima, sugere a ordem. Antes de qualquer correção de tela, vale aplicar a correção da política da Auditoria (erro 500, causa e SQL testado na 3c-3), que é falha de funcionamento e não de aparência.
+**Revisão visual concluída nas três áreas** (site, loja e área dos integrantes). O próximo passo é o usuário escolher, em pedidos separados, o que corrigir primeiro; a lista "Área 3 concluída: o que atacar primeiro", logo acima, sugere a ordem. Antes de qualquer correção de tela, o erro 500 da Auditoria já foi corrigido no banco (ver a 3c-3).
