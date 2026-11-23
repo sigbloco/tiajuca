@@ -18,15 +18,17 @@ export function memberPriceCents(priceCents: number, discountPct: number): numbe
 }
 
 /**
- * Preço de quem compra: direção, professores e monitores pagam o preço especial (valor em reais digitado no produto, se houver);
- * os demais integrantes ativos pagam o desconto %; visitante paga o público. O servidor repete esta regra no checkout.
+ * Preço de quem compra: integrantes ativos pagam o desconto %; visitante paga o público. Direção, professores e monitores
+ * pagam o preço especial (valor em reais digitado no produto, se houver) quando ele é menor que o que já pagariam (D2).
+ * O servidor repete esta regra no checkout (`shop_create_order`).
  */
 export function buyerPriceCents(
   p: { price_cents: number; member_discount_pct: number; special_price_cents?: number | null },
   who: { isMember: boolean; isSpecial?: boolean },
 ): number {
-  if (who.isSpecial && p.special_price_cents) return Math.min(p.special_price_cents, p.price_cents)
-  return who.isMember ? memberPriceCents(p.price_cents, p.member_discount_pct) : p.price_cents
+  const base = who.isMember ? memberPriceCents(p.price_cents, p.member_discount_pct) : p.price_cents
+  if (who.isSpecial && p.special_price_cents && p.special_price_cents < base) return p.special_price_cents
+  return base
 }
 
 /** Contador "faltam N" da meta mínima. `visible` segue as opções do produto; `urgent` = falta pouco (destaque). */
