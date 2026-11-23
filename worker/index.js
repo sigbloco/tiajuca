@@ -39,11 +39,15 @@ async function render(request, env) {
     const description = String(data?.site?.description || '').trim().replace(/\s+/g, ' ').slice(0, 200)
     if (!title) return page
     const setContent = (value) => ({ element: (el) => el.setAttribute('content', value) })
+    // SITE-09: a imagem da prévia acompanha o endereço em que o site está (o index.html guarda um endereço fixo de workers.dev).
+    const image = `${new URL(request.url).origin}/brand/tiajuca-share.png`
     let rewriter = new HTMLRewriter()
       .on('title', { element: (el) => el.setInnerContent(title) })
       .on('meta[property="og:title"]', setContent(title))
       .on('meta[name="twitter:title"]', setContent(title))
       .on('meta[property="og:site_name"]', setContent(String(data?.org?.name || title)))
+      .on('meta[property="og:image"]', setContent(image))
+      .on('meta[name="twitter:image"]', setContent(image))
     if (description) {
       rewriter = rewriter
         .on('meta[name="description"]', setContent(description))
