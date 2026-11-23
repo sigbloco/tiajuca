@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeCode, parseDiscount, validCode } from './CouponsTab'
+import { normalizeCode, parseDiscount, parseMaxUses, validCode } from './CouponsTab'
 
 describe('cupons', () => {
   it('código: maiúsculas, sem espaços nem símbolos, de 3 a 30', () => {
@@ -17,5 +17,12 @@ describe('cupons', () => {
     expect(parseDiscount('100,1')).toBeNull()
     expect(parseDiscount('')).toBeNull()
     expect(parseDiscount('abc')).toBeNull()
+  })
+  it('limite de usos: vazio é sem limite; de 1 a 100000', () => {
+    expect(parseMaxUses('')).toBeNull()
+    expect(parseMaxUses('50')).toBe(50)
+    expect(parseMaxUses('0')).toBeUndefined()
+    expect(parseMaxUses('100001')).toBeUndefined()
+    expect(parseMaxUses('1,5')).toBeUndefined()
   })
 })

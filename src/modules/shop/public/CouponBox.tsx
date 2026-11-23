@@ -26,11 +26,13 @@ export function CouponBox() {
   }
   return (
     <div className="space-y-1">
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void submit() }}>
+      {/* Sem <form>: o cupom fica dentro do formulário do checkout, e formulário dentro de formulário não vale em HTML. */}
+      <div className="flex gap-2">
         <Input aria-label="Código do cupom" autoCapitalize="characters" autoComplete="off" maxLength={30} className="min-w-0 flex-1 uppercase tracking-wider" placeholder="Tenho um cupom"
-          value={code} onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '')); setError(null) }} />
-        <Button type="submit" variant="outline" disabled={busy || code.length < 3}>{busy ? 'Conferindo' : 'Aplicar'}</Button>
-      </form>
+          value={code} onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '')); setError(null) }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (code.length >= 3 && !busy) void submit() } }} />
+        <Button type="button" variant="outline" disabled={busy || code.length < 3} onClick={() => void submit()}>{busy ? 'Conferindo' : 'Aplicar'}</Button>
+      </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </div>
   )
