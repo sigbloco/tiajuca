@@ -17,8 +17,10 @@ import { useCycles } from '@/modules/cycles/service'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { HeaderBand } from './HeaderBand'
 import { ColorPick } from '@/modules/site/ColorPick'
+import { resolveColors } from '@/core/themeModel'
 
-const DEFAULT_HEADER = '#E93D2B'
+/** Cor do cabeçalho quando o formulário ainda não tem uma: a cor principal do bloco (tema), ou um cinza neutro. */
+const NEUTRAL_HEADER = '#3C3C3C'
 import { FORM_STATUS_CLASS, FORM_STATUS_LABEL, kindFlags, publicUrl, slugify, type FormKind, type FormRow, type FormStatus } from './service'
 
 // Horário de Brasília (sem horário de verão em vigor): abre às 00:00 e encerra às 23:59 do dia escolhido.
@@ -29,6 +31,7 @@ const toDate = (ts: string | null) => (ts ? new Date(new Date(ts).getTime() - 3 
 export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'main' | 'header' }) {
   const orgId = useOrgId()
   const { membership } = useOrganization()
+  const DEFAULT_HEADER = resolveColors(membership?.theme, 'general').primary ?? NEUTRAL_HEADER
   const qc = useQueryClient()
   const cycles = useCycles()
   const [f, setF] = useState({

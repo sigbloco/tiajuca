@@ -19,7 +19,7 @@ export interface SiteVideo { url: string; title: string }
 export const LINK_KINDS: Record<LinkKind, { label: string; placeholder: string; icon: (c?: string) => ReactNode }> = {
   whatsapp: { label: 'WhatsApp', placeholder: '(21) 99999-9999', icon: (c) => <WhatsappIcon className={c} /> },
   email: { label: 'E-mail', placeholder: 'contato@exemplo.com', icon: (c) => <Mail className={c} aria-hidden /> },
-  instagram: { label: 'Instagram', placeholder: '@cordaodatiajuca', icon: (c) => <InstagramIcon className={c} /> },
+  instagram: { label: 'Instagram', placeholder: '@nomedobloco', icon: (c) => <InstagramIcon className={c} /> },
   youtube: { label: 'YouTube', placeholder: 'https://youtube.com/@canal', icon: (c) => <YoutubeIcon className={c} /> },
   facebook: { label: 'Facebook', placeholder: 'https://facebook.com/pagina', icon: (c) => <FacebookIcon className={c} /> },
   tiktok: { label: 'TikTok', placeholder: '@usuario', icon: (c) => <Music className={c} aria-hidden /> },

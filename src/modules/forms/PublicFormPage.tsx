@@ -46,7 +46,7 @@ function SocialInput({ id, value, onChange, networks, defs }: { id: string; valu
             </Select>
             {rows.length > 1 && <Button type="button" size="icon" variant="ghost" aria-label="Remover rede social" onClick={() => update(rows.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>}
           </div>
-          <Input aria-label="Nome de usuário" placeholder="Nome de usuário (ex.: @cordaodatiajuca)" autoCapitalize="none" autoCorrect="off" value={r.user} onChange={(e) => update(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
+          <Input aria-label="Nome de usuário" placeholder="Nome de usuário (ex.: @nomedobloco)" autoCapitalize="none" autoCorrect="off" value={r.user} onChange={(e) => update(rows.map((x, j) => (j === i ? { ...x, user: e.target.value } : x)))} />
         </div>
       ))}
       <Button type="button" size="sm" variant="outline" onClick={() => update([...rows, { network: first, user: '' }])}><Plus className="h-4 w-4" /> Adicionar rede social</Button>
