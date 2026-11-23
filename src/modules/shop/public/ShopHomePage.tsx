@@ -23,7 +23,9 @@ export function ShopHomePage() {
   const [kinds, setKinds] = useState<FilterKey[]>(['stock', 'made_to_order', 'kit'])
   // Kit é uma categoria própria: aparece no filtro Kits e não no de pronta entrega.
   const category = (p: { kind: ProductKind; is_kit?: boolean }): FilterKey => (p.is_kit ? 'kit' : p.kind)
-  const toggleKind = (k: FilterKey) => setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
+  // De 5 em 5 (regra das listas), um contador para os destaques e outro para os demais; trocar o filtro volta aos 5 primeiros.
+  const [limits, setLimits] = useState({ featured: 5, others: 5 })
+  const toggleKind = (k: FilterKey) => { setLimits((l) => ({ ...l, others: 5 })); setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k])) }
   const featured = store.products.filter((p) => p.is_featured)
   const others = store.products.filter((p) => !p.is_featured && kinds.includes(category(p)))
 
@@ -33,7 +35,7 @@ export function ShopHomePage() {
       {featured.length > 0 && (
         <section aria-labelledby="shop-featured" className="space-y-2">
           <h2 id="shop-featured" className="text-xl font-bold">{store.featured_title || 'Destaques'}</h2>
-          {renderGrid(featured)}
+          {renderGrid(featured, 'featured')}
         </section>
       )}
       <ButtonRow role="group" aria-label="Filtrar produtos">
@@ -45,12 +47,15 @@ export function ShopHomePage() {
       <p className="rounded-lg bg-muted p-3 text-sm">Retirada combinada, sem entrega. O pagamento é antecipado.</p>
       {store.products.length === 0 && <EmptyState>A loja ainda não tem produtos.</EmptyState>}
       {kinds.length > 0 && others.length === 0 && store.products.some((p) => !p.is_featured) && <EmptyState>{featured.length > 0 ? 'Nenhum outro produto neste filtro.' : 'Nenhum produto neste filtro.'}</EmptyState>}
-      {others.length > 0 && renderGrid(others)}
+      {others.length > 0 && renderGrid(others, 'others')}
     </div>
   )
 
-  function renderGrid(products: typeof store.products) {
+  function renderGrid(all: typeof store.products, key: 'featured' | 'others') {
+    const products = all.slice(0, limits[key])
+    const left = all.length - products.length
     return (
+      <>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-12">
         {products.map((p, idx) => {
           // Distribuição harmônica: celular em 2 colunas; telas maiores usam o número de colunas que fecha melhor as linhas
@@ -83,6 +88,8 @@ export function ShopHomePage() {
           )
         })}
       </ul>
+      {left > 0 && <Button type="button" variant="outline" className="w-full" onClick={() => setLimits((l) => ({ ...l, [key]: l[key] + 5 }))}>Ver mais {Math.min(5, left)}</Button>}
+      </>
     )
   }
 }

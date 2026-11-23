@@ -71,6 +71,6 @@ Deno.serve(async (req) => {
     }
     return json({ title, cover_url, found: Boolean(title || cover_url) })
   } catch (e) {
-    return json({ error: 'Não foi possível ler o álbum agora.', detail: String((e as Error)?.message ?? e) }, 500)
+    return (console.error('album-preview', e), json({ error: 'Não foi possível ler o álbum agora.' }, 500))
   }
 })

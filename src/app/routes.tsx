@@ -1,60 +1,65 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Navigate, Outlet, createBrowserRouter, useLocation, useParams } from 'react-router-dom'
 import { LoadingScreen } from '@/components/shared/LoadingScreen'
 import { isSigningOut, takePostLoginPath, useAuth } from '@/core/auth'
 import { OrganizationProvider, useMemberships, useOrganization } from '@/core/organization'
 import { isSupabaseConfigured } from '@/core/supabase'
 import { NoOrganizationPage } from '@/modules/auth/pages'
-import { HomePage } from '@/modules/dashboard/HomePage'
-import { CapacityPage } from '@/modules/capacity/CapacityPage'
-import { WaitlistPage } from '@/modules/cycles/WaitlistPage'
-import { AttendanceListPage, AttendanceRosterPage } from '@/modules/attendance/AttendancePages'
-import { EventsPage } from '@/modules/events/EventsPage'
-import { EventSettingsPage } from '@/modules/events/EventSettingsPage'
-import { BillingPage } from '@/modules/billing/BillingPage'
-import { ScholarshipsPage } from '@/modules/billing/ScholarshipsPage'
-import { ProfilePage } from '@/modules/profile/ProfilePage'
-import { RepertoireDetailPage } from '@/modules/repertoire/RepertoireDetailPage'
-import { RepertoirePage } from '@/modules/repertoire/RepertoirePage'
-import { SuppliersPage } from '@/modules/suppliers/SuppliersPage'
-import { DriveFoldersPage } from '@/modules/drive/DriveFoldersPage'
-import { AccessPage } from '@/modules/access/AccessPage'
-import { AuditBackupsPage } from '@/modules/audit/AuditBackupsPage'
-import { ReportsPage } from '@/modules/reports/ReportsPage'
-import { InterfacePage } from '@/modules/interface/InterfacePage'
-import { FormEditorPage } from '@/modules/forms/FormEditorPage'
-import { FormsPage } from '@/modules/forms/FormsPage'
-import { AlunosRedirect } from '@/modules/members/AlunosRedirect'
-import { FormListsPage } from '@/modules/forms/FormListsPage'
-import { SendDefaultsPage } from '@/modules/forms/SendDefaultsPage'
-import { TemplateEditorPage } from '@/modules/forms/TemplateEditorPage'
-import { SectionTemplatesPage } from '@/modules/forms/SectionTemplatesPage'
-import { FormPreviewPage } from '@/modules/forms/FormPreviewPage'
-import { PublicFormPage } from '@/modules/forms/PublicFormPage'
-import { MembersPage } from '@/modules/members/MembersPage'
-import { NaipesPage } from '@/modules/structure/NaipesPage'
-import { SiteSettings } from '@/modules/site/SiteSettings'
-import { Organogram } from '@/modules/structure/Organogram'
-import { FunctionsPage } from '@/modules/structure/OrgPages'
-import { CyclesPage } from '@/modules/cycles/CyclesPage'
-import { SectionNamesPage } from '@/modules/structure/NaipesSettings'
-import { ShopAdminPage } from '@/modules/shop/admin/ShopAdminPage'
-import { CartPage } from '@/modules/shop/public/CartPage'
-import { CheckoutPage } from '@/modules/shop/public/CheckoutPage'
-import { OrderCodeRedirect, OrderLookupPage } from '@/modules/shop/public/OrderLookupPage'
-import { PrivacyPage } from '@/modules/shop/public/PrivacyPage'
-import { ProductPage } from '@/modules/shop/public/ProductPage'
-import { ShopHomePage } from '@/modules/shop/public/ShopHomePage'
-import { ShopLayout } from '@/modules/shop/public/ShopLayout'
 import { LandingPage } from '@/modules/site/LandingPage'
-import { AlbumsPage } from '@/modules/site/AlbumsPage'
-import { AppShell } from './AppShell'
 import { RouteError } from './RouteError'
-import { FinanceHome, HubHome, HubLayout } from './Hub'
-import { LedgerPage } from '@/modules/finance/LedgerPage'
-import { PaymentsPage } from '@/modules/finance/PaymentsPage'
-import { TeamPage } from '@/modules/finance/TeamPage'
-import { ValuesPage } from '@/modules/billing/ValuesPage'
+
+const HomePage = lazy(() => import('@/modules/dashboard/HomePage').then((m) => ({ default: m.HomePage })))
+const CapacityPage = lazy(() => import('@/modules/capacity/CapacityPage').then((m) => ({ default: m.CapacityPage })))
+const WaitlistPage = lazy(() => import('@/modules/cycles/WaitlistPage').then((m) => ({ default: m.WaitlistPage })))
+const AttendanceListPage = lazy(() => import('@/modules/attendance/AttendancePages').then((m) => ({ default: m.AttendanceListPage })))
+const AttendanceRosterPage = lazy(() => import('@/modules/attendance/AttendancePages').then((m) => ({ default: m.AttendanceRosterPage })))
+const EventsPage = lazy(() => import('@/modules/events/EventsPage').then((m) => ({ default: m.EventsPage })))
+const EventSettingsPage = lazy(() => import('@/modules/events/EventSettingsPage').then((m) => ({ default: m.EventSettingsPage })))
+const BillingPage = lazy(() => import('@/modules/billing/BillingPage').then((m) => ({ default: m.BillingPage })))
+const ScholarshipsPage = lazy(() => import('@/modules/billing/ScholarshipsPage').then((m) => ({ default: m.ScholarshipsPage })))
+const ProfilePage = lazy(() => import('@/modules/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const RepertoireDetailPage = lazy(() => import('@/modules/repertoire/RepertoireDetailPage').then((m) => ({ default: m.RepertoireDetailPage })))
+const RepertoirePage = lazy(() => import('@/modules/repertoire/RepertoirePage').then((m) => ({ default: m.RepertoirePage })))
+const SuppliersPage = lazy(() => import('@/modules/suppliers/SuppliersPage').then((m) => ({ default: m.SuppliersPage })))
+const DriveFoldersPage = lazy(() => import('@/modules/drive/DriveFoldersPage').then((m) => ({ default: m.DriveFoldersPage })))
+const AccessPage = lazy(() => import('@/modules/access/AccessPage').then((m) => ({ default: m.AccessPage })))
+const AuditBackupsPage = lazy(() => import('@/modules/audit/AuditBackupsPage').then((m) => ({ default: m.AuditBackupsPage })))
+const ReportsPage = lazy(() => import('@/modules/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const InterfacePage = lazy(() => import('@/modules/interface/InterfacePage').then((m) => ({ default: m.InterfacePage })))
+const FormEditorPage = lazy(() => import('@/modules/forms/FormEditorPage').then((m) => ({ default: m.FormEditorPage })))
+const FormsPage = lazy(() => import('@/modules/forms/FormsPage').then((m) => ({ default: m.FormsPage })))
+const AlunosRedirect = lazy(() => import('@/modules/members/AlunosRedirect').then((m) => ({ default: m.AlunosRedirect })))
+const FormListsPage = lazy(() => import('@/modules/forms/FormListsPage').then((m) => ({ default: m.FormListsPage })))
+const SendDefaultsPage = lazy(() => import('@/modules/forms/SendDefaultsPage').then((m) => ({ default: m.SendDefaultsPage })))
+const TemplateEditorPage = lazy(() => import('@/modules/forms/TemplateEditorPage').then((m) => ({ default: m.TemplateEditorPage })))
+const SectionTemplatesPage = lazy(() => import('@/modules/forms/SectionTemplatesPage').then((m) => ({ default: m.SectionTemplatesPage })))
+const FormPreviewPage = lazy(() => import('@/modules/forms/FormPreviewPage').then((m) => ({ default: m.FormPreviewPage })))
+const PublicFormPage = lazy(() => import('@/modules/forms/PublicFormPage').then((m) => ({ default: m.PublicFormPage })))
+const MembersPage = lazy(() => import('@/modules/members/MembersPage').then((m) => ({ default: m.MembersPage })))
+const NaipesPage = lazy(() => import('@/modules/structure/NaipesPage').then((m) => ({ default: m.NaipesPage })))
+const SiteSettings = lazy(() => import('@/modules/site/SiteSettings').then((m) => ({ default: m.SiteSettings })))
+const Organogram = lazy(() => import('@/modules/structure/Organogram').then((m) => ({ default: m.Organogram })))
+const FunctionsPage = lazy(() => import('@/modules/structure/OrgPages').then((m) => ({ default: m.FunctionsPage })))
+const CyclesPage = lazy(() => import('@/modules/cycles/CyclesPage').then((m) => ({ default: m.CyclesPage })))
+const SectionNamesPage = lazy(() => import('@/modules/structure/NaipesSettings').then((m) => ({ default: m.SectionNamesPage })))
+const ShopAdminPage = lazy(() => import('@/modules/shop/admin/ShopAdminPage').then((m) => ({ default: m.ShopAdminPage })))
+const CartPage = lazy(() => import('@/modules/shop/public/CartPage').then((m) => ({ default: m.CartPage })))
+const CheckoutPage = lazy(() => import('@/modules/shop/public/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
+const OrderCodeRedirect = lazy(() => import('@/modules/shop/public/OrderLookupPage').then((m) => ({ default: m.OrderCodeRedirect })))
+const OrderLookupPage = lazy(() => import('@/modules/shop/public/OrderLookupPage').then((m) => ({ default: m.OrderLookupPage })))
+const PrivacyPage = lazy(() => import('@/modules/shop/public/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
+const ProductPage = lazy(() => import('@/modules/shop/public/ProductPage').then((m) => ({ default: m.ProductPage })))
+const ShopHomePage = lazy(() => import('@/modules/shop/public/ShopHomePage').then((m) => ({ default: m.ShopHomePage })))
+const ShopLayout = lazy(() => import('@/modules/shop/public/ShopLayout').then((m) => ({ default: m.ShopLayout })))
+const AlbumsPage = lazy(() => import('@/modules/site/AlbumsPage').then((m) => ({ default: m.AlbumsPage })))
+const AppShell = lazy(() => import('./AppShell').then((m) => ({ default: m.AppShell })))
+const LedgerPage = lazy(() => import('@/modules/finance/LedgerPage').then((m) => ({ default: m.LedgerPage })))
+const PaymentsPage = lazy(() => import('@/modules/finance/PaymentsPage').then((m) => ({ default: m.PaymentsPage })))
+const TeamPage = lazy(() => import('@/modules/finance/TeamPage').then((m) => ({ default: m.TeamPage })))
+const ValuesPage = lazy(() => import('@/modules/billing/ValuesPage').then((m) => ({ default: m.ValuesPage })))
+const FinanceHome = lazy(() => import('./Hub').then((m) => ({ default: m.FinanceHome })))
+const HubHome = lazy(() => import('./Hub').then((m) => ({ default: m.HubHome })))
+const HubLayout = lazy(() => import('./Hub').then((m) => ({ default: m.HubLayout })))
 
 /** Carregando: nunca deixa a tela em branco. Se demorar demais, mostra uma saída (recarregar). */
 function Loading() {
@@ -139,7 +144,7 @@ function ConfigMissing() {
 
 export const router = createBrowserRouter(
   isSupabaseConfigured
-    ? [{ errorElement: <RouteError />, children: [ // erro de qualquer tela: aviso com Recarregar, nunca página em branco
+    ? [{ errorElement: <RouteError />, element: <Suspense fallback={<Loading />}><Outlet /></Suspense>, children: [ // erro de qualquer tela: aviso com Recarregar, nunca página em branco
         { path: '/entrar', element: <Navigate to="/?entrar=1" replace /> },
         // Sem cadastro aberto nem senha: só entrada com Google (links antigos caem no início).
         { path: '/cadastro', element: <Navigate to="/?entrar=1" replace /> },

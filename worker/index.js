@@ -9,6 +9,7 @@ const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://dzyvtqrxmladsxceqzud.supabase.co wss://dzyvtqrxmladsxceqzud.supabase.co; frame-src https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
 }
 
 /** @param {Response} res */
@@ -38,11 +39,15 @@ async function render(request, env) {
     const description = String(data?.site?.description || '').trim().replace(/\s+/g, ' ').slice(0, 200)
     if (!title) return page
     const setContent = (value) => ({ element: (el) => el.setAttribute('content', value) })
+    // SITE-09: a imagem da prévia acompanha o endereço em que o site está (o index.html guarda um endereço fixo de workers.dev).
+    const image = `${new URL(request.url).origin}/brand/tiajuca-share.png`
     let rewriter = new HTMLRewriter()
       .on('title', { element: (el) => el.setInnerContent(title) })
       .on('meta[property="og:title"]', setContent(title))
       .on('meta[name="twitter:title"]', setContent(title))
       .on('meta[property="og:site_name"]', setContent(String(data?.org?.name || title)))
+      .on('meta[property="og:image"]', setContent(image))
+      .on('meta[name="twitter:image"]', setContent(image))
     if (description) {
       rewriter = rewriter
         .on('meta[name="description"]', setContent(description))

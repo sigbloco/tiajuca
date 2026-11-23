@@ -168,6 +168,7 @@ export function AlbumsTab() {
         </div>
       )}
       {active.length === 0 && <p className="text-muted-foreground">Nenhum álbum ainda.</p>}
+      {active.some((a) => !a.event_date) && <p className="text-sm text-muted-foreground">Álbum sem data não aparece na página pública: preencha a data para ele aparecer.</p>}
       {options.length > 1 && (
         <ButtonRow role="group" aria-label="Filtrar por ano">
           {options.map((y) => (

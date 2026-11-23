@@ -111,7 +111,7 @@ export function SiteSettings() {
   const dragLink = (from: string, to: string) => moveLink(Number(from), Number(to) - Number(from))
   const moveMenu = (i: number, d: number) => setF((x) => { const a = menuOrder(x.menu_order); const [it] = a.splice(i, 1); a.splice(i + d, 0, it); return { ...x, menu_order: a } })
   const dragMenu = (from: string, to: string) => moveMenu(Number(from), Number(to) - Number(from))
-  const vids = useProgressive(f.videos, 3)
+  const vids = useProgressive(f.videos, 5)
   const dragVideo = (from: string, to: string) => moveVideo(Number(from), Number(to) - Number(from))
   const [tab, setTab] = useRememberedState<TabKey>('site-aba', 'header', TABS.map((t) => t.key))
   useRegisterCrumb(TABS.find((t) => t.key === tab)!.label, () => setTab('header'), true, 0)

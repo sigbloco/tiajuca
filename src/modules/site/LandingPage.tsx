@@ -38,13 +38,19 @@ export function usePublicSite(slug: string) {
 }
 
 const safeBack = (b: string | null) => (b && b.startsWith('/') && !b.startsWith('//') ? b : '/')
+/** Botão do menu. Em construção, vira texto desabilitado (sem link, nem pelo teclado). */
+function Under({ on, to, href, className, children }: { on: boolean; to?: string; href?: string; className: string; children: React.ReactNode }) {
+  if (on) return <span aria-disabled className={`${className} pointer-events-none opacity-70`}>{children}</span>
+  if (to) return <Link to={to} className={className}>{children}</Link>
+  return <a href={href} target="_blank" rel="noreferrer noopener" className={className}>{children}</a>
+}
 const pill = 'flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-center font-display text-lg font-bold shadow-card transition hover:-translate-y-0.5 hover:shadow-lg'
 
 /** Página inicial pública do bloco, no estilo "link na bio": foto, descrição, redes, menu e vídeos. Tudo vem do banco. */
 export function LandingPage() {
   const { data, isLoading, isError } = usePublicSite(DEFAULT_ORG_SLUG)
   const { session } = useAuth()
-  const [shown, setShown] = useState(3)
+  const [shown, setShown] = useState(5)
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const [loginOpen, setLoginOpen] = useState(params.has('entrar'))
@@ -64,11 +70,10 @@ export function LandingPage() {
   }
   const { org, site } = data
   const slug = org.slug
-  const links = (site.links ?? []).filter((l) => !l.hidden).map((l) => ({ l, href: hrefOf(l) })).filter((x): x is { l: SiteLink; href: string } => !!x.href)
+  const links = (site.links ?? []).filter((l) => !l.hidden && l.kind in LINK_KINDS).map((l) => ({ l, href: hrefOf(l) })).filter((x): x is { l: SiteLink; href: string } => !!x.href)
   const videos = (site.videos ?? []).map((v) => ({ v, id: youtubeId(v.url) })).filter((x): x is { v: SiteVideo; id: string } => !!x.id)
   // "Em construção": o botão aparece com a etiqueta e não abre (exceto o de entrada, que a direção ainda precisa usar).
   const under = (k: string) => (site.menu_construction ?? []).includes(k)
-  const off = (k: string) => (under(k) && k !== 'login' ? 'pointer-events-none opacity-70' : '')
   const chip = <span className="ml-2 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold">em construção</span>
   const photo = site.photo_url || org.logo_path
   // Fundo do topo: só a cor escolhida para o Site (sem ela, usa a cor principal).
@@ -114,9 +119,9 @@ export function LandingPage() {
                 </span>
               )}
               {k === 'enrollment' && site.show_enrollment !== false && data.open_forms.map((f) => (
-                <Link key={f.slug} to={`/f/${slug}/${f.slug}`} aria-disabled={under('enrollment') || undefined} className={`${pill} bg-secondary text-secondary-foreground ${off('enrollment')} ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
+                <Under key={f.slug} on={under('enrollment')} to={`/f/${slug}/${f.slug}`} className={`${pill} bg-secondary text-secondary-foreground ${site.shake_button === 'enrollment' ? 'animate-attention trim-ring' : ''}`}>
                   <ClipboardList className="h-5 w-5" /> {data.open_forms.length === 1 ? (site.enrollment_label || f.title) : f.title}{under('enrollment') && chip}
-                </Link>
+                </Under>
               ))}
               {k === 'shop' && site.show_shop !== false && data.shop_product && !under('shop') && (
                 <Link to={`/${slug}/loja/produto/${data.shop_product.slug}`}
@@ -128,13 +133,13 @@ export function LandingPage() {
                 </Link>
               )}
               {k === 'shop' && site.show_shop !== false && (
-                <Link to={`/${slug}/loja`} aria-disabled={under('shop') || undefined} className={`${pill} bg-card text-foreground ${off('shop')} ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}{under('shop') && chip}</Link>
+                <Under on={under('shop')} to={`/${slug}/loja`} className={`${pill} bg-card text-foreground ${site.shake_button === 'shop' ? 'animate-attention trim-ring' : ''}`}><ShoppingBag className="h-5 w-5" /> {site.shop_label || 'Loja'}{under('shop') && chip}</Under>
               )}
               {k === 'albums' && site.show_albums !== false && (
-                <Link to={`/${slug}/fotos`} aria-disabled={under('albums') || undefined} className={`${pill} bg-card text-foreground ${off('albums')} ${site.shake_button === 'albums' ? 'animate-attention trim-ring' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}{under('albums') && chip}</Link>
+                <Under on={under('albums')} to={`/${slug}/fotos`} className={`${pill} bg-card text-foreground ${site.shake_button === 'albums' ? 'animate-attention trim-ring' : ''}`}><Images className="h-5 w-5" /> {site.albums_label || 'Fotos'}{under('albums') && chip}</Under>
               )}
               {k === 'release' && site.show_release !== false && site.release_url && (
-                <a href={site.release_url} target="_blank" rel="noreferrer noopener" aria-disabled={under('release') || undefined} className={`${pill} bg-card text-foreground ${off('release')} ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}{under('release') && chip}</a>
+                <Under on={under('release')} href={site.release_url} className={`${pill} bg-card text-foreground ${site.shake_button === 'release' ? 'animate-attention trim-ring' : ''}`}><Newspaper className="h-5 w-5" /> {site.release_label || 'Release'}{under('release') && chip}</Under>
               )}
               {k === 'login' && site.show_login !== false && (session && mine?.length
                 ? <Link to={`/${mine[0].slug}`} className={`${pill} bg-card text-foreground`}><LogIn className="h-5 w-5" /> {site.login_label || 'Área dos integrantes'}</Link>
@@ -155,7 +160,7 @@ export function LandingPage() {
               </figure>
             ))}
             {videos.length > shown && (
-              <button type="button" onClick={() => setShown((n) => n + 3)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Carregar mais</button>
+              <button type="button" onClick={() => setShown((n) => n + 5)} className="min-h-11 w-full rounded-full border-2 border-border bg-card px-5 font-semibold shadow-card hover:bg-muted">Ver mais {Math.min(5, videos.length - shown)}</button>
             )}
           </section>
         )}
