@@ -7,7 +7,7 @@
 //            { action: 'mine', org_slug }        → logado: os próprios pedidos, sem código/telefone.
 // O antigo "avisei que paguei" (report_payment) foi desligado: o cliente manda o comprovante e a loja marca como pago.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',

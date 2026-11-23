@@ -83,4 +83,4 @@ Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes
 
 ## Pendências conhecidas
 
-Ver "Andamento" no [REVISAO.md](REVISAO.md) (etapa 7): publicação do site a partir da `main` e da função `album-preview`; valores fixos que exigem publicar Edge Function ou mexer em arquivo de build (cor dos e-mails da loja, cidade do Pix, `index.html`, manifest, `public/brand`, slug no `wrangler.jsonc`); `pg_net` no `public`; baseline do esquema (DRIFT-02/03); versão fixa do `supabase-js` nas Edge Functions.
+Ver "Andamento" no [REVISAO.md](REVISAO.md) (etapa 8): publicação do site a partir da `main` e da função `album-preview`; publicar as outras 9 Edge Functions para valer o `supabase-js` fixo; valores da instância que se trocam por bloco (`index.html`, manifest, `public/brand`, slug no `wrangler.jsonc`/`.env.production`); `pg_net` no `public`; baseline do esquema (DRIFT-02/03).

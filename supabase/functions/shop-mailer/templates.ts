@@ -28,15 +28,30 @@ export interface MailContext {
     subtotal_cents: number; discount_cents: number; coupon_code?: string | null; coupon_discount_cents?: number; total_cents: number; expires_at: string | null; payment_url: string | null; items: MailItem[]
   }
   pickup: { name: string; address: string; opening_hours: string }
-  org: { name: string }
+  org: { name: string; theme?: { shop?: { primary?: string }; primary?: string } | null }
   settings: {
-    pix_key: string | null; pix_beneficiary: string | null; public_site_url: string | null
+    pix_key: string | null; pix_beneficiary: string | null; pix_city?: string | null; public_site_url: string | null
     contact_whatsapp: string | null; contact_email: string | null; directors: { name: string; whatsapp: string }[] | null
     mail_from_name: string | null; mail_from_email: string | null
   } | null
 }
 
 export interface BuiltEmail { subject: string; html: string; text: string }
+
+/** Cor de reserva dos e-mails quando o tema da loja não tem cor principal válida. */
+export const DEFAULT_MAIL_COLOR = '#E93D2B'
+
+/** Cor principal dos e-mails: a da loja no tema do bloco (`theme.shop.primary`, senão `theme.primary`); só aceita #RRGGBB (vai dentro de `style`). */
+export function mailColor(org: MailContext['org'] | null | undefined): string {
+  for (const c of [org?.theme?.shop?.primary, org?.theme?.primary]) if (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) return c
+  return DEFAULT_MAIL_COLOR
+}
+
+/** Mistura a cor com branco (0 a 1 = quanto da cor fica): fundo suave do aviso. */
+export function mailTint(hex: string, amount = 0.1): string {
+  const ch = (i: number) => Math.round(255 - (255 - parseInt(hex.slice(i, i + 2), 16)) * amount).toString(16).padStart(2, '0')
+  return `#${ch(1)}${ch(3)}${ch(5)}`
+}
 
 export const escapeHtml = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
@@ -85,7 +100,7 @@ function paymentSection(c: MailContext, qrCid: string | null): Section {
   if (o.payment_method === 'infinitepay') {
     if (!o.payment_url) return p(`Pague pelo link de pagamento da InfinitePay.${deadline}`)
     return raw(
-      `<p style="margin:0 0 12px"><a href="${escapeHtml(o.payment_url)}" style="display:inline-block;background:#E93D2B;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold">Pagar ${brl(o.total_cents)}</a><br>Cartão de crédito ou Pix, em uma página segura da InfinitePay.${escapeHtml(deadline)}</p>`,
+      `<p style="margin:0 0 12px"><a href="${escapeHtml(o.payment_url)}" style="display:inline-block;background:${mailColor(c.org)};color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold">Pagar ${brl(o.total_cents)}</a><br>Cartão de crédito ou Pix, em uma página segura da InfinitePay.${escapeHtml(deadline)}</p>`,
       `Pagar ${brl(o.total_cents)} (cartão de crédito ou Pix, página segura da InfinitePay): ${o.payment_url}${deadline}`)
   }
   const key = s?.pix_key ?? ''
@@ -108,7 +123,7 @@ function paymentSection(c: MailContext, qrCid: string | null): Section {
 export function pixCodeFor(c: MailContext): string | null {
   const s = c.settings
   if (c.order.payment_method !== 'pix' || !s?.pix_key) return null
-  return pixCopyPaste({ key: s.pix_key, beneficiary: s.pix_beneficiary ?? '', amountCents: c.order.total_cents, txid: c.order.code })
+  return pixCopyPaste({ key: s.pix_key, beneficiary: s.pix_beneficiary ?? '', city: s.pix_city ?? undefined, amountCents: c.order.total_cents, txid: c.order.code })
 }
 
 /** WhatsApp de quem recebe o comprovante: a direção com o primeiro nome do favorecido da chave; senão o contato da loja; senão a primeira da direção. */
@@ -127,7 +142,7 @@ function proofSection(c: MailContext): Section {
   const link = zap ? `https://wa.me/${zap}?text=${encodeURIComponent(text)}` : null
   const byMail = !!(s?.contact_email || s?.mail_from_email)
   if (!byMail && !link) return raw('', 'Depois de pagar, envie o comprovante para a gente.')
-  const html = `<p style="margin:0 0 12px"><strong>Já pagou?</strong> ${byMail ? 'Responda este e-mail com o comprovante' : 'Envie o comprovante'}${link ? ` ou mande pelo WhatsApp: <a href="${escapeHtml(link)}" style="color:#E93D2B;font-weight:bold">enviar comprovante</a>` : ''}.</p>`
+  const html = `<p style="margin:0 0 12px"><strong>Já pagou?</strong> ${byMail ? 'Responda este e-mail com o comprovante' : 'Envie o comprovante'}${link ? ` ou mande pelo WhatsApp: <a href="${escapeHtml(link)}" style="color:${mailColor(c.org)};font-weight:bold">enviar comprovante</a>` : ''}.</p>`
   const plain = `Já pagou? ${byMail ? 'Responda este e-mail com o comprovante' : 'Envie o comprovante'}${link ? ` ou mande pelo WhatsApp: ${link}` : ''}.`
   return raw(html, plain)
 }
@@ -146,7 +161,7 @@ function remainingSection(c: MailContext): Section | null {
       : `Faltam ${left} ${left === 1 ? 'unidade paga' : 'unidades pagas'} para a produção de ${i.name} começar (${i.progress.confirmed_units} de ${i.progress.min_units}). Avisaremos quando começar.`)
   }
   if (lines.length === 0) return null
-  return { html: lines.map((l) => `<p style="margin:0 0 12px;padding:10px;border:1px solid #E93D2B;border-radius:8px;background:#fdecea">${escapeHtml(l)}</p>`).join(''), text: lines.join('\n') }
+  return { html: lines.map((l) => `<p style="margin:0 0 12px;padding:10px;border:1px solid ${mailColor(c.org)};border-radius:8px;background:${mailTint(mailColor(c.org))}">${escapeHtml(l)}</p>`).join(''), text: lines.join('\n') }
 }
 
 function footerSection(c: MailContext): Section {
@@ -236,15 +251,15 @@ export interface FormMailContext {
 // Tudo é escapado: nada do que a direção escreve vira HTML solto.
 const INLINE = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g
 
-function inlineHtml(text: string): string {
+function inlineHtml(text: string, color: string = DEFAULT_MAIL_COLOR): string {
   let out = ''
   let last = 0
   for (const m of text.matchAll(INLINE)) {
     const at = m.index ?? 0
     out += escapeHtml(text.slice(last, at))
-    if (m[1] !== undefined) out += `<strong>${inlineHtml(m[1])}</strong>`
-    else if (m[2] !== undefined) out += `<em>${inlineHtml(m[2])}</em>`
-    else out += `<a href="${escapeHtml(m[4])}" style="color:#E93D2B">${inlineHtml(m[3])}</a>`
+    if (m[1] !== undefined) out += `<strong>${inlineHtml(m[1], color)}</strong>`
+    else if (m[2] !== undefined) out += `<em>${inlineHtml(m[2], color)}</em>`
+    else out += `<a href="${escapeHtml(m[4])}" style="color:${color}">${inlineHtml(m[3], color)}</a>`
     last = at + m[0].length
   }
   return out + escapeHtml(text.slice(last))
@@ -254,19 +269,19 @@ function inlineText(text: string): string {
   return text.replace(INLINE, (_m, b, i, label, href) => (b !== undefined ? inlineText(b) : i !== undefined ? inlineText(i) : `${inlineText(label)} (${href})`))
 }
 
-export function richSections(text: string): Section[] {
+export function richSections(text: string, color: string = DEFAULT_MAIL_COLOR): Section[] {
   const out: Section[] = []
   let items: string[] = []
   const flush = () => {
     if (!items.length) return
-    out.push({ html: `<ul style="margin:0 0 12px;padding-left:18px">${items.map((x) => `<li>${inlineHtml(x)}</li>`).join('')}</ul>`, text: items.map((x) => `- ${inlineText(x)}`).join('\n') })
+    out.push({ html: `<ul style="margin:0 0 12px;padding-left:18px">${items.map((x) => `<li>${inlineHtml(x, color)}</li>`).join('')}</ul>`, text: items.map((x) => `- ${inlineText(x)}`).join('\n') })
     items = []
   }
   for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
     const li = /^\s*[-•]\s+(.*)$/.exec(line)
     if (li) { items.push(li[1]); continue }
     flush()
-    if (line.trim()) out.push({ html: `<p style="margin:0 0 12px">${inlineHtml(line.trim())}</p>`, text: inlineText(line.trim()) })
+    if (line.trim()) out.push({ html: `<p style="margin:0 0 12px">${inlineHtml(line.trim(), color)}</p>`, text: inlineText(line.trim()) })
   }
   flush()
   return out

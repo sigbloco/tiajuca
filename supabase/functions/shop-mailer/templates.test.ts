@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { pixCopyPaste as sitePix } from '../../../src/modules/shop/payments/pix'
-import { brl, buildEmail, buildFormEmail, escapeHtml, pixCodeFor, PIX_QR_CID, type MailContext, type TemplateKey } from './templates'
+import { brl, buildEmail, buildFormEmail, DEFAULT_MAIL_COLOR, escapeHtml, mailColor, mailTint, pixCodeFor, PIX_QR_CID, type MailContext, type TemplateKey } from './templates'
 
 const ctx = (over: Partial<MailContext> = {}, order: Partial<MailContext['order']> = {}): MailContext => ({
   outbox_id: 'o1', template: 'order_created', to_email: 'maria@ex.com', kind: null, cancel_reason: null,
@@ -186,5 +186,30 @@ describe('cupom no e-mail', () => {
     const m = buildEmail(ctx({}, { discount_cents: 1200 }))
     expect(m.text).toContain('Desconto de integrante: - R$ 12,00')
     expect(m.text).not.toContain('Cupom')
+  })
+})
+
+describe('cor e cidade do Pix configuráveis', () => {
+  const org = (theme: unknown) => ({ name: 'Bloco', theme } as MailContext['org'])
+  it('cor: usa a da loja, depois a geral, e só aceita #RRGGBB', () => {
+    expect(mailColor(org({ shop: { primary: '#112233' }, primary: '#445566' }))).toBe('#112233')
+    expect(mailColor(org({ primary: '#445566' }))).toBe('#445566')
+    expect(mailColor(org({ shop: { primary: 'red;x' } }))).toBe(DEFAULT_MAIL_COLOR)
+    expect(mailColor(org(null))).toBe(DEFAULT_MAIL_COLOR)
+  })
+  it('fundo suave do aviso vem da mesma cor', () => {
+    expect(mailTint('#000000', 0.1)).toBe('#e6e6e6')
+    expect(mailTint('#ffffff')).toBe('#ffffff')
+  })
+  it('o botão de pagar usa a cor do tema', () => {
+    const e = buildEmail(ctx({ org: org({ shop: { primary: '#123456' } }) }, { payment_method: 'infinitepay', payment_url: 'https://pay.exemplo.com/x' }))
+    expect(e.html).toContain('background:#123456')
+    expect(e.html).not.toContain('E93D2B')
+  })
+  it('cidade do Pix: a configurada vai no código e é igual à do site', () => {
+    const c = ctx({ settings: { ...ctx().settings!, pix_city: 'Niterói' } })
+    const code = pixCodeFor(c)!
+    expect(code).toContain('NITEROI')
+    expect(code).toBe(sitePix({ key: 'pix@tiajuca.com.br', beneficiary: 'Rafael', amountCents: 14300, txid: 'HN5XCGA4', city: 'Niterói' }))
   })
 })

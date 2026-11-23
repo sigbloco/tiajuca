@@ -171,6 +171,18 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
   - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): a lista de nomes do D13, presença, campos de formulário, Distribuição e Integrantes depois da divisão; vale conferir no uso real (inclusive pelo "Visualizar como" Integrante).
 - **Não feito (pendente, precisa publicar Edge Function ou mexer em arquivo de build):** cor fixa `#E93D2B` nos e-mails da loja (`shop-mailer/templates.ts`) e cidade "Rio de Janeiro" do BR Code (`pix.ts` no front e no `shop-mailer`: mudar só um dos dois faria o QR do e-mail divergir do da tela); `index.html`, `manifest.webmanifest`, `public/brand/tiajuca.*` e o slug no `.env.production`/`wrangler.jsonc` (são da instância, trocados por bloco); `pg_net` no `public`; baseline do esquema (DRIFT-02/03); versão fixa do `supabase-js` nas Edge Functions.
 
+| 8 | Valores fixos e `supabase-js` | **concluída** em 23/11/2026 (branch `revisao-etapa8`, mergeada na `main`); ficam pendentes só os arquivos da instância | Sonnet 5.5, médio | ver "Etapa 8: o que foi feito" | cidade do Pix em coluna + cor do tema; publicar as funções: **sim** |
+
+### Etapa 8: o que foi feito (23/11/2026)
+
+- **Banco (aplicado em produção, versão igual ao arquivo):** `20261123145542_etapa8_cidade_pix_cor_email`: coluna `shop_settings.pix_city` (até 15 letras; a linha existente ficou com 'Rio de Janeiro', então o QR não mudou), `shop_get_public_store` devolve `pix.city`, `shop_mail_claim` devolve `org.theme` e `settings.pix_city`.
+- **Cidade do Pix:** campo "Cidade do favorecido" em Pagamentos e contatos (obrigatório com Pix ligado); QR da tela e do e-mail usam a mesma cidade; sem cidade, "BRASIL".
+- **Cor dos e-mails da loja:** `theme.shop.primary` (senão `theme.primary`; só `#RRGGBB`; padrão `#E93D2B`). Botão de pagar, link do comprovante e aviso da meta usam a cor; o fundo do aviso é a cor misturada com branco. Hoje a cor da loja é `#E2301D` (antes os e-mails usavam `#E93D2B`). Os e-mails de formulário seguem com a cor padrão (a fila deles é outra função).
+- **`supabase-js` fixo em 2.118.0** (`npm:@supabase/supabase-js@2.118.0`) nas 10 Edge Functions do repositório.
+- **Publicado:** `shop-mailer` (v12). As outras 9 só mudaram o import; a versão fixa entra quando cada uma for publicada (a próxima vez que mexerem nelas, ou por `deploy_edge_function`). Até lá usam o `@2` anterior.
+- **Testado:** `tsc`, `vitest` (29 arquivos, 217 testes, 4 novos: cor, fundo, botão e QR do e-mail igual ao do site), `vite build`; banco: `shop_get_public_store` devolve `city`, `shop_mail_claim` (em transação desfeita, sem consumir o e-mail pendente) devolve tema `#E2301D` e cidade. **Não testado:** envio real de e-mail e o campo novo no painel logado; vale conferir no uso real.
+- **Não feito (da instância, trocados por bloco):** `index.html`, `manifest.webmanifest`, `public/brand/tiajuca.*`, slug no `.env.production`/`wrangler.jsonc`; também `pg_net` no `public` e baseline do esquema (DRIFT-02/03).
+
 ---
 
 ## 3. Resumo do estado atual

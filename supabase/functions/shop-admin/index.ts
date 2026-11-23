@@ -5,7 +5,7 @@
 //   Cria um link de R$ 1,00 na InfinitePay só para conferir se a InfiniteTag funciona e qual é o formato da resposta.
 //   Ninguém é cobrado (o link só gera cobrança se alguém pagar) e nenhum pedido é criado nem webhook é registrado.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { LINKS_ENDPOINT, describeShape, extractCheckoutUrl } from './infinitepay.ts'
 
 const cors = {

@@ -8,7 +8,7 @@
 // Métodos de pagamento, InfiniteTag e endereço público do site vêm da tabela `shop_settings` (editável no painel da loja).
 // O prazo de reserva (horas) também vem de shop_settings.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { LINKS_ENDPOINT, buildLinkPayload, describeShape, extractCheckoutUrl, sumItems, type LinkItemInput } from './infinitepay.ts'
 
 const cors = {

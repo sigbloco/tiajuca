@@ -20,7 +20,7 @@ export function pixCopyPaste(a: { key: string; beneficiary: string; amountCents:
     tlv('00', '01') +
     tlv('26', tlv('00', 'br.gov.bcb.pix') + tlv('01', a.key.trim())) +
     tlv('52', '0000') + tlv('53', '986') + tlv('54', (a.amountCents / 100).toFixed(2)) + tlv('58', 'BR') +
-    tlv('59', clean(a.beneficiary, 25) || 'LOJA') + tlv('60', clean(a.city ?? 'Rio de Janeiro', 15) || 'BRASIL') +
+    tlv('59', clean(a.beneficiary, 25) || 'LOJA') + tlv('60', clean(a.city ?? '', 15) || 'BRASIL') +
     tlv('62', tlv('05', a.txid.replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***')) + '6304'
   return body + crc16(body)
 }
