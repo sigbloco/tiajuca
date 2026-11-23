@@ -28,6 +28,7 @@ import { WhatsAppIcon } from './MemberSection'
 import { isPastCycle, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
+import { MemberDirectory } from './MemberDirectory'
 import { ReactivationRequests } from './Reactivation'
 import { createMember, type MemberRow } from './service'
 
@@ -103,18 +104,22 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
 const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
-/** Visão do integrante (fora da direção): só ativos; filtros "Integrantes" (aluno, músico convidado, sênior), "Professores e Monitores" e "Regentes". */
-const MEMBER_VIEW_OPTIONS: [string, string][] = [['integrantes', 'Integrantes'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes']]
-const MEMBER_VIEW_GROUP = ['aluno', 'musico', 'senior']
 const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['musico', 'Músicos'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes'], ['senior', 'Sêniors']]
 
+/**
+ * Quem vê cadastros de outras pessoas (grupo ou todos: equipe e Direção) tem a lista completa, por naipe, com fichas e filtros;
+ * quem só vê o próprio cadastro (integrante comum) vê a lista de nomes dos ativos (D13). O que cada um enxerga vem do banco.
+ */
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
+  const seesOthers = usePermission('members.read', 'group')
+  if (!seesOthers && !lockedCategory) return <MemberDirectory title={title} />
+  return <MembersTree lockedCategory={lockedCategory} title={title} />
+}
+
+function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const wantedCategory = lockedCategory ?? ''
-  // Quem vê cadastros de outras pessoas (grupo ou todos: equipe e Direção) tem todos os filtros (situação e todos os tipos);
-  // o que cada um enxerga continua vindo do acesso.
-  const memberView = !usePermission('members.read', 'group')
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
   const [search, setSearch] = useState('')
@@ -283,14 +288,12 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     for (const m of members.data ?? []) {
       if (!inCycle(m.id, activeCycleId)) continue
       const st = statusOf(m.id)
-      if (memberView) { if (!st?.counts_as_active) continue }
-      else if (showActive !== showInactive) {
+      if (showActive !== showInactive) {
         if (showActive && !st?.counts_as_active) continue
         if (showInactive && (st?.counts_as_active || st?.is_waitlist)) continue
       }
       if (!lockedCategory && types.size > 0) {
         const mine = typesOf(m.id); if (mine.has('professor') || mine.has('monitor')) mine.add('equipe')
-        if (memberView && MEMBER_VIEW_GROUP.some((k) => mine.has(k))) mine.add('integrantes')
         if (![...types].some((t) => mine.has(t))) continue
       }
       if (wantedCategory && !allCategories(m.id).includes(wantedCategory)) continue
@@ -318,7 +321,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
-  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, memberView, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
+  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -355,7 +358,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
               <span className="break-words">{rowName(m)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
-              {!memberView && [...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
+              {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
             </p>
             {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="break-words text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
@@ -422,14 +425,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       </div>
       <ParticipationRequests />
 
-      {!memberView && <ButtonRow role="group" aria-label="Situação">
+      <ButtonRow role="group" aria-label="Situação">
         {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
           <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
         ))}
-      </ButtonRow>}
+      </ButtonRow>
       {!lockedCategory && (
         <ButtonRow role="group" aria-label="Tipo de integrante">
-          {(memberView ? MEMBER_VIEW_OPTIONS : TYPE_OPTIONS).map(([k, label0]) => { const label = memberView ? label0 : typeChip(k, label0); return (
+          {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
             <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
               onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
           ) })}
