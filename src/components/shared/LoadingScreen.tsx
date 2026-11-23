@@ -59,7 +59,7 @@ function useCountUp(ms?: number): number {
  */
 export function LoadingScreen({ children, fillMs }: { children?: ReactNode; fillMs?: number }) {
   const brand = readBrand()
-  useLayoutEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, [])
   const [ready, setReady] = useState(false)
   useEffect(() => {
     let on = true

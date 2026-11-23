@@ -126,7 +126,7 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     const own: Record<string, string> = {}
     for (const i of catalogItems) { const o = field.options.find((x) => x.value === i.id || x.value === i.name || x.label.trim().toLowerCase() === i.name.trim().toLowerCase()); if (o?.description !== undefined) own[i.id] = o.description }
     setDescs(own)
-  }, [catalogSig]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [catalogSig])
   // Ao escolher uma lista, todos os itens começam marcados (dá para desmarcar).
   const autoPick = useRef('')
   const autoLevel = useRef('')
@@ -135,13 +135,13 @@ function FieldSheet({ formId, field, fields, nextOrder, onClose, asSection, defa
     autoLevel.current = levelList
     if (field?.validation.levelList === levelList && (field?.options.length ?? 0) > 0) return
     setPicked(new Set(levelItems.data.filter((i) => i.is_active).map((i) => i.id)))
-  }, [f.mapping, levelList, levelItems.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [f.mapping, levelList, levelItems.data])
   useEffect(() => {
     if (!src || autoPick.current === src || !customItems.data || customItems.data.length === 0) return
     autoPick.current = src
     if (field?.validation.listSource === src && (field?.options.length ?? 0) > 0) return
     setPicked(new Set(customItems.data.filter((i) => i.is_active).map((i) => i.id)))
-  }, [src, customItems.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [src, customItems.data])
   const togglePicked = (id: string) => setPicked((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const setShownPicked = (on: boolean) => setPicked((cur) => { const n = new Set(cur); for (const i of shown) { if (on) n.add(i.id); else n.delete(i.id) } return n })
   const currentSection = field ? sectionIds(fields).get(field.id) ?? '' : defaultSection ?? sections[sections.length - 1]?.id ?? ''

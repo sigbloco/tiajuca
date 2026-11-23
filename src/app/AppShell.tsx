@@ -133,9 +133,9 @@ export function AppShell() {
   useEffect(() => {
     if (!orgIdForCycles) return
     void supabase.rpc('refresh_current_cycle', { p_org: orgIdForCycles }).then(() => qcShell.invalidateQueries({ queryKey: ['cycles'] }))
-  }, [orgIdForCycles]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orgIdForCycles])
   useEffect(() => { if (brandName) applyBrandToDocument({ name: brandName, logo_path: brandLogo }) }, [brandName, brandLogo])
-  useEffect(() => { if (membership) cacheBrand({ name: membership.name, short_name: membership.short_name, logo_path: membership.logo_path, theme: membership.theme }) }, [membership?.name, membership?.logo_path, membership?.theme]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (membership) cacheBrand({ name: membership.name, short_name: membership.short_name, logo_path: membership.logo_path, theme: membership.theme }) }, [membership?.name, membership?.logo_path, membership?.theme])
   // Bolinha em "Meu perfil" enquanto houver campo em branco (o titular tem o perfil do bloco, sem esse aviso).
   const profileGaps = useProfileGaps(membership?.organization_id, membership?.member_id, !!membership && !membership.roles.includes('titular'))
   const hasGaps = (profileGaps?.length ?? 0) > 0

@@ -76,7 +76,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
     const byDate = cycles.data.find((c) => c.is_active && c.starts_on <= f.activity_date && (!c.ends_on || f.activity_date <= c.ends_on))
     const pick = byDate ?? cycles.data.find((c) => c.is_current) ?? cycles.data.find((c) => c.is_active)
     if (pick) setF((x) => ({ ...x, cycle_id: pick.id }))
-  }, [cycles.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cycles.data])
   const [auds, setAuds] = useState<AudRow[]>([])
   const audience = useQuery({
     queryKey: ['audience', activity?.id],

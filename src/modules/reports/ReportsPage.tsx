@@ -45,7 +45,7 @@ export function ReportsPage() {
   const [from, setFrom] = useState(cycle?.starts_on ?? addDaysIso(today, -90))
   const [to, setTo] = useState(cycle?.ends_on ?? today)
   // Trocar o ciclo preenche De/Até com o início e o fim dele; dá para ajustar depois.
-  useEffect(() => { if (cycle) { setFrom(cycle.starts_on); setTo(cycle.ends_on) } }, [cycle?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (cycle) { setFrom(cycle.starts_on); setTo(cycle.ends_on) } }, [cycle?.id])
   const [group, setGroup] = useState<Group>('member')
   // Recorte combinável com o agrupamento: '' (tudo), 'sec:<id>', 'ins:<id>' ou 'mon:AAAA-MM'.
   const [cut, setCut] = useState('')

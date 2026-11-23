@@ -86,7 +86,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   useEffect(() => {
     if (!canEdit || !missingKey || !cats.data) return
     void Promise.all(missingKey.split('|').map((k) => { const i = k.indexOf('~'); return mirrorFunctionToFees(orgId, { fnId: k.slice(0, i), created: k.slice(i + 1) }) })).then(() => qc.invalidateQueries({ queryKey: ['catalog', orgId, 'fee_categories'] }))
-  }, [missingKey, canEdit, cats.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [missingKey, canEdit, cats.data])
 
   return (
     <div className="space-y-4">

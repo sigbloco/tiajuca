@@ -158,7 +158,7 @@ function AdminBilling() {
     if (!cycle) return
     const d = today < cycle.starts_on ? cycle.starts_on : today > cycle.ends_on ? cycle.ends_on : today
     setYm({ y: Number(d.slice(0, 4)), m: Number(d.slice(5, 7)) - 1 })
-  }, [cycle?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cycle?.id])
   const [status, setStatus] = useState<ChargeStatus | ''>('')
   const [searchInput, setSearchInput] = useState('')
   const search = useDebounced(searchInput)

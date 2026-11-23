@@ -45,7 +45,7 @@ export function FitChoice({ options }: { options: string[] }) {
     const ro = new ResizeObserver(check)
     ro.observe(btn)
     return () => ro.disconnect()
-  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key])
   return (
     <>
       <span ref={label}>{options[idx]}</span>

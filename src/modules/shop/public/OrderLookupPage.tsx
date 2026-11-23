@@ -317,7 +317,6 @@ export function OrderLookupPage() {
   const auto = useRef(false)
   useEffect(() => {
     if (!session && !auto.current && code && phone.replace(/\D/g, '').length >= 10) { auto.current = true; search.mutate() }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   // Acompanha o pagamento pela ação `status` (leve e com limite próprio, 150 por hora por pedido: a cada 30 s cabe sem fim).
   // Só quando o status muda é que o pedido completo é buscado de novo. Com a aba escondida, não consulta.
@@ -333,7 +332,6 @@ export function OrderLookupPage() {
       } catch { /* falha passageira ou limite: tenta de novo na próxima volta, sem mexer na tela */ }
     }, 30_000)
     return () => clearInterval(t)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waiting, data?.order.code])
 
   return (

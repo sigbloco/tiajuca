@@ -172,7 +172,7 @@ export function ScholarshipForm({ memberId, cycleId, onSaved, onPercent, auto = 
 
   const n = Number(percent)
   const valid = percent !== '' && Number.isInteger(n) && n >= 0 && n <= 100
-  useEffect(() => { if (valid) onPercent?.(n) }, [n, valid]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (valid) onPercent?.(n) }, [n, valid])
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('set_cycle_scholarship', {

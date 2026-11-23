@@ -254,7 +254,7 @@ function RegistrationEditor({ member, onChanged, open, setOpen }: { member: Memb
       full_name: member.full_name, display_name: member.display_name ?? '', email: member.email ?? '', phone: member.phone ? maskPhone(member.phone) : '', socials: toList(member.social_handle),
       birth_date: d.birth_date ?? '', joined_at: d.joined_at ?? '', affective_relation: d.affective_relation ?? '', played_other_blocks: d.played_other_blocks, other_blocks: d.other_blocks ?? '', played_instrument: d.played_instrument ?? '', extra: { ...(d.extra_info ?? {}) },
     })
-  }, [reg.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [reg.data])
 
   const digits = f.phone.replace(/\D/g, '')
   const phoneOk = digits === '' || (digits.length >= 10 && digits.length <= 13)
