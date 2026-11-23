@@ -2,7 +2,7 @@
 
 Data: 23/11/2026. Só leitura: nada foi corrigido.
 
-**Feitas: 3a (Integrante) mais as causas comuns da área toda, só pelo código; e 3b (Professor/Monitor), vista na tela (seção "Etapa 3b", mais abaixo).** A área tem cerca de 18 mil linhas em uns 100 arquivos (rotas `/:org/*`), grande demais para uma conversa; ficou dividida em 3a (Integrante), 3b (Professor/Monitor) e 3c (Direção/Titular), como combinado. A 3c está no fim, como "a fazer", com os indícios já encontrados.
+**Feitas: 3a (Integrante) mais as causas comuns da área toda, só pelo código; 3b (Professor/Monitor) e 3c-1 (Direção/Titular: pessoas, ciclos, presença e estrutura), vistas na tela (seções "Etapa 3b" e "Etapa 3c", mais abaixo). Faltam 3c-2 (dinheiro) e 3c-3 (formulários, loja, site, interface, acesso e auditoria).** A área tem cerca de 18 mil linhas em uns 100 arquivos (rotas `/:org/*`), grande demais para uma conversa; ficou dividida em 3a (Integrante), 3b (Professor/Monitor) e 3c (Direção/Titular), como combinado. A 3c está no fim, como "a fazer", com os indícios já encontrados.
 
 **Nada foi visto na tela.** O navegador embutido não tinha sessão aberta (nem em 5173, 5174 ou 5175) e a revisão seguiu sem login, só pelo código. Todo achado abaixo é **"não verificado na tela"**: as larguras são deduzidas das classes do Tailwind (ex.: `h-9` = 36 px), não medidas. Para saber o que o papel Integrante vê, consultei no banco (só leitura) as permissões do papel e a liberação de páginas (`role_permissions`, `page_releases`) e o tema do bloco (`organizations.theme`), para calcular os contrastes.
 
@@ -322,6 +322,146 @@ Confirmados na tela, da 3a: C1 (dias com 36 px), C2 (pontos sem legenda), C3 (li
 - `BillingPage.tsx:27`: "Seniors".
 - `app/PageReleaseBar.tsx`: caixas de liberação gravando ao toque (VA4).
 
+## Etapa 3c: Direção/Titular
+
+A 3c é grande demais para uma conversa e ficou dividida em três partes: **3c-1** (pessoas, ciclos, presença e estrutura, feita abaixo), **3c-2** (dinheiro) e **3c-3** (formulários, loja, site, interface, acesso e auditoria).
+
+### Etapa 3c-1: pessoas, ciclos, presença e estrutura (vista na tela)
+
+Data: 23/11/2026. Só leitura: nada foi corrigido.
+
+**Como foi feita.** Logado como Titular no site publicado (`tiajuca.cordaodatiajuca.workers.dev`, código da `main`), com "Titular (eu mesmo)"; a Direção foi vista pelo "Visualizar como → Direção" e, no fim, a visualização voltou para "Titular (eu mesmo)". Larguras 375 px (prioridade), 768 px e 1280 px; os tamanhos citados foram **medidos na página** (`getBoundingClientRect`). Nada foi gravado: não toquei nas caixas da "Página liberada para", em seletores de situação ou categoria, em campos que gravam ao sair, em "Encerrar", "Desativar", "Copiar do ciclo", cancelar aula, "Sincronizar acesso" nem "Testar conexão". Só abri listas, grupos recolhíveis, a ficha de um integrante e o formulário "Editar dados" dela, que fechei com o X de cancelar. Os números de linha são da `main` (`c7ca45a`); o site publicado pode estar um pouco atrás dela.
+
+Telas cobertas: moldura do Titular ("Visualizar como" e "Página liberada para"), Início (bloco "Visão da direção"), Integrantes em modo de gestão e a ficha (`MembersPage`, `MemberDetailSheet`, `ArtisticLinks`, `MemberBilling`), Naipes em edição, Configurações de naipes (`NaipesSettings`, `CatalogEditor`), Organograma, Vagas em edição, Organização, Ciclos, Categorias (`funcoes`, `OrgPages`), Fornecedores, Google Drive, Oficina, Presença do dia (com os botões de cancelar), Lista de espera e Relatórios de presença.
+
+#### Resumo 3c-1: os problemas mais importantes
+
+1. **(alta, todas) Ações que gravam num toque, sem confirmação nem desfazer, ao lado de botões inofensivos.** Na ficha, o "Encerrar" vínculo (X vermelho de 32 px, logo ao lado do lápis de editar) encerra a participação artística, colaborativa ou a regência na hora. Em Configurações de naipes, o "Desativar" faz o mesmo. A Categoria principal e a Situação do ciclo, na ficha, gravam ao trocar a opção. E as caixas da "Página liberada para" (ver item 3) também gravam na hora. `ArtisticLinks.tsx:220,230`, `CatalogEditor.tsx:156-158`, `MemberDetailSheet.tsx:96`, `MemberBilling.tsx:281`.
+2. **(alta, 375 px) O topo fixo do Titular toma quase metade da tela, mesmo sem "Visualizar como".** São 45 px da linha do "Visualizar como", 152 px de site, loja, Sair e "Página liberada para", e 97 px de ciclo, "Voltar" e caminho: **294 px fixos**, mais 55 px da barra inferior. Sobram 463 dos 812 px (57 %). O título de Integrantes começa a 283 px; com "Visualizar como" ativo, a 335 px. A ficha aberta começa a 306 px. O VA1 da 3b vale também para o uso normal. `AppShell.tsx:253-283`, `ViewAsBar.tsx:121-163`, `app/PageReleaseBar.tsx:28-48`.
+3. **(alta, todas) "Página liberada para": caixas que gravam ao toque, fixas no topo de toda página** (confirma o VA4 da 3b). São rótulos de 168 × 32 px com a marca de 16 × 16 px, numa área por onde o polegar passa ao rolar. Mudam a liberação de um papel inteiro sem confirmação nem desfazer, e aparecem até no Início (desmarcar "Integrante inativo" ali esconderia o Início de quem está inativo). O motivo das caixas desabilitadas fica só no `title`. `app/PageReleaseBar.tsx:36-43`.
+4. **(alta, 375 px) Alvos minúsculos nas telas de gestão.** Na ficha, os "+" têm 20 × 20 px (Adicionar ciclo, Adicionar participação artística, colaborativa e remunerada, Acumular outra categoria) e o lápis, a lixeira e o X de fechar têm 28 × 28 px. Nas Configurações de naipes, Subir/Descer têm **28 × 20 px**. Na Presença, o X "Cancelar a aula de …" tem **22 × 22 px** e fica colado ao atalho do instrumento. Em Naipes são quatro botões de 32 px por linha. `MemberDetailSheet.tsx:169,408-409`, `ArtisticLinks.tsx:207`, `MemberBilling.tsx:141`, `CatalogEditor.tsx:139-142`, `ActivityCard.tsx:103,120-121`, `NaipesPage.tsx:127-132`.
+5. **(média, todas) Botão de adicionar fora da regra 7, em cinco desenhos diferentes.** "Novo integrante" é um "+" de 28 px com contorno, sem texto. "Novo naipe" e "Copiar do ciclo" são ícones de 32 px; o "Copiar do ciclo" é uma ação grande (copia estrutura, oficinas, vagas e equipe) explicada só no `title`. "Adicionar em …" (Categorias) é um "+" de 28 px no cabeçalho do grupo. Fornecedores tem um "+" sem nome em cada categoria. Já Ciclos, Drive e Fornecedores usam o `variant="add"`, mas ao lado do título e não ocupando 100 % da largura abaixo dele. `MembersPage.tsx:359`, `NaipesPage.tsx:391-394`, `OrgPages.tsx:131`, `SuppliersPage.tsx:211,219`, `CyclesPage.tsx:149`, `DriveFoldersPage.tsx:250`.
+6. **(média, 375 px) Fornecedores: o botão "Novo" sai da margem.** A fileira Filtrar/Categorias/Novo é um `flex` sem quebra de linha. Em 375 px, o "Novo" vai de 279 a 375 px, encostado na borda e sem os 16 px de respiro; o tracejado fica cortado. `SuppliersPage.tsx:207-212`.
+7. **(média, todas) Ficha do integrante com dois jeitos de salvar e sem marca de campo obrigatório.** "Editar dados" abre um formulário de 2153 px. O Salvar e o Cancelar são só ícones (40 × 36 e 42 × 36 px), ficam no meio dele (a 1332 px do topo da ficha) e não na base fixa. "Nome completo" é obrigatório (`required`), mas não tem asterisco. Logo abaixo, Situação e Categoria principal gravam sozinhas (regras 4 e de salvar). `MemberDetailSheet.tsx:286-314`.
+8. **(média, todas) Categorias: a página inteira grava ao sair do campo e repete texto.** Nome, descrição, Tipo e Naipe gravam ao sair do campo. O placeholder diz "Descrição (opcional)" (regra 4). A mesma ajuda ("Com um naipe, só quem toca nele…") aparece 8 vezes, uma por categoria contribuinte. Os grupos mostram tudo de uma vez, sem 5 em 5 (Contribuintes tem 8). "Monitor" e "Produção" aparecem em Remuneradas e em Colaborativas sem nada que as diferencie. `OrgPages.tsx:95-114`.
+9. **(média, todas) Setas de reordenar em dois desenhos (regra 2).** Em Naipes, as setas ficam à direita, ao lado do lápis e da lixeira, longe da alça de arrastar (à esquerda). Nas Configurações de naipes, o desenho segue a regra (seta, alça, seta), mas com setas de 20 px de altura. `NaipesPage.tsx:118-136`, `CatalogEditor.tsx:138-143`.
+10. **(média, todas) Início, bloco "Visão da direção": números soltos.** As caixas não levam a lugar nenhum (nem "Lista de espera" nem "Pendente"). "Integrantes 191" não diz o que conta (ativos 62 + inativos 18 = 80; o resto são cadastros de outros ciclos). Os plurais vêm com "(s)": "5 lotado(s)", "0 inadimplente(s)", "≈ 4 bolsa(s) integral(is)". `HomePage.tsx:240-263`.
+
+#### O que não deu para verificar (3c-1)
+
+- **Gravações e o que vem depois delas:** salvar a ficha, encerrar vínculo, adicionar ciclo ou participação, excluir integrante e a lixeira de Integrantes (não apareceu: provavelmente vazia), criar, editar ou excluir naipe, instrumento, ciclo, categoria e fornecedor, "Copiar do ciclo", desativar nome de naipe, mudar o limite de vagas, cancelar aula ou evento (os diálogos não foram abertos), "Sincronizar acesso", "Testar conexão", adicionar à lista de espera e promover dela. Toasts, desfazer e mensagens de erro dessas ações: só pelo código.
+- **Painéis de criação** ("Novo integrante", "Novo ciclo", "Novo fornecedor", "Adicionar pasta"): não abertos.
+- **Lista de espera com gente:** estava vazia neste ciclo; só o vazio foi visto.
+- **Estados de erro:** só pelo código. Das 13 telas, só Integrantes, Ciclos, Drive e Relatórios tratam erro de consulta; nas demais, falha vira esqueleto ou lista vazia (mesma causa da 3a).
+- **Direção de verdade:** visto pelo "Visualizar como", que troca menus e permissões, mas não a barra de liberação (ver DX2). Colaborador, que não tem categoria na barra de liberação: não verificado.
+- **Calendário e Repertório em modo de edição** (`EventSheet`, `eventos/configuracoes`, edição de músicas): fora da lista da 3c. Sugiro incluir na 3c-3.
+- **Teclado e leitor de tela:** só `aria-label`, `aria-pressed` e `title` conferidos pelo DOM.
+
+#### Achados por tela (3c-1)
+
+##### Moldura do Titular: "Visualizar como" e "Página liberada para" — `ViewAsBar.tsx`, `app/PageReleaseBar.tsx`, `AppShell.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DT1 | alta | 375 | Topo fixo de 294 px sem "Visualizar como" e de cerca de 350 px com ele (ver resumo 2). Em 768 px a barra de liberação vira uma linha só (65 px). | `AppShell.tsx:253-283`, `app/PageReleaseBar.tsx:31` |
+| DT2 | alta | todas | Caixas de liberação que gravam ao toque, também no Início (ver resumo 3). | `app/PageReleaseBar.tsx:36-43` |
+| DT3 | média | todas | O motivo das caixas desabilitadas ("… não tem acesso a esta página em Acesso e papéis", "Libere primeiro a área…", "Só o Titular altera.") está só no `title`: no celular, a caixa apagada não explica nada (mesma causa do A2 da 3a). | `app/PageReleaseBar.tsx:37-41` |
+| DT4 | média | todas | "Visualizar como" tem Colaborador, mas a barra de liberação só tem 4 categorias (Direção, Professor/Monitor, Integrante ativo e inativo): a tela não diz que regra vale para o Colaborador. | `access/pageReleases.ts:9-14`, `ViewAsBar.tsx` |
+| DT5 | baixa | 375 | Dois "Sair" lado a lado com sentidos diferentes: o da barra laranja sai da visualização e o ícone da barra de cima sai da conta. No celular, o primeiro diz só "Sair" (o "Voltar a mim" aparece só a partir de 640 px). | `ViewAsBar.tsx:156`, `AppShell.tsx:258` |
+| DT6 | baixa | 375 | Seletores de categoria e pessoa com 117 × 32 px (confirma o VA2 da 3b). | `ViewAsBar.tsx:126-149` |
+
+##### Início, bloco "Visão da direção" — `HomePage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DI1 | média | todas | Caixas sem link e "Integrantes 191" sem explicação (ver resumo 10). | `HomePage.tsx:241-245` |
+| DI2 | baixa | todas | Plurais com "(s)": "lotado(s)", "inadimplente(s)", "bolsa(s) integral(is)" (mesma causa da 3a). | `HomePage.tsx:257,261,262` |
+Bem resolvido: 2 colunas no celular e 4 a partir de 1024 px, sem linha incompleta; barras por naipe com o número ao lado; os números em verde (`text-success` sobre branco, 4,3:1) passam por serem texto grande (20 px em negrito).
+
+##### Integrantes em modo de gestão e ficha — `MembersPage.tsx`, `MemberDetailSheet.tsx`, `ArtisticLinks.tsx`, `MemberBilling.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DM1 | alta | todas | "Encerrar" vínculo grava num toque (ver resumo 1). O X vermelho de 32 px fica a 4 px do lápis "Editar vínculo", também de 32 px (`gap-1`). | `ArtisticLinks.tsx:218-220,230` |
+| DM2 | alta | 375 | "+" de 20 × 20 px; lápis, lixeira e X de 28 × 28 px (ver resumo 4). | `MemberDetailSheet.tsx:169,408-409`, `ArtisticLinks.tsx:207`, `MemberBilling.tsx:141`, `primitives.tsx:148` |
+| DM3 | média | todas | Dois jeitos de salvar na ficha; Salvar e Cancelar só com ícone, no meio do formulário; "Nome completo" sem asterisco (ver resumo 7). | `MemberDetailSheet.tsx:286-314`, `MemberDetailSheet.tsx:96`, `MemberBilling.tsx:281` |
+| DM4 | média | todas | "Novo integrante" é um "+" de 28 px ao lado do título (regra 7). | `MembersPage.tsx:359` |
+| DM5 | média | todas | "Ativos" e "Inativos" parecem abas, mas somam: tocar em "Inativos" leva a lista de 62 para 80 (os dois marcados), não para os 18 inativos. Nada na tela diz isso. Chips de 29 px. | `MembersPage.tsx:368-369` |
+| DM6 | média | 375 | Com a ficha aberta, sobram cerca de 460 px de tela; o formulário "Editar dados" tem 2153 px de altura. | `primitives.tsx:92`, `MemberDetailSheet.tsx:286` |
+| DM7 | baixa | todas | "Também é:" aparece vazio, seguido só do "+"; resposta vazia vira "em branco" em itálico de 12 px, cinza a 70 % de opacidade. | `MemberBilling.tsx:134-141`, `MemberDetailSheet.tsx:321` |
+| DM8 | baixa | todas | A mesma lista de instrumentos em duas ordens: alfabética em Integrantes, a do catálogo em Naipes, Organograma e Vagas (Agogô, Surdo, Caixa de guerra…). | `MembersPage.tsx`, `NaipesPage.tsx` |
+| DM9 | baixa | todas | O nome da categoria vem do cadastro e destoa do resto da tela: "Senior" e "Senior (sopro)" sem acento, ao lado do selo "Sênior". | dado (Categorias), `MemberBilling.tsx:281` |
+
+Bem resolvido: excluir integrante pede confirmação e explica que o cadastro vai para a lixeira; a ficha mostra a idade e os contatos como botões (WhatsApp, copiar e-mail); "Isento pela categoria Monitor" explica por que a pessoa não é cobrada.
+
+##### Naipes em edição, Configurações, Organograma e Vagas — `NaipesPage.tsx`, `CatalogEditor.tsx`, `Organogram.tsx`, `CapacityPage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DN1 | média | todas | Setas de reordenar ao lado do lápis, longe da alça (ver resumo 9). | `NaipesPage.tsx:118-136` |
+| DN2 | média | 375 | Quatro botões de 32 px por naipe e por instrumento (Editar, Excluir, Subir, Descer). A lixeira desabilitada ("Tem (ou teve) integrantes neste ciclo…") explica o motivo só no `title`. | `NaipesPage.tsx:127-132` |
+| DN3 | média | todas | "Novo naipe" e "Copiar do ciclo" como ícones de 32 px ao lado do título (ver resumo 5). | `NaipesPage.tsx:391-394` |
+| DN4 | baixa | todas | A confirmação repete a ideia: "Tirar o naipe “X” do ciclo Y e tirar deste ciclo?". | `NaipesPage.tsx:353` |
+| DN5 | média | 375 | Configurações de naipes: Subir e Descer com 28 × 20 px; "Desativar" grava num toque; placeholder "Descrição (opcional)". | `CatalogEditor.tsx:139-142,156-158,186`, `StructureManagers.tsx:63` |
+| DN6 | média | todas | Organograma: "Para mudar, vá a Naipes." continua sem `PageLink`, também para a Direção, que pode mudar (confirma o N2 da 3a). Em 768 px, 2 colunas com 3 naipes e Sopro sozinho com 216 px (confirma o N1). | `Organogram.tsx:52,55` |
+| DN7 | média | todas | Vagas em edição: o campo do limite (52 × 40 px) não tem rótulo visível; aparece "10" ao lado de "2/10" sem dizer qual é o limite, e grava ao sair do campo. Em 768 px, 2 colunas: Performance com um cartão de 220 px e Percussão e Sopro com 9 cartões, o último sozinho (regra 5; mesma causa do V2 da 3b). | `CapacityPage.tsx:56-62,101` |
+| DN8 | baixa | 375 | "Voltar para Naipes e instrumentos • Organograma" quebra em duas linhas no topo (mesma causa do NF3 da 3b). | `AppShell.tsx:267-279` |
+
+##### Organização, Ciclos e Categorias — `Hub.tsx`, `CyclesPage.tsx`, `OrgPages.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DC1 | média | todas | Ciclos: "Novo ciclo" (`variant="add"`) ao lado do título, com 132 px, e não em 100 % abaixo dele. Editar e Excluir com 40 px aqui, 32 px em Naipes e 28 px na ficha: três tamanhos para o mesmo par de ações. | `CyclesPage.tsx:149,175-177` |
+| DC2 | média | todas | O ciclo atual ("Principal") tem lixeira na lista, com confirmação só de texto; o painel tem "Apagar tudo isso e o ciclo". São ações destrutivas a um toque da lista. Não exercitado. | `CyclesPage.tsx:108-109,176-177` |
+| DK1 | média | todas | Categorias: tudo grava ao sair do campo, com "(opcional)", ajuda repetida 8 vezes, sem 5 em 5 e nomes repetidos entre grupos (ver resumo 8). | `OrgPages.tsx:95-114` |
+| DK2 | média | 375 | "Adicionar em Remuneradas, Colaborativas, Contribuintes": "+" de 28 px dentro do cabeçalho recolhível (29 px), colado na área que abre e fecha o grupo. | `OrgPages.tsx:131` |
+| DK3 | baixa | todas | Texto com maiúscula irregular: "(por exemplo, direção e Regência)". A página não tem `h1`. | `OrgPages.tsx:124` |
+
+Bem resolvido: Organização com cartões que explicam cada página; Ciclos agrupados por data (Atual, Próximos, Passados) sem status manual; "Financeiro → Valores" em Categorias é `PageLink`; Categorias tem lixeira recolhível no fim.
+
+##### Fornecedores e Google Drive — `SuppliersPage.tsx`, `DriveFoldersPage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DF1 | média | 375 | "Novo" sai da margem direita (ver resumo 6). | `SuppliersPage.tsx:207-212` |
+| DF2 | média | todas | O "+" de cada categoria (42 × 36 px) não tem `aria-label` nem `title`: o leitor de tela anuncia só "botão". | `SuppliersPage.tsx:219` |
+| DF3 | baixa | todas | "Novo", sem dizer o quê (o painel se chama "Novo fornecedor"); "Filtrar" com 36 px. | `SuppliersPage.tsx:211` |
+| DD1 | baixa | todas | Falta ponto: "…documentos, atas Adicione quantas quiser…". | `DriveFoldersPage.tsx:254` |
+| DD2 | baixa | 375 | "Abrir no Drive" (138 × 36 px) e "Sincronizar acesso" (184 × 40 px) quebram em duas linhas com larguras e alturas diferentes (regra 2). O "Abrir no Drive" é um link feito à mão, sem o anel de foco do `Button`. | `DriveFoldersPage.tsx:275-282` |
+| DD3 | baixa | todas | "Busca de partituras (Repertório)" usa o `<details>` do navegador (triângulo preto), um terceiro desenho de grupo recolhível, com "Salvar" dentro do bloco, não na base fixa. | `DriveFoldersPage.tsx:302` |
+
+Bem resolvido: Fornecedores agrupados por categoria, com telefone, WhatsApp e site como botões; Drive com estado "Ainda não sincronizada com o Drive" e lixeira recolhível.
+
+##### Oficina, Presença, Lista de espera e Relatórios — `Hub.tsx`, `ActivityCard.tsx`, `WaitlistPage.tsx`, `ReportsPage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DP1 | alta | 375 | Presença do dia na visão da direção: o X "Cancelar a aula de …" tem 22 × 22 px e fica dentro do atalho do instrumento (32 px); "Cancelar aula" (o evento) tem 32 px. | `ActivityCard.tsx:103,120-121` |
+| DP2 | média | todas | A caixa de cancelar a aula de um instrumento tem título "Cancelar" e botões "Cancelar" (confirma) e "Voltar": "Cancelar" significa o contrário do habitual. A do evento usa "Cancelar o evento", que é claro. Não aberta. | `ActivityCard.tsx:47` (comparar com `:105`) |
+| DL1 | baixa | todas | Lista de espera: "Adicionar" fica desabilitado e mudo até escolher a pessoa (regra 4). | `WaitlistPage.tsx:104` |
+| DL2 | baixa | todas | "Instrumento desejado" na ordem do catálogo, com os naipes misturados (Agogô, Flauta, Pernalta, Surdo…). | `WaitlistPage.tsx:101` |
+| DR1 | média | 375 | Relatórios: os 5 filtros (De, Até, Ordenar, Agrupar, Filtrar) ocupam a primeira tela inteira; o total aparece a cerca de 860 px e o primeiro nome mais abaixo. | `ReportsPage.tsx:117-139` |
+| DR2 | baixa | todas | "0 presenças em 1 registros" (concordância); nomes em três formatos na mesma lista (nome completo, "Apelido ou Outro", apelido de duas letras com link de 11 × 18 px). | `ReportsPage.tsx:150-154,181` |
+| DR3 | baixa | todas | "Filtrar" mistura naipes e instrumentos numa lista só, sem grupo. A página não tem `h1`. | `ReportsPage.tsx:125-136` |
+
+Bem resolvido: Oficina com as quatro entradas acesas para a direção; Lista de espera vazia com `EmptyState` e link para Vagas; Relatórios com "Ver mais 5", porcentagem e total do período, e "Percentual (%)" com asterisco.
+
+##### Diferenças entre Direção e Titular (F)
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DX1 | — | todas | Nas telas da 3c-1, Direção e Titular veem o mesmo menu e os mesmos botões de gestão (Integrantes, Naipes, Ciclos, Categorias, Drive, Lista de espera). A diferença está na barra de liberação (a Direção só vê) e em Acesso e papéis (3c-3). | `navigation.ts` |
+| DX2 | média | todas | "Visualizar como → Direção" não mostra a barra de liberação como a Direção a vê: ela usa o papel real, e o Titular continua com as caixas ativas (para a Direção elas aparecem desabilitadas, com "Só o Titular altera."). | `app/PageReleaseBar.tsx:15-18,36` |
+| DX3 | baixa | todas | O aviso da visualização diz "você ainda é direção" também para o Titular. | `ViewAsBar.tsx:163` |
+
+#### Causas repetidas novas (3c-1)
+
+- **Gravar num toque, sem confirmar nem desfazer**, em botões que parecem de navegação ou ao lado de botões de leitura: "Encerrar" vínculo, "Desativar", caixas da "Página liberada para" e `OkSelect` de situação e categoria. A regra de salvar permite o automático, mas não diz nada sobre ações que tiram coisas. Vale combinar um padrão (confirmação ou toast com desfazer).
+- **Três tamanhos de botão-ícone e cinco desenhos de "adicionar"** na mesma área: ações com 28 px (ficha), 32 px (Naipes, Categorias) e 40 px (Ciclos, Drive, Fornecedores); "+" de 20 px (`h-5`), de 28 px (`h-7`), ícone de 32 px (`h-8`), "+" sem nome e `variant="add"`.
+- **Cabeçalho de página em `flex` sem `flex-wrap`:** os botões passam da margem em 375 px (Fornecedores). Conferir os demais cabeçalhos com dois ou três botões na 3c-2 e na 3c-3.
+- **Recolhível em três desenhos:** `Collapsible`, botão próprio (perfil, 3a) e `<details>` nativo (Drive).
+- **"(opcional)" confirmado** em `CatalogEditor.tsx:186` e `OrgPages.tsx:101` (já listado nos indícios; falta `FormListsPage.tsx:145`, para a 3c-3).
+
 ## Próxima etapa
 
-**3c: Direção/Titular** (Estrutura e Naipes em edição, Ciclos, Categorias, Valores, Bolsas, Cobranças, Financeiro, Formulários, Loja, Site, Interface, Acesso e papéis, liberação de páginas, Auditoria e backups, Lista de espera e Relatórios de presença). Pode ser feita com o mesmo login de Titular, já que é o próprio papel; o login do Google volta para o site publicado, então a revisão segue nele, só olhando. Ela é a maior das três: se não couber numa conversa, dividir em 3c-1 (pessoas, ciclos, presença e estrutura), 3c-2 (dinheiro: valores, bolsas, cobranças, financeiro) e 3c-3 (formulários, loja, site, interface, acesso, auditoria).
+**3c-2: dinheiro (Direção/Titular).** Receitas, Despesas, Distribuição, Pagamentos, Valores, Cobranças (painel da direção, link InfinitePay e ajuste, só até antes de gravar), Bolsas, o Financeiro da direção e o bloco de contribuição da ficha (`MemberBilling`). Mesmo jeito: logado como Titular no site publicado, só olhando, sem gerar cobrança nem link. Depois vem a **3c-3**: Formulários, Loja (`gerenciar-loja`), Site, Interface, Acesso e papéis (matriz de permissões e liberação de páginas), Auditoria e backups; sugiro incluir nela o Calendário e o Repertório em modo de edição, que ficaram fora da lista.
