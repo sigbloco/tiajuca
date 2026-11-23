@@ -22,6 +22,10 @@ const json = (body: unknown, status = 200) =>
 const sha256 = async (s: string) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, '0')).join('')
 
+/** IP de quem chamou: o cabeçalho do Cloudflare (o cliente não consegue forjar); o x-forwarded-for só se ele faltar. */
+const clientIp = (req: Request) =>
+  (req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'desconhecido').trim()
+
 
 /** Pede ao shop-mailer para esvaziar a fila agora (o agendamento do banco é só a rede de segurança). Não bloqueia a resposta. */
 function flushMail() {
@@ -81,17 +85,24 @@ async function changeMethod(req: Request, body: Record<string, unknown>) {
   const { data: settings } = await admin.rpc('shop_get_settings', { p_org: orgId })
   if (!settings || !providers[method].available(settings as Settings)) return json({ error: 'Esse método de pagamento não está disponível.' }, 400)
 
-  const ip = (req.headers.get('x-forwarded-for') ?? 'desconhecido').split(',')[0].trim()
-  const { data: allowed } = await admin.rpc('shop_rate_limit', { p_bucket: `change:${await sha256(ip)}`, p_max: 30, p_window: '1 hour' })
-  if (!allowed) return json({ error: 'Muitas tentativas. Aguarde um pouco e tente de novo.' }, 429)
+  // Por IP e por pedido: cada troca para InfinitePay cria um link novo, então um código não pode ser trocado sem parar.
+  const code = String(body.code ?? '').trim().toUpperCase()
+  if (!/^[A-Z0-9]{6,12}$/.test(code)) return json({ error: 'Pedido não encontrado.' }, 404)
+  for (const [bucket, max] of [[`change:${await sha256(clientIp(req))}`, 30], [`change-code:${code}`, 10]] as const) {
+    const { data: allowed } = await admin.rpc('shop_rate_limit', { p_bucket: bucket, p_max: max, p_window: '1 hour' })
+    if (!allowed) return json({ error: 'Muitas tentativas. Aguarde um pouco e tente de novo.' }, 429)
+  }
 
   let user: { id: string; email?: string | null } | null = null
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  if (token) { const { data } = await admin.auth.getUser(token); user = data.user ?? null }
+  if (token) {
+    const { data } = await admin.auth.getUser(token)
+    // Pedido de visitante só é casado pelo e-mail se a conta tiver o e-mail confirmado.
+    user = data.user ? { id: data.user.id, email: data.user.email_confirmed_at ? data.user.email : null } : null
+  }
   const phone = String(body.phone ?? '')
   if (!user && !phone) return json({ error: 'Entre na sua conta ou informe o telefone do pedido.' }, 401)
 
-  const code = String(body.code ?? '')
   const { data: r, error } = await admin.rpc('shop_change_method', {
     p_org: orgId, p_user: user?.id ?? null, p_email: user?.email ?? null, p_code: code, p_phone: phone, p_method: method,
   })
@@ -139,8 +150,7 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
 
   // Limite por IP (anti-abuso de reserva de estoque): 10 pedidos por hora.
-  const ip = (req.headers.get('x-forwarded-for') ?? 'desconhecido').split(',')[0].trim()
-  const { data: allowed, error: rlErr } = await admin.rpc('shop_rate_limit', { p_bucket: `checkout:${await sha256(ip)}`, p_max: 10, p_window: '1 hour' })
+  const { data: allowed, error: rlErr } = await admin.rpc('shop_rate_limit', { p_bucket: `checkout:${await sha256(clientIp(req))}`, p_max: 10, p_window: '1 hour' })
   if (rlErr) { console.error('rate_limit', rlErr.message); return json({ error: 'Não foi possível finalizar agora. Tente novamente.' }, 500) }
   if (!allowed) return json({ error: 'Muitas tentativas. Aguarde um pouco e tente de novo.' }, 429)
 
