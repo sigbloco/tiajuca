@@ -2,7 +2,7 @@
 
 Data: 23/11/2026. Só leitura: nada foi corrigido.
 
-**Feitas: 3a (Integrante) mais as causas comuns da área toda, só pelo código; 3b (Professor/Monitor) e 3c-1 (Direção/Titular: pessoas, ciclos, presença e estrutura), vistas na tela (seções "Etapa 3b" e "Etapa 3c", mais abaixo). Faltam 3c-2 (dinheiro) e 3c-3 (formulários, loja, site, interface, acesso e auditoria).** A área tem cerca de 18 mil linhas em uns 100 arquivos (rotas `/:org/*`), grande demais para uma conversa; ficou dividida em 3a (Integrante), 3b (Professor/Monitor) e 3c (Direção/Titular), como combinado. A 3c está no fim, como "a fazer", com os indícios já encontrados.
+**Feitas: 3a (Integrante) mais as causas comuns da área toda, só pelo código; 3b (Professor/Monitor), 3c-1 (Direção/Titular: pessoas, ciclos, presença e estrutura) e 3c-2 (dinheiro), vistas na tela (seções "Etapa 3b" e "Etapa 3c", mais abaixo). Falta a 3c-3 (formulários, loja, site, interface, acesso e auditoria).** A área tem cerca de 18 mil linhas em uns 100 arquivos (rotas `/:org/*`), grande demais para uma conversa; ficou dividida em 3a (Integrante), 3b (Professor/Monitor) e 3c (Direção/Titular), como combinado. A 3c está no fim, como "a fazer", com os indícios já encontrados.
 
 **Nada foi visto na tela.** O navegador embutido não tinha sessão aberta (nem em 5173, 5174 ou 5175) e a revisão seguiu sem login, só pelo código. Todo achado abaixo é **"não verificado na tela"**: as larguras são deduzidas das classes do Tailwind (ex.: `h-9` = 36 px), não medidas. Para saber o que o papel Integrante vê, consultei no banco (só leitura) as permissões do papel e a liberação de páginas (`role_permissions`, `page_releases`) e o tema do bloco (`organizations.theme`), para calcular os contrastes.
 
@@ -324,7 +324,7 @@ Confirmados na tela, da 3a: C1 (dias com 36 px), C2 (pontos sem legenda), C3 (li
 
 ## Etapa 3c: Direção/Titular
 
-A 3c é grande demais para uma conversa e ficou dividida em três partes: **3c-1** (pessoas, ciclos, presença e estrutura, feita abaixo), **3c-2** (dinheiro) e **3c-3** (formulários, loja, site, interface, acesso e auditoria).
+A 3c é grande demais para uma conversa e ficou dividida em três partes: **3c-1** (pessoas, ciclos, presença e estrutura) e **3c-2** (dinheiro), feitas abaixo, e **3c-3** (formulários, loja, site, interface, acesso e auditoria), a fazer.
 
 ### Etapa 3c-1: pessoas, ciclos, presença e estrutura (vista na tela)
 
@@ -462,6 +462,129 @@ Bem resolvido: Oficina com as quatro entradas acesas para a direção; Lista de 
 - **Recolhível em três desenhos:** `Collapsible`, botão próprio (perfil, 3a) e `<details>` nativo (Drive).
 - **"(opcional)" confirmado** em `CatalogEditor.tsx:186` e `OrgPages.tsx:101` (já listado nos indícios; falta `FormListsPage.tsx:145`, para a 3c-3).
 
+### Etapa 3c-2: dinheiro (vista na tela)
+
+Data: 23/11/2026. Só leitura: nada foi corrigido.
+
+**Como foi feita.** Como na 3c-1: logado como Titular no site publicado, em 375, 768 e 1280 px, com as medidas tiradas na página. Nada foi gravado. Não gerei cobrança, pagamento nem link; não marquei nada como pago; não toquei em valores, percentuais, horas nem bolsas (todos gravam ao sair do campo). Abri só listas, grupos, a navegação de mês (que só muda o que se vê), o painel de uma cobrança isenta, o de um pagamento da equipe e o de uma bolsa, e o formulário "Nova despesa", fechados pelo X. No meio da revisão a página recarregou sozinha uma vez (de `/financeiro` foi para `/receitas`), e o "Voltar" ficou sem destino ("Voltar"). Os números de linha são da `main`.
+
+Telas cobertas: Financeiro (página inicial), Receitas, Despesas (com o formulário), Distribuição (grupos e regras), Pagamentos (lista e painel), Valores, Cobranças (resumo, filtros, grupos, painel; novembro e julho de 2026), Bolsas (resumo, lista e painel) e o bloco "Contribuição mensal" da ficha (`MemberBilling`).
+
+#### Resumo 3c-2: os problemas mais importantes
+
+1. **(alta, todas) Registros de dinheiro feitos num toque, sem confirmação.**
+   - "Marcar como pago" registra o pagamento na hora, com a data de hoje já preenchida, tanto na cobrança quanto no pagamento da equipe.
+   - "Gerar pagamentos do mês" (Distribuição) cria os pagamentos da equipe sem perguntar.
+   - "Ajustar valor" grava sozinho ao sair do campo quando valor e motivo estão preenchidos, e esse ajuste invalida o link de pagamento.
+   - "Replicar" copia os valores do ciclo anterior sem perguntar.
+
+   Já "Gerar cobranças", "Cancelar cobrança" e "Cancelar pagamento" pedem confirmação. `BillingPage.tsx:120,127-129`, `StaffTab.tsx:100`, `DistributionPage.tsx:317`, `ContributionsEditor.tsx:100`.
+2. **(alta, todas) Distribuição: o resumo esconde o déficit.** Em novembro entraram R$ 200,00 de mensalidades e a hora-aula soma R$ 640,00 ("Professores R$ 640,00 / R$ 200,00 (320%)"). O resumo mostra "Não distribuído (fica no caixa) R$ 0,00" e "Total previsto no mês: R$ 640,00", e o "Gerar pagamentos do mês" continua ativo. O aviso vermelho do topo fala do estouro, mas o quadro final, que é o que se lê antes de gerar, não mostra a diferença de R$ 440,00. `DistributionPage.tsx:306-318`.
+3. **(média, todas) Campos de dinheiro que gravam sozinhos, pequenos e sem rótulo.**
+   - Valores: o campo de valor de cada categoria não tem nome acessível (o leitor de tela lê "R$ 150,00") e grava ao sair do campo.
+   - Distribuição: o % do grupo, o "Sobre" e as "horas no mês" têm 32 px de altura e gravam ao sair.
+   - Bolsas: o painel tem só Percentual e Motivo, sem Salvar nem Remover; para tirar a bolsa, digita-se 0 %. Na ficha, os mesmos campos têm 32 px; no painel de Bolsas, 40 px.
+
+   `ContributionsEditor.tsx:41`, `DistributionRules.tsx:158-161,196-205`, `MemberBilling.tsx:194-202`, `ScholarshipsPage.tsx:99-103`.
+4. **(média, 375 e 768 px) Cobranças: a busca fica espremida.** A fileira busca + naipe + status é um `flex` sem quebra. Em 375 px a busca tem 50 px (só a lupa aparece) e o seletor mostra "Todos os naipe" cortado; em 768 px, 95 px. O campo não tem rótulo (só o placeholder). `BillingPage.tsx:255-258`.
+5. **(média, todas) Navegação de mês em dois tamanhos.** Na Distribuição, as setas têm **22 × 40 px** em todas as larguras (o `MonthNav` está dentro de um `flex flex-wrap` que não dá largura às setas). Nas outras páginas, as setas têm 83 px em 375 px e 271 px em 1280 px. `DistributionPage.tsx:281`, `MonthNav.tsx:12`, `StepNav.tsx:17-19`.
+6. **(média, todas) Valores mostra a variável técnica em cada linha.** "{valor:Aluno (percussão)}", em fonte mono de 12 px, quebra em duas ou três linhas no celular; só o `title` explica que é "Variável para usar nos textos dos formulários". Para quem ajusta valores, é ruído; o lugar dela seria o editor de formulários. `ContributionsEditor.tsx:38`.
+7. **(média, 375 e 768 px) Cartões de resumo com a última linha incompleta (regra 5).** Receitas e Despesas têm 3 caixas em 2 colunas: "Saldo do mês" fica sozinho, com meia largura (168 px em 375, 220 px em 768). Em 1280 px, a terceira caixa tem o dobro da largura das outras (355 contra 174 px). `LedgerTab.tsx:104`.
+8. **(média, todas) Cobranças: três níveis de grupo e valores sem nome.**
+   - A lista é naipe → categoria → pessoa; em 375 px, os cartões das pessoas ficam com 213 px.
+   - O valor ao lado do naipe e da categoria não diz o que soma (é o previsto).
+   - Isentos aparecem com "bolsa 100% · vence 10/11/2026", e o painel deles mostra "Valor base R$ 0,00 · Bolsa (100%) − R$ 0,00".
+   - "24 cobrança(s)" fica no fim.
+
+   `BillingPage.tsx:262-305`.
+9. **(média, todas) Números que não batem entre páginas (a conferir).** Em novembro, Bolsas diz "Impacto mensal estimado R$ 300,00" e Cobranças, "Impacto das bolsas R$ 450,00". Em Cobranças, "Total isento" e "Impacto das bolsas" deram o mesmo valor nos dois meses vistos (R$ 450,00 e R$ 400,00). Pode ser regra (um é estimado, o outro é das cobranças geradas), mas a tela não diz a diferença. `BillingPage.tsx:243-244`, `ScholarshipsPage.tsx:75`.
+10. **(baixa, todas) O Financeiro abre com "Minhas mensalidades" para a própria direção.** "Você não possui mensalidades. Se isso estiver errado, fale com a direção." aparece acima dos 7 cartões para quem é a direção. `Hub.tsx:70`, `BillingPage.tsx:346`.
+
+#### O que não deu para verificar (3c-2)
+
+- **Painel de uma cobrança pendente** (link de pagamento, "Gerar link", "Marcar como pago", aviso de divergência da InfinitePay): em novembro não havia pendentes e, em julho, as pendentes não estavam entre as primeiras de cada grupo. Visto só pelo código.
+- **Todas as gravações:** gerar cobranças, link, pagamentos; marcar como pago; ajustar; cancelar e reabrir; replicar valores; regras de distribuição (criar, editar, remover); bolsas; despesas e receitas avulsas; "Copiar inadimplentes" (copia para a área de transferência, não aberto). Toasts e erros: só pelo código.
+- **Lista de Receitas e Despesas avulsas com itens:** não havia lançamentos em novembro; só o vazio ("Nada registrado neste mês.").
+- **Direção:** pelo código, tem `finance.read` e as mesmas telas; não há diferença de tela entre Direção e Titular no Financeiro.
+
+#### Achados por tela (3c-2)
+
+##### Financeiro (página inicial), Receitas e Despesas — `Hub.tsx`, `LedgerPage.tsx`, `LedgerTab.tsx`, `ReceiptsByGroup.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| FN1 | baixa | todas | "Minhas mensalidades" vazio para a direção, acima dos cartões (ver resumo 10). | `Hub.tsx:70` |
+| FN2 | média | 375, 768 | Três caixas em duas colunas, com "Saldo do mês" sozinho em meia largura (ver resumo 7). | `LedgerTab.tsx:104` |
+| FN3 | média | 375 | Receitas, "Mensalidades por naipe": o total do naipe ("R$ 100,00 de R$ 100,00") some no celular (`hidden sm:inline`); fechado, o grupo só mostra o número de pessoas. | `ReceiptsByGroup.tsx:105` |
+| FN4 | baixa | todas | "Mensalidades por naipe" diz que quem não contribui "não aparece aqui", mas os isentos por categoria aparecem com "R$ 0,00 Isento". Os nomes saem em formatos diferentes (nome completo, nome com apelido). | `ReceiptsByGroup.tsx` |
+| FN5 | baixa | todas | "Pagamentos da equipe" aparece em Despesas e tem página própria (Pagamentos): o mesmo número em dois lugares, sem link de um para o outro. | `LedgerTab.tsx:104` |
+
+Bem resolvido: o formulário "Nova despesa" segue as regras (asterisco vermelho nos obrigatórios, "(obrigatório)" só para o leitor de tela, aviso do que falta ao registrar, "Registrar" em 100 % da largura, explicação de que as mensalidades entram sozinhas); o vazio "Nada registrado neste mês."; "Saldo do mês (receitas − despesas)" com a conta explicada.
+
+##### Distribuição — `DistributionPage.tsx`, `DistributionRules.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| DB1 | alta | todas | O resumo final mostra "Não distribuído R$ 0,00" com déficit de R$ 440,00, e "Gerar pagamentos do mês" grava sem confirmar (ver resumos 1 e 2). | `DistributionPage.tsx:306-318` |
+| DB2 | média | todas | Setas do mês com 22 × 40 px (ver resumo 5). | `DistributionPage.tsx:281` |
+| DB3 | média | 375 | "Nova regra" é um "+" de 20 × 20 px; Editar e Remover regra têm 32 px; o % do grupo tem 48 × 32 px e as "horas no mês", 80 × 32 px, e os dois gravam ao sair (ver resumo 3). | `DistributionPage.tsx:267`, `DistributionRules.tsx:158-170,202` |
+| DB4 | baixa | todas | "4 dia(s) de aula no mês"; "R$ 0,00 para cada (2)" com três professores listados (o terceiro é pago por hora-aula, mas a tela não diz por que ficou fora da conta). | `DistributionPage.tsx:232`, `DistributionRules.tsx:211` |
+
+Bem resolvido: aviso vermelho no topo quando a hora-aula passa das mensalidades; o resumo mostra a conta passo a passo; "Remover regra" pede confirmação; "Financeiro → Pagamentos" é `PageLink`.
+
+##### Pagamentos — `PaymentsPage.tsx`, `StaffTab.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| PG1 | alta | todas | "Marcar como pago" grava num toque, com a data de hoje já preenchida (ver resumo 1). | `StaffTab.tsx:56,100` |
+| PG2 | média | todas | Selos "Pendente" em amarelo sobre amarelo claro (2,72:1; mesma causa da 3a). | `billing/service.ts:8` |
+| PG3 | baixa | todas | "Equipe" repetido em cada linha (é o destino da distribuição, igual para todos); "PIX" em maiúsculas no painel, no aviso, na mensagem e na forma de pagamento (mesma causa do PF2 da 3b). | `StaffTab.tsx:57,80,90,93,98` |
+
+Bem resolvido: "Ver mais 5"; totais Pago e Pendente no topo; a chave Pix da pessoa no painel, com "Copiar"; "Cancelar pagamento" com confirmação.
+
+##### Valores — `ValuesPage.tsx`, `ContributionsEditor.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| VL1 | média | todas | Variável técnica "{valor:…}" em cada linha (ver resumo 6). | `ContributionsEditor.tsx:38` |
+| VL2 | média | todas | Campo de valor sem rótulo, gravando ao sair do campo (ver resumo 3). | `ContributionsEditor.tsx:41` |
+| VL3 | baixa | todas | "Replicar" valores do ciclo anterior sem confirmação (só aparece em ciclo sem valores; não visto na tela). | `ContributionsEditor.tsx:97-101` |
+| VL4 | baixa | todas | Os nomes vêm do cadastro: "Senior (percussão)" sem acento (mesma causa do DM9 da 3c-1). Na lista de isentos, os nomes repetidos ganham qualificação ("Monitor (remunerado)", "Monitor (colaborativo)"), o que falta na página Categorias (DK1). | dado, `ContributionsEditor.tsx:118` |
+
+Bem resolvido: o texto do topo explica que cobranças já geradas não mudam e onde se define a categoria de cada pessoa; "Organização → Categorias" é `PageLink`.
+
+##### Cobranças (visão da direção) — `BillingPage.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| CB1 | alta | todas | No painel da cobrança pendente, "Marcar como pago" grava num toque e "Ajustar valor" grava sozinho (o ajuste também invalida o link); os dois ficam logo abaixo de "Gerar link de pagamento" (ver resumo 1). Pelo código. | `BillingPage.tsx:103-131` |
+| CB2 | média | 375, 768 | Busca de 50 px, "Todos os naipe" cortado e busca sem rótulo (ver resumo 4). | `BillingPage.tsx:255-258` |
+| CB3 | média | todas | Três níveis de grupo, valor do grupo sem nome, isentos com "bolsa 100% · vence …" (ver resumo 8). | `BillingPage.tsx:262-305` |
+| CB4 | média | todas | "Impacto das bolsas" diferente do "Impacto mensal estimado" de Bolsas e igual ao "Total isento" (ver resumo 9). | `BillingPage.tsx:243-244` |
+| CB5 | baixa | todas | "Motivo do ajuste (obrigatório)" escrito no placeholder, e não com asterisco; o campo de valor do ajuste não tem rótulo. | `BillingPage.tsx:127-128` |
+| CB6 | baixa | 375 | "Gerar cobranças" é o maior botão da página (vermelho, 341 × 40 px), entre o resumo e os filtros, para uma ação de uma vez por mês; o dia a dia (buscar, abrir uma cobrança) vem abaixo dele. | `BillingPage.tsx:249-252` |
+| CB7 | baixa | todas | "24 cobrança(s)" e, no aviso de geração, "cobrança(s) criada(s)" (concordância). | `BillingPage.tsx:187,305` |
+
+Bem resolvido: seis caixas de resumo sem linha incompleta (2 colunas no celular e 3 a partir de 1024 px); "Gerar cobranças" pede confirmação e avisa que não duplica; "Ver mais 5" em cada categoria; o painel explica o que o ajuste registra e que o link antigo deixa de dar baixa.
+
+##### Bolsas e bloco de contribuição da ficha — `ScholarshipsPage.tsx`, `MemberBilling.tsx`
+
+| # | Sev. | Largura | Achado | Arquivo provável |
+|---|---|---|---|---|
+| BL1 | média | todas | O painel da bolsa tem só Percentual e Motivo, que gravam ao sair, sem Salvar nem Remover; "0% remove a bolsa do ciclo" está só na descrição (ver resumo 3). | `ScholarshipsPage.tsx:99-103`, `MemberBilling.tsx:194-202` |
+| BL2 | baixa | todas | Os mesmos campos têm 40 px no painel de Bolsas e 32 px na ficha do integrante. | `MemberBilling.tsx:199-202` |
+| BL3 | baixa | todas | "Importado da planilha de controle 2026/27" como motivo da bolsa, no lugar do motivo de verdade (dado da migração). | dado |
+| BL4 | baixa | 375 | "Nova bolsa" (`variant="add"`) ao lado do título, e não em 100 % abaixo dele (mesma causa do DC1 da 3c-1). | `ScholarshipsPage.tsx:69` |
+
+Bem resolvido: quatro caixas de resumo (pessoas, soma, equivalente em bolsas integrais, impacto) com a conta explicada ("soma ÷ 100"); lista de 5 em 5.
+
+#### Causas repetidas novas (3c-2)
+
+- **Dinheiro gravado sem confirmação:** "Marcar como pago" (duas telas), "Gerar pagamentos do mês", "Replicar" e o ajuste automático. Na mesma área, "Gerar cobranças" e os cancelamentos pedem confirmação. Vale um padrão só para ações que criam ou mudam valores: confirmação com o resumo ("Registrar R$ 640,00 pago em 23/11 via Pix?") ou toast com desfazer.
+- **Campo de valor (`MoneyInput`) sem rótulo:** Valores, ajuste da cobrança. O componente não recebe `aria-label` nem `id` nesses usos.
+- **Fileira de filtros em `flex` sem quebra** (Cobranças), mesma causa do DF1 da 3c-1 (Fornecedores).
+- **`MonthNav` dentro de um contêiner sem largura:** as setas encolhem para 22 px (Distribuição).
+
 ## Próxima etapa
 
-**3c-2: dinheiro (Direção/Titular).** Receitas, Despesas, Distribuição, Pagamentos, Valores, Cobranças (painel da direção, link InfinitePay e ajuste, só até antes de gravar), Bolsas, o Financeiro da direção e o bloco de contribuição da ficha (`MemberBilling`). Mesmo jeito: logado como Titular no site publicado, só olhando, sem gerar cobrança nem link. Depois vem a **3c-3**: Formulários, Loja (`gerenciar-loja`), Site, Interface, Acesso e papéis (matriz de permissões e liberação de páginas), Auditoria e backups; sugiro incluir nela o Calendário e o Repertório em modo de edição, que ficaram fora da lista.
+**3c-3: Formulários, Loja (`gerenciar-loja`), Site, Interface, Acesso e papéis (matriz de permissões e liberação de páginas), Auditoria e backups (Direção/Titular).** Sugiro incluir o Calendário e o Repertório em modo de edição, que ficaram fora da lista da 3c. Mesmo jeito: logado como Titular no site publicado, só olhando. Cuidados redobrados: a matriz de permissões e a liberação de páginas gravam ao toque; não fazer backup nem restore, não publicar o site nem mudar o tema. Com ela, termina a área 3.
