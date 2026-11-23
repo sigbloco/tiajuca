@@ -126,7 +126,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     return (
       <Card className="space-y-3 p-4">
         <h3>Contatos do bloco</h3>
-        <p className="text-sm text-muted-foreground">A Loja, o Site e os e-mails usam estes contatos.</p>
+        <p className="text-sm text-muted-foreground">A Loja, o Site e os e-mails usam estes contatos, que ficam <strong>públicos</strong> (qualquer visitante vê). Prefira um e-mail e um WhatsApp do bloco aos seus pessoais.</p>
         <div className="space-y-1.5"><Label htmlFor="bl-email">E-mail de contato</Label><Input id="bl-email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="bl-phone">WhatsApp</Label><PhoneInput id="bl-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} />
           {!phoneOk && <p className="text-xs text-destructive">Informe DDD e número completos.</p>}</div>

@@ -10,6 +10,8 @@ describe('aviso de privacidade', () => {
     expect(full).toContain('Supabase')
     expect(full).toContain('InfinitePay')
     expect(full).toContain('Não guardamos dados de cartão')
+    expect(full).toContain('enviamos a ela o seu nome, e-mail e telefone')
+    expect(full).toContain('nome, telefone e e-mail são apagados automaticamente')
     expect(full).toContain('por até 5 anos')
     expect(text(buildPrivacyNotice('Bloco', { whatsapp: null, email: null }, 10))).toContain('por até 10 anos')
     expect(text(buildPrivacyNotice('Bloco', { whatsapp: null, email: null }, 1))).toContain('por até 1 ano,')
