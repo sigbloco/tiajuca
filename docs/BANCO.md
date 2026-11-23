@@ -7,6 +7,6 @@
 - `supabase/apply_all.sql` e `apply_phase2.sql` foram apagados (só cobriam as fases 1 e 2).
 - `supabase/config.toml` só registra o `verify_jwt` das Edge Functions: webhooks `false`, o resto `true`.
 - Edge Functions são publicadas isoladas (sem pasta compartilhada): `infinitepay.ts` e `verify.ts` existem em mais de uma pasta. `supabase/functions/copias.test.ts` falha se as cópias divergirem.
-- **Pendências conhecidas:** `pg_net` no schema `public` (a extensão não é relocável); `v_member_directory` como view definer (intencional: só nome de exibição, filtrada por `is_org_member`); baseline consolidada do esquema (DRIFT-02/03) não feita.
+- **Pendências conhecidas:** `v_member_directory` como view definer (intencional: só nome de exibição, filtrada por `is_org_member`); baseline consolidada do esquema (DRIFT-02/03) não feita.
 
 SEG-11 aplicado na etapa 7 (`20261123141531`): `set_updated_at` e `enforce_member_adult` com `search_path = ''`.

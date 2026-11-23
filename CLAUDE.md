@@ -83,4 +83,4 @@ Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes
 
 ## Pendências conhecidas
 
-Ver "Andamento" no [REVISAO.md](REVISAO.md) (etapa 8): publicação do site a partir da `main` (as 10 Edge Functions já estão publicadas com o `supabase-js` fixo); valores da instância que se trocam por bloco (`index.html`, manifest, `public/brand`, slug no `wrangler.jsonc`/`.env.production`); `pg_net` no `public`; baseline do esquema (DRIFT-02/03).
+Ver "Andamento" no [REVISAO.md](REVISAO.md) (etapa 8): publicação do site a partir da `main` (as 10 Edge Functions já estão publicadas com o `supabase-js` fixo); valores da instância que se trocam por bloco (`index.html`, manifest, `public/brand`, slug no `wrangler.jsonc`/`.env.production`); baseline do esquema (DRIFT-02/03).
