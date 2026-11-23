@@ -3,15 +3,15 @@ import { useLocation } from 'react-router-dom'
 import { cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
-import { useCategoryAccess, usePageReleaseRows, useSetReleases } from '@/modules/access/releaseData'
-import { RELEASE_CATEGORIES, pageAccessible, pageKeyForPath, rawReleased, releasePage } from '@/modules/access/releases'
+import { useCategoryAccess, usePageReleaseRows, useSetReleases } from '@/modules/access/pageReleaseData'
+import { RELEASE_CATEGORIES, pageAccessible, pageKeyForPath, rawReleased, releasePage } from '@/modules/access/pageReleases'
 
 /**
  * Linha fixa no topo: para quem a página aberta está liberada. Titular marca e desmarca; a Direção só vê.
  * A caixa fica desmarcada e desabilitada quando a categoria não tem acesso à página em "Acesso e papéis".
  * Subpágina de uma área só pode ser marcada com a área liberada.
  */
-export function ReleaseBar({ base }: { base: string }) {
+export function PageReleaseBar({ base }: { base: string }) {
   const { realMembership } = useOrganization()
   const { pathname } = useLocation()
   const isTitular = !!realMembership?.roles.includes('titular')

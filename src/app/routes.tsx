@@ -55,7 +55,7 @@ const AlbumsPage = lazy(() => import('@/modules/site/AlbumsPage').then((m) => ({
 const AppShell = lazy(() => import('./AppShell').then((m) => ({ default: m.AppShell })))
 const LedgerPage = lazy(() => import('@/modules/finance/LedgerPage').then((m) => ({ default: m.LedgerPage })))
 const PaymentsPage = lazy(() => import('@/modules/finance/PaymentsPage').then((m) => ({ default: m.PaymentsPage })))
-const TeamPage = lazy(() => import('@/modules/finance/TeamPage').then((m) => ({ default: m.TeamPage })))
+const DistributionPage = lazy(() => import('@/modules/finance/DistributionPage').then((m) => ({ default: m.DistributionPage })))
 const ValuesPage = lazy(() => import('@/modules/billing/ValuesPage').then((m) => ({ default: m.ValuesPage })))
 const FinanceHome = lazy(() => import('./Hub').then((m) => ({ default: m.FinanceHome })))
 const HubHome = lazy(() => import('./Hub').then((m) => ({ default: m.HubHome })))
@@ -206,7 +206,7 @@ export const router = createBrowserRouter(
                 {
                   element: <HubLayout hub="financeiro" />,
                   children: [
-                    { path: 'distribuicao', element: <TeamPage /> },
+                    { path: 'distribuicao', element: <DistributionPage /> },
                     { path: 'equipe', element: <Navigate to="../distribuicao" replace /> },
                     { path: 'pagamentos', element: <PaymentsPage /> },
                     { path: 'receitas', element: <LedgerPage kind="income" /> },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categoriesOf, chainReleased, columnChanges, hasAnyPage, isReleasedFor, pageAccessible, pageKeyForPath, rawReleased, releasePage, RELEASE_PAGES, rowKey, type Access, type ReleaseRows } from './releases'
+import { categoriesOf, chainReleased, columnChanges, hasAnyPage, isReleasedFor, pageAccessible, pageKeyForPath, rawReleased, releasePage, RELEASE_PAGES, rowKey, type Access, type ReleaseRows } from './pageReleases'
 
 const rows = (o: Record<string, boolean>): ReleaseRows => new Map(Object.entries(o))
 const none = rows({})

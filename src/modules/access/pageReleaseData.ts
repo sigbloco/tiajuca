@@ -7,7 +7,7 @@ import { supabase } from '@/core/supabase'
 import {
   CATEGORY_ROLES, RELEASE_CATEGORIES, RELEASE_PAGES, categoriesOf, hasAnyPage, isReleasedFor, pageAccessible, pageKeyForPath, releasePage, rowKey,
   type Access, type ReleaseCategory, type ReleaseChange, type ReleaseRows,
-} from './releases'
+} from './pageReleases'
 
 /** Linhas de liberação gravadas (todos os membros leem: o menu precisa). */
 export function usePageReleaseRows() {

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Hourglass } from 'lucide-react'
-import { useMyReleases } from '@/modules/access/releaseData'
+import { useMyReleases } from '@/modules/access/pageReleaseData'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'

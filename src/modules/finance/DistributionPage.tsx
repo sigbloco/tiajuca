@@ -233,7 +233,7 @@ function GroupRuleEditor({ groupKey, rule, cycleId, canEdit, count, total, label
 }
 
 /** Equipe: quem recebe no ciclo e como (fixo, % ou por hora de aula), com o previsto do mês. */
-export function TeamPage() {
+export function DistributionPage() {
   const orgId = useOrgId()
   const { membership } = useOrganization()
   const qc = useQueryClient()
