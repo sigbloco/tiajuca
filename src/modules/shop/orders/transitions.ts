@@ -1,11 +1,11 @@
 import type { ProductKind } from '../catalog'
 
 /** Status e transições dos pedidos. ESPELHA `shop_transition_allowed` (SQL): o banco é quem decide; aqui só montamos os botões. */
-export type OrderStatus = 'awaiting_payment' | 'payment_review' | 'paid' | 'cancelled'
+export type OrderStatus = 'awaiting_payment' | 'paid' | 'cancelled'
 export type FulfillmentStatus = 'pending' | 'in_preparation' | 'ready' | 'picked_up' | 'cancelled'
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  awaiting_payment: 'Aguardando pagamento', payment_review: 'Pagamento em conferência', paid: 'Pago', cancelled: 'Cancelado',
+  awaiting_payment: 'Aguardando pagamento', paid: 'Pago', cancelled: 'Cancelado',
 }
 export const ORDER_STATUSES = Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]
 
@@ -43,7 +43,7 @@ export function fulfillmentSteps(kind: ProductKind, status: FulfillmentStatus): 
 /** O que o cliente/administração pode fazer com o pedido em cada status. */
 export function orderActions(status: OrderStatus): { canMarkPaid: boolean; canCancel: boolean; canReactivate: boolean; canProgress: boolean } {
   return {
-    canMarkPaid: status === 'awaiting_payment' || status === 'payment_review',
+    canMarkPaid: status === 'awaiting_payment',
     canCancel: status !== 'cancelled',
     canReactivate: status === 'cancelled',
     canProgress: status === 'paid',

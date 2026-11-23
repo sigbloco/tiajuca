@@ -43,7 +43,6 @@ describe('cancelado e consistência', () => {
 describe('ações do pedido por status', () => {
   it('pagar só antes de pago; andar só depois de pago; reativar só cancelado', () => {
     expect(orderActions('awaiting_payment')).toEqual({ canMarkPaid: true, canCancel: true, canReactivate: false, canProgress: false })
-    expect(orderActions('payment_review')).toEqual({ canMarkPaid: true, canCancel: true, canReactivate: false, canProgress: false })
     expect(orderActions('paid')).toEqual({ canMarkPaid: false, canCancel: true, canReactivate: false, canProgress: true })
     expect(orderActions('cancelled')).toEqual({ canMarkPaid: false, canCancel: false, canReactivate: true, canProgress: false })
   })
@@ -57,6 +56,5 @@ describe('arquivar pedidos', () => {
     expect(canArchive('paid', [{ status: 'picked_up' }, { status: 'ready' }])).toBe(false)
     expect(canArchive('paid', [])).toBe(false)
     expect(canArchive('awaiting_payment', [{ status: 'pending' }])).toBe(false)
-    expect(canArchive('payment_review', [{ status: 'pending' }])).toBe(false)
   })
 })

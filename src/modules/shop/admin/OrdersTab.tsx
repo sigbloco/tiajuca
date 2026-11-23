@@ -16,7 +16,7 @@ import { EMPTY_ORDER_FILTERS, ORDERS_LIMIT, archiveFinished, listOrders, matches
 import { listPickupPoints } from './service'
 
 const STATUS_STYLE: Record<AdminOrder['status'], string> = {
-  awaiting_payment: 'bg-muted', payment_review: 'bg-secondary text-secondary-foreground', paid: 'bg-primary/15 text-primary', cancelled: 'bg-muted text-muted-foreground line-through',
+  awaiting_payment: 'bg-muted', paid: 'bg-primary/15 text-primary', cancelled: 'bg-muted text-muted-foreground line-through',
 }
 
 export function OrdersTab() {
@@ -40,17 +40,15 @@ export function OrdersTab() {
   const exportPdf = async () => {
     setExporting(true)
     try {
-      const all = await listOrders(orgId, { ...EMPTY_ORDER_FILTERS, pickup: filters.pickup })
+      const all = await listOrders(orgId, { ...EMPTY_ORDER_FILTERS, pickup: filters.pickup }, true)
       const where = filters.pickup === 'all' ? 'todos os pontos' : pointName.get(filters.pickup)?.name ?? 'ponto'
       const { exportDeliveryPdf } = await import('./deliveryPdf')
       await exportDeliveryPdf(all, (id) => pointName.get(id)?.name ?? 'Ponto removido', where)
     } catch (e) { toast.error(friendlyError(e)) } finally { setExporting(false) }
   }
-  const toCheck =(orders.data ?? []).filter((o) => o.status === 'payment_review').length
 
   return (
     <div className="space-y-3">
-      {toCheck > 0 && filters.status === 'all' && <Badge className="bg-secondary text-secondary-foreground">{toCheck} pagamento(s) para conferir</Badge>}
       <ButtonRow>
         <Button size="sm" variant="outline" disabled={exporting || !orders.data} onClick={() => void exportPdf()}>
           <FileDown className="h-4 w-4" /> {exporting ? 'Gerando' : 'Exportar PDF'}

@@ -4,7 +4,7 @@ import { nextStepText, progressIndex, progressSteps, timelineLabel } from './cus
 describe('histórico mostrado ao cliente', () => {
   it('traduz eventos do pedido e dos grupos, sem expor quem atendeu', () => {
     expect(timelineLabel({ scope: 'order', status: 'paid', kind: null, at: '' })).toBe('Pagamento confirmado')
-    expect(timelineLabel({ scope: 'order', status: 'payment_review', kind: null, at: '' })).toBe('Pagamento informado — em conferência')
+    expect(timelineLabel({ scope: 'order', status: 'awaiting_payment', kind: null, at: '' })).toBe('Pedido recebido')
     expect(timelineLabel({ scope: 'fulfillment', status: 'ready', kind: 'stock', at: '' })).toBe('Pronta entrega: Pronto para retirada')
     expect(timelineLabel({ scope: 'fulfillment', status: 'in_preparation', kind: 'made_to_order', at: '' })).toBe('Sob encomenda: Em preparo')
   })
@@ -28,9 +28,8 @@ describe('progresso por grupo', () => {
 
 describe('próximo passo', () => {
   it('orienta conforme status e método de pagamento', () => {
-    expect(nextStepText('awaiting_payment', 'pix')).toContain('Já fiz o pagamento')
+    expect(nextStepText('awaiting_payment', 'pix')).toContain('comprovante')
     expect(nextStepText('awaiting_payment', 'infinitepay')).toContain('InfinitePay')
-    expect(nextStepText('payment_review', 'pix')).toContain('conferindo')
     expect(nextStepText('paid', 'pix')).toContain('prontos para retirada')
     expect(nextStepText('cancelled', 'pix')).toContain('cancelado')
   })
