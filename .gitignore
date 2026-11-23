@@ -15,3 +15,4 @@ data-private/
 
 # cache local do wrangler dev
 .wrangler/
+tsconfig.tsbuildinfo

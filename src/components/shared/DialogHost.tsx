@@ -42,11 +42,6 @@ export function promptBox(opts: PromptOptions): Promise<string | null> {
   return new Promise((resolve) => push({ kind: 'prompt', opts, resolve }))
 }
 
-/** Confirma só quando `needed`; sem necessidade, segue direto (ex.: restaurar da lixeira não pergunta). */
-export async function confirmIf(needed: boolean, opts: string | ConfirmOptions): Promise<boolean> {
-  return needed ? confirmBox(opts) : true
-}
-
 /** Montado uma vez na raiz do app. */
 export function DialogHost() {
   const [queue, setQueue] = useState<Pending[]>([])

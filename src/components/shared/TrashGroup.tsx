@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { ShowMore, usePaged } from '@/components/shared/Paged'
 import { Button, Card } from '@/components/ui/primitives'
-import type { TrashEntry } from './TrashDrawer'
+import type { TrashEntry } from './trash'
 
 interface Group { label?: string; /** Em vez de "Restaurar" (ex.: "Adicionar a este ciclo"). */ restoreLabel?: string; entries: TrashEntry[]; onRestore: (id: string) => void; onPurge?: (id: string) => void }
 

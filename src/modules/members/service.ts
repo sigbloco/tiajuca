@@ -13,33 +13,6 @@ export interface MemberRow {
   archived_at: string | null
 }
 
-export interface MemberListParams {
-  orgId: string
-  search: string
-  page: number
-  pageSize: number
-  sort: 'full_name' | 'created_at'
-  ascending: boolean
-  includeArchived: boolean
-}
-
-// Busca, ordenação e paginação executadas no banco (nunca em memória no front).
-export async function listMembers(p: MemberListParams) {
-  const from = p.page * p.pageSize
-  let q = supabase
-    .from('members')
-    .select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at', { count: 'exact' })
-    .eq('organization_id', p.orgId)
-    .order(p.sort, { ascending: p.ascending })
-    .range(from, from + p.pageSize - 1)
-  if (!p.includeArchived) q = q.is('archived_at', null)
-  const term = p.search.replace(/[%*,()]/g, ' ').trim()
-  if (term) q = q.or(`full_name.ilike.%${term}%,display_name.ilike.%${term}%,email.ilike.%${term}%`)
-  const { data, error, count } = await q
-  if (error) throw error
-  return { rows: (data ?? []) as MemberRow[], total: count ?? 0 }
-}
-
 export interface NewMember {
   full_name: string
   display_name?: string
