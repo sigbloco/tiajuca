@@ -181,7 +181,7 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 - **`supabase-js` fixo em 2.118.0** (`npm:@supabase/supabase-js@2.118.0`) nas 10 Edge Functions do repositório.
 - **Publicado:** `shop-mailer` (v12). As outras 9 só mudaram o import e foram publicadas depois, em 23/11/2026, por `deploy_edge_function` com o código da `main` e o mesmo `verify_jwt` de antes: `album-preview` (v4, a SITE-05 também vale agora), `billing-pay-link` (v2), `billing-infinitepay-webhook` (v5), `shop-infinitepay-webhook` (v7), `drive-search` (v3), `drive-sync` (v5), `shop-admin` (v5), `shop-order-public` (v12), `shop-checkout` (v14). Conferido: os dois webhooks respondem 200 a pedido/cobrança inexistente; as demais exigem login e não foram chamadas (sem teste de uso real).
 - **Testado:** `tsc`, `vitest` (29 arquivos, 217 testes, 4 novos: cor, fundo, botão e QR do e-mail igual ao do site), `vite build`; banco: `shop_get_public_store` devolve `city`, `shop_mail_claim` (em transação desfeita, sem consumir o e-mail pendente) devolve tema `#E2301D` e cidade. **Não testado:** envio real de e-mail e o campo novo no painel logado; vale conferir no uso real.
-- **Não feito (da instância, trocados por bloco):** `index.html`, `manifest.webmanifest`, `public/brand/tiajuca.*`, slug no `.env.production`/`wrangler.jsonc`; também `pg_net` no `public` e baseline do esquema (DRIFT-02/03).
+- **Não feito (da instância, trocados por bloco):** `index.html`, `manifest.webmanifest`, `public/brand/tiajuca.*`, slug no `.env.production`/`wrangler.jsonc`; também baseline do esquema (DRIFT-02/03). Em 23/11/2026 o `pg_net` saiu do `public` (migration `20261123151053_pg_net_para_extensions`: extensão recriada em `extensions`; nada a usava; o aviso sumiu dos advisors).
 
 ---
 
