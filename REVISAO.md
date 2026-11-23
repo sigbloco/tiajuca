@@ -71,7 +71,7 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
   - `tsc`, `vite build`, `vitest` (29 arquivos, 208 testes, com os novos de acesso por URL e de `safeHttpUrl`); site e loja carregam no navegador; URL da área sem login vai para a entrada e `/convite/...` volta ao início;
   - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): menus por papel e o aviso "Sem acesso" estão cobertos pelos testes automáticos; vale conferir no uso real, inclusive pelo "Visualizar como".
 - **Advisors:** sem novidade de risco; as tabelas novas sem policy (`form_submit_attempts`, `storage_delete_queue`) são de propósito (só funções do banco usam).
-- **D13 (pendente, deixar para o fim da revisão):** o Titular liberou a página Integrantes para o Integrante ativo, mas o banco só mostra a ele o próprio cadastro (a lista sai com uma pessoa). Opções: tirar do menu dele ou transformar numa lista de nomes de exibição dos ativos.
+- **D13 (resolvida na etapa 7: lista de nomes dos ativos):** o Titular liberou a página Integrantes para o Integrante ativo, mas o banco só mostra a ele o próprio cadastro (a lista sai com uma pessoa). Opções: tirar do menu dele ou transformar numa lista de nomes de exibição dos ativos.
 | 3 | Área dos integrantes: cobranças com fonte única por ciclo | **concluída** em 20/11/2026 (branch `revisao-etapa3`, mergeada na `main`) | Opus 5.5, alto | ver "Etapa 3: o que foi feito" | D3: **remunerado nunca é cobrado**; tabelas antigas: **apagar após backup**; valores de 2024/25 e 2025/26: **pelo valor mais cobrado**; COB-06: **remover** |
 
 ### Etapa 3: o que foi feito (20/11/2026)
@@ -151,6 +151,25 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 - **`CLAUDE.md`** criado na raiz (stack, estrutura, regras vigentes, matriz de permissões, convenções, regras de interface, segurança).
 - **Testado:** `tsc`, `vitest` (29 arquivos, 212 testes), `vite build`, `npm audit` (0). **Não testado no navegador:** checkout (link do WhatsApp do ponto de retirada), páginas da loja e PDF de entregas depois da troca de `formatCents`/`whatsappUrl`; vale conferir no uso real.
 - **Não feito (pendente):** SEG-11 (`alter function ... set search_path` em `set_updated_at` e `enforce_member_adult`; SQL em `docs/BANCO.md`, não aplicado por decisão do usuário); `pg_net` em `public` (não relocável); RPCs sem uso (`create_member_invite`, `absence_streaks`, `attendance_report`, `consecutive_absences`, `remove_member_cycle`); QUAL-05 (dividir arquivos grandes), QUAL-10 (renomeações), QUAL-09 (valores fixos de reuso por outro bloco); baseline do esquema (DRIFT-02/03); fixar versão do `supabase-js` nas Edge Functions. Nenhum deles muda comportamento; podem virar uma etapa 7 se o usuário quiser.
+
+| 7 | Pendências (D13, D2/LOJA-11, SEG-11, RPCs sem uso, QUAL-05/09/10) | **concluída** em 23/11/2026 (branch `revisao-etapa7`, mergeada na `main`); ficam pendentes só itens que exigem publicar Edge Function ou arquivo de build (abaixo) | Opus 5.5, médio | ver "Etapa 7: o que foi feito" | D13: **lista de nomes dos ativos**; D2: **o menor dos dois**; SEG-11: **aplicar**; RPCs: **apagar as 6** (a tabela `member_invites` fica) |
+
+### Etapa 7: o que foi feito (23/11/2026)
+
+- **Banco (aplicado em produção, versões iguais aos arquivos):** `20261123141531_etapa7_search_path_rpcs_sem_uso`, `20261123141938_loja_d2_preco_especial`, `20261123143246_d13_diretorio_integrantes_ativos`.
+- **SEG-11:** `set_updated_at` e `enforce_member_adult` com `search_path = ''` (só usam `now()`/`current_date`). O aviso do advisor sumiu.
+- **RPCs sem uso apagadas:** `create_member_invite`, `claim_member` (a outra ponta do convite, já sem rota), `absence_streaks`, `attendance_report` (o front usa `attendance_report_f`), `consecutive_absences`, `remove_member_cycle`. Conferido antes: nenhuma é chamada pelo front, pelas Edge Functions nem por outra função. A tabela `member_invites` (1 convite antigo) ficou; o backup já a ignora.
+- **D2 / LOJA-11:** `shop_create_order` (função inteira no arquivo, igual à da etapa 4 menos o bloco do especial) e `buyerPriceCents` no front: quem tem direito ao preço especial paga o menor entre o especial e o de integrante. Hoje nenhum produto tem preço especial; nenhum pedido muda. `docs/regras-de-negocio.md` atualizado.
+- **D13:** página Integrantes de quem não tem `members.read` de grupo/todos vira lista de nomes (`MemberDirectory`, RPC `member_directory_active`): só ativos do ciclo atual, nome de exibição ou primeiro nome, busca, 5 em 5, sem ficha nem contato; o próprio nome leva a Meu perfil. Respeita a configuração do diretório. Os ramos "visão do integrante" da lista por naipe saíram (ficaram sem uso).
+- **QUAL-10:** `TeamPage` → `DistributionPage` (a rota já era `distribuicao`); arquivos da liberação de páginas `releases*`/`ReleasesTab`/`ReleaseBar` → `pageReleases*`/`PageReleasesTab`/`PageReleaseBar` (o "Release" do site é o release de imprensa e fica). A rota `funcoes` ficou: o nome segue a tabela `artistic_functions`, e chamar o código de "categorias" aumentaria a confusão com `fee_categories`; glossário no `CLAUDE.md`.
+- **QUAL-09 (parcial):** paleta sugerida neutra para bloco sem paleta (a do Tia Juca já está salva no tema: nada muda aqui), cor inicial do cabeçalho de formulário = cor principal do tema, exemplos `@cordaodatiajuca` → `@nomedobloco`.
+- **QUAL-05:** presença em `AttendanceListPage`, `AttendanceRosterPage`, `ActivityCard` e `attendanceData` (671 → 85/357/133/125 linhas); `FieldSheet` saiu de `FieldsTab` (618 → 262); `FormFieldInput` de `PublicFormPage` (554 → 397); `DistributionRules` de `DistributionPage` (519 → 322); `NewMemberSheet` e `MembersTrash` de `MembersPage`. Só movimentação de código.
+- **Testado:**
+  - banco, em transações sempre desfeitas (conferido depois que nada ficou gravado): pedido com especial 80,00 sobre público 100,00 com 10% de integrante → 80,00; especial 95,00 → 90,00 (antes seria 95,00); sem especial → 90,00; integrante comum → 90,00; visitante → 100,00. `member_directory_active` como integrante comum: 62 nomes, iguais aos 62 ativos do ciclo, nenhum nome completo fora do nome de exibição; conta sem vínculo bloqueada ("Sem permissão."); `anon` não executa;
+  - `tsc`, `vitest` (29 arquivos, 213 testes, com os novos do D2), `vite build` (pacote inicial 323 KB); no navegador (preview local), todos os módulos divididos ou renomeados carregam sem erro e a loja mostra a vitrine;
+  - advisors: `function_search_path_mutable` zerado; definer executáveis por `anon` 10, por `authenticated` 137 → 134;
+  - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): a lista de nomes do D13, presença, campos de formulário, Distribuição e Integrantes depois da divisão; vale conferir no uso real (inclusive pelo "Visualizar como" Integrante).
+- **Não feito (pendente, precisa publicar Edge Function ou mexer em arquivo de build):** cor fixa `#E93D2B` nos e-mails da loja (`shop-mailer/templates.ts`) e cidade "Rio de Janeiro" do BR Code (`pix.ts` no front e no `shop-mailer`: mudar só um dos dois faria o QR do e-mail divergir do da tela); `index.html`, `manifest.webmanifest`, `public/brand/tiajuca.*` e o slug no `.env.production`/`wrangler.jsonc` (são da instância, trocados por bloco); `pg_net` no `public`; baseline do esquema (DRIFT-02/03); versão fixa do `supabase-js` nas Edge Functions.
 
 ---
 
@@ -386,7 +405,7 @@ Já configurável: nome da loja, cores (`organizations.theme`), logo, Pix, Infin
 | # | Pergunta | Afeta |
 |---|---|---|
 | D1 | Professor pode reativar integrante inativo do próprio grupo? (sim → consertar; não → tirar o botão e a regra) | INT-01 |
-| D2 | Preço especial deve ser o menor entre especial e preço de integrante? **Adiada para o fim da revisão (etapa 4).** | LOJA-11 |
+| D2 | Preço especial deve ser o menor entre especial e preço de integrante? **Respondida (etapa 7): sim, o menor dos dois.** | LOJA-11 |
 | D3 | Quem tem atividade remunerada deve ficar fora da geração de cobranças? **Respondida (etapa 3): sim, nunca é cobrado.** | COB-05 |
 | D4 | Lista de aniversários: todos com nome completo, ou só ativos com nome de exibição? | LGPD-04 |
 | D5 | Retenção da loja: implementar a anonimização após N anos (pedidos antigos deixam de ser consultáveis) ou mudar o texto do aviso? Qual prazo para backups manuais e log de auditoria? **Respondida: backups 12 meses, auditoria 24 meses (etapa 2); loja anonimiza após o prazo (etapa 4).** | LGPD-01, LGPD-02, LGPD-03 |
