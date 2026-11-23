@@ -1,3 +1,5 @@
+> **Documento histórico.** Pode descrever regras antigas (senha, convites, Cloudflare Pages, estoque por tamanho, sem cupom). Vale o que está em `CLAUDE.md`, `docs/regras-de-negocio.md` e no banco.
+
 # Políticas RLS — Fase 1
 
 Migration: `supabase/migrations/20261015000003_rls_policies.sql`. Helpers em `…000002_access_helpers_rpc.sql`.

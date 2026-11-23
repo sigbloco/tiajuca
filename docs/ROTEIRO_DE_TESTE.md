@@ -1,3 +1,5 @@
+> **Documento histórico.** Pode descrever regras antigas (senha, convites, Cloudflare Pages, estoque por tamanho, sem cupom). Vale o que está em `CLAUDE.md`, `docs/regras-de-negocio.md` e no banco.
+
 # Roteiro de teste — SIGBloco / Cordão da Tia Juca (versão com dados reais importados)
 
 Use o site publicado: **https://tiajuca.cordaodatiajuca.workers.dev** (ou `npm run dev`). Entre com a conta **Titular** (`cordaodatiajuca@gmail.com`). Marque ✅/❌ e anote a tela e a mensagem de erro dos ❌.

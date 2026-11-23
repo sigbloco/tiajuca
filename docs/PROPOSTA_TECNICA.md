@@ -1,3 +1,5 @@
+> **Documento histórico.** Pode descrever regras antigas (senha, convites, Cloudflare Pages, estoque por tamanho, sem cupom). Vale o que está em `CLAUDE.md`, `docs/regras-de-negocio.md` e no banco.
+
 # SIGBloco — Instância Cordão da Tia Juca · Proposta Técnica (v0.1)
 
 > Status: Fases 1–9 **implementadas**. Próximas fases (10–13: mensagens, inscrições v2, lojinha, pedidos/InfinitePay) em [PLANO_FASES_10_13.md](PLANO_FASES_10_13.md).

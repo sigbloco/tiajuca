@@ -1,3 +1,5 @@
+> **Documento histórico.** Pode descrever regras antigas (senha, convites, Cloudflare Pages, estoque por tamanho, sem cupom). Vale o que está em `CLAUDE.md`, `docs/regras-de-negocio.md` e no banco.
+
 # Plano — Fases 10 a 13 (módulos adicionais)
 
 > Complementa [PROPOSTA_TECNICA.md](PROPOSTA_TECNICA.md). Estado em 15/10/2026: **Fases 1–9 implementadas e aplicadas**, incluindo gestão de papéis, Titular do bloco e matriz de permissões editável. Falta o uso real das telas pelo bloco (ver [ROTEIRO_DE_TESTE.md](ROTEIRO_DE_TESTE.md)).

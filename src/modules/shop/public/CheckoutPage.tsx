@@ -190,7 +190,7 @@ export function CheckoutPage() {
                 {pickup && (() => {
                   const p = store.pickup_points.find((x) => x.id === pickup)
                   if (!p) return null
-                  const digits = (p.contact_phone ?? '').replace(/D/g, '')
+                  const digits = (p.contact_phone ?? '').replace(/\D/g, '')
                   const zap = p.kind === 'person' ? whatsappUrl(p.contact_phone) : null
                   if (zap) {
                     return (

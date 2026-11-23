@@ -2,7 +2,7 @@
 
 Loja virtual do bloco: veja [docs/LOJA.md](docs/LOJA.md).
 
-Veja a proposta em [docs/PROPOSTA_TECNICA.md](docs/PROPOSTA_TECNICA.md) e as políticas em [docs/RLS.md](docs/RLS.md).
+Documentos antigos (PROPOSTA_TECNICA, RLS) são históricos; vale o [CLAUDE.md](CLAUDE.md).
 
 ## Rodando
 
@@ -14,11 +14,6 @@ npm run dev
 
 ## Banco
 
-Aplicar em ordem `supabase/migrations/*.sql` e depois `supabase/seed/tiajuca.sql`.
-Primeiro diretor (SQL Editor, como postgres):
+Não recrie o banco pelas migrations: a fonte da verdade é o banco de produção. Leia [docs/BANCO.md](docs/BANCO.md). Regras de negócio, permissões e convenções: [CLAUDE.md](CLAUDE.md).
 
-```sql
-select public.bootstrap_first_director('tiajuca', 'email@exemplo.com', 'Nome Completo');
-```
-
-Em *Authentication → URL Configuration*, cadastre a URL do app e `/redefinir-senha`; habilite o provedor Google.
+Em *Authentication → Providers* só o Google fica ligado; cadastre a URL do app em *URL Configuration*.
