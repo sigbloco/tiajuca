@@ -636,9 +636,15 @@ Telas cobertas: Formulários (lista; editor com Configurações, Cabeçalho, Cam
 
     `SettingsTab.tsx:121`, `FormsPage.tsx:128,141`, `ProductsTab.tsx:22`, `AuditPage.tsx:128`, `BackupsTab.tsx:15-17`.
 
-#### O que não deu para verificar (3c-3)
+#### Causa do erro 500 da Auditoria (investigada depois, só leitura)
 
-- **Causa do erro 500 da Auditoria:** não olhei o banco (esta fase é só de tela). Fica como primeira coisa a investigar.
+- **O que acontece:** o banco cancela a consulta por tempo esgotado ("canceling statement due to statement timeout", nos logs do Postgres às 22:29 a 22:33 de 23/11; o papel `authenticated` tem `statement_timeout=8s`). O PostgREST devolve 500.
+- **Por quê:** a política `audit_select` é `using (has_permission(organization_id, 'audit.read'))`. `has_permission` → `permission_scope_of` → `member_is_inactive` são `security definer` com `search_path` fixo, então o Postgres não as embute na consulta e roda tudo **uma vez por linha**. A tela pede o total exato (`count: 'exact'`), o que obriga a passar pelas 15.439 linhas. Medido como o Titular, numa transação desfeita no fim: **17,7 s** só a contagem (cerca de 1,1 ms por linha).
+- **Correção testada (sem aplicar):** avaliar a permissão uma vez por organização, com `organization_id in (select … organizações em que eu tenho a permissão)`. A mesma contagem caiu para **7 ms**. Proposta: uma função `orgs_with_permission(p_perm)` (`security definer`, `search_path` fixo, só para `authenticated`) e a política `using (organization_id in (select public.orgs_with_permission('audit.read')))`. O resultado é o mesmo da regra atual.
+- **Mesma armadilha, ainda abaixo do limite:** `event_attendance` (cerca de 4.300 linhas, `ea_select`) e `monthly_charges` (cerca de 1.600, `mc_charges_select`) usam `has_permission`/`permission_scope_of` por linha. Uma consulta que varra a tabela inteira de presença já gastaria uns 5 s; vale corrigir junto.
+- **Na tela (à parte):** enquanto o React Query tenta de novo, a página mostra "0 registro(s)" e "1 / 1" (ver o resumo 1 e as "Causas repetidas novas").
+
+#### O que não deu para verificar (3c-3)
 - **Todas as gravações:** publicar e arquivar formulário, salvar campos e textos, respostas (aprovar, rejeitar, CSV, retenção), pedidos da loja (mudar status, retirada, PDF, arquivar), produtos, kits, estoque, cupons, configurações da loja, site, cores, papéis, matriz, liberação, transferência de titularidade, criar, baixar, carregar, restaurar e excluir backup, criar, editar, cancelar e apagar evento, tipos de evento, repertório. Toasts e erros: só pelo código.
 - **Respostas de formulário com itens:** os três formulários estão em rascunho, sem respostas.
 - **Painéis de produto, kit, pedido e evento em edição:** não abertos (o de pedido mostra dados de clientes).
@@ -737,7 +743,7 @@ Bem resolvido: "Novo evento" no padrão tracejado; a lixeira vazia diz o que gua
 
 Lista curta para os pedidos de correção, pela ordem de risco:
 
-1. **Auditoria fora do ar** (erro 500): investigar no banco.
+1. **Auditoria fora do ar** (erro 500): política de RLS avaliada linha a linha; correção testada mais acima, em "Causa do erro 500 da Auditoria".
 2. **Gravar num toque o que mexe com dinheiro, acesso ou o que é público:** marcar como pago, gerar pagamentos, ajustar valor, publicar formulário, papéis e matriz, caixas da "Página liberada para" (inclusive nas subpáginas), cores e site. Um padrão só de confirmação ou desfazer.
 3. **Distribuição com déficit escondido** ("Não distribuído R$ 0,00").
 4. **Topo fixo do Titular** (294 a 350 px no celular) e a barra de liberação.
@@ -747,4 +753,4 @@ Lista curta para os pedidos de correção, pela ordem de risco:
 
 ## Próxima etapa
 
-**Revisão visual concluída nas três áreas** (site, loja e área dos integrantes). O próximo passo é o usuário escolher, em pedidos separados, o que corrigir primeiro; a lista "Área 3 concluída: o que atacar primeiro", logo acima, sugere a ordem. Antes de qualquer correção de tela, vale investigar o erro 500 da Auditoria, que é falha de funcionamento e não de aparência.
+**Revisão visual concluída nas três áreas** (site, loja e área dos integrantes). O próximo passo é o usuário escolher, em pedidos separados, o que corrigir primeiro; a lista "Área 3 concluída: o que atacar primeiro", logo acima, sugere a ordem. Antes de qualquer correção de tela, vale aplicar a correção da política da Auditoria (erro 500, causa e SQL testado na 3c-3), que é falha de funcionamento e não de aparência.
