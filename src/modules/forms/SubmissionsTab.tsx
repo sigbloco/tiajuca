@@ -86,7 +86,7 @@ function SubmissionSheet({ sub, version, form, onClose }: { sub: SubmissionRow; 
     },
   })
   const isFull = !!cap.data && cap.data.occupied >= cap.data.capacity
-  useEffect(() => { if (isFull && !cycleStatus) setCycleStatus('waitlist') }, [isFull]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isFull && !cycleStatus) setCycleStatus('waitlist') }, [isFull])
 
   return (
     <SheetContent title="Inscrição" description={`${formatDateTime(sub.submitted_at)} · versão ${version?.version ?? '?'} do formulário`}>

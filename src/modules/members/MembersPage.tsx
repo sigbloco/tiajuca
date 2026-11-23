@@ -183,7 +183,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     if (!wantedId || selected?.id === wantedId) return
     void supabase.from('members').select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at').eq('id', wantedId).maybeSingle()
       .then(({ data }) => { if (data) setSelected(data as MemberRow) })
-  }, [wantedId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wantedId])
   const navigate = useNavigate()
   const cameFrom = (useLocation().state as { from?: CameFrom } | null)?.from
   // O "x" da ficha leva de volta à página de onde a pessoa veio (se veio de outra); senão só fecha a ficha.
@@ -318,7 +318,6 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, memberView, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
   const total = tree.data.total
 

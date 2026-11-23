@@ -1,5 +1,5 @@
 import { TrashGroup } from './TrashGroup'
-import type { TrashEntry } from './TrashDrawer'
+import type { TrashEntry } from './trash'
 
 export { PAGE_SIZE, ShowMore, usePaged } from './Paged'
 

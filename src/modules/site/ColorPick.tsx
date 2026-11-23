@@ -20,7 +20,7 @@ function useColorList(area?: ThemeArea) {
   const remote = (area ? theme?.extras?.[area] : theme?.palette?.length ? theme.palette : DEFAULT_PALETTE) ?? []
   const [list, setLocal] = useState<string[]>(remote)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => { setLocal(remote) }, [JSON.stringify(remote)]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setLocal(remote) }, [JSON.stringify(remote)])
   const setList = (next: string[]) => {
     setLocal(next)
     clearTimeout(timer.current)

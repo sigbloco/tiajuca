@@ -32,7 +32,7 @@ export function MemberPicker({ value, onChange, onlyActive }: { value: string; o
   const matches = useMemo(() => {
     const q = norm(text.trim())
     return (data ?? []).filter((p) => !(onlyActive && isInactive(p.id)) && (!q || norm(`${p.full_name} ${p.display_name ?? ''} ${p.email ?? ''}`).includes(q))).slice(0, 8)
-  }, [data, text, onlyActive, isInactive, labeler]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, text, onlyActive, isInactive, labeler])
 
   if (selected) {
     return (

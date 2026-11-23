@@ -70,7 +70,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
   })
   const toF = (d: Me) => ({ full_name: d.full_name, email: d.email ?? '', birth_date: d.birth_date ?? '', display_name: d.display_name ?? '', phone: d.phone ? maskPhone(d.phone) : '', socials: toList(d.social_handle), affective_relation: d.affective_relation ?? '', other_blocks: d.other_blocks ?? '', played_instrument: d.played_instrument ?? '' })
   const [f, setF] = useState(() => toF({ full_name: '', display_name: null, email: null, phone: null, social_handle: null, birth_date: null, joined_at: null, affective_relation: null, played_other_blocks: false, other_blocks: null, played_instrument: null }))
-  useEffect(() => { if (me.data) setF(toF(me.data)) }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (me.data) setF(toF(me.data)) }, [me.data])
   // Cada bloco só olha e grava os seus campos.
   const nets = useSocialNetworks()
   const [rows, setRows] = useState<NetRow[]>([{ network: 'instagram', user: '' }])
@@ -90,7 +90,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
     queryKey: ['me-linked', orgId, memberId], enabled: part !== 'bloco',
     queryFn: async () => { const { data, error } = await supabase.from('members').select('user_id').eq('id', memberId).single(); if (error) throw error; return Boolean((data as { user_id: string | null }).user_id) },
   })
-  useEffect(() => { if (me.data) { const r = rowsOf(me.data.social_handle, nets); setRows(r); setBaseRows(r); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (me.data) { const r = rowsOf(me.data.social_handle, nets); setRows(r); setBaseRows(r); setNoSocial(isNoSocial(me.data.social_handle)) } }, [me.data])
   const OTHER = ['affective_relation', 'other_blocks', 'played_instrument'] as const
   const mine = (x: ReturnType<typeof toF>) => JSON.stringify(part === 'other' ? OTHER.map((k) => x[k]) : part === 'bloco' ? [x.email, x.phone, x.socials] : [x.full_name, x.email, x.birth_date, x.display_name, x.phone])
 

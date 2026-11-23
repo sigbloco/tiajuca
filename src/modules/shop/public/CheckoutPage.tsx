@@ -7,9 +7,9 @@ import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
 import { supabase } from '@/core/supabase'
 import { Button, Card, Input, Label, Select, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
-import { formatCurrency } from '@/core/format'
+import { formatCents } from '@/core/format'
+import { whatsappUrl } from '@/core/whatsapp'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
-import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
 import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditFees, creditTotalCents, formatPct } from '../payments/pix'
 import { CouponBox } from './CouponBox'
@@ -17,7 +17,6 @@ import { GoogleInvite } from './GoogleInvite'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
 import { useStore } from './StoreContext'
 
-const money = (cents: number) => formatCurrency(fromCents(cents))
 
 export function CheckoutPage() {
   const { store, cart, basePath, clear, isMember, index, coupon, clearCoupon } = useStore()
@@ -120,15 +119,15 @@ export function CheckoutPage() {
         <h2 className="text-lg font-bold">Resumo</h2>
         <ul className="space-y-1 text-sm">
           {cart.lines.map((l) => (
-            <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span className="shrink-0 whitespace-nowrap">{money(l.lineTotalCents)}</span></li>
+            <li key={l.variantId} className="flex justify-between gap-2"><span>{l.quantity}× {index.get(l.variantId)?.product.is_kit && <KitChip />}{l.name} ({l.variantLabel})</span><span className="shrink-0 whitespace-nowrap">{formatCents(l.lineTotalCents)}</span></li>
           ))}
         </ul>
         <hr className="border-border" />
         <CouponBox />
-        {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents - cart.couponCents)}</span></div>}
-        {cart.couponCents > 0 && coupon && <div className="flex justify-between text-sm text-primary"><span>Cupom {coupon.code}</span><span className="shrink-0 whitespace-nowrap">− {money(cart.couponCents)}</span></div>}
-        {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista ({formatPct(fees[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents, 1, fees))}</span></div>}
-        <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
+        {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {formatCents(cart.discountCents - cart.couponCents)}</span></div>}
+        {cart.couponCents > 0 && coupon && <div className="flex justify-between text-sm text-primary"><span>Cupom {coupon.code}</span><span className="shrink-0 whitespace-nowrap">− {formatCents(cart.couponCents)}</span></div>}
+        {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista ({formatPct(fees[0])})</span><span className="shrink-0 whitespace-nowrap">+ {formatCents(creditFeeCents(cart.totalCents, 1, fees))}</span></div>}
+        <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{formatCents(payCents)}</span></div>
         {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
       </Card>
   )
@@ -168,7 +167,7 @@ export function CheckoutPage() {
             {methods.map((m) => (
               <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
                 <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
-                  <span className="block font-semibold">{METHOD_LABELS[m].label} · <span className="whitespace-nowrap">{m === 'infinitepay' ? '≈ ' : ''}{money(m === 'infinitepay' ? creditTotalCents(cart.totalCents, 1, fees) : cart.totalCents)}</span></span>
+                  <span className="block font-semibold">{METHOD_LABELS[m].label} · <span className="whitespace-nowrap">{m === 'infinitepay' ? '≈ ' : ''}{formatCents(m === 'infinitepay' ? creditTotalCents(cart.totalCents, 1, fees) : cart.totalCents)}</span></span>
                 </button>
               </div>
             ))}
@@ -192,9 +191,10 @@ export function CheckoutPage() {
                   const p = store.pickup_points.find((x) => x.id === pickup)
                   if (!p) return null
                   const digits = (p.contact_phone ?? '').replace(/\D/g, '')
-                  if (p.kind === 'person' && digits.length >= 10) {
+                  const zap = p.kind === 'person' ? whatsappUrl(p.contact_phone) : null
+                  if (zap) {
                     return (
-                      <a href={`https://wa.me/${digits.startsWith('55') ? digits : '55' + digits}`} target="_blank" rel="noreferrer noopener"
+                      <a href={zap} target="_blank" rel="noreferrer noopener"
                         className="flex items-start gap-2 text-sm text-primary hover:underline">
                         <WhatsAppIcon className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>Clique aqui e combine a entrega direto com {p.contact_name ?? 'o responsável'} ({digits}). Pode ser encontro ao vivo, entrega por aplicativo ou ensaio.</span>
@@ -213,7 +213,7 @@ export function CheckoutPage() {
           <span>Li e concordo com o <Link className="font-semibold text-primary hover:underline" to={`${basePath}/privacidade`} target="_blank">aviso de privacidade</Link>: usaremos seu nome, telefone e e-mail só para este pedido.</span>
         </label>
         {blockers.map((b) => <p key={b} role="alert" className="text-sm text-destructive">{b}</p>)}
-        <Button type="submit" className="w-full" disabled={submit.isPending}>{submit.isPending ? 'Enviando' : `Avançar para o pagamento · ${f.method === 'infinitepay' ? '≈ ' : ''}${money(payCents)}`}</Button>
+        <Button type="submit" className="w-full" disabled={submit.isPending}>{submit.isPending ? 'Enviando' : `Avançar para o pagamento · ${f.method === 'infinitepay' ? '≈ ' : ''}${formatCents(payCents)}`}</Button>
       </form>
 
       <aside className="hidden space-y-2 md:sticky md:top-20 md:block md:self-start">

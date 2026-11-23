@@ -289,7 +289,7 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
       if (typeof d.step === 'number') setStep(d.step)
       if (d.consent) setConsent(true)
     } catch { /* sem rascunho */ }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
   const goLogin = () => {
     try { sessionStorage.setItem(draftKey, JSON.stringify({ answers, step, consent })) } catch { /* sem armazenamento */ }
     void signInWithGoogle(window.location.pathname + window.location.search).catch((e) => setError(friendlyError(e)))
@@ -373,7 +373,7 @@ export function PublicFormPage({ preview, initialAnswers }: { /** Pré-visualiza
   })
 
   const org = form.data?.organization
-  useEffect(() => { if (form.data?.form?.title && form.data.organization?.name) document.title = `${form.data.form.title} · ${form.data.organization.name}` }, [form.data?.form?.title, form.data?.organization?.name]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (form.data?.form?.title && form.data.organization?.name) document.title = `${form.data.form.title} · ${form.data.organization.name}` }, [form.data?.form?.title, form.data?.organization?.name])
   const f0 = form.data?.form
   const blankOther = (v: Answers[string]) => (typeof v === 'string' ? v === OTHER || v === OTHER + ' ' : Array.isArray(v) && v.some((x) => x === OTHER))
   const isEmpty = (f: PublicField) => f.required && f.type !== 'info' && (f.type === 'file' ? !files.some((x) => x.field_key === f.key)

@@ -47,7 +47,7 @@ export function EventsPage() {
     mutationFn: () => materialize(orgId, addDaysIso(today, 84)),
     onSuccess: (n) => { if (n > 0) qc.invalidateQueries({ queryKey: ['activities', orgId] }) },
   })
-  useEffect(() => { if (canManage) gen.mutate() }, [canManage, orgId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (canManage) gen.mutate() }, [canManage, orgId])
 
   const { data: raw, isLoading } = useQuery({
     queryKey: ['activities', orgId, from, to],
@@ -61,7 +61,7 @@ export function EventsPage() {
     if (!selCycle) return
     const d = today < selCycle.starts_on ? selCycle.starts_on : today > selCycle.ends_on ? selCycle.ends_on : today
     setYm({ y: Number(d.slice(0, 4)), m: Number(d.slice(5, 7)) - 1 })
-  }, [selCycle?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selCycle?.id])
 
   const holidays = useQuery({
     queryKey: ['holidays-range', orgId, from, to],

@@ -6,17 +6,15 @@ import { MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge, Button, Input, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatCurrency, formatDateTime } from '@/core/format'
+import { formatCents, formatDateTime } from '@/core/format'
 import { useOrganization, useOrgId } from '@/core/organization'
 import { invokeShop } from '../public/api'
 import { useState } from 'react'
 import { Archive, ArchiveRestore } from 'lucide-react'
-import { fromCents } from '../catalog'
 import { KIND_LABEL, ORDER_STATUS_LABEL, canArchive, fulfillmentLabel, fulfillmentSteps, orderActions, type FulfillmentStatus } from '../orders/transitions'
 import { archiveOrder, cancelOrder, listOrderEvents, markPaid, reactivateOrder, setFulfillment, type AdminOrder } from './ordersService'
 import type { PickupPoint } from './service'
 
-const money = (c: number) => formatCurrency(fromCents(c))
 const STATUS_ANY: Record<string, string> = { ...ORDER_STATUS_LABEL, pending: 'Pendente', in_preparation: 'Em preparo', ready: 'Pronto', picked_up: 'Retirado', cancelled: 'Cancelado' }
 
 export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: PickupPoint | undefined }) {
@@ -54,19 +52,19 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
           <p className="font-semibold">Itens</p>
           <ul className="space-y-1">
             {order.shop_order_items.map((i) => (
-              <li key={i.id} className="flex justify-between gap-2"><span>{i.quantity}× {i.product_name} ({i.variant_label}){i.kind === 'made_to_order' ? ' · encomenda' : ''}</span><span>{money(i.unit_final_cents * i.quantity)}</span></li>
+              <li key={i.id} className="flex justify-between gap-2"><span>{i.quantity}× {i.product_name} ({i.variant_label}){i.kind === 'made_to_order' ? ' · encomenda' : ''}</span><span>{formatCents(i.unit_final_cents * i.quantity)}</span></li>
             ))}
           </ul>
-          {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <p className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {money(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></p>}
-          {(order.coupon_discount_cents ?? 0) > 0 && <p className="flex justify-between text-primary"><span>Cupom {order.coupon_code}</span><span>− {money(order.coupon_discount_cents ?? 0)}</span></p>}
-          <p className="flex justify-between text-base font-extrabold"><span>Total</span><span>{money(order.total_cents)}</span></p>
+          {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <p className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {formatCents(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></p>}
+          {(order.coupon_discount_cents ?? 0) > 0 && <p className="flex justify-between text-primary"><span>Cupom {order.coupon_code}</span><span>− {formatCents(order.coupon_discount_cents ?? 0)}</span></p>}
+          <p className="flex justify-between text-base font-extrabold"><span>Total</span><span>{formatCents(order.total_cents)}</span></p>
         </section>
 
         {a.canMarkPaid && (
           <section className="space-y-2 rounded-lg border border-border p-3">
             <p className="font-semibold">Aguardando o pagamento</p>
-            <p className="text-muted-foreground">Confira o pagamento de <strong>{money(order.total_cents)}</strong> (referência <strong>{order.code}</strong>) antes de confirmar.</p>
-            <Button className="w-full" disabled={act.isPending} onClick={async () => await confirmBox(`Confirmar que o pagamento de ${money(order.total_cents)} foi recebido?`) && act.mutate(() => markPaid(order.id))}>Marcar como pago</Button>
+            <p className="text-muted-foreground">Confira o pagamento de <strong>{formatCents(order.total_cents)}</strong> (referência <strong>{order.code}</strong>) antes de confirmar.</p>
+            <Button className="w-full" disabled={act.isPending} onClick={async () => await confirmBox(`Confirmar que o pagamento de ${formatCents(order.total_cents)} foi recebido?`) && act.mutate(() => markPaid(order.id))}>Marcar como pago</Button>
           </section>
         )}
         {order.status === 'paid' && (

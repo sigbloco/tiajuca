@@ -37,5 +37,5 @@ export function useSetCrumbOverride(crumbs: PathCrumb[] | null) {
     if (!crumbs) return
     override = crumbs; emit()
     return () => { override = null; emit() }
-  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key])
 }

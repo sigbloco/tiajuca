@@ -210,13 +210,13 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
     const next = JSON.stringify(snap(a))
     if (JSON.stringify(d) === base.current) setD(snap(a))
     base.current = next
-  }, [a.title, a.event_date, a.authors]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [a.title, a.event_date, a.authors])
   // Salva sozinho, meio segundo depois da última alteração (título vazio espera ser preenchido).
   useEffect(() => {
     if (!dirty || !d.title.trim()) return
     const t = setTimeout(() => { void onSave(clean(d)) }, 700)
     return () => clearTimeout(t)
-  }, [JSON.stringify(clean(d)), dirty]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(clean(d)), dirty])
   const setAuthor = (i: number, p: Partial<Author>) => setD((x) => ({ ...x, authors: x.authors.map((u, k) => (k === i ? { ...u, ...p } : u)) }))
   return (
     <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${index % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(a.id)}`}>

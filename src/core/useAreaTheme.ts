@@ -8,6 +8,5 @@ export function useAreaTheme(theme: ThemeJson | null | undefined, area: ThemeAre
   useEffect(() => {
     if (!theme) return
     return applyThemeVars(varsForArea(theme, area))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, area])
 }

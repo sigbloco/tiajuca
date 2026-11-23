@@ -1,3 +1,4 @@
+import { whatsappUrl } from '@/core/whatsapp'
 import { fromCents } from '../catalog'
 import type { PaymentMethodKey } from '../config/schema'
 
@@ -85,9 +86,9 @@ export function pickupWhatsAppLinks(
     : 'Olá! Já fiz o Pix da minha compra na loja. Segue o comprovante.'
   const out: PickupWhatsApp[] = []
   for (const p of points) {
-    const d = (p.contact_phone ?? '').replace(/\D/g, '')
-    if (d.length < 10) continue
-    out.push({ id: p.id, name: `${p.name.replace(/^combinar com\s+/i, '').replace(/^(a|o)\s+/i, '') || p.contact_name?.trim().split(/\s+/)[0] || p.name}`, url: `https://wa.me/${d.startsWith('55') ? d : '55' + d}?text=${encodeURIComponent(text)}` })
+    const url = whatsappUrl(p.contact_phone, text)
+    if (!url) continue
+    out.push({ id: p.id, name: `${p.name.replace(/^combinar com\s+/i, '').replace(/^(a|o)\s+/i, '') || p.contact_name?.trim().split(/\s+/)[0] || p.name}`, url })
   }
   return opts.firstId ? [...out.filter((o) => o.id === opts.firstId), ...out.filter((o) => o.id !== opts.firstId)] : out
 }

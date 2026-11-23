@@ -40,5 +40,5 @@ export function usePersonLabeler() {
     const withSurname = nameWithSurname(p.full_name, p.display_name)
     const base = (two.get(norm(withSurname)) ?? 0) < 2 ? withSurname : p.full_name
     return pref && norm(pref) !== norm(base) && !norm(base).split(' ').includes(norm(pref)) ? `${base} (${pref})` : base
-  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data])
 }

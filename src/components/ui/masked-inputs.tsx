@@ -54,7 +54,7 @@ export function DateInput({ id, value, onChange, required, min, max, maxMessage,
   useEffect(() => {
     if (value === '' && brToIso(text) === null && text.length === 10) return
     if (value !== (brToIso(text) ?? '')) setText(value ? formatDate(value) : '')
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value])
 
   const validate = (t: string, iso: string | null) => {
     let msg = ''
@@ -64,7 +64,7 @@ export function DateInput({ id, value, onChange, required, min, max, maxMessage,
     else if (iso && min && iso < min) msg = `A data deve ser a partir de ${formatDate(min)}.`
     ref.current?.setCustomValidity(msg)
   }
-  useEffect(() => validate(text, brToIso(text))) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => validate(text, brToIso(text)))
 
   return (
     <Input
@@ -107,7 +107,7 @@ export function PhoneInput({ value, onChange, id, disabled }: { value: string; o
 /** HH:MM com máscara (24h), emite 'HH:MM' válido ou ''. */
 export function TimeInput({ id, value, onChange, required }: { id?: string; value: string; onChange: (v: string) => void; required?: boolean }) {
   const [text, setText] = useState(value)
-  useEffect(() => { if (value !== text && (value === '' || /^\d{2}:\d{2}$/.test(value))) setText(value) }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (value !== text && (value === '' || /^\d{2}:\d{2}$/.test(value))) setText(value) }, [value])
   return (
     <Input id={id} inputMode="numeric" autoComplete="off" placeholder="hh:mm" maxLength={5} required={required} value={text}
       onBlur={() => {
@@ -146,7 +146,7 @@ export function MoneyInput({ id, value, onChange, required, onBlur }: { id?: str
 export function MonthInput({ id, value, onChange, required }: { id?: string; value: string; onChange: (v: string) => void; required?: boolean }) {
   const toText = (v: string) => (/^\d{4}-\d{2}$/.test(v) ? `${v.slice(5)}/${v.slice(0, 4)}` : '')
   const [text, setText] = useState(toText(value))
-  useEffect(() => { if (value !== '' && toText(value) !== text) setText(toText(value)) }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (value !== '' && toText(value) !== text) setText(toText(value)) }, [value])
   return (
     <Input id={id} inputMode="numeric" autoComplete="off" placeholder="mm/aaaa" maxLength={7} required={required} value={text}
       onChange={(e) => {

@@ -1,3 +1,5 @@
+> **Documento histórico.** Pode descrever regras antigas (senha, convites, Cloudflare Pages, estoque por tamanho, sem cupom). Vale o que está em `CLAUDE.md`, `docs/regras-de-negocio.md` e no banco.
+
 # Loja do bloco
 
 Loja virtual pequena, com **retirada combinada** (sem entrega) e **pagamento antecipado**. Fica dentro do app do bloco:

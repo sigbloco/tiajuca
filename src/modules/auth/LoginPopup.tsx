@@ -14,7 +14,7 @@ export function LoginPopup({ open, onOpenChange, title = 'Entrar', description =
 
   useEffect(() => {
     if (session && open) { onOpenChange(false); onSignedIn?.() }
-  }, [session, open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session, open])
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>

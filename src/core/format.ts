@@ -17,6 +17,11 @@ export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+/** Centavos → "R$ 1,23". */
+export function formatCents(cents: number): string {
+  return formatCurrency(cents / 100)
+}
+
 /** '2026-10-01' (ou '2026-10') → 'Outubro de 2026'. */
 export function formatCompetence(value: string): string {
   const m = /^(\d{4})-(\d{2})/.exec(value)

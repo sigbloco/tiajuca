@@ -33,21 +33,6 @@ export interface Charge {
 const SELECT =
   'id, member_id, competence, cycle_id, base_amount, scholarship_percent, scholarship_discount, final_amount, status, due_on, paid_on, payment_method, manual_adjustment, notes, pay_link_url, pay_ref, members!inner(full_name, display_name), fee_categories(name)'
 
-export async function listCharges(p: {
-  orgId: string; competence: string; status: ChargeStatus | ''; search: string; page: number; pageSize: number
-}) {
-  let q = supabase.from('monthly_charges').select(SELECT, { count: 'exact' })
-    .eq('organization_id', p.orgId).eq('competence', p.competence)
-    .order('full_name', { referencedTable: 'members', ascending: true })
-    .range(p.page * p.pageSize, p.page * p.pageSize + p.pageSize - 1)
-  if (p.status) q = q.eq('status', p.status)
-  const term = p.search.replace(/[%*,()]/g, ' ').trim()
-  if (term) q = q.ilike('members.full_name', `%${term}%`)
-  const { data, error, count } = await q
-  if (error) throw error
-  return { rows: (data ?? []) as unknown as Charge[], total: count ?? 0 }
-}
-
 /** Todas as cobranças do mês (a tela agrupa por naipe e categoria, então não pagina). */
 export async function listAllCharges(orgId: string, competence: string) {
   const { data, error } = await supabase.from('monthly_charges').select(SELECT)

@@ -84,11 +84,11 @@ export function SiteSettings() {
     if (!loaded.current || !dirty || invalid || save.isPending) return
     const t = setTimeout(() => save.mutate(), 800)
     return () => clearTimeout(t)
-  }, [JSON.stringify(f), dirty, invalid, save.isPending]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(f), dirty, invalid, save.isPending])
   // Saindo da página com algo pendente: salva na hora.
   const latest = useRef({ f, dirty, invalid })
   latest.current = { f, dirty, invalid }
-  useEffect(() => () => { const c = latest.current; if (c.dirty && !c.invalid) void write(c.f).then(refresh) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { const c = latest.current; if (c.dirty && !c.invalid) void write(c.f).then(refresh) }, [])
   const upload = useMutation({
     mutationFn: async (file: File) => {
       if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(file.type)) throw new Error('Use uma imagem SVG, PNG, JPG ou WebP.')

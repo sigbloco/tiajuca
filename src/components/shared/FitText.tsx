@@ -57,7 +57,7 @@ export function FitBox({ children, className, min = 9, max = 44, align = 'center
     const ro = new ResizeObserver(fit)
     ro.observe(w)
     return () => ro.disconnect()
-  }, [children, min, max, forceSize]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [children, min, max, forceSize])
   return (
     <div ref={wrap} className={cn('absolute inset-0 flex', align === 'end' ? 'items-end' : align === 'start' ? 'items-start' : 'items-center')}>
       <span ref={text} className={cn('block w-full min-w-0 break-normal [overflow-wrap:normal] leading-none', className)}>{children}</span>

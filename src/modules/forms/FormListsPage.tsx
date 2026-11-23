@@ -175,7 +175,6 @@ export function FormListsPage() {
     const base = lists.data.reduce((m, l) => Math.max(m, l.sort_order), 0)
     const missing = Object.entries(SYSTEM).filter(([s]) => !lists.data!.some((l) => l.source === s)).map(([s, v], i) => ({ organization_id: orgId, name: v.title, kind: 'system', source: s, sort_order: base + i + 1 }))
     void supabase.from('form_lists').upsert(missing, { onConflict: 'organization_id,source', ignoreDuplicates: true }).then(refreshLists)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canEdit, lists.data, seeded])
 
   const all = lists.data ?? []

@@ -1,0 +1,25 @@
+# Só registra o verify_jwt de cada Edge Function (o que está publicado hoje). O banco de produção é a fonte da verdade (ver docs/BANCO.md).
+project_id = "dzyvtqrxmladsxceqzud"
+
+[functions.shop-infinitepay-webhook]
+verify_jwt = false
+
+[functions.billing-infinitepay-webhook]
+verify_jwt = false
+
+[functions.album-preview]
+verify_jwt = true
+[functions.billing-pay-link]
+verify_jwt = true
+[functions.drive-search]
+verify_jwt = true
+[functions.drive-sync]
+verify_jwt = true
+[functions.shop-admin]
+verify_jwt = true
+[functions.shop-checkout]
+verify_jwt = true
+[functions.shop-mailer]
+verify_jwt = true
+[functions.shop-order-public]
+verify_jwt = true

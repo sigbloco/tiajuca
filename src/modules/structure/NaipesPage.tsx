@@ -2,7 +2,7 @@ import { confirmBox } from '@/components/shared/DialogHost'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { MemberLink } from '@/modules/members/MemberLink'
 import { StaffChipLabel } from './StaffChipLabel'
-import { CompensationPick, type Compensation } from '@/modules/members/StaffSection'
+import { CompensationPick, type Compensation } from '@/modules/members/CompensationPick'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, CopyPlus, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react'
 import { NaipesTabs } from './NaipesTabs'
@@ -288,7 +288,7 @@ export function NaipesPage() {
     const okI = (i: CatalogItem) => matchesStatus(i.is_active, filter.status) && matchesText(i.name, filter.search)
     const visible = matchesText(s.name, filter.search) || insts.some(okI)
     return { s, insts, okI, show: matchesStatus(s.is_active, filter.status) && visible }
-  }).filter((g) => g.show), [sections.data, instruments.data, filter, inCycle.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }).filter((g) => g.show), [sections.data, instruments.data, filter, inCycle.data])
 
   const addNode = useMutation({
     mutationFn: async (v: { table: CatalogTable; name: string; section_id?: string; sort_order: number; tuning?: string | null }) =>
