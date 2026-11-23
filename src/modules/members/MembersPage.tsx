@@ -41,7 +41,8 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
 const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
-const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['musico', 'Músicos'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes'], ['senior', 'Sêniors']]
+// Ordem pensada para a quebra 3 + 2: os rótulos curtos em cima, os dois longos embaixo (mais largos, sem cortar o texto).
+const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['regente', 'Regentes'], ['senior', 'Seniores'], ['musico', 'Músicos'], ['equipe', 'Professores e Monitores']]
 
 /**
  * Quem vê cadastros de outras pessoas (grupo ou todos: equipe e Direção) tem a lista completa, por naipe, com fichas e filtros;
@@ -362,19 +363,26 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
       </div>
       <ParticipationRequests />
 
-      <ButtonRow role="group" aria-label="Situação">
-        {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
-          <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
-        ))}
-      </ButtonRow>
-      {!lockedCategory && (
-        <ButtonRow role="group" aria-label="Tipo de integrante">
-          {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
-            <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
-              onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
-          ) })}
+      <div className="space-y-3">
+        <ButtonRow role="group" aria-label="Situação">
+          {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
+            <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
+          ))}
         </ButtonRow>
-      )}
+        {!lockedCategory && (
+          <>
+            {/* Divisória sutil entre a situação (Ativos/Inativos) e o tipo: uma linha fina que some nas pontas. */}
+            <div aria-hidden className="h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+            {/* Sem caber numa linha, 3 + 2 (nunca um por linha): os curtos em cima, os longos embaixo. */}
+            <ButtonRow role="group" aria-label="Tipo de integrante" split={[3, 2]}>
+              {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
+                <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
+                  onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
+              ) })}
+            </ButtonRow>
+          </>
+        )}
+      </div>
       <p className="text-muted-foreground">{total} {total === 1 ? 'integrante' : 'integrantes'} em {activeCycle?.name ?? 'ciclo'}</p>
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">

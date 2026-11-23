@@ -24,7 +24,7 @@ import {
 } from './service'
 
 // Nome do grupo de cada categoria dentro do naipe.
-const GROUP_LABEL: Record<string, string> = { Aluno: 'Alunos', Senior: 'Seniors', Banda: 'Banda', 'Músico': 'Músicos', Pernalta: 'Pernaltas', 'Isento (equipe)': 'Isentos', Monitor: 'Monitores' }
+const GROUP_LABEL: Record<string, string> = { Aluno: 'Alunos', Senior: 'Seniores', Banda: 'Banda', 'Músico': 'Músicos', Pernalta: 'Pernaltas', 'Isento (equipe)': 'Isentos', Monitor: 'Monitores' }
 const groupOf = (cat?: string | null) => (cat ? GROUP_LABEL[cat] ?? cat : 'Sem categoria')
 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: string }) {
