@@ -1,23 +1,18 @@
-import { usePurge } from '@/core/purge'
 import { nameWithSurname } from './personLabel'
 import { ParticipationRequests } from './ParticipationRequests'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
 import { Filter, Heart, Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
-import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
-import { TrashGroup } from '@/components/shared/TrashGroup'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
-import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { adultBirthDateMax } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { Can, usePermission } from '@/core/permissions'
 import { MemberAvatar } from './MemberAvatar'
@@ -30,67 +25,9 @@ import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
 import { MemberDirectory } from './MemberDirectory'
 import { ReactivationRequests } from './Reactivation'
-import { createMember, type MemberRow } from './service'
-
-/** Lixeira de integrantes (ícone ao lado do "+"): quem foi excluído fica aqui e pode ser restaurado. */
-function MembersTrash() {
-  const orgId = useOrgId()
-  const qc = useQueryClient()
-  const can = usePermission('members.manage')
-  const q = useQuery({
-    queryKey: ['members-archived', orgId],
-    enabled: can,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('id, full_name, display_name, email').eq('organization_id', orgId).not('archived_at', 'is', null).order('full_name').limit(500)
-      if (error) throw error
-      return (data ?? []) as { id: string; full_name: string; display_name: string | null; email: string | null }[]
-    },
-  })
-  const restore = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('members').update({ archived_at: null }).eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => { toast.success('Integrante restaurado.'); qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }) },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const purge = usePurge('members')
-  if (!can) return null
-  return <TrashGroup onPurge={(id) => purge.mutate(id)} entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
-}
-
-function NewMemberSheet({ onClose }: { onClose: () => void }) {
-  const orgId = useOrgId()
-  const qc = useQueryClient()
-  const [form, setForm] = useState({ full_name: '', display_name: '', email: '', phone: '', social: '', birth_date: '' })
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value })
-  const create = useMutation({
-    mutationFn: () => createMember(orgId, form),
-    onSuccess: () => {
-      toast.success('Integrante cadastrado.')
-      qc.invalidateQueries({ queryKey: ['members', orgId] })
-      onClose()
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  return (
-    <SheetContent title="Novo integrante" description="Dados sensíveis são preenchidos depois, na ficha do integrante.">
-      <form onSubmit={(e) => { e.preventDefault(); create.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="full_name" required>Nome completo</Label><Input id="full_name" required value={form.full_name} onChange={set('full_name')} /></div>
-        <div className="space-y-1.5"><Label htmlFor="display_name">Como prefere ser chamado</Label><Input id="display_name" value={form.display_name} onChange={set('display_name')} /></div>
-        <div className="space-y-1.5"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" value={form.email} onChange={set('email')} /></div>
-        <div className="space-y-1.5"><Label htmlFor="phone">Celular</Label><PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="social">Rede social</Label><Input id="social" placeholder="@usuario" value={form.social} onChange={set('social')} /></div>
-        <div className="space-y-1.5">
-          <Label htmlFor="birth_date">Data de nascimento</Label>
-          <DateInput id="birth_date" max={adultBirthDateMax()} maxMessage="Apenas maiores de 18 anos podem ser integrantes." value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} />
-          <p className="text-xs text-muted-foreground">Apenas maiores de 18 anos podem ser integrantes.</p>
-        </div>
-        <Button type="submit" className="w-full" disabled={create.isPending}>{create.isPending ? 'Salvando' : 'Cadastrar'}</Button>
-      </form>
-    </SheetContent>
-  )
-}
+import { type MemberRow } from './service'
+import { NewMemberSheet } from './NewMemberSheet'
+import { MembersTrash } from './MembersTrash'
 
 interface GroupMember extends MemberRow {
 }
