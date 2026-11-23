@@ -1,3 +1,4 @@
+import { whatsappUrl } from '@/core/whatsapp'
 import { Globe, Mail, Music, Phone } from 'lucide-react'
 import type { ReactNode, SVGProps } from 'react'
 
@@ -38,7 +39,7 @@ export function hrefOf(l: SiteLink): string | null {
   const v = (l.value ?? '').trim()
   if (!v) return null
   switch (l.kind) {
-    case 'whatsapp': { const d = digits(v); return d.length >= 10 ? `https://wa.me/${d.startsWith('55') ? d : `55${d}`}` : null }
+    case 'whatsapp': { return whatsappUrl(v) }
     case 'email': return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? `mailto:${v}` : null
     case 'telefone': { const d = digits(v); return d.length >= 8 ? `tel:+${d.startsWith('55') ? d : `55${d}`}` : null }
     case 'instagram': return /instagram\.com/i.test(v) ? https(v) : `https://instagram.com/${handle(v)}`
@@ -53,11 +54,4 @@ export function youtubeId(url: string): string | null {
   return m ? m[1] : null
 }
 
-/** Cor do texto (branco ou quase preto) que contrasta com o fundo hex informado. */
-export function textOn(hex: string): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
-  if (!m) return '#ffffff'
-  const n = parseInt(m[1], 16)
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
-  return lum > 0.6 ? '#1c1c14' : '#ffffff'
-}
+export { textOn } from '@/core/themeModel'

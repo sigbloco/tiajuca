@@ -2,8 +2,7 @@ import { KitChip } from '@/modules/shop/KitChip'
 import { Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button, Card, EmptyState } from '@/components/ui/primitives'
-import { formatCurrency } from '@/core/format'
-import { fromCents } from '../catalog'
+import { formatCents } from '@/core/format'
 import { maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
 import { CouponBox } from './CouponBox'
@@ -11,7 +10,6 @@ import { GoogleInvite } from './GoogleInvite'
 import { RandomSuggestions, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
-const money = (cents: number) => formatCurrency(fromCents(cents))
 
 export function CartPage() {
   const { cart, index, basePath, setQty, remove, coupon } = useStore()
@@ -39,8 +37,8 @@ export function CartPage() {
                   <Link to={`${basePath}/produto/${l.slug}`} className="font-semibold hover:underline">{entry?.product.is_kit && <KitChip />}{l.name}</Link>
                   <p className="text-sm text-muted-foreground">{l.variantLabel}{l.kind === 'made_to_order' ? ' · sob encomenda' : ''}</p>
                   <p className="text-sm">
-                    {l.unitFinalCents !== l.unitPriceCents && <s className="mr-2 text-muted-foreground">{money(l.unitPriceCents)}</s>}
-                    {money(l.unitFinalCents)}
+                    {l.unitFinalCents !== l.unitPriceCents && <s className="mr-2 text-muted-foreground">{formatCents(l.unitPriceCents)}</s>}
+                    {formatCents(l.unitFinalCents)}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button size="icon" variant="outline" aria-label={`Diminuir ${l.name}`} onClick={() => setQty(l.variantId, l.quantity - 1)}>−</Button>
@@ -49,7 +47,7 @@ export function CartPage() {
                     <Button size="icon" variant="ghost" aria-label={`Remover ${l.name}`} onClick={() => remove(l.variantId)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
-                <p className="shrink-0 font-bold">{money(l.lineTotalCents)}</p>
+                <p className="shrink-0 font-bold">{formatCents(l.lineTotalCents)}</p>
               </Card>
             </li>
           )
@@ -59,10 +57,10 @@ export function CartPage() {
       <GoogleInvite title="Entre com o Google" text="Preenchemos seus dados na finalização e você acompanha seus pedidos sem precisar de código. Comprar como visitante também funciona." />
       <Card className="space-y-2 p-4">
         <CouponBox />
-        <div className="flex justify-between"><span>Subtotal</span><span>{money(cart.subtotalCents)}</span></div>
-        {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {money(cart.discountCents - cart.couponCents)}</span></div>}
-        {cart.couponCents > 0 && coupon && <div className="flex justify-between text-primary"><span>Cupom {coupon.code}</span><span>− {money(cart.couponCents)}</span></div>}
-        <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{money(cart.totalCents)}</span></div>
+        <div className="flex justify-between"><span>Subtotal</span><span>{formatCents(cart.subtotalCents)}</span></div>
+        {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-primary"><span>Desconto de integrante</span><span>− {formatCents(cart.discountCents - cart.couponCents)}</span></div>}
+        {cart.couponCents > 0 && coupon && <div className="flex justify-between text-primary"><span>Cupom {coupon.code}</span><span>− {formatCents(cart.couponCents)}</span></div>}
+        <div className="flex justify-between text-lg font-extrabold"><span>Total</span><span>{formatCents(cart.totalCents)}</span></div>
       </Card>
       <Link to={`${basePath}/finalizar`} className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90">Finalizar compra</Link>
       <p className="text-sm text-muted-foreground">Retirada combinada e pagamento antecipado e integral; os valores são confirmados na finalização.{cart.hasStock && cart.hasMadeToOrder && ' Pronta entrega fica pronta primeiro; sob encomenda segue o prazo de produção, e cada grupo é retirado separadamente.'}</p>

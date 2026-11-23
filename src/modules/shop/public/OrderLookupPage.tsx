@@ -7,8 +7,9 @@ import { toast } from 'sonner'
 import { PhoneInput } from '@/components/ui/masked-inputs'
 import { Badge, Button, Card, Input, Label, cn } from '@/components/ui/primitives'
 import { useAuth } from '@/core/auth'
-import { formatCurrency, formatDate, formatDateTime } from '@/core/format'
-import { fromCents, type ProductKind } from '../catalog'
+import { formatCents, formatDate, formatDateTime } from '@/core/format'
+import { whatsappUrl } from '@/core/whatsapp'
+import { type ProductKind } from '../catalog'
 import { CUSTOMER_STATUS_LABEL, progressIndex, progressSteps, type TimelineEntry } from '../orders/customerView'
 import type { FulfillmentStatus, OrderStatus } from '../orders/transitions'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
@@ -19,7 +20,6 @@ import { availableMethods, creditFeeCents, creditFees, creditTotalCents, formatP
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
-const money = (c: number) => formatCurrency(fromCents(c))
 const KEY = 'shop:lookup'
 
 interface LookupResult {
@@ -111,8 +111,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
   const others = status === 'awaiting_payment' ? availableMethods(store.payment_methods).filter((m) => m !== order.payment_method && (m !== 'pix' || !!store.pix)) : []
   const pickupZap = (() => {
     const pp = store.pickup_points.find((p) => p.id === order.pickup_point_id)
-    const d = (pp?.contact_phone ?? '').replace(/\D/g, '')
-    return d.length >= 10 ? `https://wa.me/${d.startsWith('55') ? d : '55' + d}` : null
+    return whatsappUrl(pp?.contact_phone)
   })()
   // Cartão de crédito: a taxa da InfinitePay entra no valor a pagar (à vista) enquanto o pedido espera pagamento.
   const withFee = order.payment_method === 'infinitepay' && status === 'awaiting_payment'
@@ -140,21 +139,21 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
           <p className="text-sm text-muted-foreground">{itemCount} {itemCount === 1 ? 'item' : 'itens'}{order.expires_at && status === 'awaiting_payment' ? ` (reservado até ${formatDate(order.expires_at)})` : ''}</p>
           <p className="text-sm text-muted-foreground">{METHOD_NAME[order.payment_method]}</p>
         </div>
-        <span className="shrink-0 whitespace-nowrap text-lg font-extrabold">{money(payCents)}</span>
+        <span className="shrink-0 whitespace-nowrap text-lg font-extrabold">{formatCents(payCents)}</span>
         <ChevronDown className={cn('mt-1 h-5 w-5 shrink-0 transition-transform', open && 'rotate-180')} aria-hidden />
       </div>
       {status !== 'cancelled' && <MinProgress items={data.items} />}
-      {payUrl && <div className="px-4 pb-4"><a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={payUrl}>Ir para o pagamento · <span className="whitespace-nowrap">{money(payCents)}</span></a></div>}
+      {payUrl && <div className="px-4 pb-4"><a className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-bold text-primary-foreground hover:opacity-90" href={payUrl}>Ir para o pagamento · <span className="whitespace-nowrap">{formatCents(payCents)}</span></a></div>}
       {open && <div className="divide-y divide-border border-t border-border">
       <section className="space-y-3 p-5">
         <h2 className="text-lg font-bold">Itens</h2>
         <ul className="space-y-1 text-sm">
-          {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-3"><span className="min-w-0">{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span className="shrink-0 whitespace-nowrap">{money(i.unit_final_cents * i.quantity)}</span></li>)}
+          {data.items.map((i) => <li key={`${i.name}-${i.variant}`} className="flex justify-between gap-3"><span className="min-w-0">{i.quantity}× {i.name} ({i.variant}){i.kind === 'made_to_order' ? ' · sob encomenda' : ''}</span><span className="shrink-0 whitespace-nowrap">{formatCents(i.unit_final_cents * i.quantity)}</span></li>)}
         </ul>
-        {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></div>}
-        {(order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Cupom {order.coupon_code}</span><span className="shrink-0 whitespace-nowrap">− {money(order.coupon_discount_cents ?? 0)}</span></div>}
-        {withFee && <div className="flex justify-between gap-3 text-sm"><span className="min-w-0">Taxa do cartão de crédito à vista ({formatPct(fees[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(feeCents)}</span></div>}
-        <div className="flex justify-between gap-3 text-lg font-extrabold"><span>Total</span><span className="shrink-0 whitespace-nowrap">{money(payCents)}</span></div>
+        {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {formatCents(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></div>}
+        {(order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Cupom {order.coupon_code}</span><span className="shrink-0 whitespace-nowrap">− {formatCents(order.coupon_discount_cents ?? 0)}</span></div>}
+        {withFee && <div className="flex justify-between gap-3 text-sm"><span className="min-w-0">Taxa do cartão de crédito à vista ({formatPct(fees[0])})</span><span className="shrink-0 whitespace-nowrap">+ {formatCents(feeCents)}</span></div>}
+        <div className="flex justify-between gap-3 text-lg font-extrabold"><span>Total</span><span className="shrink-0 whitespace-nowrap">{formatCents(payCents)}</span></div>
         {status === 'cancelled' && order.cancel_reason && <p className="text-sm text-muted-foreground">Motivo: {order.cancel_reason}</p>}
         {status === 'paid' && data.fulfillments.length > 0 && (
           <div className="space-y-3 border-t border-border pt-3">
@@ -171,7 +170,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
 
       {status !== 'cancelled' && (
         <section className="space-y-3 p-5">
-          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents, 1, fees))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
+          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${formatCents(creditTotalCents(order.total_cents, 1, fees))} à vista` : `${formatCents(order.total_cents)}, sem taxa`})</span></Button>)}
           <h2 className="flex flex-wrap gap-x-2 text-lg font-bold"><span>Forma de pagamento:</span><span>{METHOD_NAME[order.payment_method]}</span></h2>
           {status === 'paid' && <p className="text-sm">Pagamento confirmado. Obrigado!</p>}
           {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (

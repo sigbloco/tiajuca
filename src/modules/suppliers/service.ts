@@ -18,9 +18,4 @@ export async function listSuppliers(orgId: string) {
   return data as Supplier[]
 }
 
-/** Link do WhatsApp (celulares brasileiros: DDD + número). */
-export function whatsappUrl(phone: string | null): string | null {
-  const d = (phone ?? '').replace(/\D/g, '')
-  if (d.length < 10) return null
-  return `https://wa.me/${d.startsWith('55') ? d : '55' + d}`
-}
+export { whatsappUrl } from '@/core/whatsapp'
