@@ -3,7 +3,7 @@
 // SEGURANÇA: o aviso não é assinado; o corpo é só uma dica. O pagamento só é baixado depois de a própria InfinitePay confirmar
 // (`payment_check`) e de o valor bater com a cobrança. Respostas: 200 = tratado/nada a fazer; 400 = falha temporária ou ainda não pago (ela tenta de novo).
 // Cada transaction_nsu só dá baixa uma vez (tabela infinitepay_transactions, compartilhada com a loja).
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { PAYMENT_CHECK_ENDPOINT, parseWebhook, paymentVerdict } from './verify.ts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

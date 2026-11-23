@@ -8,7 +8,7 @@
 //   Teste:         MAIL_PROVIDER=log           (só registra no log, não envia)
 // Sem credenciais, nada é enviado e os avisos continuam esperando na fila.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { buildEmail, buildFormEmail, pixCodeFor, PIX_QR_CID, type FormMailContext, type MailContext } from './templates.ts'
 import { pickProvider, resolveSender, sendViaResend, formatFrom, toBase64, type InlineImage, type OutgoingMail } from './providers.ts'
 

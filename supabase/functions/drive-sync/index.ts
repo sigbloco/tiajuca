@@ -9,7 +9,7 @@
 //
 // POST JSON: { folder_id: <uuid da pasta cadastrada no app>, mode?: 'preview' | 'apply' }
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',

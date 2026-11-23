@@ -2,7 +2,7 @@
 // conferida no banco por `charge_pay_info` com o token de quem chamou. O valor vem SEMPRE da cobrança, nunca do navegador.
 //
 // POST JSON: { charge_id } → { url }
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { LINKS_ENDPOINT, describeShape, extractCheckoutUrl } from './infinitepay.ts'
 
 const cors = {

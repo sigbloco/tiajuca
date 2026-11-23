@@ -7,7 +7,7 @@
 //
 // A InfiniteTag vem das configurações da loja (tabela shop_settings). Sem ela a função responde 503.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { PAYMENT_CHECK_ENDPOINT, parseWebhook, paymentVerdict } from './verify.ts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

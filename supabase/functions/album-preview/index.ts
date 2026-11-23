@@ -4,7 +4,7 @@
 //
 // Segurança: exige usuário logado com permissão `settings.manage`; só abre endereços do Google Photos
 // (e a imagem só de googleusercontent.com), para não servir de ponte para outros sites.
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',

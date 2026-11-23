@@ -85,10 +85,12 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
           Aceitar Pix direto
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label htmlFor="px-key">Chave Pix</Label>
+          <div className="space-y-1.5"><Label htmlFor="px-key">Chave Pix <span className="text-destructive">*</span></Label>
             <Input id="px-key" autoComplete="off" value={f.pixKey} onChange={(e) => set({ pixKey: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="px-ben">Nome do favorecido</Label>
+          <div className="space-y-1.5"><Label htmlFor="px-ben">Nome do favorecido <span className="text-destructive">*</span></Label>
             <Input id="px-ben" autoComplete="off" value={f.pixBeneficiary} onChange={(e) => set({ pixBeneficiary: e.target.value })} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="px-city">Cidade do favorecido <span className="text-destructive">*</span></Label>
+            <Input id="px-city" autoComplete="off" maxLength={15} value={f.pixCity} onChange={(e) => set({ pixCity: e.target.value })} /></div>
         </div>
         <p className="text-sm text-muted-foreground">O cliente paga pela chave e envia o comprovante; você confere em <strong>Pedidos</strong> e marca como pago.</p>
       </Card>

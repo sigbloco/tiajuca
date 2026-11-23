@@ -10,6 +10,7 @@ export interface ShopSettings {
   public_site_url: string | null
   pix_key: string | null
   pix_beneficiary: string | null
+  pix_city: string | null
   contact_whatsapp: string | null
   contact_email: string | null
   directors: DirectorSetting[]
@@ -30,12 +31,12 @@ export interface ShopSettings {
 }
 
 export const EMPTY_SETTINGS: ShopSettings = {
-  payment_methods: [], infinitepay_handle: null, public_site_url: null, pix_key: null, pix_beneficiary: null,
+  payment_methods: [], infinitepay_handle: null, public_site_url: null, pix_key: null, pix_beneficiary: null, pix_city: null,
   contact_whatsapp: null, contact_email: null, directors: [], mail_from_name: null, mail_from_email: null, default_member_discount_pct: 0,
   intro_text: null, featured_title: 'Destaques', reservation_hours: 48, privacy_retention_years: 5, credit_fees_pct: [...DEFAULT_CREDIT_FEES_PCT],
 }
 
-const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, featured_title, reservation_hours, privacy_retention_years, credit_fees_pct'
+const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, pix_city, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, featured_title, reservation_hours, privacy_retention_years, credit_fees_pct'
 
 export async function getSettings(orgId: string): Promise<ShopSettings> {
   const { data, error } = await supabase.from('shop_settings').select(COLUMNS).eq('organization_id', orgId).maybeSingle()
@@ -63,7 +64,7 @@ export async function saveSettings(orgId: string, s: ShopSettings) {
 // ───────────── formulário ─────────────
 export interface DirectorForm { name: string; phone: string }
 export interface SettingsForm {
-  pix: boolean; pixKey: string; pixBeneficiary: string
+  pix: boolean; pixKey: string; pixBeneficiary: string; pixCity: string
   infinitepay: boolean; handle: string; siteUrl: string
   whatsapp: string; email: string; directors: DirectorForm[]
   mailFromName: string; mailFromEmail: string
@@ -100,7 +101,7 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 export function fromSettings(s: ShopSettings, fallbackSiteUrl = ''): SettingsForm {
   return {
-    pix: s.payment_methods.includes('pix'), pixKey: s.pix_key ?? '', pixBeneficiary: s.pix_beneficiary ?? '',
+    pix: s.payment_methods.includes('pix'), pixKey: s.pix_key ?? '', pixBeneficiary: s.pix_beneficiary ?? '', pixCity: s.pix_city ?? '',
     infinitepay: s.payment_methods.includes('infinitepay'), handle: s.infinitepay_handle ?? '', siteUrl: s.public_site_url ?? fallbackSiteUrl,
     whatsapp: fromWaDigits(s.contact_whatsapp), email: s.contact_email ?? '',
     directors: s.directors.map((d) => ({ name: d.name, phone: fromWaDigits(d.whatsapp) })),
@@ -120,6 +121,8 @@ export function validateSettings(f: SettingsForm): string[] {
   if (f.pix) {
     if (f.pixKey.trim().length < 3) errors.push('Informe a chave Pix.')
     if (f.pixBeneficiary.trim().length < 2) errors.push('Informe o nome do favorecido do Pix.')
+    if (f.pixCity.trim().length < 2) errors.push('Informe a cidade do Pix.')
+    if (f.pixCity.trim().length > 15) errors.push('A cidade do Pix tem no máximo 15 letras.')
   }
   if (f.infinitepay) {
     if (!/^[A-Za-z0-9_.-]{2,40}$/.test(cleanHandle(f.handle))) errors.push('Informe a InfiniteTag (só letras, números, ponto, hífen ou sublinhado, sem o $).')
@@ -157,6 +160,7 @@ export function toSettings(f: SettingsForm): ShopSettings {
     public_site_url: site || null,
     pix_key: f.pixKey.trim() || null,
     pix_beneficiary: f.pixBeneficiary.trim() || null,
+    pix_city: f.pixCity.trim() || null,
     contact_whatsapp: toWaDigits(f.whatsapp),
     contact_email: f.email.trim() || null,
     directors: f.directors.filter((d) => d.name.trim()).map((d) => ({ name: d.name.trim(), whatsapp: toWaDigits(d.phone) as string })),

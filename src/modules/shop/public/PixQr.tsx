@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/primitives'
 import { pixCopyPaste } from '../payments/pix'
 
 /** QR code e "copia e cola" do Pix já com o valor exato e o código do pedido. */
-export function PixQr({ pixKey, beneficiary, amountCents, orderCode, size = 132, sideBySide = false }: { pixKey: string; beneficiary: string; amountCents: number; orderCode: string; size?: number; sideBySide?: boolean }) {
-  const code = useMemo(() => pixCopyPaste({ key: pixKey, beneficiary, amountCents, txid: orderCode }), [pixKey, beneficiary, amountCents, orderCode])
+export function PixQr({ pixKey, beneficiary, city, amountCents, orderCode, size = 132, sideBySide = false }: { pixKey: string; beneficiary: string; city?: string | null; amountCents: number; orderCode: string; size?: number; sideBySide?: boolean }) {
+  const code = useMemo(() => pixCopyPaste({ key: pixKey, beneficiary, city: city ?? undefined, amountCents, txid: orderCode }), [pixKey, beneficiary, city, amountCents, orderCode])
   const [img, setImg] = useState<string | null>(null)
   useEffect(() => {
     let alive = true

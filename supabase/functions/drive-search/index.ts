@@ -9,7 +9,7 @@
 // Ações (POST JSON): { organization_id, action: 'status' | 'list', q?, folder_id?, root_id?, folders_only? }
 // `root_id` (opcional) escolhe uma das pastas cadastradas em Google Drive (drive_folders) como raiz da navegação; sem ele vale a pasta de partituras configurada.
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
