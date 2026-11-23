@@ -1,5 +1,6 @@
 import { supabase } from '@/core/supabase'
 import { maskPhone } from '@/components/ui/masked-inputs'
+import { DEFAULT_CREDIT_FEES_PCT } from '../payments/pix'
 
 /** Configurações da loja que o painel edita (tabela shop_settings). */
 export interface DirectorSetting { name: string; whatsapp: string }
@@ -22,22 +23,36 @@ export interface ShopSettings {
   featured_title: string
   /** Horas que os itens ficam reservados aguardando o pagamento. */
   reservation_hours: number
-  /** Anos de guarda dos dados do pedido (aviso de privacidade). */
+  /** Anos de guarda dos dados do pedido (aviso de privacidade); depois disso o pedido é anonimizado. */
   privacy_retention_years: number
+  /** Taxa da InfinitePay no crédito, em %, de 1x até Nx (repassada a quem paga no cartão). */
+  credit_fees_pct: number[]
 }
 
 export const EMPTY_SETTINGS: ShopSettings = {
   payment_methods: [], infinitepay_handle: null, public_site_url: null, pix_key: null, pix_beneficiary: null,
   contact_whatsapp: null, contact_email: null, directors: [], mail_from_name: null, mail_from_email: null, default_member_discount_pct: 0,
-  intro_text: null, featured_title: 'Destaques', reservation_hours: 48, privacy_retention_years: 5,
+  intro_text: null, featured_title: 'Destaques', reservation_hours: 48, privacy_retention_years: 5, credit_fees_pct: [...DEFAULT_CREDIT_FEES_PCT],
 }
 
-const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, featured_title, reservation_hours, privacy_retention_years'
+const COLUMNS = 'payment_methods, infinitepay_handle, public_site_url, pix_key, pix_beneficiary, contact_whatsapp, contact_email, directors, mail_from_name, mail_from_email, default_member_discount_pct, intro_text, featured_title, reservation_hours, privacy_retention_years, credit_fees_pct'
 
 export async function getSettings(orgId: string): Promise<ShopSettings> {
   const { data, error } = await supabase.from('shop_settings').select(COLUMNS).eq('organization_id', orgId).maybeSingle()
   if (error) throw error
-  return (data as ShopSettings | null) ?? EMPTY_SETTINGS
+  if (!data) return EMPTY_SETTINGS
+  const s = data as ShopSettings
+  return { ...s, credit_fees_pct: (s.credit_fees_pct ?? DEFAULT_CREDIT_FEES_PCT).map(Number) }
+}
+
+/** Última troca dos dados de recebimento (chave Pix, favorecido, InfiniteTag ou formas de pagamento): quando e por quem. */
+export async function getPaymentChange(orgId: string): Promise<{ at: string; by: string | null } | null> {
+  const { data, error } = await supabase.from('shop_settings')
+    .select('payment_changed_at, changer:members!shop_settings_payment_changed_by_fkey(full_name, display_name)').eq('organization_id', orgId).maybeSingle()
+  if (error) throw error
+  const row = data as { payment_changed_at: string | null; changer: { full_name: string; display_name: string | null } | null } | null
+  if (!row?.payment_changed_at) return null
+  return { at: row.payment_changed_at, by: row.changer ? row.changer.display_name || row.changer.full_name : null }
 }
 
 export async function saveSettings(orgId: string, s: ShopSettings) {
@@ -56,6 +71,8 @@ export interface SettingsForm {
   introText: string
   featuredTitle: string
   reservationHours: string; retentionYears: string
+  /** Taxa do cartão por parcela (1x até 12x); casas vazias no fim = parcelamento até ali. */
+  creditFees: string[]
 }
 
 export const cleanHandle = (v: string) => v.trim().replace(/^\$/, '').trim()
@@ -92,6 +109,7 @@ export function fromSettings(s: ShopSettings, fallbackSiteUrl = ''): SettingsFor
     introText: s.intro_text ?? '',
     featuredTitle: s.featured_title ?? 'Destaques',
     reservationHours: String(s.reservation_hours ?? 48), retentionYears: String(s.privacy_retention_years ?? 5),
+    creditFees: Array.from({ length: 12 }, (_, i) => { const n = (s.credit_fees_pct ?? DEFAULT_CREDIT_FEES_PCT)[i]; return n === undefined || n === null ? '' : String(n).replace('.', ',') }),
   }
 }
 
@@ -126,6 +144,7 @@ export function validateSettings(f: SettingsForm): string[] {
   if (!Number.isInteger(hours) || hours < 1 || hours > 720) errors.push('O prazo de reserva deve ficar entre 1 e 720 horas.')
   const years = Number(f.retentionYears)
   if (!Number.isInteger(years) || years < 1 || years > 20) errors.push('O tempo de guarda dos dados deve ficar entre 1 e 20 anos.')
+  errors.push(...creditFeeErrors(f.creditFees))
   return errors
 }
 
@@ -148,7 +167,27 @@ export function toSettings(f: SettingsForm): ShopSettings {
     featured_title: f.featuredTitle.trim() || 'Destaques',
     reservation_hours: Number(f.reservationHours) || 48,
     privacy_retention_years: Number(f.retentionYears) || 5,
+    credit_fees_pct: parseCreditFees(f.creditFees) ?? [...DEFAULT_CREDIT_FEES_PCT],
   }
+}
+
+/** Casas preenchidas até a última (vazias no fim são ignoradas). */
+const filledFees = (v: string[]) => { const t = v.map((x) => x.trim()); let n = t.length; while (n > 0 && !t[n - 1]) n--; return t.slice(0, n) }
+
+/** '4,2' etc. → números de 1x até a última parcela preenchida; null se houver casa inválida ou buraco. */
+export function parseCreditFees(v: string[]): number[] | null {
+  const t = filledFees(v)
+  if (t.length === 0) return null
+  const out = t.map((x) => (/^[0-9]{1,2}([.,][0-9]{1,2})?$/.test(x) ? Number(x.replace(',', '.')) : NaN))
+  return out.every((n) => Number.isFinite(n) && n >= 0 && n < 50) ? out : null
+}
+
+export function creditFeeErrors(v: string[]): string[] {
+  const t = filledFees(v)
+  if (t.length === 0) return ['Informe pelo menos a taxa do cartão à vista (1x).']
+  if (t.some((x) => !x)) return ['Taxa do cartão: preencha as parcelas em sequência, sem pular nenhuma.']
+  if (!parseCreditFees(v)) return ['Taxa do cartão: use números de 0 a 49,99 (ex.: 4,2).']
+  return []
 }
 
 /** O que falta preencher para a loja poder vender (aviso no topo do painel). */

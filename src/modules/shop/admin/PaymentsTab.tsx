@@ -12,7 +12,9 @@ import { Button, Card, Input, Label, Skeleton } from '@/components/ui/primitives
 import { friendlyError } from '@/core/errors'
 import { useOrganization, useOrgId } from '@/core/organization'
 import { invokeShop } from '../public/api'
-import { cleanHandle, fromSettings, getSettings, saveSettings, toSettings, validateSettings, type SettingsForm, type ShopSettings } from './settings'
+import { formatDateTime } from '@/core/format'
+import { DEFAULT_CREDIT_FEES_PCT } from '../payments/pix'
+import { cleanHandle, fromSettings, getPaymentChange, getSettings, saveSettings, toSettings, validateSettings, type SettingsForm, type ShopSettings } from './settings'
 
 function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings; initialShopName: string }) {
   const orgId = useOrgId()
@@ -72,7 +74,7 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
             <p className="text-sm text-muted-foreground">Depois desse prazo, pedido que não pagou é cancelado e o estoque volta. Vale para os próximos pedidos.</p></div>
           <div className="space-y-1.5"><Label htmlFor="rs-y">Guarda dos dados (anos)</Label>
             <Input id="rs-y" inputMode="numeric" value={f.retentionYears} onChange={(e) => set({ retentionYears: e.target.value.replace(/\D/g, '') })} />
-            <p className="text-sm text-muted-foreground">Informado no aviso de privacidade da loja.</p></div>
+            <p className="text-sm text-muted-foreground">Informado no aviso de privacidade. Pedidos mais velhos que isso perdem nome, telefone e e-mail automaticamente (valores e itens continuam).</p></div>
         </div>
       </Card>
 
@@ -106,6 +108,17 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
           </Button>
           {test && <p role="status" className={test.ok ? 'text-sm font-semibold text-primary' : 'text-sm font-semibold text-destructive'}>{test.message}</p>}
         </div>
+        <fieldset className="space-y-2 rounded-lg border border-border p-3">
+          <legend className="px-1 font-semibold">Taxa do cartão de crédito (%)</legend>
+          <p className="text-sm text-muted-foreground">A InfinitePay cobra de quem paga no cartão. A loja mostra o valor com a taxa no checkout e em Meus pedidos; confira no app da InfinitePay se as taxas mudarem. Deixe vazias as parcelas que não aceita.</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {f.creditFees.map((v, i) => (
+              <div key={i} className="space-y-1"><Label htmlFor={`fee-${i}`}>{i + 1}x</Label>
+                <Input id={`fee-${i}`} inputMode="decimal" maxLength={5} className="text-center" value={v} onChange={(e) => set({ creditFees: f.creditFees.map((x, j) => (j === i ? e.target.value.replace(/[^0-9.,]/g, '') : x)) })} /></div>
+            ))}
+          </div>
+          <Button type="button" size="sm" variant="outline" className="w-full" onClick={() => set({ creditFees: DEFAULT_CREDIT_FEES_PCT.map((n) => String(n).replace('.', ',')) })}>Voltar às taxas padrão</Button>
+        </fieldset>
         <p className="rounded-lg bg-muted p-3 text-sm">Quando o cliente paga, a InfinitePay avisa a loja e o pedido é marcado como pago sozinho (a loja confere o pagamento junto à InfinitePay antes). Se algo falhar, você ainda pode marcar como pago à mão.</p>
       </Card>
 
@@ -165,9 +178,15 @@ export function PaymentsTab() {
   const orgId = useOrgId()
   const q = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const label = useQuery({ queryKey: ['site-shop-label', orgId], queryFn: () => getShopLabel(orgId) })
+  const change = useQuery({ queryKey: ['shop', orgId, 'settings', 'payment-change'], queryFn: () => getPaymentChange(orgId) })
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-bold">Pagamentos e contatos</h2>
+      {change.data && (
+        <p role="status" className="rounded-lg border border-border p-3 text-sm">
+          Dados de recebimento (chave Pix, favorecido, InfiniteTag ou formas de pagamento) alterados pela última vez em <strong>{formatDateTime(change.data.at)}</strong>{change.data.by ? <> por <strong>{change.data.by}</strong></> : null}. Se não reconhece essa mudança, confira antes de vender.
+        </p>
+      )}
       {q.isLoading && <Skeleton className="h-40" />}
       {q.isError && <p className="text-destructive">Não foi possível carregar as configurações.</p>}
       {q.data && label.data !== undefined && <SettingsFormView key={JSON.stringify(q.data) + label.data} initial={q.data} initialShopName={label.data} />}

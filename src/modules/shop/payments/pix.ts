@@ -93,12 +93,19 @@ export function pickupWhatsAppLinks(
 }
 
 /**
- * Taxas oficiais da InfinitePay no cartão de crédito, repassadas a quem paga na página de pagamento.
+ * Taxas da InfinitePay no cartão de crédito (1x até 12x), repassadas a quem paga na página de pagamento.
+ * Configuradas no painel (Loja → Pagamentos e contatos); esta lista é só o padrão para quando a loja não informou.
  * O valor final é o do pedido dividido por (1 − taxa), arredondado para cima (R$ 48,00 à vista virou R$ 50,11 num pedido real).
  */
-export const CREDIT_FEES_PCT: readonly number[] = [4.2, 6.09, 7.01, 7.91, 8.8, 9.67, 12.59, 13.42, 14.25, 15.06, 15.87, 16.66]
-export const creditTotalCents = (cents: number, installments = 1): number => Math.ceil(cents / (1 - (CREDIT_FEES_PCT[installments - 1] ?? CREDIT_FEES_PCT[0]) / 100) - 1e-9)
-export const creditFeeCents = (cents: number, installments = 1): number => creditTotalCents(cents, installments) - cents
+export const DEFAULT_CREDIT_FEES_PCT: readonly number[] = [4.2, 6.09, 7.01, 7.91, 8.8, 9.67, 12.59, 13.42, 14.25, 15.06, 15.87, 16.66]
+/** Taxas da loja, ou o padrão se vierem vazias ou inválidas. */
+export const creditFees = (fees?: readonly unknown[] | null): readonly number[] =>
+  Array.isArray(fees) && fees.length > 0 && fees.length <= 12 && fees.every((n) => Number.isFinite(Number(n)) && Number(n) >= 0 && Number(n) < 50)
+    ? fees.map(Number) : DEFAULT_CREDIT_FEES_PCT
+export const creditTotalCents = (cents: number, installments = 1, fees: readonly number[] = DEFAULT_CREDIT_FEES_PCT): number =>
+  Math.ceil(cents / (1 - (fees[installments - 1] ?? fees[0]) / 100) - 1e-9)
+export const creditFeeCents = (cents: number, installments = 1, fees: readonly number[] = DEFAULT_CREDIT_FEES_PCT): number =>
+  creditTotalCents(cents, installments, fees) - cents
 export const formatPct = (n: number): string => n.toFixed(2).replace('.', ',') + '%'
 
 const tlv = (id: string, value: string) => `${id}${String(value.length).padStart(2, '0')}${value}`

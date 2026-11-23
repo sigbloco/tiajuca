@@ -11,7 +11,7 @@ import { formatCurrency } from '@/core/format'
 import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { fromCents } from '../catalog'
 import { commonPickupIds } from '../cart'
-import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditTotalCents } from '../payments/pix'
+import { METHOD_LABELS, availableMethods, checkoutBlockers, creditFeeCents, creditFees, creditTotalCents, formatPct } from '../payments/pix'
 import { CouponBox } from './CouponBox'
 import { GoogleInvite } from './GoogleInvite'
 import { attemptId, invokeShop, rememberOrder, type CreatedOrder } from './api'
@@ -24,6 +24,7 @@ export function CheckoutPage() {
   const { session } = useAuth()
   const navigate = useNavigate()
   const methods = availableMethods(store.payment_methods)
+  const fees = creditFees(store.credit_fees_pct)
   const meta = session?.user.user_metadata as { full_name?: string } | undefined
   const [f, setF] = useState({
     name: meta?.full_name ?? '', phone: '', email: session?.user.email ?? '',
@@ -85,7 +86,7 @@ export function CheckoutPage() {
   })
 
   if (cart.lines.length === 0 && !finished.current) return <Navigate to={`${basePath}/carrinho`} replace />
-  const payCents = f.method === 'infinitepay' ? creditTotalCents(cart.totalCents) : cart.totalCents
+  const payCents = f.method === 'infinitepay' ? creditTotalCents(cart.totalCents, 1, fees) : cart.totalCents
   const dataOk = !!f.name.trim() && !!f.email.trim() && f.phone.replace(/\D/g, '').length >= 10
   const compactData = !!session && dataOk && !editing
   // O botão está sempre clicável: se faltar algo, rola até o campo e o pinta de vermelho.
@@ -126,7 +127,7 @@ export function CheckoutPage() {
         <CouponBox />
         {cart.discountCents - cart.couponCents > 0 && <div className="flex justify-between text-sm text-primary"><span>Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(cart.discountCents - cart.couponCents)}</span></div>}
         {cart.couponCents > 0 && coupon && <div className="flex justify-between text-sm text-primary"><span>Cupom {coupon.code}</span><span className="shrink-0 whitespace-nowrap">− {money(cart.couponCents)}</span></div>}
-        {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista (4,20%)</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents))}</span></div>}
+        {f.method === 'infinitepay' && <div className="flex justify-between text-sm"><span>Taxa do cartão à vista ({formatPct(fees[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(creditFeeCents(cart.totalCents, 1, fees))}</span></div>}
         <div className="flex justify-between text-lg font-extrabold"><span>Total{f.method === 'infinitepay' ? ' no cartão' : ''}</span><span className="shrink-0 whitespace-nowrap">{f.method === 'infinitepay' ? '≈ ' : ''}{money(payCents)}</span></div>
         {!isMember && <p className="text-xs text-muted-foreground">O valor final é confirmado pelo servidor ao concluir.</p>}
       </Card>
@@ -167,12 +168,12 @@ export function CheckoutPage() {
             {methods.map((m) => (
               <div key={m} className={cn('rounded-lg border', f.method === m ? 'border-primary bg-primary/10' : 'border-border bg-card')}>
                 <button type="button" role="radio" aria-checked={f.method === m} onClick={() => setF({ ...f, method: m })} className="min-h-11 w-full px-3 py-2 text-left">
-                  <span className="block font-semibold">{METHOD_LABELS[m].label} · <span className="whitespace-nowrap">{m === 'infinitepay' ? '≈ ' : ''}{money(m === 'infinitepay' ? creditTotalCents(cart.totalCents) : cart.totalCents)}</span></span>
+                  <span className="block font-semibold">{METHOD_LABELS[m].label} · <span className="whitespace-nowrap">{m === 'infinitepay' ? '≈ ' : ''}{money(m === 'infinitepay' ? creditTotalCents(cart.totalCents, 1, fees) : cart.totalCents)}</span></span>
                 </button>
               </div>
             ))}
           </div>
-          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento. No pagamento, o recebedor aparece como <strong>MARCELO STEIMBACK DOS SANTOS LIUZZI</strong>. É ele quem recebe pelo Cordão da Tia Juca, pode pagar tranquilo.</p>
+          <p className="rounded-lg bg-muted p-3 text-sm">O pagamento é <strong>antecipado e integral</strong>. Os itens ficam reservados por {store.reservation_hours} horas aguardando o pagamento.{store.pix?.beneficiary && <> No pagamento, o recebedor aparece como <strong>{store.pix.beneficiary}</strong>, que recebe pelo {store.org.name}: pode pagar tranquilo.</>}</p>
         </Card>
 
         <Card className="space-y-3 p-4">

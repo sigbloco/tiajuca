@@ -13,6 +13,8 @@ export interface StoreData {
   featured_title: string
   reservation_hours: number
   privacy_retention_years: number
+  /** Taxa da InfinitePay no crédito, em %, de 1x até Nx (use `creditFees()` para ter o padrão se faltar). */
+  credit_fees_pct?: number[] | null
   payment_methods: string[]
   pix: PixInfo | null
   contact: ContactInfo
@@ -92,7 +94,7 @@ export function StoreProvider({ store, basePath, children }: { store: StoreData;
     if (!code) return 'Digite o código do cupom.'
     const { data, error } = await supabase.rpc('shop_coupon_check', { p_slug: slug, p_code: code })
     if (error) return 'Não foi possível conferir o cupom agora.'
-    if (data === null || data === undefined) return 'Cupom inválido ou desativado.'
+    if (data === null || data === undefined) return 'Cupom inválido, vencido, esgotado ou desativado.'
     setCoupon({ code, pct: Number(data) })
     return null
   }, [slug, setCoupon])
