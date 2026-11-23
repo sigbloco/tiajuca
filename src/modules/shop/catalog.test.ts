@@ -88,7 +88,12 @@ describe('preço de quem compra', () => {
   })
   it('sem preço especial no produto, quem tem direito paga o de integrante; especial nunca passa do público', () => {
     expect(buyerPriceCents({ ...p, special_price_cents: null }, { isMember: true, isSpecial: true })).toBe(5400)
-    expect(buyerPriceCents({ ...p, special_price_cents: 9000 }, { isMember: true, isSpecial: true })).toBe(6000)
+    expect(buyerPriceCents({ ...p, special_price_cents: 9000 }, { isMember: true, isSpecial: true })).toBe(5400)
+  })
+  it('D2: especial maior que o de integrante não vale (paga o menor dos dois)', () => {
+    expect(buyerPriceCents({ ...p, special_price_cents: 5800 }, { isMember: true, isSpecial: true })).toBe(5400)
+    expect(buyerPriceCents({ ...p, special_price_cents: 5400 }, { isMember: true, isSpecial: true })).toBe(5400)
+    expect(buyerPriceCents({ ...p, special_price_cents: 5300 }, { isMember: true, isSpecial: true })).toBe(5300)
   })
   it('valida o preço especial no cadastro', () => {
     const d: ProductDraft = { name: 'x', kind: 'stock', priceCents: 6000, discountPct: 0, leadTimeDays: null, variants: [{ label: 'U', items: 1 }] }

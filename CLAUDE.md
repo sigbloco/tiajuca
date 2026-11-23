@@ -26,7 +26,7 @@ Comandos: `npm run typecheck`, `npm test`, `npx vite build`, `npm audit`. Não h
 - **Mensalidade, fonte única:** `billing_member_fee` (só o banco chama) decide a regra de uma pessoa num ciclo; usada pela geração e por "Minha participação". Tabelas `cycle_fee_assignments`, `fee_cycle_prices`, `cycle_scholarships`, `fee_cycle_exempt`, `cycle_extra_categories`. Quem tem vínculo remunerado no ciclo nunca é cobrado. Quem entra no ciclo atual herda categoria e bolsa do último ciclo.
 - **Categorias por naipe:** uma categoria por naipe com Tipo/Naipe (valores 150/50/50/35); o Tipo (`base_key`) é o que vale, não `system_key`.
 - **Cobrança InfinitePay:** link por cobrança; o webhook só dá baixa depois de consultar a InfinitePay e conferir o valor; cada transação paga vale uma vez (`infinitepay_transactions`); 400 enquanto a InfinitePay não diz "pago". Ajuste de cobrança tira o link e guarda o código antigo.
-- **Loja:** preço e total recalculados no servidor; pagamento por Pix ou InfinitePay (taxa do cartão configurável no painel, `credit_fees_pct`); cupom com validade e limite de usos; "avisei que paguei" não existe mais; pedidos encerrados são anonimizados após o prazo do aviso (tarefa diária); pedido de visitante só casa por e-mail confirmado.
+- **Loja:** preço e total recalculados no servidor; pagamento por Pix ou InfinitePay (taxa do cartão configurável no painel, `credit_fees_pct`); cupom com validade e limite de usos; preço especial (direção, professores, monitores) só vale quando é menor que o de integrante (quem tem direito paga o menor); "avisei que paguei" não existe mais; pedidos encerrados são anonimizados após o prazo do aviso (tarefa diária); pedido de visitante só casa por e-mail confirmado.
 - **LGPD:** auditoria mascara e-mail, telefone, Pix e nascimento (retenção 24 meses); backups manuais 12 meses; dados sensíveis de terceiros só por `get_member_sensitive`/`save_member_sensitive` (leitura registrada); aniversários do integrante comum: só ativos, nome de exibição, sem ano; inscrições antigas anonimizadas pela tarefa diária.
 - **Reativação:** Professor reativa inativo do próprio grupo; não inativa nem mexe fora dele.
 - **Backups:** só `backups.manage` (Direção/Titular); o restore ignora linhas de outra organização, não mexe em papéis nem em `user_id`.
@@ -46,7 +46,7 @@ Comandos: `npm run typecheck`, `npm test`, `npx vite build`, `npm audit`. Não h
 | Backups, auditoria, matriz de permissões | — | — | — | — | sim (`members.manage` e `backups.manage` são travadas: não se delegam) |
 | Conceder papéis | — | — | — | — | Titular concede Direção; titularidade só por transferência |
 
-Inativo: só o próprio cadastro e o pedido de reativação. Os escopos "Meu grupo" só existem onde o banco os usa. Tabela detalhada: seção 6 do [REVISAO.md](REVISAO.md).
+Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes de quem só vê o próprio cadastro: nomes dos ativos do ciclo atual (`member_directory_active`), sem ficha nem contato. Os escopos "Meu grupo" só existem onde o banco os usa. Tabela detalhada: seção 6 do [REVISAO.md](REVISAO.md).
 
 ## Convenções de código
 
@@ -54,6 +54,7 @@ Inativo: só o próprio cadastro e o pedido de reativação. Os escopos "Meu gru
 - Acesso a dados pelo cliente Supabase único; permissão por `usePermission`/`canOpenPath`, nunca por nome de papel. Link de campo livre só `http(s)` (`safeHttpUrl`).
 - Funções únicas: `whatsappUrl`, `formatCents`/`formatCurrency`, `textOn`. Não recrie cópias locais.
 - Arquivos têm CRLF; scripts de edição precisam normalizar. Não há Python (scripts em Node).
+- Nomes que confundem: "Categorias" na tela (rota `funcoes`) é a tabela `artistic_functions`; "categoria de contribuição" é `fee_categories` (o Tipo é `base_key`); "Release" no site é o botão do release de imprensa, e a liberação de páginas por papel é `pageRelease*` (`page_releases`). A página Distribuição é `DistributionPage`.
 - Edge Functions são publicadas isoladas; `infinitepay.ts` e `verify.ts` existem em mais de uma pasta e `supabase/functions/copias.test.ts` exige que fiquem iguais.
 - Migrations: o banco de produção é a fonte da verdade (ver [docs/BANCO.md](docs/BANCO.md)); mostre o SQL ao usuário antes de aplicar; depois renomeie o arquivo para a versão registrada.
 - Testes de banco por papel: bloco `DO` que termina em `raise exception` com o resultado (tudo desfeito), via `set local role authenticated` + `request.jwt.claims`; dados de teste sempre removidos.
@@ -82,4 +83,4 @@ Inativo: só o próprio cadastro e o pedido de reativação. Os escopos "Meu gru
 
 ## Pendências conhecidas
 
-Ver "Andamento" no [REVISAO.md](REVISAO.md): D13 (página Integrantes do integrante comum), D2/LOJA-11 (preço especial × preço de integrante), SEG-11 (`search_path` de duas funções, migration não aplicada) e a publicação do site e da função `album-preview`.
+Ver "Andamento" no [REVISAO.md](REVISAO.md) (etapa 7): publicação do site a partir da `main` e da função `album-preview`; valores fixos que exigem publicar Edge Function ou mexer em arquivo de build (cor dos e-mails da loja, cidade do Pix, `index.html`, manifest, `public/brand`, slug no `wrangler.jsonc`); `pg_net` no `public`; baseline do esquema (DRIFT-02/03); versão fixa do `supabase-js` nas Edge Functions.

@@ -8,7 +8,8 @@ import { supabase } from '@/core/supabase'
 import type { ThemeArea } from '@/core/themeModel'
 import { useQueryClient } from '@tanstack/react-query'
 
-const DEFAULT_PALETTE = ['#E93D2B', '#DEE33B', '#FFFFFF', '#FFF8E7', '#F1F1EE', '#1C1C14']
+/** Paleta sugerida a um bloco que ainda não tem a sua (neutra: as cores de cada bloco ficam em organizations.theme). */
+const DEFAULT_PALETTE = ['#3C3C3C', '#F1F1EE', '#FFFFFF', '#1C1C14']
 const same = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase()
 
 /** Salva em organizations.theme (com atraso) uma lista de cores: a paleta de fábrica (`area` ausente) ou as cores próprias de uma área. */
@@ -56,7 +57,7 @@ export function HexColorButton({ value, onChange, label, className }: { value: s
               onChange={(e) => { setText(e.target.value); const v = norm(e.target.value); if (v) onChange(v) }}
               className={`mt-1 block min-h-9 w-full rounded-lg border bg-background px-2 font-mono text-sm uppercase ${valid ? 'border-border' : 'border-destructive'}`} />
           </label>
-          {!valid && <p className="text-xs text-destructive">Use 6 dígitos, ex.: #E93D2B</p>}
+          {!valid && <p className="text-xs text-destructive">Use 6 dígitos, ex.: #3C3C3C</p>}
           <button type="button" onClick={() => setOpen(false)} className="min-h-8 w-full rounded-lg border border-border text-sm font-semibold">Fechar</button>
         </div>
       )}

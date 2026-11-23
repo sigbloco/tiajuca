@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/primitives'
 import { MyBilling } from '@/modules/billing/BillingPage'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
-import { useMyReleases } from '@/modules/access/releaseData'
+import { useMyReleases } from '@/modules/access/pageReleaseData'
 import { HUBS, NAV_ITEMS, type HubKey, type NavItem } from './navigation'
 
 /** Páginas do hub que a pessoa pode abrir (só o que o acesso dela permite). */

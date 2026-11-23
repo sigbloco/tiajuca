@@ -4,8 +4,8 @@ import { StickySave } from '@/components/shared/StickySave'
 import { UnsavedGuard } from '@/components/shared/UnsavedGuard'
 import { Button, Card, cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
-import { useCategoryAccess, usePageReleaseRows, useSetReleases } from './releaseData'
-import { RELEASE_CATEGORIES, RELEASE_PAGES, columnChanges, pageAccessible, rawReleased, releasePage, rowKey, type ReleaseCategory, type ReleaseChange } from './releases'
+import { useCategoryAccess, usePageReleaseRows, useSetReleases } from './pageReleaseData'
+import { RELEASE_CATEGORIES, RELEASE_PAGES, columnChanges, pageAccessible, rawReleased, releasePage, rowKey, type ReleaseCategory, type ReleaseChange } from './pageReleases'
 
 /**
  * Tabela de liberação das páginas: o mesmo dado das caixas do topo, de todas as páginas de uma vez.
@@ -13,7 +13,7 @@ import { RELEASE_CATEGORIES, RELEASE_PAGES, columnChanges, pageAccessible, rawRe
  * A liberação só restringe: a célula fica desmarcada e desabilitada quando a categoria não tem acesso à página em "Permissões dos papéis".
  * Desmarcar uma área apaga as subpáginas (herança); marcar a área não libera as subpáginas.
  */
-export function ReleasesTab() {
+export function PageReleasesTab() {
   const { realMembership } = useOrganization()
   const isTitular = !!realMembership?.roles.includes('titular')
   const rows = usePageReleaseRows()

@@ -19,9 +19,9 @@ import { HUBS, NAV_ITEMS, canOpenPath, crumbsFor, hubVisible, navItemVisible, ty
 import { InactiveNotice } from '@/modules/members/Reactivation'
 import { BulletTrail } from '@/components/shared/BulletTrail'
 import { ViewAsBar } from './ViewAsBar'
-import { ReleaseBar } from './ReleaseBar'
-import { useMyReleases } from '@/modules/access/releaseData'
-import { pageKeyForPath } from '@/modules/access/releases'
+import { PageReleaseBar } from './PageReleaseBar'
+import { useMyReleases } from '@/modules/access/pageReleaseData'
+import { pageKeyForPath } from '@/modules/access/pageReleases'
 import { Lock, ShieldOff } from 'lucide-react'
 import { useProfileGaps } from '@/modules/profile/profileGaps'
 
@@ -258,7 +258,7 @@ export function AppShell() {
             <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" aria-label="Sair" title="Sair" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /><span className="hidden md:inline">Sair</span></Button>
           </div>
           {/* Titular marca para quem a página aberta está liberada; a Direção só vê. */}
-          <ReleaseBar base={base} />
+          <PageReleaseBar base={base} />
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+var(--appbar-h,3rem))] z-30 -mx-4 -mt-3 mb-3 [&:not(:has(>:not(#edit-actions-slot:empty)))]:hidden border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+var(--appbar-h,3rem))] md:-mx-8 md:-mt-3 md:px-8 md:pt-3">

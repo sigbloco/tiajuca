@@ -130,7 +130,7 @@ Ver a seção 6 do `REVISAO.md` (papel × ação, com onde cada regra é imposta
 ### 3.2 Preço (decidido só no servidor, em `shop_create_order`)
 1. Preço base do banco (o navegador não manda preço).
 2. **Integrante ativo** → desconto do produto. "Ativo" = cadastro ligado à conta, não arquivado, não inativo no ciclo atual e (status ativo no ciclo atual **ou** papel titular/direção/professor/monitor). A conta vem do token verificado no servidor.
-3. **Preço especial** (titular, direção, professor ou monitor ativo): substitui o preço de integrante, mesmo quando este é menor (⚠ LOJA-11).
+3. **Preço especial** (titular, direção, professor ou monitor ativo): vale só quando é menor que o preço de integrante; quem tem direito paga o menor dos dois (D2, etapa 7).
 4. **Cupom:** não acumula; vale o menor preço entre o do comprador e o preço público com o desconto do cupom. Cupom inválido aborta o pedido. Cupom não tem validade nem limite de uso.
 5. Tudo é congelado no pedido; `total = subtotal - desconto`.
 - Desconto padrão nas configurações só pré-preenche produto novo.

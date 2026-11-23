@@ -1,23 +1,18 @@
-import { usePurge } from '@/core/purge'
 import { nameWithSurname } from './personLabel'
 import { ParticipationRequests } from './ParticipationRequests'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
 import { Filter, Heart, Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
-import { toast } from 'sonner'
 import { ProgressiveList } from '@/components/shared/LoadMore'
-import { TrashGroup } from '@/components/shared/TrashGroup'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useSelectedCycle } from '@/modules/cycles/SelectedCycle'
 import { Collapsible, TONES, type Tone } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesText, type FilterValue } from '@/components/shared/FilterBar'
-import { DateInput, PhoneInput } from '@/components/ui/masked-inputs'
-import { Badge, Button, Card, Input, Label, Select, Sheet, SheetContent, Skeleton, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, Input, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { adultBirthDateMax } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { Can, usePermission } from '@/core/permissions'
 import { MemberAvatar } from './MemberAvatar'
@@ -28,68 +23,11 @@ import { WhatsAppIcon } from './MemberSection'
 import { isPastCycle, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 import { MemberDetailSheet } from './MemberDetailSheet'
+import { MemberDirectory } from './MemberDirectory'
 import { ReactivationRequests } from './Reactivation'
-import { createMember, type MemberRow } from './service'
-
-/** Lixeira de integrantes (ícone ao lado do "+"): quem foi excluído fica aqui e pode ser restaurado. */
-function MembersTrash() {
-  const orgId = useOrgId()
-  const qc = useQueryClient()
-  const can = usePermission('members.manage')
-  const q = useQuery({
-    queryKey: ['members-archived', orgId],
-    enabled: can,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('members').select('id, full_name, display_name, email').eq('organization_id', orgId).not('archived_at', 'is', null).order('full_name').limit(500)
-      if (error) throw error
-      return (data ?? []) as { id: string; full_name: string; display_name: string | null; email: string | null }[]
-    },
-  })
-  const restore = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('members').update({ archived_at: null }).eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => { toast.success('Integrante restaurado.'); qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }) },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  const purge = usePurge('members')
-  if (!can) return null
-  return <TrashGroup onPurge={(id) => purge.mutate(id)} entries={(q.data ?? []).map((m) => ({ id: m.id, name: shortName(m.full_name, m.display_name), detail: m.email ?? undefined }))} onRestore={(id) => restore.mutate(id)} />
-}
-
-function NewMemberSheet({ onClose }: { onClose: () => void }) {
-  const orgId = useOrgId()
-  const qc = useQueryClient()
-  const [form, setForm] = useState({ full_name: '', display_name: '', email: '', phone: '', social: '', birth_date: '' })
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value })
-  const create = useMutation({
-    mutationFn: () => createMember(orgId, form),
-    onSuccess: () => {
-      toast.success('Integrante cadastrado.')
-      qc.invalidateQueries({ queryKey: ['members', orgId] })
-      onClose()
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-  return (
-    <SheetContent title="Novo integrante" description="Dados sensíveis são preenchidos depois, na ficha do integrante.">
-      <form onSubmit={(e) => { e.preventDefault(); create.mutate() }} className="space-y-3">
-        <div className="space-y-1.5"><Label htmlFor="full_name" required>Nome completo</Label><Input id="full_name" required value={form.full_name} onChange={set('full_name')} /></div>
-        <div className="space-y-1.5"><Label htmlFor="display_name">Como prefere ser chamado</Label><Input id="display_name" value={form.display_name} onChange={set('display_name')} /></div>
-        <div className="space-y-1.5"><Label htmlFor="email">E-mail</Label><Input id="email" type="email" value={form.email} onChange={set('email')} /></div>
-        <div className="space-y-1.5"><Label htmlFor="phone">Celular</Label><PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} /></div>
-        <div className="space-y-1.5"><Label htmlFor="social">Rede social</Label><Input id="social" placeholder="@usuario" value={form.social} onChange={set('social')} /></div>
-        <div className="space-y-1.5">
-          <Label htmlFor="birth_date">Data de nascimento</Label>
-          <DateInput id="birth_date" max={adultBirthDateMax()} maxMessage="Apenas maiores de 18 anos podem ser integrantes." value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} />
-          <p className="text-xs text-muted-foreground">Apenas maiores de 18 anos podem ser integrantes.</p>
-        </div>
-        <Button type="submit" className="w-full" disabled={create.isPending}>{create.isPending ? 'Salvando' : 'Cadastrar'}</Button>
-      </form>
-    </SheetContent>
-  )
-}
+import { type MemberRow } from './service'
+import { NewMemberSheet } from './NewMemberSheet'
+import { MembersTrash } from './MembersTrash'
 
 interface GroupMember extends MemberRow {
 }
@@ -103,18 +41,22 @@ interface TreeData { sectionList: { id: string; name: string; sort_order: number
 const plain = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 const sameName = (a: string, b: string) => plain(a) === plain(b)
 const TYPE_LABEL: Record<string, string> = { regente: 'Regente', professor: 'Professor', monitor: 'Monitor', senior: 'Sênior', musico: 'Músico', aluno: 'Aluno' }
-/** Visão do integrante (fora da direção): só ativos; filtros "Integrantes" (aluno, músico convidado, sênior), "Professores e Monitores" e "Regentes". */
-const MEMBER_VIEW_OPTIONS: [string, string][] = [['integrantes', 'Integrantes'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes']]
-const MEMBER_VIEW_GROUP = ['aluno', 'musico', 'senior']
 const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['musico', 'Músicos'], ['equipe', 'Professores e Monitores'], ['regente', 'Regentes'], ['senior', 'Sêniors']]
 
+/**
+ * Quem vê cadastros de outras pessoas (grupo ou todos: equipe e Direção) tem a lista completa, por naipe, com fichas e filtros;
+ * quem só vê o próprio cadastro (integrante comum) vê a lista de nomes dos ativos (D13). O que cada um enxerga vem do banco.
+ */
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
+  const seesOthers = usePermission('members.read', 'group')
+  if (!seesOthers && !lockedCategory) return <MemberDirectory title={title} />
+  return <MembersTree lockedCategory={lockedCategory} title={title} />
+}
+
+function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const wantedCategory = lockedCategory ?? ''
-  // Quem vê cadastros de outras pessoas (grupo ou todos: equipe e Direção) tem todos os filtros (situação e todos os tipos);
-  // o que cada um enxerga continua vindo do acesso.
-  const memberView = !usePermission('members.read', 'group')
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
   const [search, setSearch] = useState('')
@@ -283,14 +225,12 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     for (const m of members.data ?? []) {
       if (!inCycle(m.id, activeCycleId)) continue
       const st = statusOf(m.id)
-      if (memberView) { if (!st?.counts_as_active) continue }
-      else if (showActive !== showInactive) {
+      if (showActive !== showInactive) {
         if (showActive && !st?.counts_as_active) continue
         if (showInactive && (st?.counts_as_active || st?.is_waitlist)) continue
       }
       if (!lockedCategory && types.size > 0) {
         const mine = typesOf(m.id); if (mine.has('professor') || mine.has('monitor')) mine.add('equipe')
-        if (memberView && MEMBER_VIEW_GROUP.some((k) => mine.has(k))) mine.add('integrantes')
         if (![...types].some((t) => mine.has(t))) continue
       }
       if (wantedCategory && !allCategories(m.id).includes(wantedCategory)) continue
@@ -318,7 +258,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
-  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, memberView, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
+  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -355,7 +295,7 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
             <p className={cn('flex flex-wrap items-center gap-x-1.5 font-semibold', dim && 'font-medium')}>
               <span className="break-words">{rowName(m)}</span>
               {st && !st.counts_as_active && <Badge>{pastCycle && !st.is_waitlist ? 'Não participou' : st.name}</Badge>}
-              {!memberView && [...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
+              {[...typesOf(m.id)].map((t) => <Badge key={t} className="bg-muted">{typeBadge(t)}</Badge>)}
             </p>
             {m.display_name?.trim() && sameName(m.display_name, givenName(m.full_name, m.display_name)) === false && <p className="break-words text-muted-foreground">{m.display_name.trim()}</p>}
           </button>
@@ -422,14 +362,14 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
       </div>
       <ParticipationRequests />
 
-      {!memberView && <ButtonRow role="group" aria-label="Situação">
+      <ButtonRow role="group" aria-label="Situação">
         {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
           <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
         ))}
-      </ButtonRow>}
+      </ButtonRow>
       {!lockedCategory && (
         <ButtonRow role="group" aria-label="Tipo de integrante">
-          {(memberView ? MEMBER_VIEW_OPTIONS : TYPE_OPTIONS).map(([k, label0]) => { const label = memberView ? label0 : typeChip(k, label0); return (
+          {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
             <button key={k} type="button" aria-pressed={types.has(k)} className={chip(types.has(k))}
               onClick={() => setTypes((cur) => { const n = new Set(cur); if (n.has(k)) n.delete(k); else n.add(k); return n })}>{label}</button>
           ) })}

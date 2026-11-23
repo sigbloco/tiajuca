@@ -13,7 +13,7 @@ import { supabase } from '@/core/supabase'
 import { MemberPicker } from '@/modules/members/MemberPicker'
 import { PeopleTab } from './PeopleTab'
 import { PermissionsMatrix } from './PermissionsMatrix'
-import { ReleasesTab } from './ReleasesTab'
+import { PageReleasesTab } from './PageReleasesTab'
 
 function useIsTitular() {
   const { membership } = useOrganization()
@@ -76,7 +76,7 @@ export function AccessPage() {
             className={cn('rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === k && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{l}</FitWord></button>
         ))}
       </ButtonRow>
-      {tab === 'people' ? <PeopleTabContainer /> : tab === 'perms' ? <PermissionsMatrix /> : <ReleasesTab />}
+      {tab === 'people' ? <PeopleTabContainer /> : tab === 'perms' ? <PermissionsMatrix /> : <PageReleasesTab />}
     </div>
   )
 }
