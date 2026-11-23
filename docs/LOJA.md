@@ -12,12 +12,15 @@ Loja virtual pequena, com **retirada combinada** (sem entrega) e **pagamento ant
 - Dois métodos de pagamento, que o bloco liga/desliga no painel:
   - **Pix direto**: a tela mostra chave, valor exato e o código do pedido; o cliente envia o comprovante por WhatsApp/e-mail e a Direção marca como pago.
   - **InfinitePay** (cartão de crédito ou Pix na página deles): o pedido é confirmado sozinho quando a InfinitePay avisa; marcar à mão continua possível.
-- Cliente sem conta consulta o pedido em **Meus pedidos** com **código + telefone** (com limite de tentativas).
-- E-mail ao cliente a cada mudança de status.
+- Cliente sem conta consulta o pedido em **Meus pedidos** com **código + telefone** (com limite de tentativas). Com a tela aberta, o pedido
+  é acompanhado a cada 30 s por uma consulta leve de status (que não esgota o limite) e, se algo falhar, o que está na tela não some.
+- **Cupons** de desconto em %, com validade e limite de usos opcionais (Loja → Cupons). Não acumulam com o preço de integrante: vale o menor.
+- E-mail ao cliente a cada mudança de status (o "pedido recebido" vai no máximo 5 vezes por dia para o mesmo e-mail).
 
 ### Status
 
-Pedido: `aguardando pagamento → pagamento em conferência → pago`, ou `cancelado`.
+Pedido: `aguardando pagamento → pago`, ou `cancelado`. Não existe mais "pagamento em conferência": quem paga por Pix manda o comprovante
+(WhatsApp ou e-mail) e a loja marca como pago; pela InfinitePay a confirmação é automática.
 Depois de pago, cada grupo anda separado:
 
 | Grupo | Etapas |
@@ -31,18 +34,23 @@ Dá para voltar um passo (corrigir engano). Toda ação grava **quem fez e quand
 
 `estoque` = unidades físicas; `reservado` = vendido e ainda não retirado; **disponível = estoque − reservado**.
 Criar pedido reserva; cancelar/expirar devolve; **retirar** baixa o estoque físico. Pedido "aguardando pagamento" expira em 48 h
-(a cada 15 min o banco cancela os vencidos). **"Em conferência" não expira.**
+(a cada 15 min o banco cancela os vencidos). **Reativar** um pedido cancelado volta a "aguardando pagamento" com prazo novo e só refaz a
+reserva dos grupos que foram cancelados (o que já foi retirado continua retirado).
 
 ## Configurar (pelo painel — nada disso exige mexer em código)
 
-**Loja → Configurações**: texto de abertura da vitrine; prazo de reserva sem pagamento e tempo de guarda dos dados (aviso de privacidade);
-desconto padrão de integrante (já preenche produto novo); formas de pagamento, chave Pix e favorecido, InfiniteTag (com botão **Testar conexão**), endereço do site,
+**Loja → Configurações**: texto de abertura da vitrine; prazo de reserva sem pagamento e tempo de guarda dos dados (aviso de privacidade:
+depois desse prazo, a tarefa diária `daily_privacy_maintenance` apaga nome, telefone e e-mail dos pedidos pagos ou cancelados; itens e valores ficam);
+desconto padrão de integrante (já preenche produto novo); formas de pagamento, chave Pix e favorecido (o checkout diz ao cliente que o recebedor é esse nome), InfiniteTag (com botão **Testar conexão**),
+**taxa do cartão** por parcela (1x a 12x, mostrada no checkout e em Meus pedidos), endereço do site,
 WhatsApp/e-mail da loja, pessoas da Direção (botões de WhatsApp) e remetente dos e-mails.
 O **nome público da loja** fica em **Configurações → Site**; as **cores** (cabeçalho, fundo, cartões, botões e destaque) ficam em **Interface**, nas abas **Geral** (sistema todo, ponto de partida), **Site** e **Loja** (cada uma sobrepõe só o que tiver cor própria).
 **Pontos de retirada**: nome, endereço e **agenda** — dias fixos da semana (ex.: ensaios às segundas) e/ou datas únicas (eventos), com horário; datas que passam somem sozinhas
 e um ponto que só tem datas passadas deixa de aparecer no checkout. **Produtos**: preço público, desconto de integrante, variações e fotos. **Pedidos**: pagamento, andamento, cancelar/reativar, arquivar.
 
 Quem pode gerenciar: Titular e Direção. Para dar a outra pessoa, use **Acesso e papéis** e conceda `shop.manage` a um papel.
+Toda troca de chave Pix, favorecido, InfiniteTag ou formas de pagamento fica registrada (quando e por quem) e aparece no alto de
+**Pagamentos e contatos**, para quem gerencia a loja perceber uma mudança que não reconhece.
 
 ### Segredos das Edge Functions (Supabase → Edge Functions → Secrets)
 
@@ -80,13 +88,16 @@ Princípios:
 - **E-mail passa por uma camada central** (`shop-mailer`/`providers.ts`): trocar Gmail por Resend é configuração.
 - **Webhook da InfinitePay nunca é confiado.** A documentação não prevê assinatura, então o pagamento só vale depois de `payment_check` na própria InfinitePay e com o valor igual ao total.
 - Dados do cliente só aparecem para quem tem `shop.manage` (RLS) e, na consulta pública, só para quem sabe **código + telefone**.
+- **Limites por IP** (pedido, consulta, troca de pagamento, cupom) usam o cabeçalho `cf-connecting-ip`, que o Cloudflare preenche e o
+  cliente não consegue forjar (conferido em 23/11/2026). Os contadores ficam em `shop_lookup_attempts` (limpos a cada 15 min).
 
 ## Colocar no ar (ou recriar do zero)
 
 1. **Banco**: aplique `supabase/migrations/*.sql` em ordem (as da loja são `20261019000022` a `…36`) e depois `supabase/seed/tiajuca_shop.sql`
    (pontos de retirada de exemplo e configurações). Para um bloco novo, edite os dados do seed (Pix, contatos, Direção).
 2. **Edge Functions**: publique as cinco pastas de `supabase/functions/shop-*`. Todas com verificação de JWT ligada, **exceto**
-   `shop-infinitepay-webhook` e `shop-mailer` (que não recebem login). `shop-admin` e `shop-checkout` usam um arquivo `infinitepay.ts`
+   `shop-infinitepay-webhook` (a InfinitePay não manda login). O `shop-mailer` ainda confere por conta própria: só aceita a chave de serviço
+   (as outras funções) ou um usuário logado (tela de formulários). `shop-admin` e `shop-checkout` usam um arquivo `infinitepay.ts`
    próprio (cópia: ao mudar um, mude o outro).
 3. **Agendamentos** (já criados pelas migrations/seed): expiração de pedidos a cada 15 min (`pg_cron`) e, como rede de segurança dos e-mails,
    o comentário no fim do seed mostra como agendar o `shop-mailer` a cada minuto (troque `<ref>` pelo ID do projeto).
@@ -109,12 +120,14 @@ npm run typecheck
 npm run build
 ```
 
-As regras de acesso do banco têm um teste de fumaça em SQL: `supabase/tests/rls_shop_smoke.sql` (termina com um erro `RESULTADO: …` de propósito,
-para desfazer tudo).
+As regras de acesso do banco têm testes de fumaça em SQL: `supabase/tests/rls_shop_smoke.sql` e `rls_shop_etapa4_smoke.sql` (cupom com validade
+e limite, pedido duplicado, reativação, anonimização, produto oculto, troca de Pix registrada). Terminam com um erro `RESULTADO: …` de propósito,
+para desfazer tudo.
 
 ## Operação
 
-- **Pagamento chegou depois do cancelamento**: o pedido mostra um aviso vermelho; use **Reativar pedido** (se ainda houver estoque) ou reembolse por fora.
+- **Pagamento chegou depois do cancelamento**: o pedido mostra um aviso vermelho; use **Reativar pedido** (se ainda houver estoque) e depois
+  **Marcar como pago**, ou reembolse por fora.
 - **Reembolso** é feito fora do sistema; o pedido é só cancelado, com motivo.
 - **E-mail que não saiu**: no banco, `select template, to_email, status, attempts, last_error from shop_email_outbox where status <> 'sent' order by created_at desc;`
 - **Domínio novo**: atualize o **endereço do site** em Pagamentos e contatos (links dos e-mails e retorno da InfinitePay).
@@ -123,7 +136,7 @@ para desfazer tudo).
 ## Limites conhecidos
 
 - O formato da resposta da InfinitePay ao criar um link não é documentado; a leitura é tolerante e o botão **Testar conexão** confere de verdade.
-- Não há reembolso automático, cupom nem frete.
+- Não há reembolso automático nem frete.
 - Preço de integrante vale para **todo integrante ativo com login vinculado**: alunos e demais integrantes com registro ativo no ciclo atual,
   mais titular, direção, professores e monitores ativos. Inativos, lista de espera e contas sem vínculo pagam o preço público.
   Para valer, a pessoa precisa **entrar com a conta do app** (o login em popup da loja) e a conta precisa estar vinculada ao cadastro dela.
