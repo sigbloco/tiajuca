@@ -13,7 +13,7 @@ begin
   perform public.seed_org_defaults(org_a); perform public.seed_org_defaults(org_b);
   -- organizações criadas depois da migration recebem as permissões pelo mesmo caminho da migration
   insert into public.role_permissions (access_role_id, permission_key, scope)
-    select id, 'suppliers.read', 'org' from public.access_roles where organization_id in (org_a, org_b) and key in ('direcao', 'professor', 'monitor') on conflict do nothing;
+    select id, 'suppliers.read', 'org' from public.access_roles where organization_id in (org_a, org_b) and key in ('direcao', 'professor') on conflict do nothing;
   insert into public.role_permissions (access_role_id, permission_key, scope)
     select id, 'suppliers.manage', 'org' from public.access_roles where organization_id in (org_a, org_b) and key = 'direcao' on conflict do nothing;
 
@@ -28,9 +28,9 @@ begin
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_a, m_prof, id from public.access_roles where organization_id=org_a and key='professor';
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
-    select org_a, m_mon, id from public.access_roles where organization_id=org_a and key='monitor';
+    select org_a, m_mon, id from public.access_roles where organization_id=org_a and key='professor'; -- papel único Professor/Monitor
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
-    select org_a, m_int, id from public.access_roles where organization_id=org_a and key='integrante';
+    select org_a, m_int, id from public.access_roles where organization_id=org_a and key='integrante' on conflict do nothing; -- o papel Integrante já vem automático
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_b, m_dirb, id from public.access_roles where organization_id=org_b and key='direcao';
 
@@ -46,7 +46,7 @@ begin
   update public.suppliers set is_active = false where id = sup;
   update public.suppliers set is_active = true where id = sup;
 
-  -- ── Professor e Monitor leem, mas não escrevem ──
+  -- ── Professor/Monitor (as duas pessoas) leem, mas não escrevem ──
   perform set_config('request.jwt.claims', json_build_object('sub', u_prof, 'role','authenticated')::text, true);
   select count(*) into n from public.suppliers; if n <> 1 then raise exception 'FALHOU: professor deveria ver o fornecedor (viu %)', n; end if;
   begin insert into public.suppliers (organization_id, category_id, name) values (org_a, cat, 'Y');

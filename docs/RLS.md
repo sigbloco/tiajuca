@@ -41,7 +41,7 @@ Migration: `supabase/migrations/20261015000003_rls_policies.sql`. Helpers em `�
 | section_cycle_capacity | quem tem `capacity.read` | `capacity.manage` |
 | staff_section_assignments | próprio · `staff_assignments.manage` | `staff_assignments.manage` |
 
-`is_in_my_group(org, member)` agora é real: o integrante tem vínculo artístico vigente em naipe atribuído ao usuário (professor/monitor) em `staff_section_assignments`.
+`is_in_my_group(org, member)` agora é real: o integrante tem vínculo artístico vigente em instrumento ou naipe atribuído ao usuário como professor ou monitor no ciclo atual (`staff_assignments`; a atribuição de regente não conta, desde a migration `20261123160407`). Professor e Monitor são um papel de acesso só, "Professor/Monitor" (chave `professor`). `can_record_attendance_for`: quem tem atribuição de professor ou monitor no ciclo atual registra presença de qualquer integrante.
 Ocupação de naipe = integrantes com status que `counts_as_active` no ciclo e vínculo vigente com o naipe (`section_occupied`).
 Testes: `supabase/tests/rls_phase2_smoke.sql`.
 
@@ -63,11 +63,11 @@ Naipe (Percussão/Sopro/Performance) → Instrumento. Vagas (`instrument_cycle_c
 | holidays | membro da org | `settings.manage` |
 | monthly_charges | próprio · `billing.read` (Direção) | **só RPCs** `generate_monthly_charges` (idempotente, UQ membro+competência), `adjust_charge`, `mark_charge_paid`, `change_charge_status` |
 | charge_adjustments | `billing.manage` | só RPC `adjust_charge` |
-Professor e Monitor **não** veem financeiro de ninguém (nem o próprio de equipe por esta tela). Dados sensíveis (LGPD) nunca entram em consultas financeiras.
+Professor/Monitor **não** vê financeiro de ninguém (nem o próprio de equipe por esta tela). Dados sensíveis (LGPD) nunca entram em consultas financeiras.
 Testes: `supabase/tests/rls_phase4_smoke.sql`.
 
 ## Fase 5 — financeiro (migration `…000009`)
-Tudo financeiro é restrito à Direção (`finance.read/manage`, `staff_payments.manage`): `finance_categories`, `financial_entries`, `distribution_*`, razão `v_finance_ledger`. Escrita por RPC (`post_financial_entry`, `cancel_financial_entry` com motivo, `create_staff_payment`, `mark_staff_payment_paid` com snapshot da chave PIX, `set_pix_key`). `staff_payments` e `member_pix_keys`: o titular lê os próprios; PIX só para quem tem `pix.manage` (professor/monitor). Soma de percentuais por base ≤ 100% garantida por trigger. Testes: `rls_phase5_smoke.sql`.
+Tudo financeiro é restrito à Direção (`finance.read/manage`, `staff_payments.manage`): `finance_categories`, `financial_entries`, `distribution_*`, razão `v_finance_ledger`. Escrita por RPC (`post_financial_entry`, `cancel_financial_entry` com motivo, `create_staff_payment`, `mark_staff_payment_paid` com snapshot da chave PIX, `set_pix_key`). `staff_payments` e `member_pix_keys`: o titular lê os próprios; PIX só para quem tem `pix.manage` (Professor/Monitor). Soma de percentuais por base ≤ 100% garantida por trigger. Testes: `rls_phase5_smoke.sql`.
 
 ## Fase 6 — repertório (migration `…000010`)
 `repertoires`, `songs`, `song_attachments`: leitura para quem tem `repertoire.read` (todos os papéis; inativos só para quem gerencia), escrita `repertoire.manage` (Direção; configurável por papel). Arquivos no bucket **privado** `org-files`, pasta `{organization_id}/…`: leitura por membro da organização, escrita por `repertoire.manage`; abertura por URL assinada (1 h). CHECK impede `storage_path` fora da pasta da organização e URL que não seja http(s). Limitação: qualquer membro da organização lê qualquer arquivo da pasta (sem filtro por instrumento no Storage). Testes: `rls_phase6_smoke.sql`.

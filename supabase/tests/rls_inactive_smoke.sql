@@ -25,16 +25,17 @@ begin
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_a, m_prof, id from public.access_roles where organization_id = org_a and key = 'professor';
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
-    select org_a, m_mon, id from public.access_roles where organization_id = org_a and key = 'monitor';
+    select org_a, m_mon, id from public.access_roles where organization_id = org_a and key = 'professor'; -- papel único Professor/Monitor
   select id into ct from public.cycle_types where organization_id = org_a and key = 'carnaval';
   select id into st_act from public.member_cycle_statuses where organization_id = org_a and key = 'active';
   select id into st_ina from public.member_cycle_statuses where organization_id = org_a and key = 'inactive';
   insert into public.sections (organization_id, name) values (org_a, 'Sopro') returning id into sec;
   insert into public.instruments (organization_id, section_id, name) values (org_a, sec, 'Trompete') returning id into inst;
   insert into public.member_artistic_links (organization_id, member_id, instrument_id) values (org_a, m_stu, inst), (org_a, m_mon, inst);
-  insert into public.staff_assignments (organization_id, member_id, staff_kind, instrument_id) values (org_a, m_prof, 'professor', inst);
   insert into public.cycles (organization_id, cycle_type_id, name, starts_on, ends_on, status, is_current)
     values (org_a, ct, 'Ciclo', '2026-06-01', '2027-02-28', 'open', true) returning id into cyc;
+  -- a atribuição vem depois do ciclo (sem ciclo informado, o gatilho usa o ciclo atual; o grupo só vale no ciclo atual)
+  insert into public.staff_assignments (organization_id, member_id, staff_kind, instrument_id) values (org_a, m_prof, 'professor', inst);
   insert into public.member_cycles (organization_id, member_id, cycle_id, status_id) values (org_a, m_mon, cyc, st_act);
   insert into public.member_cycles (organization_id, member_id, cycle_id, status_id) values (org_a, m_dirina, cyc, st_ina);
   insert into public.member_cycles (organization_id, member_id, cycle_id, status_id) values (org_a, m_prof, cyc, st_act);
@@ -83,14 +84,16 @@ begin
   if (public.get_my_memberships() -> 0 ->> 'inactive')::boolean is true then raise exception 'FALHOU: sem registro no ciclo não é inativo'; end if;
   reset role;
 
-  -- Monitor (mesmo ativo) NÃO reativa ninguém
+  -- Monitor do grupo (papel único Professor/Monitor) também reativa inativo do próprio grupo
   update public.member_cycles set status_id = st_act where member_id = m_mon and cycle_id = cyc;
   insert into public.staff_assignments (organization_id, member_id, staff_kind, instrument_id) values (org_a, m_mon, 'monitor', inst);
   perform set_config('request.jwt.claims', json_build_object('sub', u_mon, 'role','authenticated')::text, true);
   set local role authenticated;
-  begin perform public.set_member_cycle_status(m_stu, cyc, 'active'); raise exception 'FALHOU: monitor reativou um inativo' using errcode = 'XX999';
-  exception when sqlstate 'P0001' then null; end;
+  perform public.set_member_cycle_status(m_stu, cyc, 'active');
+  if (select s.counts_as_active from public.member_cycles mc join public.member_cycle_statuses s on s.id = mc.status_id where mc.member_id = m_stu and mc.cycle_id = cyc) is not true then
+    raise exception 'FALHOU: monitor do grupo deveria reativar o aluno'; end if;
   reset role;
+  update public.member_cycles set status_id = st_ina where member_id = m_stu and cycle_id = cyc;
 
   -- Professor do grupo reativa; a decisão do pedido aprova e reativa
   update public.member_cycles set status_id = st_ina where member_id = m_mon and cycle_id = cyc;

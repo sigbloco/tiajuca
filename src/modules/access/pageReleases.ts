@@ -8,8 +8,7 @@ import { HUBS, HUB_ORDER, NAV_ITEMS, hubVisible, type HubKey } from '@/app/navig
 
 export const RELEASE_CATEGORIES = [
   { key: 'direcao', label: 'Direção', short: 'Dir.' },
-  { key: 'professor', label: 'Professor', short: 'Prof.' },
-  { key: 'monitor', label: 'Monitor', short: 'Mon.' },
+  { key: 'professor', label: 'Professor/Monitor', short: 'Prof./Mon.' },
   { key: 'ativo', label: 'Integrante ativo', short: 'Ativo' },
   { key: 'inativo', label: 'Integrante inativo', short: 'Inativo' },
 ] as const
@@ -17,7 +16,7 @@ export type ReleaseCategory = (typeof RELEASE_CATEGORIES)[number]['key']
 
 /** Papéis simulados de cada categoria (os mesmos do "Visualizar como"). Inativo só tem o acesso "próprio". */
 export const CATEGORY_ROLES: Record<ReleaseCategory, string[]> = {
-  direcao: ['direcao', 'integrante'], professor: ['professor', 'integrante'], monitor: ['monitor', 'integrante'], ativo: ['integrante'], inativo: ['integrante'],
+  direcao: ['direcao', 'integrante'], professor: ['professor', 'integrante'], ativo: ['integrante'], inativo: ['integrante'],
 }
 
 export interface ReleasePage {
@@ -65,15 +64,12 @@ export function pageKeyForPath(rest: string): string | null {
   return BY_KEY.has(first) ? first : null
 }
 
-/** Categorias de uma pessoa, ou 'all' para o Titular. Direção vale por si; Professor e Monitor somam; o resto é ativo ou inativo. */
+/** Categorias de uma pessoa, ou 'all' para o Titular. Direção vale por si; depois Professor/Monitor (papel único, chave 'professor'); o resto é ativo ou inativo. */
 export function categoriesOf(m: { roles: string[]; inactive?: boolean }): ReleaseCategory[] | 'all' {
   if (m.roles.includes('titular')) return 'all'
   if (m.inactive) return ['inativo']
   if (m.roles.includes('direcao')) return ['direcao']
-  const staff: ReleaseCategory[] = []
-  if (m.roles.includes('professor')) staff.push('professor')
-  if (m.roles.includes('monitor')) staff.push('monitor')
-  return staff.length ? staff : ['ativo']
+  return m.roles.includes('professor') ? ['professor'] : ['ativo']
 }
 
 /** Linhas gravadas: `${página}|${categoria}` → liberada. */

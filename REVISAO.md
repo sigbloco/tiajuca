@@ -182,6 +182,7 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 - **Publicado:** `shop-mailer` (v12). As outras 9 só mudaram o import e foram publicadas depois, em 23/11/2026, por `deploy_edge_function` com o código da `main` e o mesmo `verify_jwt` de antes: `album-preview` (v4, a SITE-05 também vale agora), `billing-pay-link` (v2), `billing-infinitepay-webhook` (v5), `shop-infinitepay-webhook` (v7), `drive-search` (v3), `drive-sync` (v5), `shop-admin` (v5), `shop-order-public` (v12), `shop-checkout` (v14). Conferido: os dois webhooks respondem 200 a pedido/cobrança inexistente; as demais exigem login e não foram chamadas (sem teste de uso real).
 - **Testado:** `tsc`, `vitest` (29 arquivos, 217 testes, 4 novos: cor, fundo, botão e QR do e-mail igual ao do site), `vite build`; banco: `shop_get_public_store` devolve `city`, `shop_mail_claim` (em transação desfeita, sem consumir o e-mail pendente) devolve tema `#E2301D` e cidade. **Não testado:** envio real de e-mail e o campo novo no painel logado; vale conferir no uso real.
 - **Não feito (da instância, trocados por bloco):** `index.html`, `manifest.webmanifest`, `public/brand/tiajuca.*`, slug no `.env.production`/`wrangler.jsonc`; também baseline do esquema (DRIFT-02/03: feito depois, ver abaixo). Em 23/11/2026 o `pg_net` saiu do `public` (migration `20261123151053_pg_net_para_extensions`: extensão recriada em `extensions`; nada a usava; o aviso sumiu dos advisors).
+- **Papel único Professor/Monitor (23/11/2026, migration `20261123160407_unifica_professor_monitor`):** os 9 que tinham o papel Monitor passaram para a chave `professor` (nome "Professor/Monitor"; 12 pessoas, ninguém perdido nem duplicado), liberações de páginas juntas (as 7 iguais), papel `monitor` e a coluna `monitor` de `page_releases` removidos. Só o papel de acesso mudou: `staff_kind` professor/monitor/regente, organograma, naipes, categorias e pagamento da equipe ficam iguais. `is_in_my_group` e `_viewer_section` só contam atribuições de professor e monitor (regente é simbólico); `can_record_attendance_for` deixa quem tem atribuição de professor ou monitor no ciclo atual registrar presença de qualquer integrante; o papel único reativa inativo do próprio grupo. Testes de banco: `rls_professor_monitor_smoke.sql` (novo) e os afetados (`rls_default_role`, `rls_drive_folders`, `rls_inactive`, `rls_phase3`, `rls_phase10`, `rls_phase11`, `rls_suppliers`), todos com TESTES_OK_ROLLBACK; de passagem, corrigidos pontos já desatualizados nesses testes (papel Integrante automático, `repertoire.manage` sem "Meu grupo", atribuição criada antes do ciclo, pastas do Drive que a equipe sempre vê).
 - **Pós-etapa 8 (23/11/2026):** Edge Functions publicadas, site publicado (`wrangler deploy`), `pg_net` movido para `extensions` e **baseline do esquema** feito em `supabase/baseline/schema.sql` (108 tabelas, 261 funções, 143 gatilhos, 290 políticas, 5 views, 5 buckets, 2 agendamentos; contagens iguais às do banco; sem dados; sem segredo). Testado só reproduzindo num Postgres vazio em memória (PGlite, com `auth`/`storage`/papéis simulados): todas as seções rodam; não foi testado num Supabase real, e `pg_trgm`/`pg_cron`/`pg_net` ficaram de fora do teste. As migrations antigas não foram mexidas nem renomeadas.
 
 ---
@@ -226,43 +227,43 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
 
 ## 6. Matriz de permissões (como está hoje)
 
-Legenda: **DB** = imposto por RLS/RPC no banco; **F** = só o front esconde. Escopo: própria pessoa / grupo (instrumento ou naipe do professor/monitor no ciclo atual) / todos.
+Legenda: **DB** = imposto por RLS/RPC no banco; **F** = só o front esconde. Escopo: própria pessoa / grupo (instrumentos ou naipes das atribuições de professor ou monitor no ciclo atual; regente não conta) / todos. Professor e Monitor são um papel de acesso só, "Professor/Monitor" (chave `professor`), desde 23/11/2026.
 
-| Ação | Integrante | Inativo | Colaborador | Monitor | Professor | Direção | Titular | Onde |
-|---|---|---|---|---|---|---|---|---|
-| Ver cadastro completo (e-mail, telefone, nascimento) | próprio | próprio | próprio | grupo | grupo | todos | todos | DB |
-| Ver nome de exibição de todos (diretório) | sim | sim | sim | sim | sim | sim | sim | DB (view definer, conforme configuração) |
-| Aniversários | ativos, nome de exibição, sem ano | idem | idem | todos, nome completo e ano | idem | idem | idem | DB (`birthday_list`, etapa 2) |
-| Editar próprio perfil | sim | sim | sim | sim | sim | qualquer | qualquer | DB (`update_my_profile`) |
-| Criar/editar/arquivar integrantes (todas as colunas, inclusive `user_id`) | — | — | — | — | — | sim | sim | DB (SEG-02) |
-| Dados sensíveis (gênero, raça, PCD): ver/editar | próprio | próprio | próprio | próprio | próprio | todos (só por RPC, leitura registrada) | todos | DB |
-| Chave Pix: ver | própria | própria | própria | própria | própria | todas | todas | DB |
-| Chave Pix: cadastrar | — | — | — | própria | própria | qualquer | qualquer | DB |
-| Status no ciclo / reativar | — | pede | — | — | reativa do grupo | sim | sim | DB |
-| Presença: ver | própria | própria | própria | grupo | grupo | toda | toda | DB |
-| Presença: registrar | — | — | — | grupo | qualquer integrante | toda | toda | DB |
-| Relatórios de presença | — | — | — | grupo | grupo | todos | todos | DB |
-| Cobranças: ver | próprias | próprias | próprias | próprias | próprias | todas | todas | DB |
-| Cobranças: gerar, baixar, ajustar, cancelar, link | — | — | — | — | — | sim | sim | DB |
-| Categoria e bolsa | ver própria | ver própria | ver própria | ver própria | ver própria | editar | editar | DB |
-| Financeiro (receitas, despesas, distribuição) | — | — | — | — | — | sim | sim | DB |
-| Pagamentos da equipe: ver | próprios | próprios | próprios | próprios | próprios | todos | todos | DB |
-| Eventos: ver | visíveis a integrantes | — | visíveis a integrantes | + só equipe | + só equipe | todos | todos | DB |
-| Eventos: criar/editar | — | — | — | — | — | sim | sim | DB |
-| Checklist: marcar tarefa | se responsável | — | se responsável | se responsável | se responsável | sim | sim | DB |
-| Formulários: editar/aprovar | — | — | — | — | — | sim | sim | DB + F (configurações por nome de papel) |
-| Repertório: ver / arquivos | sim / sim | — / — | sim / sim | sim / sim | sim / sim | sim | sim | DB |
-| Repertório: editar | — | — | — | — | — | sim | sim | DB |
-| Estrutura, ciclos, vagas, fornecedores: editar | — | — | — | — | — | sim | sim | DB |
-| Vagas, fornecedores: ver | — | — | — | sim | sim | sim | sim | DB |
-| Drive: pastas | liberadas | — | liberadas | todas | todas | gerenciar | gerenciar | DB |
-| Loja (admin), site, interface/tema | — | — | — | — | — | sim | sim | DB |
-| Backups (criar, baixar, carregar, restaurar) | — | — | — | — | — | sim | sim | DB (SEG-03) |
-| Auditoria | — | — | — | — | — | sim | sim | DB |
-| Conceder/revogar papéis | — | — | — | — | — | sim (Direção só se não houver titular; **bypass**, SEG-01) | sim | DB |
-| Matriz de permissões | — | — | — | — | — | sim (exceto travadas) | sim | DB |
-| Liberação de páginas | ler | ler | ler | ler | ler | ler | gravar | DB (o efeito é só F) |
-| "Ver como" | — | — | — | — | — | sim | sim | só F |
+| Ação | Integrante | Inativo | Colaborador | Professor/Monitor | Direção | Titular | Onde |
+|---|---|---|---|---|---|---|---|
+| Ver cadastro completo (e-mail, telefone, nascimento) | próprio | próprio | próprio | grupo | todos | todos | DB |
+| Ver nome de exibição de todos (diretório) | sim | sim | sim | sim | sim | sim | DB (view definer, conforme configuração) |
+| Aniversários | ativos, nome de exibição, sem ano | idem | idem | todos, nome completo e ano | idem | idem | DB (`birthday_list`, etapa 2) |
+| Editar próprio perfil | sim | sim | sim | sim | qualquer | qualquer | DB (`update_my_profile`) |
+| Criar/editar/arquivar integrantes (todas as colunas, inclusive `user_id`) | — | — | — | — | sim | sim | DB (SEG-02) |
+| Dados sensíveis (gênero, raça, PCD): ver/editar | próprio | próprio | próprio | próprio | todos (só por RPC, leitura registrada) | todos | DB |
+| Chave Pix: ver | própria | própria | própria | própria | todas | todas | DB |
+| Chave Pix: cadastrar | — | — | — | própria | qualquer | qualquer | DB |
+| Status no ciclo / reativar | — | pede | — | reativa do grupo | sim | sim | DB |
+| Presença: ver | própria | própria | própria | grupo | toda | toda | DB |
+| Presença: registrar | — | — | — | qualquer integrante (com atribuição de professor ou monitor no ciclo atual) | toda | toda | DB |
+| Relatórios de presença | — | — | — | grupo | todos | todos | DB |
+| Cobranças: ver | próprias | próprias | próprias | próprias | todas | todas | DB |
+| Cobranças: gerar, baixar, ajustar, cancelar, link | — | — | — | — | sim | sim | DB |
+| Categoria e bolsa | ver própria | ver própria | ver própria | ver própria | editar | editar | DB |
+| Financeiro (receitas, despesas, distribuição) | — | — | — | — | sim | sim | DB |
+| Pagamentos da equipe: ver | próprios | próprios | próprios | próprios | todos | todos | DB |
+| Eventos: ver | visíveis a integrantes | — | visíveis a integrantes | + só equipe | todos | todos | DB |
+| Eventos: criar/editar | — | — | — | — | sim | sim | DB |
+| Checklist: marcar tarefa | se responsável | — | se responsável | se responsável | sim | sim | DB |
+| Formulários: editar/aprovar | — | — | — | — | sim | sim | DB + F (configurações por nome de papel) |
+| Repertório: ver / arquivos | sim / sim | — / — | sim / sim | sim / sim | sim | sim | DB |
+| Repertório: editar | — | — | — | — | sim | sim | DB |
+| Estrutura, ciclos, vagas, fornecedores: editar | — | — | — | — | sim | sim | DB |
+| Vagas, fornecedores: ver | — | — | — | sim | sim | sim | DB |
+| Drive: pastas | liberadas | — | liberadas | todas | gerenciar | gerenciar | DB |
+| Loja (admin), site, interface/tema | — | — | — | — | sim | sim | DB |
+| Backups (criar, baixar, carregar, restaurar) | — | — | — | — | sim | sim | DB (SEG-03) |
+| Auditoria | — | — | — | — | sim | sim | DB |
+| Conceder/revogar papéis | — | — | — | — | sim (Direção só se não houver titular; **bypass**, SEG-01) | sim | DB |
+| Matriz de permissões | — | — | — | — | sim (exceto travadas) | sim | DB |
+| Liberação de páginas | ler | ler | ler | ler | ler | gravar | DB (o efeito é só F) |
+| "Ver como" | — | — | — | — | sim | sim | só F |
 
 ---
 

@@ -11,7 +11,7 @@ import { CHARGE_STATUS_CLASS, CHARGE_STATUS_LABEL, listAllCharges, type Charge }
 import { usePersonLabeler } from '@/modules/members/personLabel'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
 
-const STAFF_ROLES = ['titular', 'direcao', 'professor', 'monitor']
+const STAFF_ROLES = ['titular', 'direcao', 'professor'] // 'professor' = papel único Professor/Monitor
 
 /**
  * Receitas de mensalidades agrupadas: naipe → pessoas, cada uma com a etiqueta da categoria (aluno, sênior, músico, pernalta).

@@ -26,7 +26,7 @@ begin
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_a, m_prof, id from public.access_roles where organization_id = org_a and key = 'professor';
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
-    select org_a, m_mon, id from public.access_roles where organization_id = org_a and key = 'monitor';
+    select org_a, m_mon, id from public.access_roles where organization_id = org_a and key = 'professor'; -- papel único Professor/Monitor
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_b, m_dirb, id from public.access_roles where organization_id = org_b and key = 'direcao';
   select id into role_prof from public.access_roles where organization_id = org_a and key = 'professor';
@@ -53,9 +53,9 @@ begin
   select count(*) into n from public.drive_folders; if n <> 4 then raise exception 'FALHOU: Direção deveria ver as 4 pastas (viu %)', n; end if;
   delete from public.drive_folder_access where folder_id = f_none;
 
-  -- ── Professor: só a pasta do papel ──
+  -- ── Professor/Monitor: sempre vê todas as pastas ativas ──
   perform set_config('request.jwt.claims', json_build_object('sub', u_prof, 'role','authenticated')::text, true);
-  select count(*) into n from public.drive_folders; if n <> 1 then raise exception 'FALHOU: professor deveria ver 1 pasta (viu %)', n; end if;
+  select count(*) into n from public.drive_folders; if n <> 4 then raise exception 'FALHOU: Professor/Monitor deveria ver as 4 pastas (viu %)', n; end if;
   begin insert into public.drive_folders (organization_id, name, url) values (org_a, 'X', 'https://drive.google.com/x');
     raise exception 'FALHOU: professor criou pasta' using errcode = 'XX999'; exception when insufficient_privilege then null; end;
   select count(*) into n from public.drive_folder_access; if n <> 0 then raise exception 'FALHOU: professor leu regras (%)', n; end if;
@@ -64,9 +64,9 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u_int, 'role','authenticated')::text, true);
   select count(*) into n from public.drive_folders; if n <> 2 then raise exception 'FALHOU: integrante de trompete deveria ver 2 pastas (viu %)', n; end if;
 
-  -- ── Monitor (Tuba): só a do naipe ──
+  -- ── Monitor (Tuba), com o papel único Professor/Monitor: todas as ativas, como o professor ──
   perform set_config('request.jwt.claims', json_build_object('sub', u_mon, 'role','authenticated')::text, true);
-  select count(*) into n from public.drive_folders; if n <> 1 then raise exception 'FALHOU: monitor de tuba deveria ver 1 pasta (viu %)', n; end if;
+  select count(*) into n from public.drive_folders; if n <> 4 then raise exception 'FALHOU: monitor (Professor/Monitor) deveria ver as 4 pastas (viu %)', n; end if;
 
   -- ── Outra organização: nada ──
   perform set_config('request.jwt.claims', json_build_object('sub', u_dirb, 'role','authenticated')::text, true);
@@ -76,7 +76,8 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u_dir, 'role','authenticated')::text, true);
   update public.drive_folders set is_active = false where id = f_role;
   perform set_config('request.jwt.claims', json_build_object('sub', u_prof, 'role','authenticated')::text, true);
-  select count(*) into n from public.drive_folders; if n <> 0 then raise exception 'FALHOU: pasta desativada ainda visível ao professor (%)', n; end if;
+  select count(*) into n from public.drive_folders where id = f_role; if n <> 0 then raise exception 'FALHOU: pasta desativada ainda visível ao professor (%)', n; end if;
+  select count(*) into n from public.drive_folders; if n <> 3 then raise exception 'FALHOU: professor deveria continuar vendo as 3 ativas (viu %)', n; end if;
 
   reset role;
   raise exception 'TESTES_OK_ROLLBACK';

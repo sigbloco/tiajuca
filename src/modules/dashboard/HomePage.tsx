@@ -19,7 +19,7 @@ import { MergedEventCard } from '@/modules/events/MergedEventCard'
 import { groupSimultaneous } from '@/modules/events/grouping'
 import { audienceSectionIds, getAudiencesFor, listActivities, type Activity } from '@/modules/events/service'
 
-const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor', monitor: 'Monitor', integrante: 'Integrante' }
+const ROLE_LABEL: Record<string, string> = { titular: 'Titular do bloco', direcao: 'Direção', professor: 'Professor/Monitor', integrante: 'Integrante' }
 
 function Stat({ label, labelShort, value, hint, tone, compact, size, onSize }: { /** Fonte única do valor, escolhida pela linha de caixas (a menor que cabe em todas). */ size?: number; onSize?: (n: number) => void; label: string; /** Forma curta do título, usada só se o completo não couber (compact). */ labelShort?: string; value: string | number; hint?: string; tone?: string; /** Caixas lado a lado numa linha só: fontes menores que se ajustam à largura. */ compact?: boolean }) {
   if (compact) {

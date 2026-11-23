@@ -26,7 +26,7 @@ begin
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_a, m_prof, id from public.access_roles where organization_id=org_a and key='professor';
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
-    select org_a, m_st1, id from public.access_roles where organization_id=org_a and key='integrante';
+    select org_a, m_st1, id from public.access_roles where organization_id=org_a and key='integrante' on conflict do nothing; -- o papel Integrante já vem automático
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_b, m_dirb, id from public.access_roles where organization_id=org_b and key='direcao';
 
@@ -77,10 +77,9 @@ begin
   if n <> 2 then raise exception 'FALHOU: deveria haver 2 registros de presença, há %', n; end if;
   select count(*) into n from public.event_attendance where activity_id = act and status_id = st_present;
   if n <> 1 then raise exception 'FALHOU: deveria haver 1 presente'; end if;
-  begin
-    perform public.set_attendance(act, m_st3, 'present');
-    raise exception 'FALHOU: Professor registrou presença fora do grupo' using errcode = 'XX999';
-  exception when insufficient_privilege then null; end;
+  -- Professor/Monitor com atribuição no ciclo atual registra presença de qualquer integrante (Aluno3 toca Surdo, fora do grupo)
+  perform public.set_attendance(act, m_st3, 'present');
+  perform public.clear_attendance(act, m_st3);
   -- Professor não cria/edita eventos
   begin
     insert into public.activities (organization_id, activity_type_id, title, activity_date) values (org_a, atype, 'Intruso', current_date);

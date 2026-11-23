@@ -17,11 +17,11 @@ import { MemberPicker } from '@/modules/members/MemberPicker'
 import { useMemberStatus } from '@/modules/members/useMemberStatus'
 
 // "Integrante" não aparece: todo mundo é integrante. Aqui só se vê (e se concede) o que vai além disso.
-const GRANTABLE = [{ key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professor' }, { key: 'monitor', label: 'Monitor' }] as const
+const GRANTABLE = [{ key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professor/Monitor' }] as const
 const GROUPS = [
-  { key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professores' }, { key: 'monitor', label: 'Monitores' },
+  { key: 'direcao', label: 'Direção' }, { key: 'professor', label: 'Professores e monitores' },
 ] as const
-const RANK: Record<string, number> = { titular: 50, direcao: 40, professor: 30, monitor: 20 }
+const RANK: Record<string, number> = { titular: 50, direcao: 40, professor: 30 }
 
 interface Person { id: string; name: string; user_id: string | null; roles: Set<string> }
 
@@ -148,7 +148,7 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
         </Card>
       )}
       <ReadMore>
-        Todo cadastro já é <strong>integrante</strong>; aqui aparece só quem tem um papel além disso. Papéis acumulam (ex.: Professor e direção). Toda mudança fica na auditoria.
+        Todo cadastro já é <strong>integrante</strong>; aqui aparece só quem tem um papel além disso. Papéis acumulam (ex.: Professor/Monitor e Direção). Toda mudança fica na auditoria.
       </ReadMore>
 
       <Card className="space-y-2 p-3">

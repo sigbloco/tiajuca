@@ -29,7 +29,9 @@ Fonte da verdade: o banco de produção (Supabase `dzyvtqrxmladsxceqzud`). Muita
 - E-mails extras: o integrante pede (`request_extra_email`), a Direção aprova; a Direção pode incluir direto.
 
 ### 2.2 Papéis e permissões
-- Papéis cumulativos: **Integrante** (padrão, dado a todo cadastro novo), **Colaborador**, **Monitor**, **Professor**, **Direção** e **Titular**.
+- Papéis cumulativos: **Integrante** (padrão, dado a todo cadastro novo), **Colaborador**, **Professor/Monitor**, **Direção** e **Titular**.
+- **Professor/Monitor** é um papel de acesso só (chave `professor`). A função na equipe é outra coisa e continua separada: atribuições de professor, monitor ou regente por ciclo (`staff_assignments`), organograma, naipes e pagamento da equipe. O **grupo** de quem tem o papel são os instrumentos/naipes das atribuições de professor ou monitor no ciclo atual. **Regente** é um cargo simbólico: não dá acesso, não registra presença e não amplia o grupo.
+- **Reativação:** Direção, Titular e Professor/Monitor do grupo da pessoa reativam um inativo (pedido ou direto); Professor/Monitor não inativa nem mexe fora do grupo.
 - Matriz `role_permissions` (permissão × escopo `own`/`group`/`org`) editável em Acesso, exceto:
   - Direção e Titular sempre têm todas as permissões com escopo `org`;
   - permissões **travadas** (só Direção/Titular): `org.manage`, `settings.manage`, `roles.manage`, `audit.read`, `members.sensitive.read/manage`, `finance.read/manage`, `billing.manage`, `scholarships.manage`, `staff_payments.manage`, `staff_assignments.manage`, `forms.manage`. **Não** estão travadas, entre outras, `members.manage` e `backups.manage` (ver SEG-02/SEG-03).
@@ -59,7 +61,7 @@ Fonte da verdade: o banco de produção (Supabase `dzyvtqrxmladsxceqzud`). Muita
 
 ### 2.6 Presença (Oficina)
 - Chamada por evento com presença. Público do evento por naipe, instrumento, pessoa ou categoria (categorias combinadas com OU entre si e com E com o resto). Pessoa "fora da lista" pode ser incluída.
-- Quem registra: Professor do ciclo atual registra para qualquer integrante; Monitor só para o próprio grupo (instrumento/naipe); Direção para todos.
+- Quem registra: quem tem atribuição de professor ou monitor no ciclo atual registra para qualquer integrante (a chamada inteira); Direção para todos. Ter o papel Professor/Monitor sem atribuição na equipe do ciclo atual não registra presença. Ver presenças fora da chamada (relatórios, ficha) continua no escopo do grupo.
 - Relatórios por pessoa, evento, mês, instrumento e naipe (exigem `attendance.read` com escopo `group` ou `org`).
 
 ### 2.7 Calendário, eventos e checklists
@@ -103,7 +105,7 @@ Fonte da verdade: o banco de produção (Supabase `dzyvtqrxmladsxceqzud`). Muita
 
 ### 2.12 Repertório e Drive
 - Repertório por ciclo: músicas, anexos (link, arquivo no Storage até 25 MB, pasta do Drive), afinação por instrumento.
-- Drive: pastas cadastradas com regras de acesso por papel, naipe ou instrumento (Professor e Monitor veem todas). Sincronização de compartilhamento pela conta de serviço (`drive-sync`, prévia ou aplicação, só mexe em leitores criados pelo app). Busca de partituras (`drive-search`) só dentro das pastas cadastradas.
+- Drive: pastas cadastradas com regras de acesso por papel, naipe ou instrumento (Professor/Monitor vê todas). Sincronização de compartilhamento pela conta de serviço (`drive-sync`, prévia ou aplicação, só mexe em leitores criados pelo app). Busca de partituras (`drive-search`) só dentro das pastas cadastradas.
 
 ### 2.13 Fornecedores, perfil, interface
 - Fornecedores: categorias e contatos, com desativação lógica.
@@ -129,8 +131,8 @@ Ver a seção 6 do `REVISAO.md` (papel × ação, com onde cada regra é imposta
 
 ### 3.2 Preço (decidido só no servidor, em `shop_create_order`)
 1. Preço base do banco (o navegador não manda preço).
-2. **Integrante ativo** → desconto do produto. "Ativo" = cadastro ligado à conta, não arquivado, não inativo no ciclo atual e (status ativo no ciclo atual **ou** papel titular/direção/professor/monitor). A conta vem do token verificado no servidor.
-3. **Preço especial** (titular, direção, professor ou monitor ativo): vale só quando é menor que o preço de integrante; quem tem direito paga o menor dos dois (D2, etapa 7).
+2. **Integrante ativo** → desconto do produto. "Ativo" = cadastro ligado à conta, não arquivado, não inativo no ciclo atual e (status ativo no ciclo atual **ou** papel titular/direção/Professor/Monitor). A conta vem do token verificado no servidor.
+3. **Preço especial** (titular, direção ou Professor/Monitor ativo): vale só quando é menor que o preço de integrante; quem tem direito paga o menor dos dois (D2, etapa 7).
 4. **Cupom:** não acumula; vale o menor preço entre o do comprador e o preço público com o desconto do cupom. Cupom inválido aborta o pedido. Cupom não tem validade nem limite de uso.
 5. Tudo é congelado no pedido; `total = subtotal - desconto`.
 - Desconto padrão nas configurações só pré-preenche produto novo.
