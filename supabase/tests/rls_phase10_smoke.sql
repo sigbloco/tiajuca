@@ -20,7 +20,7 @@ begin
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_a, m_d1, id from public.access_roles where organization_id=org_a and key='direcao';
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
-    select org_a, m_st, id from public.access_roles where organization_id=org_a and key='integrante';
+    select org_a, m_st, id from public.access_roles where organization_id=org_a and key='integrante' on conflict do nothing; -- o papel Integrante já vem automático
   insert into public.member_access_roles (organization_id, member_id, access_role_id)
     select org_b, m_db, id from public.access_roles where organization_id=org_b and key='direcao';
 
@@ -32,10 +32,9 @@ begin
   select count(*) into n from public.member_access_roles mar join public.access_roles ar on ar.id = mar.access_role_id
     where mar.member_id = m_pr and ar.key = 'professor' and mar.revoked_at is null;
   if n <> 1 then raise exception 'FALHOU: conceder duas vezes deveria manter 1 papel ativo, há %', n; end if;
-  perform public.grant_access_role(m_pr, 'monitor'); -- papéis acumuláveis
-  select count(*) into n from public.member_access_roles where member_id = m_pr and revoked_at is null;
-  if n <> 2 then raise exception 'FALHOU: papéis deveriam acumular (2), há %', n; end if;
-  perform public.revoke_access_role(m_pr, 'monitor');
+  -- Monitor não é mais um papel de acesso (é o papel único Professor/Monitor, chave 'professor')
+  begin perform public.grant_access_role(m_pr, 'monitor'); raise exception 'FALHOU: aceitou o papel antigo monitor' using errcode = 'XX999';
+  exception when sqlstate 'P0002' then null; end;
   begin perform public.grant_access_role(m_pr, 'inexistente'); raise exception 'FALHOU: aceitou papel inválido' using errcode = 'XX999';
   exception when sqlstate 'P0002' then null; end;
 

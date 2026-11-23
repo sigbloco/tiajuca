@@ -7,3 +7,4 @@
 - **Sem dados.** Papéis, permissões e modelos vêm de `supabase/seed` e das migrations; confira antes de usar um banco recriado.
 - **Conferido:** reproduzido num Postgres vazio (PGlite, com `auth`/`storage`/papéis simulados): todas as seções rodam; só ficou de fora o que o PGlite não tem (`pg_trgm`, `pg_cron`, `pg_net`).
 - **Atualizar:** quando o esquema mudar de forma relevante, gere de novo a partir do banco (consultas só de leitura em `pg_catalog`: `pg_get_functiondef`, `pg_get_constraintdef`, `pg_get_indexdef`, `pg_get_triggerdef`, `pg_policies`, `pg_get_viewdef`) e confira o diff.
+- **Atualizado em 23/11/2026** com a migration `20261123160407_unifica_professor_monitor` (papel único Professor/Monitor): as 10 funções alteradas e o check de `page_releases.category`, conferidos por md5 contra `pg_get_functiondef` do banco.

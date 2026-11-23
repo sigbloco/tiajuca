@@ -19,7 +19,7 @@ begin
   insert into public.members (organization_id, full_name) values (org_a,'Sem Conta');
   insert into public.member_access_roles (organization_id, member_id, access_role_id) select org_a, m_d, id from public.access_roles where organization_id=org_a and key='direcao';
   insert into public.member_access_roles (organization_id, member_id, access_role_id) select org_a, m_pr, id from public.access_roles where organization_id=org_a and key='professor';
-  insert into public.member_access_roles (organization_id, member_id, access_role_id) select org_a, m_st, id from public.access_roles where organization_id=org_a and key='integrante';
+  insert into public.member_access_roles (organization_id, member_id, access_role_id) select org_a, m_st, id from public.access_roles where organization_id=org_a and key='integrante' on conflict do nothing; -- o papel Integrante já vem automático
   insert into public.member_access_roles (organization_id, member_id, access_role_id) select org_b, m_db, id from public.access_roles where organization_id=org_b and key='direcao';
   select id into r_dir from public.access_roles where organization_id = org_a and key = 'direcao';
   select id into r_prof from public.access_roles where organization_id = org_a and key = 'professor';
@@ -42,7 +42,7 @@ begin
   set local role authenticated;
   perform public.set_role_permission(org_a, 'professor', 'events.manage', 'org');
   if not exists (select 1 from public.role_permissions where access_role_id = r_prof and permission_key = 'events.manage' and scope = 'org') then raise exception 'FALHOU: escopo não alterado'; end if;
-  perform public.set_role_permission(org_a, 'professor', 'repertoire.manage', 'group');
+  perform public.set_role_permission(org_a, 'professor', 'repertoire.manage', 'org'); -- repertório não tem "Meu grupo"
   perform public.set_role_permission(org_a, 'professor', 'repertoire.manage', null);
   if exists (select 1 from public.role_permissions where access_role_id = r_prof and permission_key = 'repertoire.manage') then raise exception 'FALHOU: permissão não foi removida'; end if;
   begin perform public.set_role_permission(org_a, 'professor', 'events.manage', 'tudo'); raise exception 'FALHOU: aceitou escopo inválido' using errcode = 'XX999';
@@ -79,7 +79,7 @@ begin
   begin perform public.set_organization_titular('p11-a', 'd@p11.local'); raise exception 'FALHOU: designou titular pela interface' using errcode = 'XX999';
   exception when insufficient_privilege then null; end;
   -- ainda pode gerir papéis comuns
-  perform public.grant_access_role(m_pr, 'monitor'); perform public.revoke_access_role(m_pr, 'monitor');
+  perform public.grant_access_role(m_st, 'professor'); perform public.revoke_access_role(m_st, 'professor');
 
   -- ── Titular controla a Direção ──
   reset role;

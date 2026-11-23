@@ -13,15 +13,14 @@ interface Row {
   id: string; full_name: string; display_name: string | null; user_id: string | null
   member_access_roles: { revoked_at: string | null; access_roles: { key: string } | null }[]
 }
-interface Staff { member_id: string; staff_kind: 'professor' | 'monitor'; section_id: string | null; instrument_id: string | null }
+interface Staff { member_id: string; staff_kind: 'professor' | 'monitor' | 'regente'; section_id: string | null; instrument_id: string | null }
 interface Cat { member_id: string; category_name: string }
 interface Person { id: string; name: string; label: string; virtual?: { key: string; roles: string[]; inactive?: boolean } }
 
 /** Categorias de perfil para visualizar. "Titular" (eu mesmo) é o valor vazio: sai da visualização. */
 const CATEGORIES = [
   { key: 'direcao', label: 'Direção' },
-  { key: 'professor', label: 'Professor' },
-  { key: 'monitor', label: 'Monitor' },
+  { key: 'professor', label: 'Professor/Monitor' },
   { key: 'colaborador', label: 'Colaborador' },
   { key: 'ativo', label: 'Integrante ativo' },
   { key: 'inativo', label: 'Integrante inativo' },
@@ -29,7 +28,7 @@ const CATEGORIES = [
 type CatKey = (typeof CATEGORIES)[number]['key']
 
 // Sem ninguém na categoria, dá para visualizar mesmo assim: simula só os papéis (os dados continuam os seus).
-const virtualRoles = (key: CatKey) => (key === 'direcao' ? ['direcao', 'integrante'] : key === 'professor' ? ['professor', 'integrante'] : key === 'monitor' ? ['monitor', 'integrante'] : key === 'colaborador' ? ['colaborador'] : ['integrante'])
+const virtualRoles = (key: CatKey) => (key === 'direcao' ? ['direcao', 'integrante'] : key === 'professor' ? ['professor', 'integrante'] : key === 'colaborador' ? ['colaborador'] : ['integrante'])
 
 /** Barra fixa no topo (só Titular/Direção): escolhe uma CATEGORIA e, depois, uma pessoa dela; a interface passa a mostrar o que ela veria. */
 export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à coluna do formulário (max-w-xl, com o mesmo respiro lateral). */ contained?: boolean } = {}) {
@@ -88,21 +87,23 @@ export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à col
     const rolesOf = (r: Row) => new Set(r.member_access_roles.filter((x) => !x.revoked_at && x.access_roles).map((x) => x.access_roles!.key))
     const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
     const secName = new Map((sections.data ?? []).map((s) => [s.id, s.name]))
-    const sectionsOf = (id: string, kind: 'professor' | 'monitor') => [...new Set((staff.data ?? []).filter((a) => a.member_id === id && a.staff_kind === kind)
+    // Equipe que dá aula: atribuição de professor ou de monitor (regente é simbólico e não conta).
+    const teaches = (a: Staff) => a.staff_kind === 'professor' || a.staff_kind === 'monitor'
+    const sectionsOf = (id: string) => [...new Set((staff.data ?? []).filter((a) => a.member_id === id && teaches(a))
       .map((a) => secName.get(a.section_id ?? (a.instrument_id ? instById.get(a.instrument_id)?.section_id ?? '' : '')) ?? '').filter(Boolean))]
     const catOf = new Map<string, string>()
     for (const c of cats.data ?? []) if (!catOf.has(c.member_id)) catOf.set(c.member_id, c.category_name)
     const others = rows.filter((r) => r.id !== realMembership?.member_id && !rolesOf(r).has('titular'))
     const activeOthers = others.filter((r) => !isInactive(r.id))
-    const isStaff = (r: Row) => rolesOf(r).has('professor') || rolesOf(r).has('monitor')
+    const isStaff = (r: Row) => rolesOf(r).has('professor')
     const person = (r: Row, extra?: string): Person => ({ id: r.id, name: nameOf(r), label: extra ? `${nameOf(r)} · ${extra}` : nameOf(r) })
-    const staffOf = (kind: 'professor' | 'monitor') => activeOthers
-      .filter((r) => rolesOf(r).has(kind) || (staff.data ?? []).some((a) => a.member_id === r.id && a.staff_kind === kind))
-      .map((r) => person(r, sectionsOf(r.id, kind).join(', ')))
+    // Professor/Monitor: quem tem o papel ou atribuição de professor ou monitor no ciclo atual.
+    const staffPeople = activeOthers
+      .filter((r) => rolesOf(r).has('professor') || (staff.data ?? []).some((a) => a.member_id === r.id && teaches(a)))
+      .map((r) => person(r, sectionsOf(r.id).join(', ')))
     const out: Record<CatKey, Person[]> = {
       direcao: activeOthers.filter((r) => rolesOf(r).has('direcao')).map((r) => person(r)),
-      professor: staffOf('professor'),
-      monitor: staffOf('monitor'),
+      professor: staffPeople,
       colaborador: activeOthers.filter((r) => rolesOf(r).has('colaborador') && !isStaff(r) && !rolesOf(r).has('direcao')).map((r) => person(r)),
       ativo: others.filter((r) => !isInactive(r.id) && !isStaff(r) && !rolesOf(r).has('direcao') && !rolesOf(r).has('colaborador')).map((r) => person(r, catOf.get(r.id))),
       inativo: others.filter((r) => isInactive(r.id) && !rolesOf(r).has('direcao')).map((r) => person(r, catOf.get(r.id))),

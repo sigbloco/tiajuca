@@ -67,7 +67,7 @@ export function PageReleasesTab() {
             <li>Sem acesso em Permissões dos papéis, a caixa fica desmarcada e desabilitada.</li>
             <li>O Titular vê tudo.</li>
             <li>Desmarcar uma área (Oficina, Financeiro, Organização) apaga também as páginas dela. Marcar a área não libera as páginas: cada uma tem a sua caixa.</li>
-            <li>Professor e Monitor não herdam de Integrante ativo: marque cada coluna.</li>
+            <li>Professor/Monitor não herda de Integrante ativo: marque a coluna dele.</li>
             <li>Colaborador segue a coluna Integrante ativo.</li>
           </ul>
         )}

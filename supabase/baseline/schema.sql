@@ -2145,7 +2145,8 @@ AS $function$
     (select i.section_id from public.member_artistic_links l join public.instruments i on i.id = l.instrument_id
       where l.member_id = p_member and l.ended_at is null order by l.is_primary desc, l.created_at limit 1),
     (select coalesce(a.section_id, i.section_id) from public.staff_assignments a left join public.instruments i on i.id = a.instrument_id
-      where a.member_id = p_member and a.valid_to is null and coalesce(a.section_id, i.section_id) is not null order by a.created_at limit 1))
+      where a.member_id = p_member and a.valid_to is null and a.staff_kind in ('professor', 'monitor')
+        and coalesce(a.section_id, i.section_id) is not null order by a.created_at limit 1))
 $function$
 ;
 
@@ -2736,22 +2737,13 @@ CREATE OR REPLACE FUNCTION public.can_record_attendance_for(p_org uuid, p_member
  STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-  select
-    exists (
+  -- Professor ou monitor (atribuição vigente no ciclo atual) registra presença de qualquer integrante da organização.
+  select exists (select 1 from public.members m where m.id = p_member and m.organization_id = p_org)
+     and exists (
       select 1 from public.staff_assignments sa
       where sa.organization_id = p_org and sa.member_id = public.current_member_id(p_org)
-        and sa.staff_kind = 'professor' and (sa.valid_to is null or sa.valid_to >= current_date)
+        and sa.staff_kind in ('professor', 'monitor') and (sa.valid_to is null or sa.valid_to >= current_date)
         and sa.cycle_id = (select c.id from public.cycles c where c.organization_id = p_org and c.is_current limit 1))
-    or exists (
-      select 1 from public.staff_assignments sa
-      left join public.instruments si on si.id = sa.instrument_id
-      join public.member_artistic_links l on l.member_id = p_member and l.ended_at is null
-      join public.instruments i on i.id = l.instrument_id
-      where sa.organization_id = p_org and sa.member_id = public.current_member_id(p_org)
-        and sa.staff_kind = 'monitor' and (sa.valid_to is null or sa.valid_to >= current_date)
-        and sa.cycle_id = (select c.id from public.cycles c where c.organization_id = p_org and c.is_current limit 1)
-        and i.section_id = coalesce(sa.section_id, si.section_id))
-    or public.is_in_my_group(p_org, p_member)
 $function$
 ;
 
@@ -2766,7 +2758,7 @@ AS $function$
     join public.members m on m.organization_id = f.organization_id and m.user_id = auth.uid() and m.archived_at is null
     where f.id = p_folder and f.is_active and (
       exists (select 1 from public.member_access_roles mar join public.access_roles ar on ar.id = mar.access_role_id
-               where mar.member_id = m.id and mar.revoked_at is null and ar.key in ('professor', 'monitor'))
+               where mar.member_id = m.id and mar.revoked_at is null and ar.key = 'professor')
       or exists (
         select 1 from public.drive_folder_access a where a.folder_id = f.id and (
           (a.access_role_id is not null and exists (
@@ -3254,7 +3246,7 @@ begin
   select * into r from public.reactivation_requests where id = p_request;
   if r.id is null then raise exception 'Pedido não encontrado.' using errcode = 'P0002'; end if;
   if not public.can_decide_reactivation(r.organization_id, r.member_id) then
-    raise exception 'Só a Direção ou um professor do grupo da pessoa pode decidir.' using errcode = '42501';
+    raise exception 'Só a Direção ou um Professor/Monitor do grupo da pessoa pode decidir.' using errcode = '42501';
   end if;
   if r.status <> 'pending' then raise exception 'Este pedido já foi decidido.' using errcode = 'P0001'; end if;
   v_actor := public.current_member_id(r.organization_id);
@@ -3409,12 +3401,12 @@ begin
    where m.organization_id = f.organization_id and m.archived_at is null and m.email is not null and length(trim(m.email)) > 3
      and (
        exists (select 1 from public.member_access_roles mar join public.access_roles ar on ar.id = mar.access_role_id
-                where mar.member_id = m.id and mar.revoked_at is null and ar.key in ('titular', 'direcao', 'professor', 'monitor'))
+                where mar.member_id = m.id and mar.revoked_at is null and ar.key in ('titular', 'direcao', 'professor'))
        or (
          (exists (select 1 from public.member_cycles mc join public.cycles c on c.id = mc.cycle_id and c.is_current
                     join public.member_cycle_statuses s on s.id = mc.status_id and s.counts_as_active where mc.member_id = m.id)
           or exists (select 1 from public.member_access_roles mar join public.access_roles ar on ar.id = mar.access_role_id
-                      where mar.member_id = m.id and mar.revoked_at is null and ar.key in ('professor', 'monitor')))
+                      where mar.member_id = m.id and mar.revoked_at is null and ar.key = 'professor'))
          and exists (
            select 1 from public.drive_folder_access a where a.folder_id = f.id and (
              (a.access_role_id is not null and exists (select 1 from public.member_access_roles mar where mar.member_id = m.id and mar.revoked_at is null and mar.access_role_id = a.access_role_id))
@@ -4502,6 +4494,7 @@ CREATE OR REPLACE FUNCTION public.is_in_my_group(p_org uuid, p_member uuid)
  STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
+  -- Grupo = naipes/instrumentos em que a pessoa é professor ou monitor no ciclo atual. Regente é simbólico: não conta.
   select exists (
     select 1
     from public.staff_assignments sa
@@ -4509,6 +4502,7 @@ AS $function$
     join public.instruments i on i.id = l.instrument_id
     where sa.organization_id = p_org
       and sa.member_id = public.current_member_id(p_org)
+      and sa.staff_kind in ('professor', 'monitor')
       and (sa.valid_to is null or sa.valid_to >= current_date)
       and sa.cycle_id = (select c.id from public.cycles c where c.organization_id = p_org and c.is_current limit 1)
       and (sa.instrument_id = i.id or sa.section_id = i.section_id)
@@ -5700,10 +5694,9 @@ AS $function$
 declare r record;
 begin
   insert into public.access_roles (organization_id, key, name, rank, is_system) values
-    (p_org, 'direcao',    'Direção',    40, true),
-    (p_org, 'professor',  'Professor',  30, true),
-    (p_org, 'monitor',    'Monitor',    20, true),
-    (p_org, 'integrante', 'Integrante', 10, true)
+    (p_org, 'direcao',    'Direção',           40, true),
+    (p_org, 'professor',  'Professor/Monitor', 30, true),
+    (p_org, 'integrante', 'Integrante',        10, true)
   on conflict (organization_id, key) do nothing;
 
   -- Direção: todas as permissões, escopo organização.
@@ -5712,7 +5705,7 @@ begin
   where ar.organization_id = p_org and ar.key = 'direcao'
   on conflict do nothing;
 
-  -- Demais papéis (matriz E da proposta).
+  -- Demais papéis. 'professor' é o papel único Professor/Monitor.
   for r in
     select * from (values
       ('professor','members.read','group'), ('professor','member_cycles.read','group'),
@@ -5721,12 +5714,6 @@ begin
       ('professor','attendance.read','group'), ('professor','attendance.record','group'),
       ('professor','repertoire.read','org'), ('professor','billing.read','own'),
       ('professor','staff_payments.read','own'), ('professor','pix.manage','own'),
-      ('monitor','members.read','group'), ('monitor','member_cycles.read','group'),
-      ('monitor','member_cycles.manage','group'), ('monitor','capacity.read','group'),
-      ('monitor','events.read','org'), ('monitor','attendance.read','group'),
-      ('monitor','attendance.record','group'), ('monitor','repertoire.read','org'),
-      ('monitor','billing.read','own'), ('monitor','staff_payments.read','own'),
-      ('monitor','pix.manage','own'),
       ('integrante','members.read','own'), ('integrante','events.read','org'),
       ('integrante','attendance.read','own'), ('integrante','repertoire.read','org'),
       ('integrante','billing.read','own')
@@ -5948,14 +5935,14 @@ begin
   v_allowed := public.has_permission(v_org, 'member_cycles.manage')
     or (coalesce(public.permission_scope_of(v_org, 'member_cycles.manage') = 'group', false)
         and public.is_in_my_group(v_org, p_member))
-    -- Reativação (inativo → ativo): também quem pode decidir reativações (Professor do grupo da pessoa).
+    -- Reativação (inativo → ativo): também quem pode decidir reativações (Professor/Monitor do grupo da pessoa).
     or (v_status.counts_as_active and coalesce(v_was_inactive, false) and public.can_decide_reactivation(v_org, p_member));
   if not coalesce(v_allowed, false) then
     raise exception 'Você não tem permissão para alterar este status.' using errcode = '42501';
   end if;
 
   if v_status.counts_as_active and coalesce(v_was_inactive, false) and not public.can_decide_reactivation(v_org, p_member) then
-    raise exception 'Só a Direção ou um professor do grupo da pessoa pode reativar um integrante inativo.' using errcode = 'P0001';
+    raise exception 'Só a Direção ou um Professor/Monitor do grupo da pessoa pode reativar um integrante inativo.' using errcode = 'P0001';
   end if;
 
   if v_status.counts_as_active and not coalesce(v_was_active, false) then
@@ -6185,7 +6172,7 @@ AS $function$
           where mc.member_id = m.id)
        or exists (
          select 1 from public.member_access_roles mar
-           join public.access_roles ar on ar.id = mar.access_role_id and ar.key in ('titular', 'direcao', 'professor', 'monitor')
+           join public.access_roles ar on ar.id = mar.access_role_id and ar.key in ('titular', 'direcao', 'professor')
           where mar.member_id = m.id and mar.revoked_at is null)
      )
    limit 1
@@ -6791,7 +6778,7 @@ AS $function$
      and exists (
        select 1 from public.members m
          join public.member_access_roles mar on mar.member_id = m.id and mar.revoked_at is null
-         join public.access_roles ar on ar.id = mar.access_role_id and ar.key in ('titular', 'direcao', 'professor', 'monitor')
+         join public.access_roles ar on ar.id = mar.access_role_id and ar.key in ('titular', 'direcao', 'professor')
         where m.organization_id = p_org and m.user_id = p_user and m.archived_at is null)
 $function$
 ;
@@ -8093,7 +8080,7 @@ alter table only public.monthly_charges add constraint monthly_charges_scholarsh
 alter table only public.monthly_charges add constraint monthly_charges_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'paid'::text, 'exempt'::text, 'cancelled'::text])));
 alter table only public.organizations add constraint organizations_logo_path_check CHECK (((logo_path IS NULL) OR (logo_path ~* '^(https://|/)'::text)));
 alter table only public.organizations add constraint organizations_slug_check CHECK ((slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text));
-alter table only public.page_releases add constraint page_releases_category_check CHECK ((category = ANY (ARRAY['direcao'::text, 'professor'::text, 'monitor'::text, 'ativo'::text, 'inativo'::text])));
+alter table only public.page_releases add constraint page_releases_category_check CHECK ((category = ANY (ARRAY['direcao'::text, 'professor'::text, 'ativo'::text, 'inativo'::text])));
 alter table only public.page_releases add constraint page_releases_page_key_check CHECK ((page_key ~ '^[a-z0-9-]{1,40}$'::text));
 alter table only public.participation_requests add constraint participation_requests_action_check CHECK ((action = ANY (ARRAY['add'::text, 'remove'::text])));
 alter table only public.participation_requests add constraint participation_requests_check CHECK (((action = 'remove'::text) OR (instrument_id IS NOT NULL) OR (function_id IS NOT NULL)));

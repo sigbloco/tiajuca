@@ -8,7 +8,7 @@ const ativo: Access = { roles: ['integrante'], permissions: [{ key: 'events.read
 describe('padrão: igual a hoje', () => {
   it('sem nada gravado só a Direção tem as páginas liberadas', () => {
     expect(rawReleased(none, 'financeiro', 'direcao')).toBe(true)
-    for (const c of ['professor', 'monitor', 'ativo', 'inativo'] as const) expect(rawReleased(none, 'inicio', c)).toBe(false)
+    for (const c of ['professor', 'ativo', 'inativo'] as const) expect(rawReleased(none, 'inicio', c)).toBe(false)
   })
   it('o Titular vê tudo sempre', () => {
     expect(isReleasedFor(none, 'acesso', categoriesOf({ roles: ['titular', 'direcao'] }))).toBe(true)
@@ -20,9 +20,10 @@ describe('padrão: igual a hoje', () => {
 })
 
 describe('categorias', () => {
-  it('Direção vale por si; Professor e Monitor somam; inativo vence; o resto é ativo', () => {
+  it('Direção vale por si; depois Professor/Monitor; inativo vence; o resto é ativo', () => {
     expect(categoriesOf({ roles: ['direcao', 'professor', 'integrante'] })).toEqual(['direcao'])
-    expect(categoriesOf({ roles: ['professor', 'monitor', 'integrante'] })).toEqual(['professor', 'monitor'])
+    expect(categoriesOf({ roles: ['professor', 'integrante'] })).toEqual(['professor'])
+    expect(categoriesOf({ roles: ['monitor', 'integrante'] })).toEqual(['ativo']) // papel antigo não existe mais
     expect(categoriesOf({ roles: ['integrante'] })).toEqual(['ativo'])
     expect(categoriesOf({ roles: [], inactive: true })).toEqual(['inativo'])
   })

@@ -33,7 +33,7 @@ function useRequests() {
   })
 }
 
-/** Aviso fixo para quem está inativo: acesso limitado e pedido de volta (a direção ou um professor autoriza). */
+/** Aviso fixo para quem está inativo: acesso limitado e pedido de volta (a direção ou um professor ou monitor do grupo autoriza). */
 export function InactiveNotice() {
   const orgId = useOrgId()
   // O aviso segue o acesso EFETIVO: ao "visualizar como" um inativo, aparece igual ao que ele vê (só como prévia, sem pedido real).
@@ -46,14 +46,14 @@ export function InactiveNotice() {
   const mine = preview ? undefined : (data ?? []).find((r) => r.member_id === realMembership?.member_id)
   const send = useMutation({
     mutationFn: async () => { const { error } = await supabase.rpc('request_reactivation', { p_org: orgId, p_message: message }); if (error) throw error },
-    onSuccess: () => { toast.success('Pedido enviado. A direção ou um professor vai analisar.'); setOpen(false); setMessage(''); qc.invalidateQueries({ queryKey: ['reactivation', orgId] }) },
+    onSuccess: () => { toast.success('Pedido enviado. A direção ou um professor ou monitor do seu grupo vai analisar.'); setOpen(false); setMessage(''); qc.invalidateQueries({ queryKey: ['reactivation', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   if (!membership?.inactive) return null
   return (
     <Card className="mb-4 space-y-2 border-warning bg-warning/10 p-4">
       <p className="font-semibold">Sua participação está inativa neste ciclo.</p>
-      <p>Seu acesso está limitado ao seu perfil, à sua frequência e às suas mensalidades. Para voltar a participar, é preciso a autorização da direção ou de um professor.</p>
+      <p>Seu acesso está limitado ao seu perfil, à sua frequência e às suas mensalidades. Para voltar a participar, é preciso a autorização da direção ou de um professor ou monitor do seu grupo.</p>
       {mine?.status === 'pending' && <p><Badge className="bg-warning/30">Pedido em análise</Badge> enviado em {formatDate(mine.created_at.slice(0, 10))}.</p>}
       {mine?.status === 'rejected' && <p className="text-muted-foreground">Seu último pedido não foi aprovado{mine.decision_note ? `: ${mine.decision_note}` : '.'} Você pode pedir de novo.</p>}
       {preview && <p className="text-sm text-muted-foreground">Prévia: é assim que a pessoa inativa vê este aviso. O botão de pedir para voltar só funciona para ela.</p>}
@@ -72,7 +72,7 @@ export function InactiveNotice() {
   )
 }
 
-/** Pedidos de volta aguardando decisão (só aparecem para quem pode decidir: direção e professores do grupo). */
+/** Pedidos de volta aguardando decisão (só aparecem para quem pode decidir: direção e professores e monitores do grupo). */
 export function ReactivationRequests() {
   const orgId = useOrgId()
   const { realMembership } = useOrganization()

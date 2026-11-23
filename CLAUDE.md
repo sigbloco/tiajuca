@@ -26,25 +26,26 @@ Comandos: `npm run typecheck`, `npm test`, `npx vite build`, `npm audit`. Não h
 - **Mensalidade, fonte única:** `billing_member_fee` (só o banco chama) decide a regra de uma pessoa num ciclo; usada pela geração e por "Minha participação". Tabelas `cycle_fee_assignments`, `fee_cycle_prices`, `cycle_scholarships`, `fee_cycle_exempt`, `cycle_extra_categories`. Quem tem vínculo remunerado no ciclo nunca é cobrado. Quem entra no ciclo atual herda categoria e bolsa do último ciclo.
 - **Categorias por naipe:** uma categoria por naipe com Tipo/Naipe (valores 150/50/50/35); o Tipo (`base_key`) é o que vale, não `system_key`.
 - **Cobrança InfinitePay:** link por cobrança; o webhook só dá baixa depois de consultar a InfinitePay e conferir o valor; cada transação paga vale uma vez (`infinitepay_transactions`); 400 enquanto a InfinitePay não diz "pago". Ajuste de cobrança tira o link e guarda o código antigo.
-- **Loja:** preço e total recalculados no servidor; pagamento por Pix ou InfinitePay (taxa do cartão configurável no painel, `credit_fees_pct`); cupom com validade e limite de usos; preço especial (direção, professores, monitores) só vale quando é menor que o de integrante (quem tem direito paga o menor); "avisei que paguei" não existe mais; pedidos encerrados são anonimizados após o prazo do aviso (tarefa diária); pedido de visitante só casa por e-mail confirmado.
+- **Loja:** preço e total recalculados no servidor; pagamento por Pix ou InfinitePay (taxa do cartão configurável no painel, `credit_fees_pct`); cupom com validade e limite de usos; preço especial (titular, direção e Professor/Monitor) só vale quando é menor que o de integrante (quem tem direito paga o menor); "avisei que paguei" não existe mais; pedidos encerrados são anonimizados após o prazo do aviso (tarefa diária); pedido de visitante só casa por e-mail confirmado.
 - **LGPD:** auditoria mascara e-mail, telefone, Pix e nascimento (retenção 24 meses); backups manuais 12 meses; dados sensíveis de terceiros só por `get_member_sensitive`/`save_member_sensitive` (leitura registrada); aniversários do integrante comum: só ativos, nome de exibição, sem ano; inscrições antigas anonimizadas pela tarefa diária.
-- **Reativação:** Professor reativa inativo do próprio grupo; não inativa nem mexe fora dele.
+- **Professor/Monitor:** um papel de acesso só (chave `professor`, nome "Professor/Monitor"); a função na equipe continua separada (`staff_assignments.staff_kind` professor/monitor/regente). Grupo = instrumentos/naipes das atribuições de professor ou monitor no ciclo atual; regente é simbólico (não dá acesso, não registra presença, não amplia grupo). Quem tem atribuição de professor ou monitor no ciclo atual registra presença de qualquer integrante.
+- **Reativação:** Professor/Monitor reativa inativo do próprio grupo; não inativa nem mexe fora dele.
 - **Backups:** só `backups.manage` (Direção/Titular); o restore ignora linhas de outra organização, não mexe em papéis nem em `user_id`.
 - **Login:** só Google (o provedor e-mail/senha deve ficar desligado no painel do Supabase); o vínculo com o cadastro é por e-mail (`link_my_member_by_email`).
 
 ## Matriz de permissões (resumida; o banco impõe, o front só esconde)
 
-| Ação | Integrante | Colaborador | Monitor | Professor | Direção / Titular |
-|---|---|---|---|---|---|
-| Cadastro completo (e-mail, telefone, nascimento) | próprio | próprio | grupo | grupo | todos |
-| Dados sensíveis, Pix | próprios | próprios | próprios | próprios | todos (sensíveis só por RPC) |
-| Presença: ver / registrar | própria / — | própria / — | grupo / grupo | grupo / qualquer | toda / toda |
-| Cobranças, bolsas, categoria | só as próprias | idem | idem | idem | gerenciar |
-| Eventos | visíveis | visíveis | + só equipe | + só equipe | gerenciar |
-| Repertório | ver | ver | ver | ver | editar |
-| Estrutura, ciclos, vagas, fornecedores, financeiro, formulários, loja, site, tema | — | — | vagas/fornecedores: ver | vagas/fornecedores: ver | sim |
-| Backups, auditoria, matriz de permissões | — | — | — | — | sim (`members.manage` e `backups.manage` são travadas: não se delegam) |
-| Conceder papéis | — | — | — | — | Titular concede Direção; titularidade só por transferência |
+| Ação | Integrante | Colaborador | Professor/Monitor | Direção / Titular |
+|---|---|---|---|---|
+| Cadastro completo (e-mail, telefone, nascimento) | próprio | próprio | grupo | todos |
+| Dados sensíveis, Pix | próprios | próprios | próprios | todos (sensíveis só por RPC) |
+| Presença: ver / registrar | própria / — | própria / — | grupo / qualquer (com atribuição no ciclo atual) | toda / toda |
+| Cobranças, bolsas, categoria | só as próprias | idem | idem | gerenciar |
+| Eventos | visíveis | visíveis | + só equipe | gerenciar |
+| Repertório | ver | ver | ver | editar |
+| Estrutura, ciclos, vagas, fornecedores, financeiro, formulários, loja, site, tema | — | — | vagas/fornecedores: ver | sim |
+| Backups, auditoria, matriz de permissões | — | — | — | sim (`members.manage` e `backups.manage` são travadas: não se delegam) |
+| Conceder papéis | — | — | — | Titular concede Direção; titularidade só por transferência |
 
 Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes de quem só vê o próprio cadastro: nomes dos ativos do ciclo atual (`member_directory_active`), sem ficha nem contato. Os escopos "Meu grupo" só existem onde o banco os usa. Tabela detalhada: seção 6 do [REVISAO.md](REVISAO.md).
 
@@ -54,7 +55,7 @@ Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes
 - Acesso a dados pelo cliente Supabase único; permissão por `usePermission`/`canOpenPath`, nunca por nome de papel. Link de campo livre só `http(s)` (`safeHttpUrl`).
 - Funções únicas: `whatsappUrl`, `formatCents`/`formatCurrency`, `textOn`. Não recrie cópias locais.
 - Arquivos têm CRLF; scripts de edição precisam normalizar. Não há Python (scripts em Node).
-- Nomes que confundem: "Categorias" na tela (rota `funcoes`) é a tabela `artistic_functions`; "categoria de contribuição" é `fee_categories` (o Tipo é `base_key`); "Release" no site é o botão do release de imprensa, e a liberação de páginas por papel é `pageRelease*` (`page_releases`). A página Distribuição é `DistributionPage`.
+- Nomes que confundem: o papel de acesso `professor` é o "Professor/Monitor" (não existe mais o papel `monitor`; `staff_kind` monitor continua existindo na equipe); "Categorias" na tela (rota `funcoes`) é a tabela `artistic_functions`; "categoria de contribuição" é `fee_categories` (o Tipo é `base_key`); "Release" no site é o botão do release de imprensa, e a liberação de páginas por papel é `pageRelease*` (`page_releases`). A página Distribuição é `DistributionPage`.
 - Edge Functions são publicadas isoladas; `infinitepay.ts` e `verify.ts` existem em mais de uma pasta e `supabase/functions/copias.test.ts` exige que fiquem iguais.
 - Migrations: o banco de produção é a fonte da verdade (ver [docs/BANCO.md](docs/BANCO.md)); mostre o SQL ao usuário antes de aplicar; depois renomeie o arquivo para a versão registrada.
 - Testes de banco por papel: bloco `DO` que termina em `raise exception` com o resultado (tudo desfeito), via `set local role authenticated` + `request.jwt.claims`; dados de teste sempre removidos.
