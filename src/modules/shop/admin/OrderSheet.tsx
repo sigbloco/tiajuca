@@ -64,7 +64,7 @@ export function OrderSheet({ order, pickup }: { order: AdminOrder; pickup: Picku
 
         {a.canMarkPaid && (
           <section className="space-y-2 rounded-lg border border-border p-3">
-            <p className="font-semibold">{order.status === 'payment_review' ? 'O cliente avisou que pagou' : 'Aguardando o pagamento'}</p>
+            <p className="font-semibold">Aguardando o pagamento</p>
             <p className="text-muted-foreground">Confira o pagamento de <strong>{money(order.total_cents)}</strong> (referência <strong>{order.code}</strong>) antes de confirmar.</p>
             <Button className="w-full" disabled={act.isPending} onClick={async () => await confirmBox(`Confirmar que o pagamento de ${money(order.total_cents)} foi recebido?`) && act.mutate(() => markPaid(order.id))}>Marcar como pago</Button>
           </section>

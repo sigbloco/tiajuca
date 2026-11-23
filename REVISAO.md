@@ -92,7 +92,39 @@ Descrição completa das funcionalidades: [`docs/regras-de-negocio.md`](docs/reg
   - **não testado no navegador logado** (o Google só volta para o endereço cadastrado): ficha, Bolsas, Valores, painel e o aviso de pagamento sem baixa; vale conferir no uso real;
   - advisors: definer executáveis por `anon` continuam 10; por `authenticated` 141 → 137.
 - **Atenção ao deploy do site:** as tabelas antigas já foram apagadas. Enquanto o site publicado for o anterior ao merge, a ficha (contribuição), Bolsas e Valores sem ciclo dão erro; com o deploy da `main` volta ao normal.
-| 4 | Loja | pendente | Opus 5.5 ou Sonnet 5.5, médio a alto | — | — |
+| 4 | Loja | **concluída** em 23/11/2026 (branch `revisao-etapa4`, mergeada na `main`); fica pendente só o preço especial (D2, LOJA-11) | Opus 5.5, médio a alto | ver "Etapa 4: o que foi feito" | D6: **desligar de vez**; D5 (loja): **anonimizar após o prazo**; D10: **sim**; D12: **sim** (validade e limite); D2: **deixar para o fim** |
+
+### Etapa 4: o que foi feito (23/11/2026)
+
+- **Banco (aplicado em produção, versão igual ao arquivo):** `20261123115642_loja_etapa4`.
+- **Edge Functions publicadas:** `shop-order-public` (v11), `shop-checkout` (v13), `shop-mailer` (v11).
+- **D6 (LOJA-02, LOJA-14):** `shop_report_payment` e `shop_report_payment_owned` apagadas; a ação `report_payment` responde "Ação inválida"; o estado `payment_review` saiu do banco (nenhum pedido estava nele), das telas, do painel e do modelo de e-mail. Reativar um pedido cancelado volta a "aguardando pagamento" com prazo novo (antes ia para "em conferência").
+- **LOJA-01:** "Meus pedidos" acompanha o pagamento pela ação `status` a cada 30 s (150/h por pedido: cabe sem fim), só busca o pedido inteiro quando o status muda, não consulta com a aba escondida e não apaga o pedido da tela quando uma consulta falha.
+- **LOJA-03:** o checkout mostra o favorecido do Pix configurado no painel e o nome da organização (sem nome fixo no código).
+- **LOJA-06 (D12):** cupom com validade (`valid_until`, horário de Brasília) e limite de usos (`max_uses`; uso = pedido não cancelado), conferidos em `shop_coupon_check` e em `shop_create_order` (linha do cupom travada); painel mostra "Usado N vezes", "vencido" e "esgotado". O limite de conferência virou por IP (30 a cada 10 min); o contador da loja inteira saiu.
+- **LOJA-07 / SUS-02 (resolvido):** limites por IP usam `cf-connecting-ip` (funções e banco, via `shop_request_ip`). Conferido: com `x-forwarded-for` forjado o contador continua no IP real; mandar `cf-connecting-ip` forjado é barrado pelo próprio Cloudflare (erro 1000).
+- **LOJA-08:** "pedido recebido" no máximo 5 por dia para o mesmo e-mail (o pedido é criado; só o e-mail não sai).
+- **LOJA-09:** `shop-mailer` só aceita a chave de serviço ou um usuário logado (com a chave pública: 401).
+- **LOJA-10:** `shop_settings.payment_changed_at/by` registram quem trocou chave Pix, favorecido, InfiniteTag ou formas de pagamento; o aviso aparece no alto de Pagamentos e contatos.
+- **LOJA-12:** pedido descartado como duplicado não manda "recebido" nem "cancelado".
+- **LOJA-13 (D10):** `shop_settings.credit_fees_pct` (1x a 12x, com as taxas de hoje); editável no painel; checkout, Meus pedidos e a tabela de parcelas usam o valor da loja.
+- **LOJA-15:** `shop_rate_limit` com trava por contador (sem corrida) e sem DELETE a cada chamada (limpeza na tarefa de 15 min).
+- **LOJA-16:** troca de forma de pagamento limitada também por pedido (10/h).
+- **LOJA-17:** reativar só refaz reserva e andamento dos grupos cancelados (o já retirado continua retirado; a reserva não dobra).
+- **LOJA-18:** a tela já avisava do limite de 200; o PDF de entregas agora busca todos, de 200 em 200.
+- **LOJA-19:** novo `supabase/tests/rls_shop_etapa4_smoke.sql` (cupom, duplicado, e-mails, reativação, anonimização, produto oculto, Pix, privilégios).
+- **LOJA-20:** pedido de visitante só é casado pelo e-mail se a conta tiver o e-mail confirmado.
+- **LGPD-01 (D5):** `shop_anonymize_old_orders` (dentro da tarefa diária `daily_privacy_maintenance`) tira nome, telefone, e-mail e vínculos dos pedidos pagos ou cancelados mais velhos que o prazo do aviso (hoje 5 anos: nenhum pedido afetado); itens e valores ficam.
+- **LGPD-09:** o aviso diz que nome, e-mail e telefone vão para a InfinitePay e explica a anonimização; o Perfil do bloco avisa que os contatos do bloco ficam públicos.
+- **Extra:** a caixa do cupom estava dentro do formulário do checkout (formulário aninhado, aviso no console); virou campo comum.
+- **Não feito:** LOJA-11 (D2, preço especial) ficou para o fim da revisão, a pedido. "LOJA-21" do plano não existe na lista (vai até LOJA-20).
+- **Testado:**
+  - banco, em transações sempre desfeitas (conferido depois que nada ficou gravado): cupom aceito, esgotado após 1 uso, volta ao cancelar o pedido, recusado vencido (na conferência e no pedido); pedido duplicado sem e-mail na fila; 6º "pedido recebido" do dia para o mesmo e-mail não entra na fila; diretor reativa (volta a aguardando com prazo); pronta entrega retirada continua retirada e a reserva não dobra; troca de Pix registrada com o diretor; conta sem `shop.manage` não altera cupom nem Pix (0 linhas); anonimização de pedido de 6 anos e consulta antiga recusada; estado antigo recusado; visitante não executa criar pedido/anonimizar/contar usos; limite (sim, sim, não); visitante não vê produto oculto;
+  - funções publicadas: `shop-mailer` com a chave pública 401; `report_payment` "Ação inválida"; `status` de pedido inexistente 404; vitrine devolve a taxa do cartão; IP do contador igual nas funções e no banco, sem efeito do cabeçalho forjado;
+  - navegador (preview local): vitrine → produto → carrinho → checkout; favorecido do painel no texto; taxa "4,20%" e total ≈ R$ 5,22 no cartão; cupom inválido mostra a mensagem nova; TIA20 aplica com Enter sem enviar o checkout; nenhum formulário aninhado;
+  - `tsc`, `vite build`, `vitest` (29 arquivos, 212 testes); advisors sem novidade (definer por `anon` 10, por `authenticated` 137);
+  - **não testado:** pedido real até o pagamento (Pix e InfinitePay) e "Meus pedidos" aberto mais de 10 minutos com pedido real (não criei pedido real em produção; a criação foi testada no banco e o `status` nas funções); painel logado (Cupons, Pagamentos e contatos, Reativar), porque o Google só volta para o endereço cadastrado. Vale conferir no uso real depois do deploy.
+- **Atenção ao deploy do site:** as funções já estão no ar. Até o site ser publicado a partir da `main`, a loja publicada segue com a taxa fixa (igual à do banco hoje) e com a consulta antiga, que continua funcionando.
 | 5 | Site e partes compartilhadas | pendente | Sonnet 5.5, médio | — | — |
 | 6 | Qualidade, faxina e `CLAUDE.md` | pendente | Sonnet 5.5, médio | — | — |
 
@@ -330,17 +362,17 @@ Já configurável: nome da loja, cores (`organizations.theme`), logo, Pix, Infin
 | # | Pergunta | Afeta |
 |---|---|---|
 | D1 | Professor pode reativar integrante inativo do próprio grupo? (sim → consertar; não → tirar o botão e a regra) | INT-01 |
-| D2 | Preço especial deve ser o menor entre especial e preço de integrante? | LOJA-11 |
+| D2 | Preço especial deve ser o menor entre especial e preço de integrante? **Adiada para o fim da revisão (etapa 4).** | LOJA-11 |
 | D3 | Quem tem atividade remunerada deve ficar fora da geração de cobranças? **Respondida (etapa 3): sim, nunca é cobrado.** | COB-05 |
 | D4 | Lista de aniversários: todos com nome completo, ou só ativos com nome de exibição? | LGPD-04 |
-| D5 | Retenção da loja: implementar a anonimização após N anos (pedidos antigos deixam de ser consultáveis) ou mudar o texto do aviso? Qual prazo para backups manuais e log de auditoria? | LGPD-01, LGPD-02, LGPD-03 |
-| D6 | "Avisei que paguei": desligar de vez (recomendado) ou reativar o botão com expiração do "em conferência"? | LOJA-02, LOJA-14 |
+| D5 | Retenção da loja: implementar a anonimização após N anos (pedidos antigos deixam de ser consultáveis) ou mudar o texto do aviso? Qual prazo para backups manuais e log de auditoria? **Respondida: backups 12 meses, auditoria 24 meses (etapa 2); loja anonimiza após o prazo (etapa 4).** | LGPD-01, LGPD-02, LGPD-03 |
+| D6 | "Avisei que paguei": desligar de vez (recomendado) ou reativar o botão com expiração do "em conferência"? **Respondida (etapa 4): desligado de vez.** | LOJA-02, LOJA-14 |
 | D7 | Desligar o login por e-mail/senha no Supabase (há 3 contas antigas com senha; conferir se têm Google)? | SEG-05 |
 | D8 | Apagar `supabase/apply_all.sql` e `apply_phase2.sql`? | DRIFT-04 |
 | D9 | Adicionar ESLint (dependência de desenvolvimento) ou remover os 41 comentários `eslint-disable`? | QUAL-06 |
-| D10 | Taxa do cartão configurável no painel da loja? | LOJA-13 |
+| D10 | Taxa do cartão configurável no painel da loja? **Respondida (etapa 4): sim.** | LOJA-13 |
 | D11 | Listas públicas (vídeos 3 em 3, álbuns 6 em 6, vitrine da loja) são exceção à regra "5 em 5"? | SITE |
-| D12 | Cupom: incluir validade e limite de usos? | LOJA-06 |
+| D12 | Cupom: incluir validade e limite de usos? **Respondida (etapa 4): sim.** | LOJA-06 |
 
 ---
 

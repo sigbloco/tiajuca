@@ -2,7 +2,7 @@
 // Entrada: o contexto que a função SQL `shop_mail_claim` monta para cada item da fila. Saída: assunto, HTML e texto simples.
 // Todo texto vindo de cliente/produto é escapado (nome, itens, motivo de cancelamento) para não injetar HTML no e-mail.
 
-export type TemplateKey = 'order_created' | 'payment_review' | 'paid' | 'cancelled' | 'fulfillment_in_preparation' | 'fulfillment_ready' | 'fulfillment_picked_up' | 'production_started'
+export type TemplateKey = 'order_created' | 'paid' | 'cancelled' | 'fulfillment_in_preparation' | 'fulfillment_ready' | 'fulfillment_picked_up' | 'production_started'
 
 import { pixCopyPaste } from './pix.ts'
 
@@ -176,10 +176,6 @@ export function buildEmail(c: MailContext, opts: { qrCid?: string | null } = {})
     case 'order_created':
       subject = `Pedido ${code} recebido — falta o pagamento`
       body = [hello, p(`Recebemos o seu pedido ${code}. Ele só é confirmado depois do pagamento, que é antecipado e integral.`), itemsSection(c), paymentSection(c, opts.qrCid ?? null), pickupSection(c)]
-      break
-    case 'payment_review':
-      subject = `Pedido ${code}: pagamento em conferência`
-      body = [hello, p(`Recebemos o aviso de pagamento do pedido ${code}. Estamos conferindo e você receberá outro e-mail assim que for confirmado.`), itemsSection(c)]
       break
     case 'paid':
       subject = `Pedido ${code}: pagamento confirmado`

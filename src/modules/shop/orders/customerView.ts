@@ -5,11 +5,11 @@ import { fulfillmentLabel, type FulfillmentStatus, type OrderStatus } from './tr
 export interface TimelineEntry { scope: 'order' | 'fulfillment'; status: string; kind: ProductKind | null; at: string }
 
 export const CUSTOMER_STATUS_LABEL: Record<OrderStatus, string> = {
-  awaiting_payment: 'Aguardando pagamento', payment_review: 'Pagamento em conferência', paid: 'Pago', cancelled: 'Cancelado',
+  awaiting_payment: 'Aguardando pagamento', paid: 'Pago', cancelled: 'Cancelado',
 }
 
 const ORDER_EVENT_LABEL: Record<string, string> = {
-  awaiting_payment: 'Pedido recebido', payment_review: 'Pagamento informado — em conferência', paid: 'Pagamento confirmado', cancelled: 'Pedido cancelado',
+  awaiting_payment: 'Pedido recebido', paid: 'Pagamento confirmado', cancelled: 'Pedido cancelado',
 }
 const KIND_NAME: Record<ProductKind, string> = { stock: 'Pronta entrega', made_to_order: 'Sob encomenda' }
 
@@ -36,9 +36,8 @@ export function progressIndex(kind: ProductKind, status: FulfillmentStatus): num
 export function nextStepText(status: OrderStatus, paymentMethod: 'pix' | 'infinitepay'): string {
   switch (status) {
     case 'awaiting_payment': return paymentMethod === 'pix'
-      ? 'Faça o Pix e envie o comprovante à loja. Depois toque em "Já fiz o pagamento".'
+      ? 'Faça o Pix e envie o comprovante à loja. O pedido é confirmado quando a loja conferir o pagamento.'
       : 'Conclua o pagamento no link da InfinitePay. A confirmação é automática.'
-    case 'payment_review': return 'Estamos conferindo o seu pagamento. Você será avisado por e-mail quando for confirmado.'
     case 'paid': return 'Pagamento confirmado. Avisaremos por e-mail quando seus itens estiverem prontos para retirada.'
     case 'cancelled': return 'Este pedido foi cancelado. Se já pagou ou acha que foi engano, fale com a direção.'
   }

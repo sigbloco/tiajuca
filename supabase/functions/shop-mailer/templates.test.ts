@@ -95,7 +95,6 @@ describe('segurança do conteúdo', () => {
 describe('demais avisos por mudança de status', () => {
   const subj = (t: TemplateKey, kind: MailContext['kind'] = null, extra: Partial<MailContext> = {}) => buildEmail(ctx({ template: t, kind, ...extra })).subject
   it('assuntos', () => {
-    expect(subj('payment_review')).toBe('Pedido HN5XCGA4: pagamento em conferência')
     expect(subj('paid')).toBe('Pedido HN5XCGA4: pagamento confirmado')
     expect(subj('cancelled')).toBe('Pedido HN5XCGA4 cancelado')
     expect(subj('fulfillment_in_preparation', 'made_to_order')).toBe('Pedido HN5XCGA4: seus itens sob encomenda estão em preparo')
@@ -121,7 +120,7 @@ describe('demais avisos por mudança de status', () => {
     expect(buildEmail(ctx({ template: 'order_created' }, { items: [bone] })).text).not.toContain('Faltam')
   })
   it('todo e-mail traz o código para consulta e o nome do bloco', () => {
-    const keys: TemplateKey[] = ['order_created', 'payment_review', 'paid', 'cancelled', 'fulfillment_in_preparation', 'fulfillment_ready', 'fulfillment_picked_up']
+    const keys: TemplateKey[] = ['order_created', 'paid', 'cancelled', 'fulfillment_in_preparation', 'fulfillment_ready', 'fulfillment_picked_up']
     for (const t of keys) {
       const m = buildEmail(ctx({ template: t, kind: 'stock' }))
       expect(m.text).toContain('HN5XCGA4')

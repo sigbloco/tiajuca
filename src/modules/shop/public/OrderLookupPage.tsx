@@ -15,7 +15,7 @@ import { WhatsAppIcon } from '@/modules/members/MemberSection'
 import { CreditFeeTable } from './CreditFeeTable'
 import { GoogleInvite } from './GoogleInvite'
 import { PixQr } from './PixQr'
-import { availableMethods, CREDIT_FEES_PCT, creditFeeCents, creditTotalCents, formatPct, directorLinks, pixInstructions, proofLinks } from '../payments/pix'
+import { availableMethods, creditFeeCents, creditFees, creditTotalCents, formatPct, directorLinks, pixInstructions, proofLinks } from '../payments/pix'
 import { invokeShop } from './api'
 import { useStore } from './StoreContext'
 
@@ -116,7 +116,8 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
   })()
   // Cartão de crédito: a taxa da InfinitePay entra no valor a pagar (à vista) enquanto o pedido espera pagamento.
   const withFee = order.payment_method === 'infinitepay' && status === 'awaiting_payment'
-  const feeCents = withFee ? creditFeeCents(order.total_cents) : 0
+  const fees = creditFees(store.credit_fees_pct)
+  const feeCents = withFee ? creditFeeCents(order.total_cents, 1, fees) : 0
   const payCents = order.total_cents + feeCents
   const pickupPoint = store.pickup_points.find((p) => p.id === order.pickup_point_id)
   const pickupPerson = pickupPoint?.kind === 'person' ? pickupPoint.name.replace(/^combinar com\s+/i, '').replace(/^(a|o)\s+/i, '') : null
@@ -152,7 +153,7 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
         </ul>
         {order.discount_cents - (order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Desconto de integrante</span><span className="shrink-0 whitespace-nowrap">− {money(order.discount_cents - (order.coupon_discount_cents ?? 0))}</span></div>}
         {(order.coupon_discount_cents ?? 0) > 0 && <div className="flex justify-between gap-3 text-sm text-primary"><span className="min-w-0">Cupom {order.coupon_code}</span><span className="shrink-0 whitespace-nowrap">− {money(order.coupon_discount_cents ?? 0)}</span></div>}
-        {withFee && <div className="flex justify-between gap-3 text-sm"><span className="min-w-0">Taxa do cartão de crédito à vista ({formatPct(CREDIT_FEES_PCT[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(feeCents)}</span></div>}
+        {withFee && <div className="flex justify-between gap-3 text-sm"><span className="min-w-0">Taxa do cartão de crédito à vista ({formatPct(fees[0])})</span><span className="shrink-0 whitespace-nowrap">+ {money(feeCents)}</span></div>}
         <div className="flex justify-between gap-3 text-lg font-extrabold"><span>Total</span><span className="shrink-0 whitespace-nowrap">{money(payCents)}</span></div>
         {status === 'cancelled' && order.cancel_reason && <p className="text-sm text-muted-foreground">Motivo: {order.cancel_reason}</p>}
         {status === 'paid' && data.fulfillments.length > 0 && (
@@ -170,10 +171,9 @@ function OrderView({ data, phone, onRefresh, defaultOpen = false, open: openProp
 
       {status !== 'cancelled' && (
         <section className="space-y-3 p-5">
-          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
+          {others.map((m) => <Button key={m} variant="outline" className="h-auto min-h-11 w-full whitespace-normal py-2 text-center" disabled={change.isPending} onClick={() => change.mutate(m)}>Trocar forma de pagamento para {METHOD_SHORT[m]}{' '}<span className="whitespace-nowrap">({m === 'infinitepay' ? `${money(creditTotalCents(order.total_cents, 1, fees))} à vista` : `${money(order.total_cents)}, sem taxa`})</span></Button>)}
           <h2 className="flex flex-wrap gap-x-2 text-lg font-bold"><span>Forma de pagamento:</span><span>{METHOD_NAME[order.payment_method]}</span></h2>
           {status === 'paid' && <p className="text-sm">Pagamento confirmado. Obrigado!</p>}
-          {status === 'payment_review' && <p className="text-sm">Recebemos o seu aviso. Assim que a loja conferir o comprovante, o pedido é marcado como pago.</p>}
           {order.payment_method === 'infinitepay' && status === 'awaiting_payment' && (
             <>
               {!order.payment_url && <p className="text-sm text-muted-foreground">O link de pagamento não está disponível. Fale com a direção abaixo ou troque a forma de pagamento.</p>}
@@ -261,7 +261,7 @@ function MyOrders({ highlight }: { highlight: string }) {
   const q = useQuery({
     queryKey: ['shop', 'my-orders', store.org.slug, session?.user.id],
     queryFn: async () => (await invokeShop<{ orders: LookupResult[] }>('shop-order-public', { action: 'mine', org_slug: store.org.slug })).orders,
-    refetchInterval: (query) => (query.state.data?.some((o) => o.order.status === 'awaiting_payment' || o.order.status === 'payment_review') ? 20_000 : false),
+    refetchInterval: (query) => (query.state.data?.some((o) => o.order.status === 'awaiting_payment') ? 30_000 : false),
   })
   if (q.isPending) return <p className="text-center text-muted-foreground">Carregando seus pedidos</p>
   if (q.isError) return <Card className="space-y-2 p-5"><p role="alert" className="text-destructive">{(q.error as Error).message}</p><Button onClick={() => void q.refetch()}>Tentar de novo</Button></Card>
@@ -290,15 +290,28 @@ export function OrderLookupPage() {
   const [code, setCode] = useState(fromState?.code ?? (urlCode || saved.current?.code || ''))
   const [phone, setPhone] = useState(fromState?.phone ?? (saved.current && (!urlCode || saved.current.code === urlCode) ? saved.current.phone : ''))
   const [data, setData] = useState<LookupResult | null>(null)
+  // Código e telefone da última consulta que deu certo: o acompanhamento e o "atualizar" usam estes, mesmo que o campo mude.
+  const last = useRef<{ code: string; phone: string } | null>(null)
 
   const search = useMutation({
-    mutationFn: () => invokeShop<LookupResult>('shop-order-public', { action: 'lookup', org_slug: store.org.slug, code: code.trim().toUpperCase(), phone }),
-    onSuccess: (r) => {
-      setData(r)
-      try { sessionStorage.setItem(KEY, JSON.stringify({ code: code.trim().toUpperCase(), phone })) } catch { /* sem armazenamento: só não lembra */ }
+    mutationFn: (q?: { code: string; phone: string }) => {
+      const target = q ?? { code: code.trim().toUpperCase(), phone }
+      return invokeShop<LookupResult>('shop-order-public', { action: 'lookup', org_slug: store.org.slug, ...target }).then((r) => ({ r, target }))
     },
-    onError: (e) => { setData(null); toast.error((e as Error).message) },
+    onSuccess: ({ r, target }) => {
+      setData(r)
+      last.current = target
+      try { sessionStorage.setItem(KEY, JSON.stringify(target)) } catch { /* sem armazenamento: só não lembra */ }
+    },
+    // Um erro (limite de consultas, internet caindo) não apaga o pedido que já está na tela: o cliente pode estar pagando.
+    // Só some se a busca falhou para OUTRO código.
+    onError: (e, q) => {
+      const target = q ?? { code: code.trim().toUpperCase(), phone }
+      setData((cur) => (cur && cur.order.code !== target.code ? null : cur))
+      toast.error((e as Error).message)
+    },
   })
+  const refresh = () => { if (last.current) search.mutate(last.current) }
 
   // Veio da compra (ou recarregou/voltou do pagamento): consulta sozinho e acompanha o pagamento até ser confirmado.
   const auto = useRef(false)
@@ -306,13 +319,22 @@ export function OrderLookupPage() {
     if (!session && !auto.current && code && phone.replace(/\D/g, '').length >= 10) { auto.current = true; search.mutate() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const waiting = data?.order.status === 'awaiting_payment' || data?.order.status === 'payment_review'
+  // Acompanha o pagamento pela ação `status` (leve e com limite próprio, 150 por hora por pedido: a cada 30 s cabe sem fim).
+  // Só quando o status muda é que o pedido completo é buscado de novo. Com a aba escondida, não consulta.
+  const waiting = data?.order.status === 'awaiting_payment'
   useEffect(() => {
-    if (!waiting) return
-    const t = setInterval(() => search.mutate(), 20_000)
+    if (!waiting || !last.current) return
+    const target = last.current
+    const t = setInterval(async () => {
+      if (document.hidden) return
+      try {
+        const r = await invokeShop<{ status: OrderStatus }>('shop-order-public', { action: 'status', org_slug: store.org.slug, ...target })
+        if (r.status !== 'awaiting_payment') search.mutate(target)
+      } catch { /* falha passageira ou limite: tenta de novo na próxima volta, sem mexer na tela */ }
+    }, 30_000)
     return () => clearInterval(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [waiting])
+  }, [waiting, data?.order.code])
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
@@ -329,7 +351,7 @@ export function OrderLookupPage() {
             </form>
           </Card>
           {data && <GoogleInvite title="Acompanhe este pedido sem código" text="Entre com o Google e todos os seus pedidos ficam em Meus pedidos, sem precisar do código nem do telefone." />}
-          {data && <OrderView key={data.order.code} defaultOpen data={data} phone={phone} onRefresh={() => search.mutate()} refreshing={search.isPending} />}
+          {data && <OrderView key={data.order.code} defaultOpen data={data} phone={phone} onRefresh={refresh} refreshing={search.isPending} />}
         </>
       )}
       <Link className="block text-center font-semibold text-primary hover:underline" to={basePath}>Voltar à loja</Link>

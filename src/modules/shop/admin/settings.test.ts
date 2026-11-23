@@ -1,11 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { EMPTY_SETTINGS, fromSettings, missingSetup, parsePercent, toSettings, toWaDigits, validateSettings, type SettingsForm } from './settings'
+import { EMPTY_SETTINGS, creditFeeErrors, fromSettings, missingSetup, parseCreditFees, parsePercent, toSettings, toWaDigits, validateSettings, type SettingsForm } from './settings'
 
 const ok: SettingsForm = {
   pix: true, pixKey: 'pix@bloco.com', pixBeneficiary: 'Rafael', infinitepay: false, handle: '', siteUrl: '',
   whatsapp: '(21) 99069-8483', email: 'loja@bloco.com', directors: [{ name: 'Rafael', phone: '(21) 99613-4845' }], mailFromName: 'Bloco', mailFromEmail: 'loja@bloco.com', defaultDiscount: '10',
   introText: '', featuredTitle: 'Destaques', reservationHours: '48', retentionYears: '5',
+  creditFees: ['4,2', '6,09', '', '', '', '', '', '', '', '', '', ''],
 }
+
+describe('taxa do cartão', () => {
+  it('lê de 1x até a última casa preenchida', () => {
+    expect(parseCreditFees(['4,2', '6.09', '', ''])).toEqual([4.2, 6.09])
+    expect(toSettings(ok).credit_fees_pct).toEqual([4.2, 6.09])
+  })
+  it('recusa vazio, buraco no meio e valor fora de 0 a 49,99', () => {
+    expect(creditFeeErrors(['', ''])).toHaveLength(1)
+    expect(creditFeeErrors(['4,2', '', '7'])).toHaveLength(1)
+    expect(creditFeeErrors(['50'])).toHaveLength(1)
+    expect(creditFeeErrors(['abc'])).toHaveLength(1)
+    expect(creditFeeErrors(['0'])).toEqual([])
+  })
+  it('o formulário mostra as 12 casas, com as que não existem vazias', () => {
+    const f = fromSettings({ ...EMPTY_SETTINGS, credit_fees_pct: [4.2, 6.09] })
+    expect(f.creditFees).toHaveLength(12)
+    expect(f.creditFees.slice(0, 3)).toEqual(['4,2', '6,09', ''])
+  })
+})
 
 describe('telefones', () => {
   it('converte para o formato do WhatsApp (55 + DDD + número) e rejeita inválidos', () => {

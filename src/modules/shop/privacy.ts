@@ -30,13 +30,14 @@ export function buildPrivacyNotice(orgName: string, contact: PrivacyContact, ret
     {
       title: 'Com quem compartilhamos',
       paragraphs: [
-        'Apenas com quem precisa para a loja funcionar: o serviço de hospedagem e banco de dados (Supabase), o serviço de envio de e-mails e, se você escolher pagar pela InfinitePay, a própria InfinitePay.',
+        'Apenas com quem precisa para a loja funcionar: o serviço de hospedagem e banco de dados (Supabase) e o serviço de envio de e-mails.',
+        'Se você escolher pagar pela InfinitePay, enviamos a ela o seu nome, e-mail e telefone, além dos itens e do valor, para preencher a página de pagamento. A partir daí vale também o aviso de privacidade da InfinitePay.',
         'Integrantes da direção e quem administra a loja veem seus dados de contato para atender o pedido.',
       ],
     },
     {
       title: 'Por quanto tempo guardamos',
-      paragraphs: [`Guardamos os dados do pedido por até ${retentionYears} ${retentionYears === 1 ? 'ano' : 'anos'}, para controle financeiro do bloco e eventual atendimento posterior. Depois disso eles são apagados ou anonimizados.`],
+      paragraphs: [`Guardamos os dados do pedido por até ${retentionYears} ${retentionYears === 1 ? 'ano' : 'anos'}, para controle financeiro do bloco e eventual atendimento posterior. Depois disso, nome, telefone e e-mail são apagados automaticamente; ficam só os itens, os valores e as datas, sem identificar você. A partir daí o pedido também deixa de aparecer em "Meus pedidos".`],
     },
     {
       title: 'Seus direitos',

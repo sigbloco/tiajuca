@@ -1,5 +1,6 @@
-// Edge Function: envia os e-mails da fila (shop_email_outbox). Chamada logo depois de uma mudança de status e, por segurança,
-// a cada minuto por um agendamento no banco. Não recebe dados: só processa o que está na fila, então chamar de novo é inofensivo.
+// Edge Function: envia os e-mails da fila (shop_email_outbox). Chamada logo depois de uma mudança de status: pelas outras funções da
+// loja (chave de serviço) e pela tela de formulários (sessão de quem aprovou). Não recebe dados: só processa o que está na fila,
+// então chamar de novo é inofensivo.
 //
 // Provedor (troca por configuração, sem mexer nos pedidos) — segredos no Supabase (Edge Functions → Secrets):
 //   SMTP (Gmail):  SMTP_USER=conta@gmail.com   SMTP_PASS=<senha de app>   [SMTP_HOST=smtp.gmail.com  SMTP_PORT=465]
@@ -42,10 +43,16 @@ async function pixQrImage(code: string): Promise<InlineImage | null> {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Método não permitido.' }, 405)
 
+  // Só a chave de serviço (outras funções da loja) ou um usuário logado (tela de formulários). A chave pública sozinha não basta.
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token || token !== Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+    const { data } = token ? await admin.auth.getUser(token) : { data: { user: null } }
+    if (!data.user) return json({ error: 'Não autorizado.' }, 401)
+  }
+
   const provider = pickProvider({ get: (k) => Deno.env.get(k) })
   if (!provider) return json({ configured: false, sent: 0 })
-
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
   const { data: batch, error } = await admin.rpc('shop_mail_claim', { p_limit: 20 })
   if (error) { console.error('shop_mail_claim', error.message); return json({ error: 'fila indisponível' }, 500) }
 

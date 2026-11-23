@@ -18,9 +18,20 @@ export interface OrderFilters { status: OrderStatus | 'all'; method: 'pix' | 'in
 export const EMPTY_ORDER_FILTERS: OrderFilters = { status: 'all', method: 'all', pickup: 'all', archive: 'active' }
 export const ORDERS_LIMIT = 200
 
-export async function listOrders(orgId: string, f: OrderFilters) {
+/** Pedidos para a tela (os 200 mais recentes, com aviso na tela) ou, com `all`, todos, buscados de 200 em 200 (PDF de entregas). */
+export async function listOrders(orgId: string, f: OrderFilters, all = false): Promise<AdminOrder[]> {
+  if (!all) return listOrdersPage(orgId, f, 0)
+  const out: AdminOrder[] = []
+  for (let from = 0; ; from += ORDERS_LIMIT) {
+    const page = await listOrdersPage(orgId, f, from)
+    out.push(...page)
+    if (page.length < ORDERS_LIMIT || from > 20_000) return out
+  }
+}
+
+async function listOrdersPage(orgId: string, f: OrderFilters, from: number) {
   let q = supabase.from('shop_orders').select('*, shop_order_items(*), shop_fulfillments(*)').eq('organization_id', orgId)
-    .order('created_at', { ascending: false }).limit(ORDERS_LIMIT)
+    .order('created_at', { ascending: false }).order('id').range(from, from + ORDERS_LIMIT - 1)
   if (f.status !== 'all') q = q.eq('status', f.status)
   if (f.method !== 'all') q = q.eq('payment_method', f.method)
   if (f.pickup !== 'all') q = q.eq('pickup_point_id', f.pickup)
