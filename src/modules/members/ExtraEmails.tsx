@@ -70,7 +70,7 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
     <div className="space-y-1.5 sm:col-span-2">
       <div className="flex items-center gap-1.5">
         <Label>{self ? 'Adicionais' : 'E-mails adicionais'}</Label>
-        <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar e-mail" title="Adicionar e-mail"
+        <button type="button" className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar e-mail" title="Adicionar e-mail"
           onClick={() => setAdding((a) => !a)}><Plus className="h-3.5 w-3.5" /></button>
         {needsApproval && <span className="min-w-0 whitespace-nowrap text-[clamp(0.6rem,2.7vw,0.75rem)] text-muted-foreground">sujeito à aprovação da direção</span>}
       </div>
@@ -85,7 +85,7 @@ export function ExtraEmails({ memberId, self = false }: { memberId: string; /** 
           {(list.data ?? []).map((e) => (
             <span key={e.id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-sm text-muted-foreground">
               <span className="break-all">{e.email}</span>
-              <button type="button" aria-label={`Remover ${e.email}`} title="Remover" disabled={remove.isPending} className="rounded-full px-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(e.id)}><X className="h-3.5 w-3.5" /></button>
+              <button type="button" aria-label={`Remover ${e.email}`} title="Remover" disabled={remove.isPending} className="tap-44 rounded-full p-1 text-muted-foreground hover:text-destructive" onClick={() => remove.mutate(e.id)}><X className="h-3.5 w-3.5" /></button>
             </span>
           ))}
         </div>

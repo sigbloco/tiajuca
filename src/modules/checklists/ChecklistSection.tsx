@@ -112,9 +112,9 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
               <div className="flex items-start gap-2">
                 {canManage && (
                   <div className="flex shrink-0 flex-col items-center">
-                    <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={idx === 0 || reorder.isPending} onClick={() => swap(idx, idx - 1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={idx === 0 || reorder.isPending} onClick={() => swap(idx, idx - 1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
                     {drag.handle(i.id, moveTo, `checklist-${activityId}`)}
-                    <Button type="button" size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={idx === list.length - 1 || reorder.isPending} onClick={() => swap(idx, idx + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={idx === list.length - 1 || reorder.isPending} onClick={() => swap(idx, idx + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
                   </div>
                 )}
                 <button

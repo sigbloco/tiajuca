@@ -26,7 +26,7 @@ export function TypePicker({ types, ids, onChange }: { types: ActivityTypeRow[];
               {options.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </Select>
           ) : options.length > 0 && (
-            <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Acumular outro tipo" title="Acumular outro tipo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
+            <button type="button" className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Acumular outro tipo" title="Acumular outro tipo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
           )}
           {extras.map((id) => (
             <span key={id} className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-sm text-muted-foreground">

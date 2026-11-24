@@ -315,7 +315,7 @@ export function AttendanceRosterPage() {
                       dropDraft(r.member_id)
                       mark.mutate({ member: r.member_id, status: s, clear: r.status_id === s.id })
                     }}
-                    className={cn('h-9 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, active))}
+                    className={cn('h-11 rounded-lg border text-sm font-semibold transition-colors disabled:opacity-50', statusClass(s, active))}
                   >
                     {s.name}
                   </button>

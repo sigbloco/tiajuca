@@ -100,7 +100,7 @@ export function ActivityCard({ a, instruments, studentIds, slug, audience, staff
         <div className="flex items-start justify-between gap-2">
           <Link to={`/${slug}/presenca/${a.id}`} className="block min-w-0 break-words font-semibold hover:underline">{a.title}</Link>
           {canManage && (
-            <Button size="icon" variant="ghost" className="-mt-1 h-8 w-8 shrink-0 text-destructive" aria-label={`Cancelar ${cancelWord(a.activity_types?.name)}`} title={`Cancelar ${cancelWord(a.activity_types?.name)}`}
+            <Button size="icon" variant="ghost" className="-mt-1 h-10 w-10 shrink-0 text-destructive" aria-label={`Cancelar ${cancelWord(a.activity_types?.name)}`} title={`Cancelar ${cancelWord(a.activity_types?.name)}`}
               disabled={cancel.isPending}
               onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(a.activity_types?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /></Button>
           )}
@@ -118,7 +118,7 @@ export function ActivityCard({ a, instruments, studentIds, slug, audience, staff
                   </Link>
                   {canManage && (
                     <button type="button" disabled={toggleInst.isPending} aria-label={off ? `Desfazer o cancelamento de ${i.name}` : `Cancelar a aula de ${i.name}`} title={off ? 'Desfazer o cancelamento' : 'Cancelar a aula deste instrumento'}
-                      className="mr-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-destructive" onClick={() => toggleInst.mutate({ id: i.id, name: i.name, cancel: !off })}>
+                      className="ml-0.5 mr-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full border-l border-border text-muted-foreground hover:bg-muted hover:text-destructive" onClick={() => toggleInst.mutate({ id: i.id, name: i.name, cancel: !off })}>
                       {off ? <Undo2 className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
                     </button>
                   )}

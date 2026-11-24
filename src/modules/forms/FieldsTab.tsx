@@ -182,10 +182,10 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
               <Card {...drag.row(x.id, sec ? moveSection : moveFieldTo, sec ? 'sections' : 'fields')}
                 className={cn('flex flex-wrap items-center gap-2 p-2.5', !x.is_active && 'opacity-60', sec ? 'border-l-4 border-l-primary bg-muted/60' : 'ml-3', drag.cls(x.id))}>
                 <div className="flex flex-col items-center">
-                  <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={sec ? hi <= 0 : i === 0}
+                  <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={sec ? hi <= 0 : i === 0}
                     onClick={() => (sec ? moveSection(x.id, heads[hi - 1].head!.id) : move.mutate({ from: i, to: i - 1 }))}><ArrowUp className="h-3.5 w-3.5" /></Button>
                   {drag.handle(x.id, sec ? moveSection : moveFieldTo, sec ? 'sections' : 'fields')}
-                  <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={sec ? hi === heads.length - 1 : i === fields.length - 1}
+                  <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={sec ? hi === heads.length - 1 : i === fields.length - 1}
                     onClick={() => (sec ? moveSection(x.id, heads[hi + 1].head!.id) : move.mutate({ from: i, to: i + 1 }))}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
                 {sec && !templateMode && !isLoginSection(x) && (
@@ -199,10 +199,10 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
                     <p className={cn('break-words font-semibold', sec && 'font-display text-lg')}>{x.label}{x.required && <span className="text-destructive"> *</span>}</p>
                   </button>
                   {!isLoginSection(x) && !(templateMode && sec) && (
-                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0" aria-label={`Duplicar ${x.label}`} title={sec ? 'Duplicar a seção com os campos dela' : 'Duplicar o campo'} disabled={duplicate.isPending} onClick={() => duplicate.mutate(x)}><CopyPlus className="h-4 w-4" /></Button>
+                    <Button type="button" size="icon" variant="outline" className="h-10 w-10 shrink-0" aria-label={`Duplicar ${x.label}`} title={sec ? 'Duplicar a seção com os campos dela' : 'Duplicar o campo'} disabled={duplicate.isPending} onClick={() => duplicate.mutate(x)}><CopyPlus className="h-4 w-4" /></Button>
                   )}
                   {sec && !templateMode && x.source_template_id && (
-                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0" aria-label={`Restaurar ${x.label} do modelo`} title="Restaurar do modelo (os campos desta seção voltam ao modelo)" disabled={resetFromTemplate.isPending}
+                    <Button type="button" size="icon" variant="outline" className="h-10 w-10 shrink-0" aria-label={`Restaurar ${x.label} do modelo`} title="Restaurar do modelo (os campos desta seção voltam ao modelo)" disabled={resetFromTemplate.isPending}
                       onClick={async () => { if (await confirmBox(`Restaurar a seção “${x.label}” como está no modelo? Os campos dela voltam ao modelo e o que você mudou aqui nela se perde. Respostas já enviadas não mudam.`)) resetFromTemplate.mutate(x.id) }}><RotateCcw className="h-4 w-4" /></Button>
                   )}
                 </div>

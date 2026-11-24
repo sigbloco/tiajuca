@@ -166,7 +166,7 @@ function CyclesSection({ memberId }: { memberId: string }) {
   return (
     <div className="space-y-3">
       <MemberSection title={<span className="inline-flex items-center gap-1.5">Ciclos{canManage && staffCycles && !adding && missing.length > 0 && (
-        <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
+        <button type="button" className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar ciclo" title="Adicionar ciclo" onClick={() => setAdding(true)}><Plus className="h-3.5 w-3.5" /></button>
       )}</span>}>
         {isLoading && <Skeleton className="h-16" />}
         {adding && (
@@ -405,8 +405,8 @@ export function MemberDetailSheet({ member, category, onChanged = () => {}, onCr
   return (
     <SheetContent onCrumbClick={onCrumbClick} title={labeler(member)} titleAction={canManage && (
       <>
-        <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" aria-label="Excluir integrante" title="Excluir integrante" disabled={archive.isPending}
+        <Button size="icon" variant="ghost" className="h-10 w-10" aria-label="Editar dados" title="Editar dados" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive" aria-label="Excluir integrante" title="Excluir integrante" disabled={archive.isPending}
           onClick={async () => { if (await confirmBox(`Excluir ${labeler(member)}? O cadastro vai para a lixeira: some das listas e da chamada, o histórico (presenças, cobranças) é mantido e dá para restaurar depois.`)) archive.mutate() }}><Trash2 className="h-4 w-4" /></Button>
       </>
     )} description={!staffView || ageOf(member.birth_date) === null ? member.full_name : `${member.full_name} (${ageOf(member.birth_date)} anos)`} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">

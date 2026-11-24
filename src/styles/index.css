@@ -5,6 +5,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Área de toque de 44 × 44 px para alvos pequenos (o "+" de adicionar, o X de um chip), sem mudar o desenho. */
+@layer utilities {
+  .tap-44 { position: relative; }
+  .tap-44::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}
+
 /* Tokens de tema. Os valores de marca (primary/secondary) são sobrescritos em runtime
    pelo tema da organização (src/core/theme.ts). Aqui ficam apenas defaults neutros do SIGBloco. */
 :root {

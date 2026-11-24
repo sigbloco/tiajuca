@@ -60,10 +60,10 @@ export function ItemRow({ item, siblings, canEdit, mut, extra, zebra }: {
   return (
     <div {...(canEdit ? drag.row(item.id, onMove, scope) : {})} className={cn('flex flex-wrap items-center gap-1.5 rounded-lg p-1.5', zebra ? 'bg-muted/60' : 'bg-card', !item.is_active && 'opacity-60', drag.cls(item.id))}>
       <div className="flex flex-col items-center">
-        <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx <= 0}
+        <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={!canEdit || idx <= 0}
           onClick={() => mut.move.mutate({ a: item, b: siblings[idx - 1], list: siblings })}><ArrowUp className="h-3.5 w-3.5" /></Button>
         {canEdit && drag.handle(item.id, onMove, scope)}
-        <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1}
+        <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={!canEdit || idx === siblings.length - 1}
           onClick={() => mut.move.mutate({ a: item, b: siblings[idx + 1], list: siblings })}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>
       <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`} onSave={(v) => mut.save.mutateAsync({ id: item.id, name: v })} />

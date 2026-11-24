@@ -97,9 +97,9 @@ export function SectionTemplatesPage() {
         <ProgressiveList items={list} render={(t, i) => (
           <Card key={t.id} {...drag.row(t.id, moveTo, 'templates')} className={cn('flex flex-wrap items-center gap-2 p-3', drag.cls(t.id))}>
             <div className="flex flex-col items-center">
-              <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
               {drag.handle(t.id, moveTo, 'templates')}
-              <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === list.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={i === list.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
             </div>
             <div className="min-w-0 flex-1 basis-40">
               <div className="flex items-center gap-2">

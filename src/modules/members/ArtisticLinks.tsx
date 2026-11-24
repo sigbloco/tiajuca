@@ -204,7 +204,7 @@ export function ArtisticLinks({ memberId, mode = 'artistic', cycle }: { memberId
   if (!canManage && (data?.length ?? 0) === 0 && (regentes.data?.length ?? 0) === 0) return null
   return (
     <MemberSection level={2} title={<span className="inline-flex items-center gap-1.5">{paid ? 'Remunerada' : collab ? 'Colaborativa' : 'Artística'}{canManage && editing === null && (
-      <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={paid ? 'Adicionar participação remunerada' : collab ? 'Adicionar participação colaborativa' : 'Adicionar participação artística'} title="Adicionar" onClick={() => { setF({ ...EMPTY, is_paid: paid }); setEditing('new') }}><Plus className="h-3.5 w-3.5" /></button>
+      <button type="button" className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label={paid ? 'Adicionar participação remunerada' : collab ? 'Adicionar participação colaborativa' : 'Adicionar participação artística'} title="Adicionar" onClick={() => { setF({ ...EMPTY, is_paid: paid }); setEditing('new') }}><Plus className="h-3.5 w-3.5" /></button>
     )}</span>}>
       {data?.filter((l) => (collab ? !!(l.artistic_functions?.name ?? functions.data?.find((x) => x.id === l.function_id)?.name) : !!l.instrument_id)).map((l, idx) => (editing === l.id ? <div key={l.id}>{form}</div> : (
         <div key={l.id} className={cn('flex items-center justify-between gap-2 rounded-md px-2 py-1', idx % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25')}>

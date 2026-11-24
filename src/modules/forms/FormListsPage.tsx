@@ -136,9 +136,9 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
         <ProgressiveList items={active} render={(item, i) => (
           <Card key={item.id} {...(canEdit ? drag.row(item.id, moveTo, `list-${list.id}`) : {})} className={cn('flex flex-wrap items-center gap-2 p-2', drag.cls(item.id))}>
             <div className="flex flex-col items-center">
-              <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Subir" disabled={!canEdit || i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={!canEdit || i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-4 w-4" /></Button>
               {canEdit && drag.handle(item.id, moveTo, `list-${list.id}`)}
-              <Button size="icon" variant="ghost" className="h-5 w-8" aria-label="Descer" disabled={!canEdit || i === active.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={!canEdit || i === active.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-4 w-4" /></Button>
             </div>
             <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`} onSave={(v) => patch.mutateAsync({ id: item.id, patch: { name: v } })} />
             {canEdit && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover ${item.name} para a lixeira`} title="Mover para a lixeira" onClick={() => patch.mutate({ id: item.id, patch: { is_active: false } })}><Trash2 className="h-4 w-4" /></Button>}
@@ -260,9 +260,9 @@ export function FormListsPage() {
             <Collapsible key={l.id} open={opened.has(l.id)} onToggle={() => toggle(l.id)} title={sd?.title ?? l.name} count={count}
               left={canEdit && (
                 <div className="flex flex-col items-center" {...drag.row(l.id, moveTo, 'form-lists')}>
-                  <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={i === 0} onClick={() => swap(i, i - 1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
                   {drag.handle(l.id, moveTo, 'form-lists')}
-                  <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={i === active.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={i === active.length - 1} onClick={() => swap(i, i + 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
                 </div>
               )}
               right={canEdit && (

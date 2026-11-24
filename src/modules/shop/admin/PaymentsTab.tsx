@@ -152,7 +152,7 @@ function SettingsFormView({ initial, initialShopName }: { initial: ShopSettings;
             <div key={i} className="flex items-center gap-2">
               <Input aria-label="Nome" placeholder="Nome" value={d.name} onChange={(e) => setDirector(i, { name: e.target.value })} />
               <PhoneInput value={d.phone} onChange={(v) => setDirector(i, { phone: v })} />
-              <Button type="button" size="icon" variant="ghost" aria-label={`Remover ${d.name || 'pessoa'}`} onClick={() => set({ directors: f.directors.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
+              <Button type="button" size="icon" variant="ghost" className="shrink-0" aria-label={`Remover ${d.name || 'pessoa'}`} onClick={() => set({ directors: f.directors.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
           <Button type="button" size="sm" variant="outline" onClick={() => set({ directors: [...f.directors, { name: '', phone: '' }] })}><Plus className="h-4 w-4" /> Adicionar pessoa</Button>

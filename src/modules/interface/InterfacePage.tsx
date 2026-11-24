@@ -55,7 +55,7 @@ function FactoryEditor() {
             <HexColorButton label={`Cor ${i + 1}`} value={hex} onChange={(v) => edit(i, v)} className="h-11 w-14 rounded border border-border" />
             <span>{i === 0 ? 'Principal' : i === 1 ? 'Apoio' : `Cor ${i + 1}`}</span>
             {palette.length > 2 && (
-              <button type="button" className="inline-flex items-center gap-0.5 text-destructive hover:underline" onClick={() => void remove(i)}>
+              <button type="button" className="inline-flex min-h-11 items-center gap-0.5 px-2 text-destructive hover:underline" onClick={() => void remove(i)}>
                 <X className="h-3 w-3" /> Tirar
               </button>
             )}

@@ -119,9 +119,9 @@ export function SiteSettings() {
   /** Alça de arrastar + setas (uma acima da outra), como nas variações do produto. */
   const reorderCol = (id: string, i: number, total: number, move: (i: number, d: number) => void, drag: (f: string, t: string) => void, scope: string, what: string) => (
     <div className="flex flex-col items-center">
-      <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label={`Subir ${what}`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+      <Button type="button" size="icon" variant="ghost" className="h-9 w-11" aria-label={`Subir ${what}`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
       {dnd.handle(id, drag, scope)}
-      <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label={`Descer ${what}`} disabled={i === total - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+      <Button type="button" size="icon" variant="ghost" className="h-9 w-11" aria-label={`Descer ${what}`} disabled={i === total - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
     </div>
   )
 

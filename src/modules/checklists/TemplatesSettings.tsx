@@ -91,8 +91,8 @@ export function TemplatesSettings({ canEdit }: { canEdit: boolean }) {
               {list.map((i, idx) => (
                 <div key={i.id} className={cn('flex items-center gap-1.5 rounded-lg bg-background p-1.5', !i.is_active && 'opacity-60')}>
                   <div className="flex flex-col">
-                    <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Subir" disabled={!canEdit || idx === 0} onClick={() => swap.mutate({ a: i, b: list[idx - 1] })}><ArrowUp className="h-3.5 w-3.5" /></Button>
-                    <Button size="icon" variant="ghost" className="h-5 w-7" aria-label="Descer" disabled={!canEdit || idx === list.length - 1} onClick={() => swap.mutate({ a: i, b: list[idx + 1] })}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir" disabled={!canEdit || idx === 0} onClick={() => swap.mutate({ a: i, b: list[idx - 1] })}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer" disabled={!canEdit || idx === list.length - 1} onClick={() => swap.mutate({ a: i, b: list[idx + 1] })}><ArrowDown className="h-3.5 w-3.5" /></Button>
                   </div>
                   <div className="min-w-0 flex-1">
                     <Input className="h-9 border-transparent bg-transparent font-semibold" defaultValue={i.title} disabled={!canEdit}

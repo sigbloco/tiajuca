@@ -104,14 +104,14 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setSheet(p.id) } }}
           className={`flex cursor-pointer items-center gap-2 p-3 transition hover:shadow-md ${p.is_hidden ? 'opacity-60' : ''} ${dragId === p.id ? 'ring-2 ring-primary' : ''}`}>
           <div className="flex shrink-0 flex-col items-center">
-          <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Subir ${p.name}`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="h-9 w-11" aria-label={`Subir ${p.name}`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" /></Button>
           <button type="button" aria-label={`Arrastar ${p.name}`} title="Arraste para reordenar" style={{ touchAction: 'none' }}
             className="shrink-0 cursor-grab rounded p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing"
             onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragId(p.id); setLocal(items.map((x) => x.id)) }}
             onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
             <GripVertical className="h-5 w-5" />
           </button>
-          <Button size="icon" variant="ghost" className="h-7 w-8" aria-label={`Descer ${p.name}`} disabled={i === items.length - 1 || save.isPending} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="h-9 w-11" aria-label={`Descer ${p.name}`} disabled={i === items.length - 1 || save.isPending} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" /></Button>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-1 self-start">
             {p.shop_product_images[0]

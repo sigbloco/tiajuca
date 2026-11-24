@@ -41,7 +41,7 @@ export function AudiencePicker({ value, onChange }: { value: AudRow[]; onChange:
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
         <Label>Público da chamada</Label>
-        <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar público" title="Adicionar público"
+        <button type="button" className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted" aria-label="Adicionar público" title="Adicionar público"
           onClick={() => onChange([...value, { kind: 'section', ref: '', type: 'section' }])}><Plus className="h-3.5 w-3.5" /></button>
       </div>
       {value.length === 0 && <p className="text-sm text-muted-foreground">Todos os ativos no ciclo.</p>}

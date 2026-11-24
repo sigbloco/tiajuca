@@ -221,9 +221,9 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
   return (
     <div {...dnd.row(a.id, onDrag, 'albums')} className={`flex items-start gap-2 rounded-lg border border-border p-2 ${index % 2 === 1 ? 'bg-muted/60' : 'bg-muted/25'} ${dnd.cls(a.id)}`}>
       <div className="flex flex-col items-center">
-        <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label="Subir álbum" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+        <Button type="button" size="icon" variant="ghost" className="h-9 w-11" aria-label="Subir álbum" disabled={index === 0} onClick={() => onMove(index, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
         {dnd.handle(a.id, onDrag, 'albums')}
-        <Button type="button" size="icon" variant="ghost" className="h-6 w-7" aria-label="Descer álbum" disabled={index === total - 1} onClick={() => onMove(index, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+        <Button type="button" size="icon" variant="ghost" className="h-9 w-11" aria-label="Descer álbum" disabled={index === total - 1} onClick={() => onMove(index, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         {a.cover_url ? <img src={a.cover_url} alt="" className="aspect-[4/3] w-full max-w-[13rem] rounded-lg object-cover" /> : <div aria-hidden className="flex aspect-[4/3] w-full max-w-xs items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">sem capa</div>}
@@ -235,7 +235,7 @@ function AlbumRow({ album: a, index, total, dnd, onMove, onDrag, onSave, onTrash
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
             <Label>Autores (“por …”)</Label>
-            <button type="button" disabled={d.authors.length >= 10} className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar autor" title="Adicionar autor"
+            <button type="button" disabled={d.authors.length >= 10} className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar autor" title="Adicionar autor"
               onClick={() => setD({ ...d, authors: [...d.authors, { kind: 'instagram', value: '' }] })}><Plus className="h-3.5 w-3.5" /></button>
           </div>
           {d.authors.map((u, i) => (

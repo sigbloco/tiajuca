@@ -183,7 +183,7 @@ export function MyData({ memberId, bind, part = 'contact' }: { memberId: string;
           <div className="order-4 space-y-1.5 sm:order-5 sm:col-span-2">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Label htmlFor="my-user-0">Redes sociais</Label>
-              <button type="button" className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar rede social" title="Adicionar rede social" disabled={noSocial}
+              <button type="button" className="tap-44 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50" aria-label="Adicionar rede social" title="Adicionar rede social" disabled={noSocial}
                 onClick={() => setRows([...rows, { network: 'instagram', user: '' }])}><Plus className="h-3.5 w-3.5" /></button>
               <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><input type="checkbox" className="h-4 w-4" checked={noSocial} onChange={(e) => setNoSocial(e.target.checked)} /> não tenho / não uso</label>
             </div>
