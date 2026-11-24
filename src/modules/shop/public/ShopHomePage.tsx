@@ -7,6 +7,7 @@ import { balancedCols } from '@/components/shared/BalancedGrid'
 import { productAvailability, type ProductKind } from '../catalog'
 import { imageUrl } from '../admin/service'
 import { Price } from './Price'
+import { MinUnitsBadge } from './Suggestions'
 import { useStore } from './StoreContext'
 
 type FilterKey = ProductKind | 'kit'
@@ -78,7 +79,8 @@ export function ShopHomePage() {
                   <div className="space-y-1 p-3">
                     <p className="font-semibold leading-tight">{p.is_kit && <KitChip />}{p.name}</p>
                     <Price product={p} isMember={isMember} />
-                    <div>
+                    <div className="flex flex-wrap gap-1">
+                      <MinUnitsBadge product={p} />
                       {soldOut ? <Badge>Esgotado</Badge> : p.kind === 'made_to_order' ? <Badge>Sob encomenda · {p.lead_time_days}</Badge> : <Badge>Pronta entrega</Badge>}
                     </div>
                   </div>

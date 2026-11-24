@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { formatDayShort, formatTime } from '@/core/format'
 import type { Activity } from './service'
 
@@ -19,10 +19,9 @@ const WHEN = 'text-sm font-semibold capitalize text-muted-foreground'
 const COUNT = 'text-xs font-bold uppercase text-primary'
 
 /** Uma linha do destaque. Se a linha inteira com "FALTAM N DIAS" não couber, troca por "EM N DIAS" (só quebra se nem assim couber). */
-function HighlightRow({ a, today, onPick }: { a: Activity; today: string; onPick: (a: Activity) => void }) {
+function HighlightRow({ a, today, onPick, short, onNeed }: { a: Activity; today: string; onPick: (a: Activity) => void; short: boolean; onNeed: (id: string, need: boolean) => void }) {
   const btn = useRef<HTMLButtonElement>(null)
   const probe = useRef<HTMLSpanElement>(null)
-  const [short, setShort] = useState(false)
   const when = `${formatDayShort(a.activity_date)}${a.start_time ? ` · ${hourLabel(a.start_time)}` : ''} ·`
   const confirm = a.to_confirm ? ' · a confirmar' : ''
   const long = daysUntilText(a.activity_date, today) + confirm
@@ -32,13 +31,13 @@ function HighlightRow({ a, today, onPick }: { a: Activity; today: string; onPick
     const check = () => {
       const cs = getComputedStyle(el)
       const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
-      setShort((probe.current?.offsetWidth ?? 0) > avail)
+      onNeed(a.id, (probe.current?.offsetWidth ?? 0) > avail)
     }
     check()
     const ro = new ResizeObserver(check)
     ro.observe(el)
-    return () => ro.disconnect()
-  }, [long, when, a.title])
+    return () => { ro.disconnect(); onNeed(a.id, false) }
+  }, [long, when, a.title, a.id, onNeed])
   return (
     <button ref={btn} type="button" onClick={() => onPick(a)} className={`relative w-full flex-wrap overflow-hidden rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-left transition hover:bg-primary/10 ${ROW}`}>
       <span className={WHEN}>{when}</span>
@@ -54,9 +53,20 @@ function HighlightRow({ a, today, onPick }: { a: Activity; today: string; onPick
 
 /** Eventos em destaque, um por linha: "sáb · 13/02 · 14h · Cortejo  FALTAM 86 DIAS". Usada no Calendário e no Início. */
 export function HighlightCards({ items, today, onPick }: { items: Activity[]; today: string; onPick: (a: Activity) => void }) {
+  // Se uma linha precisa da versão curta ("EM N DIAS"), todas passam a usá-la, para a lista ficar uniforme.
+  const [needs, setNeeds] = useState<Set<string>>(() => new Set())
+  const onNeed = useCallback((id: string, need: boolean) => {
+    setNeeds((cur) => {
+      if (cur.has(id) === need) return cur
+      const next = new Set(cur)
+      if (need) next.add(id); else next.delete(id)
+      return next
+    })
+  }, [])
+  const short = needs.size > 0
   return (
     <div className="space-y-2">
-      {items.map((a) => <HighlightRow key={a.id} a={a} today={today} onPick={onPick} />)}
+      {items.map((a) => <HighlightRow key={a.id} a={a} today={today} onPick={onPick} short={short} onNeed={onNeed} />)}
     </div>
   )
 }

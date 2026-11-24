@@ -9,7 +9,7 @@ import { useAuth } from '@/core/auth'
 import { MAX_QTY_PER_LINE, maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
 import { Price } from './Price'
-import { MinUnitsBar, SuggestedProducts } from './Suggestions'
+import { MinUnitsBadge, MinUnitsBar, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
 export function ProductPage() {
@@ -61,6 +61,7 @@ export function ProductPage() {
             {product.kind === 'made_to_order'
               ? <Badge>Sob encomenda · produção em {product.lead_time_days}</Badge>
               : <Badge>Pronta entrega</Badge>}
+            <MinUnitsBadge product={product} />
           </div>
           <MinUnitsBar product={product} />
           {product.is_kit && (product.components?.length ?? 0) > 0 && (

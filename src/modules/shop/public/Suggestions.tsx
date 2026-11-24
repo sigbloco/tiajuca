@@ -3,7 +3,7 @@ import { Flame } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Button, Card, cn } from '@/components/ui/primitives'
+import { Badge, Button, Card, cn } from '@/components/ui/primitives'
 import { remainingView } from '../catalog'
 import { imageUrl } from '../admin/service'
 import type { StoreProduct } from '../cart'
@@ -36,11 +36,25 @@ export function MinUnitsBar({ product }: { product: StoreProduct }) {
   )
 }
 
+/** Selo "Produção: 3/10" (unidades pagas / mínimo para produzir) para o produto que tem mínimo. */
+export function MinUnitsBadge({ product }: { product: StoreProduct }) {
+  const v = remainingView({ min_units: product.min_units, confirmed_units: product.confirmed_units })
+  if (!v) return null
+  return <Badge title="Unidades pagas até o mínimo para produzir">Produção: {Math.min(v.done, v.min)}/{v.min}</Badge>
+}
+
 /** Sugestões pequenas escolhidas no painel. `from` = produtos cujas sugestões entram; `exclude` = ids que não repetem. */
 export function SuggestedProducts({ from, exclude }: { from: StoreProduct[]; exclude: string[] }) {
   const { store, isMember, basePath } = useStore()
+  const [seed] = useState(() => Math.random())
   const ids = [...new Set(from.flatMap((p) => p.suggested_ids ?? []))].filter((id) => !exclude.includes(id))
-  const items = ids.map((id) => store.products.find((p) => p.id === id)).filter((p): p is StoreProduct => !!p && p.variants.some((v) => v.available !== 0))
+  const available = (p?: StoreProduct): p is StoreProduct => !!p && p.variants.some((v) => v.available !== 0)
+  let items = ids.map((id) => store.products.find((p) => p.id === id)).filter(available)
+  // Produto sem sugeridos no painel: sorteia outros (estável durante a visita à página).
+  if (items.length === 0) {
+    items = store.products.filter((p) => !exclude.includes(p.id) && available(p))
+      .map((p, i) => ({ p, k: Math.sin((i + 1) * 9301 + seed * 49297) })).sort((a, b) => a.k - b.k).slice(0, 3).map((x) => x.p)
+  }
   if (items.length === 0) return null
   return (
     <section className="space-y-2" aria-label="Você também pode gostar">
