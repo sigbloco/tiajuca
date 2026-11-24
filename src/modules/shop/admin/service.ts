@@ -36,6 +36,16 @@ export async function listProducts(orgId: string) {
   }))
 }
 
+/** Unidades em pedidos PAGOS por produto (a mesma conta do "x/x" da loja pública). */
+export async function listPaidUnits(orgId: string): Promise<Map<string, number>> {
+  const { data, error } = await supabase.from('shop_order_items')
+    .select('product_id, quantity, shop_orders!inner(status)').eq('organization_id', orgId).eq('shop_orders.status', 'paid').limit(5000)
+  if (error) throw error
+  const out = new Map<string, number>()
+  for (const r of (data ?? []) as { product_id: string | null; quantity: number }[]) if (r.product_id) out.set(r.product_id, (out.get(r.product_id) ?? 0) + r.quantity)
+  return out
+}
+
 export interface ProductInput {
   name: string; description: string; kind: ProductKind; price_cents: number; member_discount_pct: number
   special_price_cents?: number | null; show_remaining?: boolean; show_remaining_when?: number | null

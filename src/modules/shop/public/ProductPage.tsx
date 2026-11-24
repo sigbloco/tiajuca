@@ -9,7 +9,7 @@ import { useAuth } from '@/core/auth'
 import { MAX_QTY_PER_LINE, maxQuantity } from '../cart'
 import { imageUrl } from '../admin/service'
 import { Price } from './Price'
-import { MinUnitsBadge, MinUnitsBar, SuggestedProducts } from './Suggestions'
+import { MinUnitsBar, SuggestedProducts } from './Suggestions'
 import { useStore } from './StoreContext'
 
 export function ProductPage() {
@@ -60,9 +60,7 @@ export function ProductPage() {
           <div className="flex flex-wrap gap-2">
             {product.kind === 'made_to_order'
               ? <Badge>Sob encomenda · produção em {product.lead_time_days}</Badge>
-              : <Badge>Pronta entrega</Badge>}
-            <MinUnitsBadge product={product} />
-          </div>
+              : <Badge>Pronta entrega</Badge>}          </div>
           <MinUnitsBar product={product} />
           {product.is_kit && (product.components?.length ?? 0) > 0 && (
             <div className="rounded-lg bg-muted p-3 text-sm">

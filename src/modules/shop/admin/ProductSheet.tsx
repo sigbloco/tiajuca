@@ -87,7 +87,7 @@ function ActionBar({ product, saving, hiding, trashing, onHide, onTrash }: {
 }
 
 
-export function ProductSheet({ product, kit = false, others = [], stockItems = [], pickupPoints = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; kit?: boolean; others?: ShopProduct[]; stockItems?: StockItem[]; pickupPoints?: PickupPoint[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
+export function ProductSheet({ product, paidUnits = 0, kit = false, others = [], stockItems = [], pickupPoints = [], defaultDiscount = 0, onSaved, onClose }: { product: ShopProduct | null; paidUnits?: number; kit?: boolean; others?: ShopProduct[]; stockItems?: StockItem[]; pickupPoints?: PickupPoint[]; defaultDiscount?: number; onSaved: (id: string) => void; onClose: () => void }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const [f, setF] = useState({
@@ -292,6 +292,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
         {!isStock && (
           <div className="space-y-1.5"><Label htmlFor="pr-min">Mínimo para produzir</Label>
             <Input id="pr-min" inputMode="numeric" placeholder="Ex.: 50" value={f.minUnits} onChange={(e) => setF({ ...f, minUnits: e.target.value.replace(/\D/g, '') })} />
+            {!!product?.min_units && <p className="text-sm font-semibold">Produção: {Math.min(paidUnits, product.min_units)}/{product.min_units} unidades pagas</p>}
             <p className="text-xs text-muted-foreground">Se preencher, a loja mostra quantas unidades já foram pagas até chegar nesse mínimo, e o prazo de produção só conta depois disso. Deixe vazio para não usar.</p>
             {f.minUnits && (
               <div className="space-y-1.5 pt-1">

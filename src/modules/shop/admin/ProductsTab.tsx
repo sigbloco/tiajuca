@@ -12,7 +12,7 @@ import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, variantUnits } from '../catalog'
 import { ProductSheet } from './ProductSheet'
-import { imageUrl, listProducts, listPickupPoints, listStockItems, reorderProducts, setProductActive, type ShopProduct, type StockItem } from './service'
+import { imageUrl, listPaidUnits, listProducts, listPickupPoints, listStockItems, reorderProducts, setProductActive, type ShopProduct, type StockItem } from './service'
 import { getSettings } from './settings'
 
 function stockSummary(p: ShopProduct, items: Map<string, StockItem>): string {
@@ -29,7 +29,8 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
   const q = useQuery({ queryKey: ['shop', orgId, 'products'], queryFn: () => listProducts(orgId) })
   const stock = useQuery({ queryKey: ['shop', orgId, 'stock'], queryFn: () => listStockItems(orgId) })
   const points = useQuery({ queryKey: ['shop', orgId, 'pickup'], queryFn: () => listPickupPoints(orgId) })
-  const itemsMap = new Map((stock.data ?? []).map((it) => [it.id, it]))
+  const paid = useQuery({ queryKey: ['shop', orgId, 'paid-units'], queryFn: () => listPaidUnits(orgId) })
+  const itemsMap =new Map((stock.data ?? []).map((it) => [it.id, it]))
   const settings = useQuery({ queryKey: ['shop', orgId, 'settings'], queryFn: () => getSettings(orgId) })
   const defaultDiscount = settings.data?.default_member_discount_pct ?? 0
   const qc = useQueryClient()
@@ -128,6 +129,7 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
             {p.member_discount_pct > 0 && <p className="text-sm text-muted-foreground">{formatCurrency(fromCents(memberPriceCents(p.price_cents, p.member_discount_pct)))} · integrante</p>}
             {!!p.special_price_cents && <p className="text-sm text-muted-foreground">{formatCurrency(fromCents(p.special_price_cents))} · especial (direção, professores, monitores)</p>}
             <p className="text-sm text-muted-foreground">{stockSummary(p, itemsMap)}</p>
+            {!!p.min_units && <p className="text-sm font-semibold">Produção: {Math.min(paid.data?.get(p.id) ?? 0, p.min_units)}/{p.min_units}</p>}
           </div>
         </Card>
       ))}
@@ -136,7 +138,7 @@ export function ProductsTab({ kits = false }: { kits?: boolean }) {
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet === 'new' && <ProductSheet key={`new-${defaultDiscount}`} product={null} others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
         {sheet === 'new-kit' && <ProductSheet key={`kit-${defaultDiscount}`} product={null} kit others={q.data ?? []} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} defaultDiscount={defaultDiscount} onSaved={setSheet} onClose={() => setSheet(null)} />}
-        {current && <ProductSheet key={current.id} product={current} others={(q.data ?? []).filter((x) => x.id !== current.id)} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} onSaved={setSheet} onClose={() => setSheet(null)} />}
+        {current && <ProductSheet key={current.id} product={current} paidUnits={paid.data?.get(current.id) ?? 0}others={(q.data ?? []).filter((x) => x.id !== current.id)} stockItems={stock.data ?? []} pickupPoints={(points.data ?? []).filter((x) => x.is_active)} onSaved={setSheet} onClose={() => setSheet(null)} />}
       </Sheet>
     </div>
   )

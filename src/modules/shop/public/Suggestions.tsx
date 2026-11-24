@@ -3,7 +3,7 @@ import { Flame } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Badge, Button, Card, cn } from '@/components/ui/primitives'
+import { Button, Card, cn } from '@/components/ui/primitives'
 import { remainingView } from '../catalog'
 import { imageUrl } from '../admin/service'
 import type { StoreProduct } from '../cart'
@@ -34,13 +34,6 @@ export function MinUnitsBar({ product }: { product: StoreProduct }) {
         : urgent ? 'O prazo de produção conta a partir daí.' : `Faltam ${remaining} para a produção começar, e o prazo conta a partir daí.`}</p>
     </div>
   )
-}
-
-/** Selo "Produção: 3/10" (unidades pagas / mínimo para produzir) para o produto que tem mínimo. */
-export function MinUnitsBadge({ product }: { product: StoreProduct }) {
-  const v = remainingView({ min_units: product.min_units, confirmed_units: product.confirmed_units })
-  if (!v) return null
-  return <Badge title="Unidades pagas até o mínimo para produzir">Produção: {Math.min(v.done, v.min)}/{v.min}</Badge>
 }
 
 /** Sugestões pequenas escolhidas no painel. `from` = produtos cujas sugestões entram; `exclude` = ids que não repetem. */
