@@ -115,7 +115,12 @@ export function SettingsTab({ form, part = 'main' }: { form: FormRow; part?: 'ma
           <p className="text-xs text-muted-foreground">Mostra o formulário como está agora (mesmo rascunho), sem enviar nada. Só abre para quem tem acesso ao sistema.</p>
         </div>
         <ButtonRow>
-          <Button disabled={publish.isPending || form.status === 'archived'} onClick={() => publish.mutate()}><Rocket className="h-4 w-4" /> {form.published_version_id ? 'Publicar nova versão' : 'Publicar'}</Button>
+          <Button disabled={publish.isPending || form.status === 'archived'} onClick={async () => {
+            const msg = form.published_version_id
+              ? 'Publicar nova versão? Quem abrir o link passa a ver o formulário como está agora; quem já respondeu continua com a versão em que respondeu.'
+              : 'Publicar este formulário? O link fica aberto ao público e passa a aceitar respostas.'
+            if (await confirmBox({ title: form.published_version_id ? 'Publicar nova versão' : 'Publicar', message: msg, confirmLabel: 'Publicar' })) publish.mutate()
+          }}><Rocket className="h-4 w-4" /> {form.published_version_id ? 'Publicar nova versão' : 'Publicar'}</Button>
           {form.status === 'published' && <Button variant="outline" onClick={() => setStatus.mutate('closed')}>Encerrar inscrições</Button>}
           {form.status === 'closed' && <Button variant="outline" onClick={() => setStatus.mutate('published')}>Reabrir</Button>}
           {form.status !== 'archived' && <Button variant="ghost" onClick={async () => { if (await confirmBox('Apagar este formulário? Ele vai para a lixeira (em Inscrições), o link deixa de funcionar e as respostas são mantidas.')) setStatus.mutate('archived') }}>Arquivar</Button>}

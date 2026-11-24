@@ -128,6 +128,7 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
                 title={blocked ? 'Somente o titular do bloco concede ou remove a direção' : undefined}
                 onClick={async () => {
                   if (on && r.key === 'direcao' && !(await confirmBox('Remover o papel de direção desta pessoa?'))) return
+                  if (!on && r.key === 'direcao' && !(await confirmBox({ title: 'Dar a direção', message: `Dar o papel de direção a ${p.name}? A direção vê e gerencia tudo do bloco, inclusive dados pessoais e dinheiro.`, confirmLabel: 'Dar a direção' }))) return
                   toggle.mutate({ member: p.id, role: r.key, on: !on })
                 }}>
                 {blocked && <Lock className="h-3 w-3" />}{r.label}

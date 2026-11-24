@@ -97,7 +97,10 @@ function PaySheet({ payment, onClose }: { payment: StaffPayment; onClose: () => 
             <div className="space-y-1.5"><Label htmlFor="pp-m">Forma</Label>
               <Select id="pp-m" value={method} onChange={(e) => setMethod(e.target.value)}>{['PIX', 'Dinheiro', 'Transferência', 'Outro'].map((m) => <option key={m}>{m}</option>)}</Select></div>
           </div>
-          <Button disabled={!paidOn || pay.isPending} onClick={() => pay.mutate()}>Marcar como pago</Button>
+          <Button disabled={pay.isPending} onClick={async () => {
+            if (!paidOn) { toast.error('Preencha: Data do pagamento.'); return }
+            if (await confirmBox({ title: 'Registrar pagamento', message: `Registrar ${formatCurrency(Number(payment.amount))} pago a ${name} em ${formatDate(paidOn)}, via ${method}?`, confirmLabel: 'Registrar pagamento' })) pay.mutate()
+          }}>Marcar como pago</Button>
           <Button variant="ghost" className="text-destructive" onClick={async () => { if (await confirmBox('Cancelar este pagamento?')) cancel.mutate() }}>Cancelar pagamento</Button>
         </>
       )}

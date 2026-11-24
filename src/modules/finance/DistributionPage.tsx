@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { confirmBox } from '@/components/shared/DialogHost'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
 import { Badge, Button, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
@@ -233,10 +234,20 @@ export function DistributionPage() {
     : r.kind === 'group' ? `rende ${formatCurrency(groupShareOf((r as RuleRow).member_id))}`
     : r.kind === 'percent' ? `Mensalidades pagas no mês: ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
 
+  const toGenerate = () => {
+    const already = new Set((payments.data ?? []).map((p) => p.member_id))
+    return people.filter((p) => !already.has(p.id) && totalOf(p.id) > 0)
+  }
+  const confirmGenerate = async () => {
+    const todo = toGenerate()
+    if (!todo.length) { toast.success('Nenhum pagamento novo a criar.'); return }
+    const sum = todo.reduce((n, p) => n + totalOf(p.id), 0)
+    const deficit = rawNet < 0 ? `\nAtenção: o previsto passa das mensalidades pagas no mês em ${formatCurrency(-rawNet)}.` : ''
+    if (await confirmBox({ title: 'Gerar pagamentos do mês', message: `Criar ${todo.length} ${todo.length === 1 ? 'pagamento' : 'pagamentos'} da equipe, somando ${formatCurrency(sum)}?${deficit}`, confirmLabel: 'Gerar pagamentos' })) generate.mutate()
+  }
   const generate = useMutation({
     mutationFn: async () => {
-      const already = new Set((payments.data ?? []).map((p) => p.member_id))
-      const todo = people.filter((p) => !already.has(p.id) && totalOf(p.id) > 0)
+      const todo = toGenerate()
       for (const p of todo) {
         const { error } = await supabase.rpc('create_staff_payment', { p_member: p.id, p_competence: competence, p_destination: null, p_amount: totalOf(p.id), p_due_on: null, p_notes: 'Gerado pela Equipe' })
         if (error) throw error
@@ -314,7 +325,7 @@ export function DistributionPage() {
       </Card>
       <Card className="flex flex-wrap items-center justify-between gap-2 p-3">
         <p className="font-semibold">Total previsto no mês: {formatCurrency(grand)}</p>
-        {canEdit && <Button disabled={generate.isPending || grand <= 0} onClick={() => generate.mutate()}>Gerar pagamentos do mês</Button>}
+        {canEdit && <Button disabled={generate.isPending || grand <= 0} onClick={confirmGenerate}>Gerar pagamentos do mês</Button>}
       </Card>
       <p className="text-sm text-muted-foreground">Os pagamentos gerados aparecem em <PageLink to="pagamentos">Financeiro → Pagamentos</PageLink>.</p>
     </div>

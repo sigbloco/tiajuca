@@ -52,7 +52,13 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
   }
   const pay = useMutation({ mutationFn: rpc('mark_charge_paid', { p_charge: charge.id, p_paid_on: paidOn, p_method: method }), onSuccess: () => done('Pagamento registrado.'), onError: (e) => toast.error(friendlyError(e)) })
   const adjust = useMutation({ mutationFn: rpc('adjust_charge', { p_charge: charge.id, p_new_amount: amount, p_reason: reason }), onSuccess: () => done('Valor ajustado e registrado.'), onError: (e) => toast.error(friendlyError(e)) })
-  const autoAdjust = () => { if (amount !== null && reason.trim() && amount !== charge.final_amount && !adjust.isPending) adjust.mutate() }
+  const confirmAdjust = async () => {
+    const missing = [amount === null && 'Novo valor', !reason.trim() && 'Motivo do ajuste'].filter(Boolean)
+    if (missing.length) { toast.error(`Preencha: ${missing.join(' e ')}.`); return }
+    if (amount === charge.final_amount) { toast.error('O novo valor é igual ao valor devido.'); return }
+    const linkNote = charge.pay_link_url ? '\nO link de pagamento atual deixa de dar baixa: depois, gere um novo.' : ''
+    if (await confirmBox({ title: 'Ajustar valor', message: `Mudar a cobrança de ${formatCurrency(charge.final_amount)} para ${formatCurrency(amount ?? 0)}?${linkNote}`, confirmLabel: 'Ajustar valor' })) adjust.mutate()
+  }
   const status = useMutation({
     mutationFn: (s: 'cancelled' | 'pending') => rpc('change_charge_status', { p_charge: charge.id, p_status: s, p_notes: null })(),
     onSuccess: (_d, s) => done(s === 'cancelled' ? 'Cobrança cancelada.' : 'Cobrança reaberta.'), onError: (e) => toast.error(friendlyError(e)),
@@ -117,16 +123,20 @@ function ChargeSheet({ charge, onClose }: { charge: Charge; onClose: () => void 
                 {['PIX', 'Dinheiro', 'Transferência', 'Cartão', 'Outro'].map((m) => <option key={m}>{m}</option>)}
               </Select></div>
           </div>
-          <Button className="w-full" disabled={!paidOn || pay.isPending} onClick={() => pay.mutate()}>Marcar como pago</Button>
+          <Button className="w-full" disabled={pay.isPending} onClick={async () => {
+            if (!paidOn) { toast.error('Preencha: Data.'); return }
+            if (await confirmBox({ title: 'Registrar pagamento', message: `Registrar ${formatCurrency(charge.final_amount)} pago por ${name} em ${formatDate(paidOn)}, via ${method}?`, confirmLabel: 'Registrar pagamento' })) pay.mutate()
+          }}>Marcar como pago</Button>
         </section>
       )}
 
       {editable && (
         <section className="space-y-2">
           <h3>Ajustar valor</h3>
-          <MoneyInput value={amount} onChange={setAmount} onBlur={autoAdjust} />
-          <Input placeholder="Motivo do ajuste (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} onBlur={autoAdjust} />
-          <p className="text-xs text-muted-foreground">Grava sozinho quando o valor e o motivo estão preenchidos. Fica registrado: valor original, novo valor, motivo, responsável e horário.</p>
+          <div className="space-y-1.5"><Label htmlFor="adj-amount" required>Novo valor</Label><MoneyInput id="adj-amount" value={amount} onChange={setAmount} /></div>
+          <div className="space-y-1.5"><Label htmlFor="adj-reason" required>Motivo do ajuste</Label><Input id="adj-reason" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          <Button variant="outline" className="w-full" disabled={adjust.isPending} onClick={confirmAdjust}>Ajustar valor</Button>
+          <p className="text-xs text-muted-foreground">Fica registrado: valor original, novo valor, motivo, responsável e horário.</p>
         </section>
       )}
 

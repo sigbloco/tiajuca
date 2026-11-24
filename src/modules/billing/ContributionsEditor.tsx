@@ -1,4 +1,5 @@
 import { PageLink } from '@/components/shared/PageLink'
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -97,7 +98,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
       {canEdit && noOwnPrices && previous && (
         <Card className="flex flex-wrap items-center justify-between gap-2 border-primary/30 bg-primary/5 p-3">
           <p className="min-w-0 flex-1 basis-56">Este ciclo ainda não tem valores. Copie os de <strong>{previous.name}</strong> e ajuste o que mudou.</p>
-          <Button variant="outline" disabled={replicate.isPending} onClick={() => replicate.mutate()}><Copy className="h-4 w-4" /> Replicar</Button>
+          <Button variant="outline" disabled={replicate.isPending} onClick={async () => { if (await confirmBox({ title: 'Replicar valores', message: `Copiar para este ciclo os valores de ${previous.name}? Depois dá para ajustar cada um.`, confirmLabel: 'Replicar' })) replicate.mutate() }}><Copy className="h-4 w-4" /> Replicar</Button>
         </Card>
       )}
       {(cats.isLoading || funcs.isLoading) && <Skeleton className="h-24" />}

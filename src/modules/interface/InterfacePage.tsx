@@ -1,4 +1,5 @@
 import { FitWord } from '@/components/shared/FitText'
+import { confirmBox } from '@/components/shared/DialogHost'
 import { SaveButton } from '@/components/shared/SaveButton'
 import { StickySave } from '@/components/shared/StickySave'
 import { ButtonRow } from '@/components/shared/ButtonRow'
@@ -33,6 +34,15 @@ const AREAS: { key: Tab; label: string; intro: string }[] = [
 function FactoryEditor() {
   const [palette, setPalette] = usePalette()
   const edit = (i: number, v: string) => setPalette(palette.map((c, k) => (k === i ? v.toUpperCase() : c)))
+  // Tirar a Principal ou a de Apoio troca as cores no sistema, no site e na loja de uma vez: pede confirmação.
+  const remove = async (i: number) => {
+    const message = i === 0
+      ? 'Tirar a cor Principal? A cor seguinte vira a Principal e muda os botões e destaques do sistema, do site e da loja onde estiver “Padrão do bloco”.'
+      : i === 1
+        ? 'Tirar a cor de Apoio? A cor seguinte vira a de Apoio no sistema, no site e na loja onde estiver “Padrão do bloco”.'
+        : `Tirar a Cor ${i + 1} da paleta?`
+    if (await confirmBox({ title: 'Tirar cor', message, confirmLabel: 'Tirar', danger: true })) setPalette(palette.filter((_, k) => k !== i))
+  }
   return (
     <Card className="space-y-4 p-4">
       <p className="text-sm text-muted-foreground">
@@ -45,7 +55,7 @@ function FactoryEditor() {
             <HexColorButton label={`Cor ${i + 1}`} value={hex} onChange={(v) => edit(i, v)} className="h-11 w-14 rounded border border-border" />
             <span>{i === 0 ? 'Principal' : i === 1 ? 'Apoio' : `Cor ${i + 1}`}</span>
             {palette.length > 2 && (
-              <button type="button" className="inline-flex items-center gap-0.5 text-destructive hover:underline" onClick={() => setPalette(palette.filter((_, k) => k !== i))}>
+              <button type="button" className="inline-flex items-center gap-0.5 text-destructive hover:underline" onClick={() => void remove(i)}>
                 <X className="h-3 w-3" /> Tirar
               </button>
             )}

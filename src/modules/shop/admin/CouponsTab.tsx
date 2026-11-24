@@ -7,6 +7,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, EmptyState, Input, Label, Skeleton } from '@/components/ui/primitives'
+import { DateInput } from '@/components/ui/masked-inputs'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { supabase } from '@/core/supabase'
@@ -35,6 +36,21 @@ export function parseMaxUses(v: string): number | null | undefined {
 export const todayBR = (): string => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 
 /** Loja → Cupons: cria cupons de desconto em %, ativa e desativa. Tudo grava na hora (nada de botão de salvar por linha). */
+/** Validade do cupom: grava ao sair do campo, só com a data completa (ou vazia, para sem validade), não a cada dígito. */
+function CouponValidUntil({ id, value, disabled, onSave }: { id: string; value: string | null; disabled: boolean; onSave: (v: string | null) => void }) {
+  const [v, setV] = useState(value ?? '')
+  return (
+    <fieldset className="min-w-0" disabled={disabled} onBlur={(e) => {
+      const typed = (e.target as unknown as HTMLInputElement).value ?? ''
+      if (typed && !v) { toast.error('Digite a data completa: dd/mm/aaaa.'); return }
+      const next = typed ? v : null
+      if (next !== value) onSave(next)
+    }}>
+      <DateInput id={id} value={v} onChange={setV} />
+    </fieldset>
+  )
+}
+
 export function CouponsTab() {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -142,8 +158,8 @@ export function CouponsTab() {
             onClick={async () => { if (await confirmBox(`Excluir o cupom ${c.code}? Para só pausar, desmarque Ativo.`)) remove.mutate(c.id) }}><Trash2 className="h-4 w-4" /></Button>
           <div className="grid w-full grid-cols-2 gap-2">
             <div className="space-y-1"><Label htmlFor={`cu-${c.id}`}>Válido até</Label>
-              <Input id={`cu-${c.id}`} type="date" value={c.valid_until ?? ''} disabled={patch.isPending}
-                onChange={(e) => patch.mutate({ id: c.id, fields: { valid_until: e.target.value || null } })} /></div>
+              <CouponValidUntil key={c.valid_until ?? ''} id={`cu-${c.id}`} value={c.valid_until} disabled={patch.isPending}
+                onSave={(v) => patch.mutate({ id: c.id, fields: { valid_until: v } })} /></div>
             <div className="space-y-1"><Label>Limite de usos</Label>
               <SaveInput numeric allowEmpty inputClassName="text-center" placeholder="Sem limite" aria-label={`Limite de usos do cupom ${c.code}`} value={c.max_uses === null ? '' : String(c.max_uses)}
                 onSave={async (v) => { const n = parseMaxUses(v); if (n === undefined) { toast.error('O limite deve ficar entre 1 e 100000, ou vazio para sem limite.'); throw new Error('limite inválido') } if (n !== c.max_uses) await patch.mutateAsync({ id: c.id, fields: { max_uses: n } }) }} /></div>

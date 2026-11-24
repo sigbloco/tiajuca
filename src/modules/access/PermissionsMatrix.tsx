@@ -8,6 +8,7 @@ import { Select, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { GROUP_SCOPED } from '@/core/permissions'
+import { notifyChange } from '@/core/undo'
 import { supabase } from '@/core/supabase'
 
 /** Uma linha por página do sistema. `see` = permissões de ver (a página aparece no menu); `edit` = de editar. */
@@ -46,6 +47,7 @@ const GROUPS: { title: string; areas: Area[] }[] = [
 const SCOPES: [string, string][] = [['', 'Sem acesso'], ['own', 'Só o próprio'], ['group', 'Meu grupo'], ['org', 'Tudo']]
 
 interface RoleRow { id: string; key: string; name: string; scopes: Record<string, string> }
+interface Change { role: string; permission: string; scope: string; prev: string }
 
 /** Valor de um controle com várias permissões: todas iguais → esse valor; senão "mixed". */
 function valueOf(keys: string[], scopes: Record<string, string>): string {
@@ -77,14 +79,20 @@ export function PermissionsMatrix() {
       return { roles: rows, locked: new Set((locked.data ?? []) as string[]) }
     },
   })
+  const apply = async (changes: Change[]) => {
+    for (const c of changes) {
+      const { error } = await supabase.rpc('set_role_permission', { p_org: orgId, p_role_key: c.role, p_permission: c.permission, p_scope: c.scope || null })
+      if (error) throw error
+    }
+  }
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['access-matrix', orgId] }); qc.invalidateQueries({ queryKey: ['memberships'] }) }
   const set = useMutation({
-    mutationFn: async (changes: { role: string; permission: string; scope: string }[]) => {
-      for (const c of changes) {
-        const { error } = await supabase.rpc('set_role_permission', { p_org: orgId, p_role_key: c.role, p_permission: c.permission, p_scope: c.scope || null })
-        if (error) throw error
-      }
+    mutationFn: (changes: Change[]) => apply(changes),
+    // Desfazer por 5 s: volta cada permissão ao alcance que tinha antes.
+    onSuccess: (_d, changes) => {
+      refresh()
+      notifyChange('Permissão atualizada. Vale no próximo carregamento de cada pessoa.', async () => { await apply(changes.map((c) => ({ ...c, scope: c.prev }))); refresh() })
     },
-    onSuccess: () => { toast.success('Permissão atualizada. Vale no próximo carregamento de cada pessoa.'); qc.invalidateQueries({ queryKey: ['access-matrix', orgId] }); qc.invalidateQueries({ queryKey: ['memberships'] }) },
     onError: (e) => { toast.error(friendlyError(e)); qc.invalidateQueries({ queryKey: ['access-matrix', orgId] }) },
   })
 
@@ -95,8 +103,8 @@ export function PermissionsMatrix() {
   /** Muda "Ver" ou "Editar" de uma página. Editar sem ver não faz sentido: editar liga o ver, e tirar o ver tira o editar. */
   const change = (area: Area, kind: 'see' | 'edit', scope: string) => {
     if (!role) return
-    const out: { role: string; permission: string; scope: string }[] = []
-    const put = (keys: string[] | undefined, s: string) => (keys ?? []).forEach((k) => { if (!data?.locked.has(k)) out.push({ role: role.key, permission: k, scope: s }) })
+    const out: Change[] = []
+    const put = (keys: string[] | undefined, s: string) => (keys ?? []).forEach((k) => { if (!data?.locked.has(k)) out.push({ role: role.key, permission: k, scope: s, prev: role.scopes[k] ?? '' }) })
     if (kind === 'see') {
       put(area.see, scope)
       if (!scope) put(area.edit, '')

@@ -1,4 +1,5 @@
 import { Lock } from 'lucide-react'
+import { confirmBox } from '@/components/shared/DialogHost'
 import { useLocation } from 'react-router-dom'
 import { cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
@@ -10,6 +11,8 @@ import { RELEASE_CATEGORIES, pageAccessible, pageKeyForPath, rawReleased, releas
  * Linha fixa no topo: para quem a página aberta está liberada. Titular marca e desmarca; a Direção só vê.
  * A caixa fica desmarcada e desabilitada quando a categoria não tem acesso à página em "Acesso e papéis".
  * Subpágina de uma área só pode ser marcada com a área liberada.
+ * Só aparece na própria página (não nas subpáginas, como configurações, editor ou chamada, que mudariam a página-mãe sem
+ * que se perceba), e cada toque pede confirmação: muda o que um papel inteiro vê.
  */
 export function PageReleaseBar({ base }: { base: string }) {
   const { realMembership } = useOrganization()
@@ -19,7 +22,9 @@ export function PageReleaseBar({ base }: { base: string }) {
   const rows = usePageReleaseRows()
   const access = useCategoryAccess(seen)
   const set = useSetReleases()
-  const key = pageKeyForPath(pathname.slice(base.length))
+  const rest = pathname.slice(base.length)
+  const segs = rest.split('/').filter(Boolean)
+  const key = segs.length > 1 || segs[0] === 'vagas' ? null : pageKeyForPath(rest)
   const page = key ? releasePage(key) : undefined
   if (!seen || !page || page.alias) return null
   const ready = !!rows.data && !!access.data
@@ -40,7 +45,13 @@ export function PageReleaseBar({ base }: { base: string }) {
               className={cn('flex min-h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-2 text-sm font-semibold',
                 disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-muted', checked && !disabled && 'border-primary')}>
               <input type="checkbox" className="h-4 w-4 shrink-0" checked={checked} disabled={disabled}
-                onChange={(e) => set.mutate([{ page: page.key, category: c.key, released: e.target.checked }])} />
+                onChange={async (e) => {
+                  const released = e.target.checked
+                  const ok = await confirmBox(released
+                    ? { title: 'Liberar página', message: `Liberar ${page.label} para ${c.label}? A categoria ${c.label} passa a ver esta página${page.isHub ? ' (as subpáginas continuam com a liberação de cada uma)' : ''}.`, confirmLabel: 'Liberar' }
+                    : { title: 'Tirar a liberação', message: `Tirar ${page.label} de ${c.label}? A categoria ${c.label} deixa de ver esta página${page.isHub ? ' e todas as subpáginas dela' : ''}.`, confirmLabel: 'Tirar', danger: true })
+                  if (ok) set.mutate([{ page: page.key, category: c.key, released }])
+                }} />
               <span>{c.label}</span>
             </label>
           )
