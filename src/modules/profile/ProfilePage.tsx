@@ -4,7 +4,7 @@ import { SaveButton } from '@/components/shared/SaveButton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Badge, Card, Input, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Card, Input, Label, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatCurrency, formatDate } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -13,13 +13,13 @@ import { supabase } from '@/core/supabase'
 import { MyParticipation } from './MyParticipation'
 import { MemberPhotoEditor } from '@/modules/members/MemberAvatar'
 import { StickySave } from '@/components/shared/StickySave'
-import { MyData, MySensitiveData, type SaveBinder } from './MyData'
+import { MyData, MySensitiveData, useBindSave, type SaveBinder } from './MyData'
 import { PAY_STATUS_CLASS, PAY_STATUS_LABEL, type StaffPayment } from '@/modules/finance/service'
 
 const PIX_TYPES = [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email', 'E-mail'], ['telefone', 'Telefone'], ['aleatoria', 'Chave aleatória']] as const
 
-/** Chave PIX (professores e monitores hoje; liberável a outros papéis via permissão) e histórico de pagamentos próprios. */
-function PixSection({ memberId }: { memberId: string }) {
+/** Chave Pix (professores e monitores hoje; liberável a outros papéis via permissão). Salva pelo botão único da página, não ao sair do campo. */
+function PixSection({ memberId, bind }: { memberId: string; bind: SaveBinder }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
   const allowed = usePermission('pix.manage', 'own')
@@ -39,24 +39,33 @@ function PixSection({ memberId }: { memberId: string }) {
       const { error } = await supabase.rpc('set_pix_key', { p_member: memberId, p_type: type, p_value: value })
       if (error) throw error
     },
-    onSuccess: () => { toast.success('Chave PIX salva.'); setValue(''); qc.invalidateQueries({ queryKey: ['my-pix', orgId, memberId] }) },
-    onError: (e) => toast.error(/check|violat|23514/i.test(String(e) + JSON.stringify(e)) ? 'Chave PIX inválida para o tipo escolhido.' : friendlyError(e)),
+    onSuccess: () => { toast.success('Chave Pix salva.'); setValue(''); qc.invalidateQueries({ queryKey: ['my-pix', orgId, memberId] }) },
+    onError: (e) => toast.error(/check|violat|23514/i.test(String(e) + JSON.stringify(e)) ? 'Chave Pix inválida para o tipo escolhido.' : friendlyError(e)),
+  })
+  // Campo vazio: nada a salvar. Com erro, o "Salvar" da página para aqui (o aviso já saiu).
+  useBindSave(bind, async () => {
+    if (!allowed || !value.trim()) return
+    try { await save.mutateAsync() } catch { return false }
   })
   if (!allowed) return null
   return (
     <Card className="space-y-2 p-4">
-      <h3>Minha chave PIX</h3>
+      <h3>Minha chave Pix</h3>
       {current.data ? <p>Atual: <span className="font-mono">{current.data.key_value}</span> <Badge>{PIX_TYPES.find((t) => t[0] === current.data!.key_type)?.[1]}</Badge></p>
         : <p className="text-muted-foreground">Nenhuma chave cadastrada.</p>}
       <div className="grid gap-2 sm:grid-cols-3">
-        <Select aria-label="Tipo da chave" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-          {PIX_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-        </Select>
-        <div className="flex gap-2 sm:col-span-2">
-          <Input className="min-w-0 flex-1" aria-label="Chave" placeholder="Digite a nova chave" value={value} onChange={(e) => setValue(e.target.value)} onBlur={() => { if (value.trim() && !save.isPending) save.mutate() }} onKeyDown={(e) => { if (e.key === 'Enter' && value.trim() && !save.isPending) { e.preventDefault(); save.mutate() } }} />
+        <div className="space-y-1">
+          <Label htmlFor="pix-type">Tipo da chave</Label>
+          <Select id="pix-type" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
+            {PIX_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </Select>
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor="pix-value">{current.data ? 'Nova chave' : 'Chave'}</Label>
+          <Input id="pix-value" className="w-full" value={value} onChange={(e) => setValue(e.target.value)} />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">Só você e a direção veem a chave. Ao trocar, a anterior é arquivada e os pagamentos passados mantêm a chave usada na época.</p>
+      <p className="text-xs text-muted-foreground">Grava com o "Salvar" da página. Só você e a direção veem a chave. Ao trocar, a anterior é arquivada e os pagamentos passados mantêm a chave usada na época.</p>
     </Card>
   )
 }
@@ -102,6 +111,7 @@ export function ProfilePage() {
   const bindData = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('data', fn); else savers.current.delete('data') }, [])
   const bindOther = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('other', fn); else savers.current.delete('other') }, [])
   const bindSens = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('sens', fn); else savers.current.delete('sens') }, [])
+  const bindPix = useCallback<SaveBinder>((fn) => { if (fn) savers.current.set('pix', fn); else savers.current.delete('pix') }, [])
   const saveAll = async () => {
     setSaving(true)
     try { for (const fn of savers.current.values()) { if ((await fn()) === false) break } } catch { /* cada bloco já avisa o erro */ } finally { setSaving(false) }
@@ -119,7 +129,7 @@ export function ProfilePage() {
       <MyData memberId={memberId} bind={bindData} />
       <MySensitiveData memberId={memberId} bind={bindSens} />
       <MyParticipation memberId={memberId} />
-      <PixSection memberId={memberId} />
+      <PixSection memberId={memberId} bind={bindPix} />
       {(payments.isLoading || (payments.data?.length ?? 0) > 0) && (
         <section className="space-y-2">
           <h3>Pagamentos que recebo</h3>

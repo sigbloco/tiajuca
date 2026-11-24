@@ -37,8 +37,6 @@ export default {
         '2xl': ['1.5rem', { lineHeight: '1.65rem' }],
         '3xl': ['1.875rem', { lineHeight: '2rem' }],
       },
-      keyframes: { 'loading-fill': { '0%': { width: '0%' }, '100%': { width: '100%' } }, 'loading-bar': { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(300%)' } } },
-      animation: { 'loading-fill': 'loading-fill 3s linear forwards', 'loading-bar': 'loading-bar 1.3s ease-in-out infinite' },
       boxShadow: { card: '0 1px 2px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.04)' },
     },
   },

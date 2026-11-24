@@ -4,29 +4,40 @@ import { applyTheme } from '@/core/theme'
 import { readBrand } from '@/modules/auth/AuthLayout'
 import { RaysBackdrop } from '@/modules/site/Rays'
 
-/** A logo guardada começa a baixar já na abertura do app; a tela de carregando só começa (logo, raios, barra e contagem) quando ela estiver pronta (ou passados 2,5 s). */
-export const brandReady: Promise<void> = new Promise((resolve) => {
+/** Tempo da barra: de 0 a 100 % em no máximo 2 s, uma animação só. */
+export const LOADING_MS = 2000
+
+// A logo guardada começa a baixar já na abertura do app (fica no cache quando a tela de carregando aparecer).
+if (typeof Image !== 'undefined') {
   const logo = readBrand()?.logo_path
-  if (!logo || typeof Image === 'undefined') { resolve(); return }
-  const img = new Image()
-  img.onload = img.onerror = () => resolve()
-  img.src = logo
-  setTimeout(resolve, 2500)
-})
+  if (logo) new Image().src = logo
+}
+
+/**
+ * Um "carregamento" só, mesmo quando uma tela de carregando dá lugar a outra (rotas → moldura do app):
+ * a barra continua de onde estava em vez de recomeçar. Depois de um tempo sem nenhuma na tela, o próximo começa do 0.
+ */
+let started: number | null = null
+let mounted = 0
+let lastGone = 0
+const HANDOFF_MS = 400
+function loadingStart(): number {
+  const now = performance.now()
+  if (started === null || (mounted === 0 && now - lastGone > HANDOFF_MS)) started = now
+  return started
+}
 
 /** Vale por carga da página: ao recarregar volta a valer; ao navegar dentro do app, não. */
 let splashShown = false
 
-/** Na abertura do app, segura a tela de carregando pelo tempo mínimo (padrão 3 s) para dar tempo de ver a logo e a barra encher. */
-export function useSplashHold(ms = 3000): boolean {
+/** Na abertura do app, segura a tela de carregando até a barra chegar a 100 % (no máximo 2 s desde que ela apareceu). */
+export function useSplashHold(ms = LOADING_MS): boolean {
   const [hold, setHold] = useState(!splashShown)
   useEffect(() => {
     if (!hold) return
-    let t: ReturnType<typeof setTimeout> | undefined
-    let on = true
-    // O tempo mínimo conta a partir de a logo estar pronta.
-    void brandReady.then(() => { if (on) t = setTimeout(() => { splashShown = true; setHold(false) }, ms) })
-    return () => { on = false; clearTimeout(t) }
+    const left = Math.max(0, loadingStart() + ms - performance.now())
+    const t = setTimeout(() => { splashShown = true; setHold(false) }, left)
+    return () => clearTimeout(t)
   }, [hold, ms])
   return hold
 }
@@ -34,41 +45,32 @@ export function useSplashHold(ms = 3000): boolean {
 /** Contorno branco em volta do texto (oito direções), para proteger a leitura sobre os raios. */
 const STROKE = { textShadow: '2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff, 1.5px 1.5px #fff, -1.5px -1.5px #fff, 1.5px -1.5px #fff, -1.5px 1.5px #fff' }
 
-/** Número de 0 a 100 no mesmo ritmo da barra (linear, em "ms"). Sem "ms", fica em 0. */
-function useCountUp(ms?: number): number {
-  const [n, setN] = useState(0)
+/** Progresso de 0 a 100, linear, a partir do começo do carregamento. A barra e o número usam o mesmo valor (andam juntos). */
+function useProgress(): number {
+  const [n, setN] = useState(() => Math.min(100, ((performance.now() - loadingStart()) / LOADING_MS) * 100))
   useEffect(() => {
-    if (!ms) return
-    const t0 = performance.now()
+    mounted++
+    const t0 = loadingStart()
     let raf = 0
     const tick = (now: number) => {
-      const v = Math.min(100, Math.floor(((now - t0) / ms) * 100))
+      const v = Math.min(100, ((now - t0) / LOADING_MS) * 100)
       setN(v)
       if (v < 100) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [ms])
+    return () => { cancelAnimationFrame(raf); mounted--; lastGone = performance.now() }
+  }, [])
   return n
 }
 
 /**
  * Tela de carregando, centralizada: logo do bloco (a última conhecida, guardada no aparelho) com raios na cor do bloco
- * saindo do centro dela, e uma barra embaixo.
- * Com "fillMs", a barra enche de 0 a 100% nesse tempo; sem ele, uma barrinha corre sem parar. "children" entra embaixo.
+ * saindo do centro dela, e uma barra embaixo que enche de 0 a 100 % em 2 s. "children" entra embaixo.
  */
-export function LoadingScreen({ children, fillMs }: { children?: ReactNode; fillMs?: number }) {
+export function LoadingScreen({ children }: { children?: ReactNode }) {
   const brand = readBrand()
   useLayoutEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, [])
-  const [ready, setReady] = useState(false)
-  useEffect(() => {
-    let on = true
-    void brandReady.then(() => { if (on) setReady(true) })
-    return () => { on = false }
-  }, [])
-  const pct = useCountUp(ready ? fillMs : undefined)
-  // Até a logo estar pronta, só o fundo: nada aparece pela metade e a barra só começa a encher depois.
-  if (!ready) return <div role="status" aria-live="polite" className="min-h-screen" style={{ backgroundColor: 'rgb(var(--secondary))' }}><p className="sr-only">Carregando</p></div>
+  const pct = useProgress()
   return (
     <div role="status" aria-live="polite" className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center" style={{ backgroundColor: 'rgb(var(--secondary))' }}>
       {/* Fundo na cor secundária (100%) e 9 raios na cor principal, em SVG (bordas lisas), saindo do centro da logo. */}
@@ -77,13 +79,11 @@ export function LoadingScreen({ children, fillMs }: { children?: ReactNode; fill
         {brand && <OrgLogo name={brand.name} logoPath={brand.logo_path} className="relative h-20 w-20" />}
       </div>
       <div className="relative h-3 w-52 overflow-hidden rounded-full bg-white p-0.5 shadow-sm" aria-hidden>
-        {fillMs
-          ? <div className="h-full w-0 rounded-full bg-primary animate-loading-fill motion-reduce:w-full" style={{ animationDuration: fillMs + 'ms' }} />
-          : <div className="h-full w-1/3 rounded-full bg-primary animate-loading-bar motion-reduce:w-full motion-reduce:animate-pulse" />}
+        <div className="h-full rounded-full bg-primary motion-reduce:!w-full" style={{ width: `${pct}%` }} />
       </div>
       {/* Texto escuro com contorno branco, para continuar legível sobre os raios. */}
       <p className="relative font-display text-lg font-extrabold text-[#1c1917]" style={STROKE}>
-        Carregando{fillMs ? <> <span className="tabular-nums">{pct}%</span></> : null}
+        Carregando <span className="tabular-nums">{Math.floor(pct)}%</span>
       </p>
       <div className="relative">{children}</div>
     </div>

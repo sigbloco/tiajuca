@@ -31,7 +31,8 @@ const toList = (v: string | null) => { const l = (v ?? '').split(/\r?\n/).map((x
 
 /** A página do perfil tem um único botão Salvar: cada bloco registra aqui a sua função de salvar (devolve false se algo impede). */
 export type SaveBinder = (fn: (() => Promise<boolean | void>) | null) => void
-function useBindSave(bind: SaveBinder | undefined, fn: () => Promise<boolean | void>) {
+/** Entrega ao botão único da página a função que salva este bloco (sem botão próprio). */
+export function useBindSave(bind: SaveBinder | undefined, fn: () => Promise<boolean | void>) {
   const ref = useRef(fn)
   ref.current = fn
   useEffect(() => { bind?.(() => ref.current()); return () => bind?.(null) }, [bind])

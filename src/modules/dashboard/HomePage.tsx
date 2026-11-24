@@ -199,9 +199,10 @@ function MyStatus({ orgId, memberId, slug, staff, direction }: { orgId: string; 
       <Stat compact size={valueSize} onSize={fit('ciclo')} label="Ciclo" value={data.cycle?.name ?? '—'} />
       <Stat compact size={valueSize} onSize={fit('status')} label="Status" value={data.status ?? 'Sem registro'} />
       {!staff && !direction && <Stat compact size={valueSize} onSize={fit('freq')} label="Frequência" labelShort="Freq." value={data.att ? `${Number(data.att.pct_present).toLocaleString('pt-BR')}%` : '—'} hint={data.att ? `${data.att.records} registros` : 'sem chamadas ainda'} />}
-      <Link to={`/${slug}/cobrancas`} className="flex min-w-0">
+      {/* Quem recebe (equipe, direção): o próximo pagamento a receber, com atalho para "Pagamentos que recebo" em Meu perfil. */}
+      <Link to={receives ? `/${slug}/perfil` : `/${slug}/cobrancas`} className="flex min-w-0">
         {receives ? (
-          <Stat compact size={valueSize} onSize={fit('valor')} label="Pagamento" labelShort="Pgto." value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Em dia'} hint={data.pay ? `a receber · ${data.pay.due_on < todayIso() ? "venceu" : "vence"} ${formatDate(data.pay.due_on)}` : undefined} />
+          <Stat compact size={valueSize} onSize={fit('valor')} label="A receber" labelShort="Receber" value={data.pay ? formatCurrency(Number(data.pay.amount)) : 'Nada pendente'} hint={data.pay ? `${data.pay.due_on < todayIso() ? "venceu" : "vence"} ${formatDate(data.pay.due_on)}` : undefined} />
         ) : (
           <Stat compact size={valueSize} onSize={fit('valor')} label="Mensalidade" labelShort="Mensal." value={data.exempt ? 'Isento' : data.charge ? formatCurrency(Number(data.charge.final_amount)) : 'Em dia'}
             hint={!data.exempt && data.charge ? (data.charge.count > 1 ? `${data.charge.count} em aberto · desde ${formatDate(data.charge.due_on)}` : `${data.charge.due_on < todayIso() ? "venceu" : "vence"} ${formatDate(data.charge.due_on)}`) : undefined} tone={!data.exempt && data.charge && data.charge.due_on < todayIso() ? 'text-destructive' : undefined} />

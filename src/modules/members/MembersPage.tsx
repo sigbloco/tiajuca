@@ -2,7 +2,7 @@ import { nameWithSurname } from './personLabel'
 import { ParticipationRequests } from './ParticipationRequests'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { givenName, shortName } from '@/core/format'
-import { Filter, Heart, Pencil, Plus, Search } from 'lucide-react'
+import { Eye, Filter, Heart, Pencil, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CameFrom } from '@/app/navigation'
@@ -57,6 +57,8 @@ export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedC
 function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title: string }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
+  // Quem não gerencia (ex.: Professor/Monitor) abre a ficha só para ver: olho e "Ver ficha", não lápis.
+  const canEditMembers = usePermission('members.manage')
   const wantedCategory = lockedCategory ?? ''
   // Por padrão a lista mostra só quem está ATIVO no ciclo escolhido; "Ativos e inativos" no funil mostra todos (inativos esmaecidos).
   // Filtros: busca por nome; situação no ciclo (ativos por padrão); tipos de pessoa (todos marcados por padrão).
@@ -306,7 +308,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
             </a>
           )}
         </div>
-        <Button size="icon" variant="ghost" aria-label={`Editar ficha de ${shortName(m?.full_name, m?.display_name)}`} onClick={() => setSelected(m)}><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" aria-label={`${canEditMembers ? 'Editar' : 'Ver'} ficha de ${shortName(m?.full_name, m?.display_name)}`} title={canEditMembers ? 'Editar ficha' : 'Ver ficha'} onClick={() => setSelected(m)}>{canEditMembers ? <Pencil className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
       </div>
     )
   }
@@ -352,15 +354,14 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h1>{title}</h1>
-        <Can permission="members.manage">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card hover:bg-muted" aria-label="Novo integrante" title="Novo integrante" onClick={() => setSheetOpen(true)}><Plus className="h-4 w-4" /></button>
-            <NewMemberSheet onClose={() => setSheetOpen(false)} />
-          </Sheet>
-        </Can>
-      </div>
+      <h1>{title}</h1>
+      {/* Regra 7: botão de adicionar tracejado, com "+" e texto, em 100 % da largura sob o título. */}
+      <Can permission="members.manage">
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <Button variant="add" className="w-full" onClick={() => setSheetOpen(true)}><Plus className="h-4 w-4" /> Novo integrante</Button>
+          <NewMemberSheet onClose={() => setSheetOpen(false)} />
+        </Sheet>
+      </Can>
       <ParticipationRequests />
 
       <div className="space-y-3">

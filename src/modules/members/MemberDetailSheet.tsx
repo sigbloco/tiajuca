@@ -93,11 +93,16 @@ function CycleGroup({ cycle, status, memberId, canManage, onChange, statuses, se
           {selector && <div className="min-w-0 space-y-1"><Label className="text-xs">Ciclo</Label>{selector}</div>}
           <div className="min-w-0 space-y-1">
             <Label className="text-xs">Situação</Label>
-            <OkSelect className="w-full min-w-0 px-2 text-sm" disabled={!canManage} value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
-              {!status && <option value="">Sem registro</option>}
-              {status && past && status.is_waitlist && <option value={status.key}>{status.name}</option>}
-              {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
-            </OkSelect>
+            {/* Quem só vê (ex.: Professor/Monitor): a situação em texto, não um seletor travado e apagado. */}
+            {canManage ? (
+              <OkSelect className="w-full min-w-0 px-2 text-sm" value={status?.key ?? ''} onSave={(v) => onChange(cycle.id, v)} aria-label={'Situação em ' + cycle.name}>
+                {!status && <option value="">Sem registro</option>}
+                {status && past && status.is_waitlist && <option value={status.key}>{status.name}</option>}
+                {optionsFor.map((x) => <option key={x.id} value={x.key}>{labelOf(x)}</option>)}
+              </OkSelect>
+            ) : (
+              <p className="flex h-10 items-center rounded-lg border border-border bg-muted/40 px-2 text-sm font-medium">{status ? labelOf(status) : 'Sem registro'}</p>
+            )}
           </div>
         </div>
         <div className="border-t border-border pt-3"><ParticipationBlock memberId={memberId} cycle={cycle} /></div>
