@@ -211,6 +211,8 @@ export function DistributionPage() {
   const shareOfGroup = (g: GroupRule) => cents((g.scope === 'section' ? naipeBase(g.section_id) : allPool) * g.percent / 100)
   const groupsTotal = (groupRules.data ?? []).filter((g) => g.group_key !== CAIXA).reduce((n, g) => n + shareOfGroup(g), 0)
   const notDistributed = cents(pool - groupsTotal)
+  // Quanto o previsto passa do que entrou: hora-aula, fixos, % exclusivas, caixa e grupos somados contra as mensalidades pagas.
+  const shortfall = Math.max(0, cents(hourFixedTotal + exclusiveTotal + caixaAmount + groupsTotal - revenue))
   // Só participa da divisão do grupo quem tem a regra "Divisão do grupo".
   const membersOfGroup = (key: string) => people.filter((p) => allRules.some((r) => r.member_id === p.id && r.kind === 'group' && r.group_key === key))
   const groupShareOf = (memberId: string) => (groupRules.data ?? []).reduce((n, g) => {
@@ -242,7 +244,7 @@ export function DistributionPage() {
     const todo = toGenerate()
     if (!todo.length) { toast.success('Nenhum pagamento novo a criar.'); return }
     const sum = todo.reduce((n, p) => n + totalOf(p.id), 0)
-    const deficit = rawNet < 0 ? `\nAtenção: o previsto passa das mensalidades pagas no mês em ${formatCurrency(-rawNet)}.` : ''
+    const deficit = shortfall > 0 ? `\nAtenção: o previsto passa das mensalidades pagas no mês em ${formatCurrency(shortfall)}.` : ''
     if (await confirmBox({ title: 'Gerar pagamentos do mês', message: `Criar ${todo.length} ${todo.length === 1 ? 'pagamento' : 'pagamentos'} da equipe, somando ${formatCurrency(sum)}?${deficit}`, confirmLabel: 'Gerar pagamentos' })) generate.mutate()
   }
   const generate = useMutation({
@@ -320,11 +322,16 @@ export function DistributionPage() {
           <p className="flex justify-between gap-2"><span className="text-muted-foreground">% exclusivas</span><strong>− {formatCurrency(exclusiveTotal)}</strong></p>
           <p className="flex justify-between gap-2"><span className="text-muted-foreground">Caixa do bloco</span><strong>− {formatCurrency(caixaAmount)}</strong></p>
           <p className="flex justify-between gap-2"><span className="text-muted-foreground">Divisão dos grupos</span><strong>− {formatCurrency(groupsTotal)}</strong></p>
-          <p className="flex justify-between gap-2"><span className="text-muted-foreground">Não distribuído (fica no caixa)</span><strong>{formatCurrency(notDistributed)}</strong></p>
+          {shortfall > 0
+            ? <p className="flex justify-between gap-2 text-destructive"><span className="font-semibold">Falta para cobrir (passa das mensalidades)</span><strong>{formatCurrency(shortfall)}</strong></p>
+            : <p className="flex justify-between gap-2"><span className="text-muted-foreground">Não distribuído (fica no caixa)</span><strong>{formatCurrency(notDistributed)}</strong></p>}
         </div>
       </Card>
-      <Card className="flex flex-wrap items-center justify-between gap-2 p-3">
-        <p className="font-semibold">Total previsto no mês: {formatCurrency(grand)}</p>
+      <Card className={cn('flex flex-wrap items-center justify-between gap-2 p-3', shortfall > 0 && 'border-destructive')}>
+        <div className="min-w-0">
+          <p className="font-semibold">Total previsto no mês: {formatCurrency(grand)}</p>
+          {shortfall > 0 && <p role="alert" className="text-sm font-semibold text-destructive">{formatCurrency(shortfall)} a mais do que entrou de mensalidades no mês ({formatCurrency(revenue)}).</p>}
+        </div>
         {canEdit && <Button disabled={generate.isPending || grand <= 0} onClick={confirmGenerate}>Gerar pagamentos do mês</Button>}
       </Card>
       <p className="text-sm text-muted-foreground">Os pagamentos gerados aparecem em <PageLink to="pagamentos">Financeiro → Pagamentos</PageLink>.</p>

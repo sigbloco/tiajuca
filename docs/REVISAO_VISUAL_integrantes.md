@@ -525,7 +525,7 @@ Bem resolvido: o formulário "Nova despesa" segue as regras (asterisco vermelho 
 
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
-| DB1 | alta | todas | O resumo final mostra "Não distribuído R$ 0,00" com déficit de R$ 440,00, e "Gerar pagamentos do mês" grava sem confirmar (ver resumos 1 e 2). | `DistributionPage.tsx:306-318` |
+| DB1 | alta | todas | O resumo final mostra "Não distribuído R$ 0,00" com déficit de R$ 440,00, e "Gerar pagamentos do mês" grava sem confirmar (ver resumos 1 e 2). **Corrigido em 23/11/2026.** | `DistributionPage.tsx:306-318` |
 | DB2 | média | todas | Setas do mês com 22 × 40 px (ver resumo 5). | `DistributionPage.tsx:281` |
 | DB3 | média | 375 | "Nova regra" é um "+" de 20 × 20 px; Editar e Remover regra têm 32 px; o % do grupo tem 48 × 32 px e as "horas no mês", 80 × 32 px, e os dois gravam ao sair (ver resumo 3). | `DistributionPage.tsx:267`, `DistributionRules.tsx:158-170,202` |
 | DB4 | baixa | todas | "4 dia(s) de aula no mês"; "R$ 0,00 para cada (2)" com três professores listados (o terceiro é pago por hora-aula, mas a tela não diz por que ficou fora da conta). | `DistributionPage.tsx:232`, `DistributionRules.tsx:211` |
@@ -747,7 +747,7 @@ Lista curta para os pedidos de correção, pela ordem de risco:
 
 1. **Auditoria fora do ar** (erro 500, já resolvido): política de RLS avaliada linha a linha; corrigida e aplicada em 23/11 (ver "Causa do erro 500 da Auditoria").
 2. **Gravar num toque o que mexe com dinheiro, acesso ou o que é público:** marcar como pago, gerar pagamentos, ajustar valor, publicar formulário, papéis e matriz, caixas da "Página liberada para" (inclusive nas subpáginas), cores e site. Um padrão só de confirmação ou desfazer. **Feito em 23/11/2026:** confirmação com resumo (`confirmBox`) em marcar como pago (cobrança e equipe), ajustar valor (agora com botão, não grava mais ao sair do campo), gerar pagamentos (com o déficit, se houver), replicar valores, publicar formulário, dar a direção, caixas da "Página liberada para" (que deixaram de aparecer nas subpáginas) e tirar cor; "Desfazer" por 5 s na matriz de permissões; validade do cupom grava ao sair do campo, com a data completa. Já tinham "Desfazer": papéis em Pessoas, encerrar vínculo, situação e categoria na ficha. Ficou de fora o Site (gravação automática, permitida pela regra de salvar).
-3. **Distribuição com déficit escondido** ("Não distribuído R$ 0,00").
+3. **Distribuição com déficit escondido** ("Não distribuído R$ 0,00"). **Feito em 23/11/2026:** com déficit, o quadro final troca o "Não distribuído" por "Falta para cobrir" em vermelho, o total avisa quanto passa das mensalidades, e a confirmação de "Gerar pagamentos do mês" repete o valor.
 4. **Topo fixo do Titular** (294 a 350 px no celular) e a barra de liberação.
 5. **Alvos de toque:** os "+" de 20 px, Subir/Descer de 20 a 28 px, "× Tirar" de 16 px, "Remover" de 18 px, os botões da chamada (36 px) e o X de cancelar aula (22 px).
 6. **Quebras de layout no celular:** "titul / ar", "Novo" fora da margem em Fornecedores, busca de 50 px em Cobranças, "Desmarcar tudo" vazando, `ButtonRow` com 3 ou 5 itens indo para 1 coluna.
