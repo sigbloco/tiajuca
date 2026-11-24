@@ -20,7 +20,7 @@ export type SendTexts = Record<SendKey, string> & { on: Record<SendKey, boolean>
 export type SendPart = 'form' | 'email'
 
 export const SEND_FALLBACK: Record<SendKey, string> = {
-  privacy: 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à direção e não aparecem em listas ou relatórios comuns. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.',
+  privacy: 'Usaremos seus dados apenas para analisar sua inscrição e, se aprovada, para o cadastro no bloco. Informações como gênero, cor/raça e deficiência são sensíveis, ficam restritas à direção e não aparecem em listas ou relatórios comuns. Na área dos integrantes, seu celular só aparece para quem é do mesmo naipe que você, para a equipe do naipe e para a direção; e-mail e ano de nascimento ficam restritos à equipe e à direção. Você pode pedir a correção ou exclusão dos seus dados a qualquer momento.',
   send: '',
   confirmation: 'Inscrição recebida!',
   review: 'Recebemos a sua inscrição e a direção está avaliando. Você receberá a confirmação por e-mail.',
