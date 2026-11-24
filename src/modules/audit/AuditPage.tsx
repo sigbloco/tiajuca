@@ -4,7 +4,7 @@ import { shortName } from '@/core/format'
 import { useEffect, useState } from 'react'
 import { EMPTY_FILTER, FilterBar, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput } from '@/components/ui/masked-inputs'
-import { Badge, Card, EmptyState, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Card, EmptyState, Select, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
 import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
@@ -107,11 +107,16 @@ export function AuditLogTab() {
         <DateInput aria-label="Até" value={to} onChange={setTo} />
       </FilterBar>
 
-      {logs.isError && <Card className="p-3 text-destructive">{friendlyError(logs.error)}</Card>}
+      {logs.isError && (
+        <Card className="space-y-2 p-3">
+          <p role="alert" className="text-destructive">Não foi possível carregar o registro de alterações.{friendlyError(logs.error, '') && ` ${friendlyError(logs.error, '')}`}</p>
+          <Button variant="outline" disabled={logs.isFetching} onClick={() => void logs.refetch()}>{logs.isFetching ? 'Carregando' : 'Tentar de novo'}</Button>
+        </Card>
+      )}
       {logs.isLoading && <Skeleton className="h-32" />}
-      {logs.data && logs.data.rows.length === 0 && <EmptyState>Nenhum registro encontrado.</EmptyState>}
+      {!logs.isError && logs.data && logs.data.rows.length === 0 && <EmptyState>Nenhum registro encontrado.</EmptyState>}
       <div className="grid gap-2">
-        {logs.data?.rows.filter((r) => !filter.search.trim() || `${ENTITY_LABEL[r.entity_type] ?? r.entity_type} ${actors.data?.[r.actor_member_id ?? ''] ?? ''}`.toLowerCase().includes(filter.search.trim().toLowerCase())).map((r) => (
+        {!logs.isError && logs.data?.rows.filter((r) => !filter.search.trim() || `${ENTITY_LABEL[r.entity_type] ?? r.entity_type} ${actors.data?.[r.actor_member_id ?? ''] ?? ''}`.toLowerCase().includes(filter.search.trim().toLowerCase())).map((r) => (
           <Card key={r.id} className="p-3">
             <button className="flex w-full items-center justify-between gap-2 text-left" onClick={() => setOpen(open === r.id ? null : r.id)}>
               <div className="min-w-0">
@@ -124,10 +129,10 @@ export function AuditLogTab() {
           </Card>
         ))}
       </div>
-      <div className="space-y-2">
+      {!logs.isError && logs.data && <div className="space-y-2">
         <p className="text-muted-foreground">{total} registro(s)</p>
         <StepNav prevLabel="Página anterior" nextLabel="Próxima página" prevDisabled={page === 0} nextDisabled={page + 1 >= pages} onPrev={() => setPage(page - 1)} onNext={() => setPage(page + 1)}>{page + 1} / {pages}</StepNav>
-      </div>
+      </div>}
     </div>
   )
 }
