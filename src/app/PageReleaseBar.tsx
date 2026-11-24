@@ -14,7 +14,7 @@ import { RELEASE_CATEGORIES, pageAccessible, pageKeyForPath, rawReleased, releas
  * Subpágina de uma área só pode ser marcada com a área liberada.
  * Só aparece na própria página (não nas subpáginas, como configurações, editor ou chamada, que mudariam a página-mãe sem
  * que se perceba), e cada toque pede confirmação: muda o que um papel inteiro vê.
- * Fica no começo da página (rola junto, fora do topo fixo) e recolhida numa linha com o resumo; "Alterar" abre as caixas.
+ * Fica no começo da página (rola junto, fora do topo fixo), recolhida numa linha só ("Quem vê esta página"); os grupos aparecem ao tocar em "Alterar".
  */
 export function PageReleaseBar({ base }: { base: string }) {
   const { realMembership } = useOrganization()
@@ -32,17 +32,11 @@ export function PageReleaseBar({ base }: { base: string }) {
   const page = key ? releasePage(key) : undefined
   if (!seen || !page || page.alias) return null
   const ready = !!rows.data && !!access.data
-  const released = RELEASE_CATEGORIES.filter((c) => {
-    const hasAccess = !access.data || pageAccessible(page, access.data[c.key])
-    const hubOff = !!page.hub && !rawReleased(rows.data ?? new Map(), page.hub, c.key)
-    return hasAccess && !hubOff && rawReleased(rows.data ?? new Map(), page.key, c.key)
-  }).map((c) => c.label)
-  const summary = !ready ? 'carregando' : released.length ? released.join(', ') : 'só o Titular'
 
   return (
-    <div className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-1.5" role="group" aria-label="Página liberada para">
+    <div className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-1.5" role="group" aria-label="Quem vê esta página">
       <div className="flex items-center gap-2">
-        <p className="min-w-0 flex-1 text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5 align-[-2px]" aria-hidden /><span className="font-semibold">Página liberada para:</span> {summary}</p>
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5 align-[-2px]" aria-hidden /><span className="font-semibold">Quem vê esta página</span></p>
         <Button type="button" size="sm" variant="outline" className="shrink-0" aria-expanded={open} onClick={() => setOpen(!open)}>
           {isTitular ? 'Alterar' : 'Detalhes'} <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
         </Button>

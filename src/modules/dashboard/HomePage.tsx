@@ -83,7 +83,8 @@ function BirthdaysToday({ orgId, tz }: { orgId: string; tz: string }) {
   })
   if (!data || data.length === 0) return null
   return (
-    <Card className="space-y-1 p-3">
+    // Rótulo e nomes na mesma linha; os nomes descem só se não couberem.
+    <Card className="flex flex-wrap items-center gap-x-2 gap-y-1 p-3">
       <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> {pluralWord(data.length, 'Aniversariante', 'Aniversariantes')} do dia:</p>
       <p className="text-muted-foreground">
         {data.map((p, i) => <span key={p.member_id}>{i > 0 && ', '}<MemberLink id={p.member_id} className="font-semibold text-foreground">{p.name}</MemberLink></span>)}
@@ -138,7 +139,7 @@ function UpcomingEvents({ orgId, memberId, slug, tz, filterByMine }: { orgId: st
   )
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between"><h3>Próximos eventos</h3><Link className="text-primary hover:underline" to={`/${slug}/eventos`}>Ver agenda</Link></div>
+      <div className="flex flex-wrap items-baseline gap-x-3"><h3>Próximos eventos</h3><Link className="text-primary hover:underline" to={`/${slug}/eventos`}>Ver agenda</Link></div>
       {(isLoading || (filterByMine && my.isLoading)) && <Skeleton className="h-16" />}
       {data && visible.length === 0 && <p className="text-muted-foreground">Nenhum evento agendado.</p>}
       {/* Ordem: o que acontece hoje (a aula, por exemplo), depois os destaques, depois os próximos dias. */}
