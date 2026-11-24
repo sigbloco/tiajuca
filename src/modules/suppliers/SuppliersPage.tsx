@@ -6,6 +6,7 @@ import { ExternalLink, MessageCircle, Pencil, Phone, Plus, Save, Tags } from 'lu
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { PhoneInput, maskPhone } from '@/components/ui/masked-inputs'
 import { ProgressiveList } from '@/components/shared/LoadMore'
 import { TrashGroup } from '@/components/shared/TrashGroup'
@@ -202,20 +203,20 @@ export function SuppliersPage() {
   const loading = cats.isLoading || sups.isLoading
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1>Fornecedores</h1>
-        <div className="flex flex-wrap gap-2">
-          {canManage && <Button variant="outline" onClick={() => setCatSheet(true)}><Tags className="h-4 w-4" /> Categorias</Button>}
-          {canManage && <Button variant="add" onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo</Button>}
-        </div>
-      </div>
+      <h1>Fornecedores</h1>
+      {canManage && (
+        <ButtonRow>
+          <Button variant="add" onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo fornecedor</Button>
+          <Button variant="outline" onClick={() => setCatSheet(true)}><Tags className="h-4 w-4" /> Categorias</Button>
+        </ButtonRow>
+      )}
       <FilterBar value={filter} onChange={setFilter} />
       {loading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14" />)}</div>}
       {!loading && (cats.data ?? []).length === 0 && <EmptyState>Nenhuma categoria ainda.{canManage ? ' Crie categorias (ex.: Sonorização) e depois cadastre os fornecedores.' : ''}</EmptyState>}
       {groups.map(({ cat, items }) => (
         <Collapsible key={cat.id} title={cat.name} count={items.length}
           open={filter.search.trim() ? true : !!open[cat.id]} onToggle={() => setOpen((o) => ({ ...o, [cat.id]: !o[cat.id] }))}
-          right={canManage ? <Button size="sm" variant="ghost" onClick={() => setSheet({ sup: null, category: cat.id })}><Plus className="h-4 w-4" /></Button> : undefined}>
+          right={canManage ? <Button size="sm" variant="add" aria-label={`Novo fornecedor em ${cat.name}`} onClick={() => setSheet({ sup: null, category: cat.id })}><Plus className="h-4 w-4" /> Novo</Button> : undefined}>
           {items.length === 0 && <p className="text-muted-foreground">Nenhum fornecedor nesta categoria.</p>}
           <ProgressiveList items={items} resetKey={filter.search} render={(s) => <SupplierRow key={s.id} s={s} canManage={canManage} onEdit={() => setSheet({ sup: s, category: s.category_id })} />} />
         </Collapsible>

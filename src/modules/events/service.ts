@@ -34,7 +34,7 @@ export interface Activity {
   activity_types: { id?: string; name: string; color: TypeColor } | null
   /** Evento com chamada de presença? (nem tudo tem). */
   has_attendance: boolean
-  /** Evento ainda não confirmado: aparece com o aviso "À confirmar" e, se houver, o que falta confirmar. */
+  /** Evento ainda não confirmado: aparece com o aviso "A confirmar" e, se houver, o que falta confirmar. */
   to_confirm: boolean
   to_confirm_note: string | null
   /** Rótulos extras (além do principal, que é o tipo do evento). */
@@ -89,7 +89,7 @@ export interface ActivityInput {
   to_confirm_note: string | null
 }
 
-/** Confirma o evento (tira o aviso "À confirmar"). */
+/** Confirma o evento (tira o aviso "A confirmar"). */
 export async function confirmActivity(orgId: string, id: string) {
   const { error } = await supabase.from('activities').update({ to_confirm: false, to_confirm_note: null }).eq('id', id).eq('organization_id', orgId)
   if (error) throw error

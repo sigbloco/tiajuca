@@ -7,7 +7,7 @@ import { confirmBox } from '@/components/shared/DialogHost'
 import { MonthNav, toCompetence, type YearMonth } from '@/components/shared/MonthNav'
 import { Badge, Button, Card, EmptyState, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatCurrency, shortName, todayIso } from '@/core/format'
+import { formatCurrency, plural, shortName, todayIso } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -232,7 +232,7 @@ export function DistributionPage() {
     return `${num(Number(r.percent ?? 0))}% ${of}`
   }
   const detailOf = (r: Rule) => r.kind === 'hourly'
-    ? `${daysOf(r).size} dia(s) de aula no mês · rende ${formatCurrency(amountOf(r))}`
+    ? `${plural(daysOf(r).size, 'dia', 'dias')} de aula no mês · rende ${formatCurrency(amountOf(r))}`
     : r.kind === 'group' ? `rende ${formatCurrency(groupShareOf((r as RuleRow).member_id))}`
     : r.kind === 'percent' ? `Mensalidades pagas no mês: ${formatCurrency(revenueOf(r))} · rende ${formatCurrency(amountOf(r))}` : `rende ${formatCurrency(amountOf(r))}`
 
@@ -256,7 +256,7 @@ export function DistributionPage() {
       }
       return todo.length
     },
-    onSuccess: (n) => { toast.success(n ? `${n} pagamento(s) criado(s).` : 'Nenhum pagamento novo a criar.'); qc.invalidateQueries({ queryKey: ['staff-payments'] }); qc.invalidateQueries({ queryKey: ['staff-payments-month', orgId] }) },
+    onSuccess: (n) => { toast.success(n ? `${plural(n, 'pagamento criado', 'pagamentos criados')}.` : 'Nenhum pagamento novo a criar.'); qc.invalidateQueries({ queryKey: ['staff-payments'] }); qc.invalidateQueries({ queryKey: ['staff-payments-month', orgId] }) },
     onError: (e) => toast.error(friendlyError(e)),
   })
 

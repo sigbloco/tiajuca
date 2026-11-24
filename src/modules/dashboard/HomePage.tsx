@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useCycles } from '@/modules/cycles/service'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCurrency, formatDate, formatDayShort, todayIso } from '@/core/format'
+import { addDaysIso, formatCurrency, formatDate, formatDayShort, plural, pluralWord, todayIso } from '@/core/format'
 import { useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
 import { supabase } from '@/core/supabase'
@@ -84,7 +84,7 @@ function BirthdaysToday({ orgId, tz }: { orgId: string; tz: string }) {
   if (!data || data.length === 0) return null
   return (
     <Card className="space-y-1 p-3">
-      <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> Aniversariante(s) do dia:</p>
+      <p className="flex items-center gap-2 font-semibold"><Cake className="h-4 w-4 text-foreground" strokeWidth={2.75} /> {pluralWord(data.length, 'Aniversariante', 'Aniversariantes')} do dia:</p>
       <p className="text-muted-foreground">
         {data.map((p, i) => <span key={p.member_id}>{i > 0 && ', '}<MemberLink id={p.member_id} className="font-semibold text-foreground">{p.name}</MemberLink></span>)}
       </p>
@@ -254,12 +254,12 @@ function DirectionDashboard({ orgId }: { orgId: string }) {
             <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${(s.active / maxSection) * 100}%` }} /></div>
           </div>
         ))}
-        <p className="pt-1 text-muted-foreground">Vagas: {data.capacity.occupied}/{data.capacity.capacity} ocupadas em {data.capacity.limited} instrumentos com limite · <strong>{data.capacity.full} lotado(s)</strong></p>
+        <p className="pt-1 text-muted-foreground">Vagas: {data.capacity.occupied}/{data.capacity.capacity} {pluralWord(data.capacity.occupied, 'ocupada', 'ocupadas')} em {plural(data.capacity.limited, 'instrumento', 'instrumentos')} com limite · <strong>{plural(data.capacity.full, 'lotado', 'lotados')}</strong></p>
       </Card>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Arrecadado no mês" value={formatCurrency(Number(data.billing.recebido))} hint={`previsto ${formatCurrency(Number(data.billing.previsto))}`} tone="text-success" />
-        <Stat label="Pendente" value={formatCurrency(Number(data.billing.pendente))} hint={`${data.billing.inadimplentes} inadimplente(s)`} tone={data.billing.inadimplentes ? 'text-destructive' : undefined} />
-        <Stat label="Bolsas" value={`${data.scholarships.bolsistas} pessoas`} hint={`≈ ${Number(data.scholarships.equivalente).toLocaleString('pt-BR')} bolsa(s) integral(is)`} />
+        <Stat label="Pendente" value={formatCurrency(Number(data.billing.pendente))} hint={plural(data.billing.inadimplentes, 'inadimplente', 'inadimplentes')} tone={data.billing.inadimplentes ? 'text-destructive' : undefined} />
+        <Stat label="Bolsas" value={plural(data.scholarships.bolsistas, 'pessoa', 'pessoas')} hint={`≈ ${plural(Number(data.scholarships.equivalente), 'bolsa integral', 'bolsas integrais')}`} />
         <Stat label="Saldo do mês" value={formatCurrency(Number(data.finance.saldo))} hint={`despesas ${formatCurrency(Number(data.finance.despesas))}`} tone={Number(data.finance.saldo) < 0 ? 'text-destructive' : 'text-success'} />
       </div>
     </div>

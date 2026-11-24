@@ -74,7 +74,7 @@ export function AlbumsTab() {
     await Promise.all([worker(), worker(), worker()])
     setBulk(null)
     refresh()
-    notifySaved(failed ? `Capas lidas. ${failed} álbum(ns) não deram certo: veja-os no filtro “Com problema” e confira se estão compartilhados.` : 'Capas e títulos atualizados.')
+    notifySaved(failed ? `Capas lidas. ${failed === 1 ? '1 álbum não deu certo: veja-o no filtro “Com problema” e confira se está compartilhado.' : `${failed} álbuns não deram certo: veja-os no filtro “Com problema” e confira se estão compartilhados.`}` : 'Capas e títulos atualizados.')
   }
 
   const add = useMutation({

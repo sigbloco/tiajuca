@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { MoneyInput } from '@/components/ui/masked-inputs'
 import { Button, Input, Label, Select, SheetContent } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatCurrency } from '@/core/format'
+import { formatCurrency, plural } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, toCents, validateProductDraft, type ProductKind } from '../catalog'
 import { IMAGE_MIME, MAX_IMAGE_BYTES, createProduct, duplicateProduct, deleteProductImage, imageUrl, reorderProductImages, productHasOrders, saveProductPickups, setProductActive, setProductHidden, updateProduct, uploadProductImage, type PickupPoint, type ShopProduct, type StockItem } from './service'
@@ -126,7 +126,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
   const sendPending = async (id: string) => {
     let failed = 0
     for (const [i, file] of pending.entries()) { try { await uploadProductImage(orgId, id, file, i) } catch { failed++ } }
-    if (failed) toast.error(`${failed} foto(s) não puderam ser enviadas. Adicione de novo na edição.`)
+    if (failed) toast.error(`${plural(failed, 'foto não pôde ser enviada', 'fotos não puderam ser enviadas')}. Adicione de novo na edição.`)
   }
   const refresh = () => qc.invalidateQueries({ queryKey: ['shop', orgId, 'products'] })
   const isStock = f.kind === 'stock'
@@ -368,7 +368,7 @@ export function ProductSheet({ product, kit = false, others = [], stockItems = [
                 onClick={() => { if (v.id) setRemoved((r) => [...r, v.id!]); setVariants((vs) => vs.filter((_, j) => j !== i)) }}><Trash2 className="h-4 w-4" /></Button>
             </div>
             {isStock && <UsesEditor uses={v.uses} items={stockItems} locked={v.reserved > 0} onChange={(u) => setVariant(i, { uses: u })} />}
-            {isStock && v.reserved > 0 && <p className="pl-1 text-xs text-muted-foreground">{v.reserved} reservada(s) em pedidos em andamento: os itens só mudam depois que forem retirados ou cancelados.</p>}
+            {isStock && v.reserved > 0 && <p className="pl-1 text-xs text-muted-foreground">{plural(v.reserved, 'reservada', 'reservadas')} em pedidos em andamento: os itens só mudam depois que forem retirados ou cancelados.</p>}
             </div>
           ))}
           {varProg.button}

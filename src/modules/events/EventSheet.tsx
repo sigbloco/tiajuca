@@ -152,11 +152,11 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
           {labels.map((l) => <Badge key={l.id} className={COLOR_BADGE[l.color]}>{l.name}</Badge>)}
           {activity.status !== 'scheduled' && <Badge>{STATUS_LABEL[activity.status]}</Badge>}
           {activity.visibility === 'staff' && <Badge>{VISIBILITY_LABEL.staff}</Badge>}
-          {activity.to_confirm && <Badge className="border border-dashed border-warning bg-warning/15 text-warning">À confirmar</Badge>}
+          {activity.to_confirm && <Badge className="border border-dashed border-warning bg-warning/15 text-warning">A confirmar</Badge>}
         </div>
         {activity.to_confirm && (
           <p className="rounded-lg border border-dashed border-warning bg-warning/10 p-3 text-sm">
-            <strong>À confirmar</strong>{activity.to_confirm_note ? `: ${activity.to_confirm_note}` : '. Data, horário ou local ainda podem mudar.'}
+            <strong>A confirmar</strong>{activity.to_confirm_note ? `: ${activity.to_confirm_note}` : '. Data, horário ou local ainda podem mudar.'}
           </p>
         )}
         <dl className="space-y-2">
@@ -181,7 +181,7 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
               <Button asChild variant="outline"><Link to={presence === 'day' ? `/${membership?.slug}/presenca?dia=${activity.activity_date}` : `/${membership?.slug}/presenca/${activity.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>
             )}
             {canManage && activity.to_confirm && activity.status !== 'cancelled' && (
-              <Button variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso À confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>
+              <Button variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso A confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>
             )}
             {canManage && <Button variant="outline" aria-label="Editar" title="Editar" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /><span className="act-label ml-1.5">Editar</span></Button>}
             {canManage && activity.status !== 'cancelled' && (
@@ -216,9 +216,9 @@ export function EventSheet({ activity, defaultDate, onClose, startEditing, prese
             && !(await confirmBox(`A data ${formatDayLong(f.activity_date)} fica fora do ciclo ${cy.name}. O evento não vai aparecer no calendário desse ciclo. Salvar mesmo assim?`))) return
           save.mutate()
         }} className="space-y-3">
-        {/* "À confirmar" em cima do título. */}
+        {/* "A confirmar" em cima do título. */}
         <label className="flex items-center gap-2 font-semibold">
-          <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> À confirmar
+          <input type="checkbox" className="h-4 w-4" checked={f.to_confirm} onChange={(e) => setF({ ...f, to_confirm: e.target.checked })} /> A confirmar
         </label>
         {f.to_confirm && (
           <div className="space-y-1.5"><Label htmlFor="ev-confirm-note">O que falta confirmar</Label>

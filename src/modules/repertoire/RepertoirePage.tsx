@@ -1,7 +1,7 @@
+import { plural } from '@/core/format'
 import { usePurge } from '@/core/purge'
 import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
-import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BalancedGrid } from '@/components/shared/BalancedGrid'
@@ -95,13 +95,8 @@ export function RepertoirePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1>Repertório</h1>
-        <ButtonRow>
-
-          {canManage && <Button variant="add" onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
-        </ButtonRow>
-      </div>
+      <h1>Repertório</h1>
+      {canManage && <Button variant="add" className="w-full" onClick={() => setSheet({ rep: null })}><Plus className="h-4 w-4" /> Novo repertório</Button>}
       {isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
       {data?.length === 0 && <EmptyState>Nenhum repertório ainda.{canManage ? ' Crie o primeiro para começar a cadastrar músicas.' : ''}</EmptyState>}
       <BalancedGrid>
@@ -131,7 +126,7 @@ export function RepertoirePage() {
       <Sheet open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
         {sheet && <RepertoireSheet key={sheet.rep?.id ?? 'new'} rep={sheet.rep} onClose={() => setSheet(null)} />}
       </Sheet>
-      {canManage && <TrashGroup entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: `${r.songs[0]?.count ?? 0} músicas` }))}
+      {canManage && <TrashGroup entries={(data ?? []).filter((r) => !r.is_active).map((r) => ({ id: r.id, name: r.name, detail: plural(r.songs[0]?.count ?? 0, 'música', 'músicas') }))}
       onRestore={(id) => restoreRep.mutate(id)} onPurge={(id) => purgeRep.mutate(id)} />}
     </div>
   )

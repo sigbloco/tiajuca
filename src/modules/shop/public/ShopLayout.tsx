@@ -1,3 +1,4 @@
+import { plural } from '@/core/format'
 import { useQuery } from '@tanstack/react-query'
 import { LogIn, LogOut, ShoppingCart } from 'lucide-react'
 import { useEffect } from 'react'
@@ -46,7 +47,7 @@ function Header() {
         </Link>
         <nav className="flex shrink-0 items-center gap-3 text-sm">
           <Link to={`${basePath}/consultar`} className="font-semibold text-primary hover:underline">Pedidos</Link>
-          <Link to={`${basePath}/carrinho`} className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border px-3 hover:bg-muted" aria-label={`Carrinho, ${cart.itemCount} item(ns)`}>
+          <Link to={`${basePath}/carrinho`} className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border px-3 hover:bg-muted" aria-label={`Carrinho, ${plural(cart.itemCount, 'item', 'itens')}`}>
             <ShoppingCart className="h-5 w-5" />
             {cart.itemCount > 0 && <span className="ml-1 font-bold">{cart.itemCount}</span>}
           </Link>

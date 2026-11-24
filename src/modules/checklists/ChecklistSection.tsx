@@ -2,7 +2,7 @@ import { confirmBox } from '@/components/shared/DialogHost'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { SaveInput } from '@/components/shared/ConfirmField'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { shortName } from '@/core/format'
+import { plural, shortName } from '@/core/format'
 import { ArrowDown, ArrowUp, CheckCircle2, Circle, CircleDot, MessageSquare, Trash2, UserRound, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -58,7 +58,7 @@ export function ChecklistSection({ activityId }: { activityId: string }) {
   const update = useMutation({ mutationFn: (a: Record<string, unknown>) => rpc('update_checklist_item', a), onSuccess: refresh, onError })
   const apply = useMutation({
     mutationFn: () => rpc('apply_checklist_template', { p_activity: activityId, p_template: template }),
-    onSuccess: (n) => { toast.success(n ? `${n} tarefa(s) adicionada(s).` : 'Todas as tarefas do modelo já estão no evento.'); setExpanded(true); refresh(); refreshName() },
+    onSuccess: (n) => { toast.success(n ? `${plural(n, 'tarefa adicionada', 'tarefas adicionadas')}.` : 'Todas as tarefas do modelo já estão no evento.'); setExpanded(true); refresh(); refreshName() },
     onError,
   })
   const add = useMutation({ mutationFn: () => rpc('add_checklist_item', { p_activity: activityId, p_title: newTitle }), onSuccess: () => { setNewTitle(''); refresh() }, onError })

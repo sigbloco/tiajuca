@@ -43,7 +43,7 @@ export function EventCard({ a, index = 0, onOpen, onEdit, presence = 'roster' }:
       <div className="min-w-0 flex-1">
         <button className="w-full text-left" onClick={onOpen}>
           <p className={cn('font-semibold', a.status === 'cancelled' && 'line-through')}>{a.title}</p>
-          {a.to_confirm && <p className="text-sm font-semibold text-warning">À confirmar{a.to_confirm_note ? `: ${a.to_confirm_note}` : ''}</p>}
+          {a.to_confirm && <p className="text-sm font-semibold text-warning">A confirmar{a.to_confirm_note ? `: ${a.to_confirm_note}` : ''}</p>}
           {a.itinerary && a.itinerary.length > 0 ? (
             <div className="text-muted-foreground">
               {[...a.itinerary].sort((x, y) => x.time.localeCompare(y.time)).map((x, k, list) => {
@@ -67,7 +67,7 @@ export function EventCard({ a, index = 0, onOpen, onEdit, presence = 'roster' }:
         {a.status === 'scheduled' && (canRecord || canManage) && (
           <ActionRow className="mt-2">
             {canRecord && a.has_attendance !== false && <Button asChild size="sm" variant="outline" title="Presença"><Link to={presence === 'day' ? `/${membership?.slug}/presenca?dia=${a.activity_date}` : `/${membership?.slug}/presenca/${a.id}`}><ClipboardCheck className="h-4 w-4" /><span className="act-label ml-1.5">Presença</span></Link></Button>}
-            {canManage && a.to_confirm && <Button size="sm" variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso À confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>}
+            {canManage && a.to_confirm && <Button size="sm" variant="outline" aria-label="Confirmar evento" title="Confirmar: tira o aviso A confirmar" disabled={confirm.isPending} onClick={() => confirm.mutate()}><CheckCircle2 className="h-4 w-4" /><span className="act-label ml-1.5">Confirmar</span></Button>}
             {canManage && <Button size="sm" variant="outline" aria-label="Editar" title="Editar" onClick={onEdit}><Pencil className="h-4 w-4" /><span className="act-label ml-1.5">Editar</span></Button>}
             {canManage && <Button size="sm" variant="outline" className="text-destructive" aria-label={`Cancelar ${cancelWord(t?.name)}`} title={`Cancelar ${cancelWord(t?.name)}`}
               onClick={async () => { const reason = await promptBox({ title: 'Cancelar', message: `Cancelar ${cancelWord(t?.name)} de ${a.title}?\nMotivo (ex.: chuva):`, confirmLabel: 'Cancelar o evento', cancelLabel: 'Voltar' }); if (reason !== null) cancel.mutate(reason) }}><Ban className="h-4 w-4" /><span className="act-label ml-1.5">Cancelar</span></Button>}

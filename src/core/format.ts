@@ -120,3 +120,14 @@ export function shortName(fullName: string | null | undefined, displayName?: str
   const same = normName(pref) === normName(first) || normName(first).split(' ').includes(normName(pref))
   return pref && !same ? `${first} (${pref})` : first
 }
+
+/** Concordância de número: singular só para 1 (e frações abaixo de 2, como "1,5 bolsa"); zero vai no plural ("0 respostas"). */
+export function pluralWord(n: number, one: string, many: string): string {
+  const a = Math.abs(n)
+  return a > 0 && a < 2 ? one : many
+}
+
+/** Número com a palavra concordando: "1 cobrança", "0 cobranças", "24 cobranças". Nunca "cobrança(s)". */
+export function plural(n: number, one: string, many: string): string {
+  return `${n.toLocaleString('pt-BR')} ${pluralWord(n, one, many)}`
+}

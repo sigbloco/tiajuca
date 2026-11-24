@@ -101,7 +101,8 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      {/* Três caixas: celular com o saldo na largura toda embaixo; tela grande, as três iguais numa linha. */}
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
         {kind === 'income' ? (
           <>
             <Card className="p-3"><p className="text-xs text-muted-foreground">Mensalidades</p><p className="font-display text-xl font-bold">{num(s?.receita_mensalidades)}</p></Card>
@@ -113,16 +114,14 @@ export function LedgerTab({ kind, competence }: { kind: 'income' | 'expense'; co
             <Card className="p-3"><p className="text-xs text-muted-foreground">Pagamentos da equipe</p><p className="font-display text-xl font-bold">{num(s?.pagamentos_equipe)}</p></Card>
           </>
         )}
-        <Card className="p-3 lg:col-span-2"><p className="text-xs text-muted-foreground">Saldo do mês (receitas − despesas)</p>
+        <Card className="col-span-2 p-3 lg:col-span-1"><p className="text-xs text-muted-foreground">Saldo do mês (receitas − despesas)</p>
           <p className={cn('font-display text-xl font-bold', Number(s?.saldo ?? 0) < 0 ? 'text-destructive' : 'text-success')}>{num(s?.saldo)}</p></Card>
       </div>
 
       {kind === 'income' && <ReceiptsByGroup competence={competence} />}
 
-      <div className="flex items-center justify-between">
-        <h2>{kind === 'income' ? 'Outras receitas' : 'Despesas'} <span className="text-base font-normal text-muted-foreground">· {formatCurrency(total)}</span></h2>
-        {canManage && <Button variant="add" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> {kind === 'income' ? 'Nova receita' : 'Nova despesa'}</Button>}
-      </div>
+      <h2>{kind === 'income' ? 'Outras receitas' : 'Despesas'} <span className="text-base font-normal text-muted-foreground">· {formatCurrency(total)}</span></h2>
+      {canManage && <Button variant="add" className="w-full" onClick={() => setSheet(true)}><Plus className="h-4 w-4" /> {kind === 'income' ? 'Nova receita' : 'Nova despesa'}</Button>}
 
       {ledger.isLoading && <Skeleton className="h-24" />}
       {ledger.data && rows.length === 0 && <EmptyState>Nada registrado neste mês.</EmptyState>}

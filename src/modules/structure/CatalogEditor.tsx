@@ -183,7 +183,7 @@ export function CatalogEditor({ table, title, singular, withSection, withColor, 
             )}
             {withDescription && (
               <div className="basis-full">
-                <SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${item.name}`}
+                <SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição" aria-label={`Descrição de ${item.name}`}
                   onSave={(v) => save.mutateAsync({ id: item.id, name: item.name, description: v.trim() || null })} />
               </div>
             )}

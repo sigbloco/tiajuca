@@ -1,3 +1,4 @@
+import { plural } from '@/core/format'
 import { PageLink } from '@/components/shared/PageLink'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -67,7 +68,7 @@ export function ContributionsEditor({ canEdit, cycle }: { canEdit: boolean; cycl
   const noOwnPrices = !!cycle && prices.isSuccess && Object.keys(prices.data ?? {}).length === 0
   const replicate = useMutation({
     mutationFn: async () => { const { data, error } = await supabase.rpc('replicate_cycle_prices', { p_cycle: cycle!.id }); if (error) throw error; return data as number },
-    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['fee-prices', orgId] }); toast.success(`Valores copiados de ${previous?.name}: ${n} categoria(s).`) },
+    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['fee-prices', orgId] }); toast.success(`Valores copiados de ${previous?.name}: ${plural(n, 'categoria', 'categorias')}.`) },
     onError: (e) => toast.error(friendlyError(e)),
   })
 

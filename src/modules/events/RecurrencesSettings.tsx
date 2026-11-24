@@ -8,8 +8,9 @@ import { toast } from 'sonner'
 import { DateInput } from '@/components/ui/masked-inputs'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent } from '@/components/ui/primitives'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { friendlyError } from '@/core/errors'
-import { WEEKDAYS, addDaysIso, formatDate, formatTime, todayIso } from '@/core/format'
+import { addDaysIso, formatDate, formatTime, plural, todayIso, WEEKDAYS } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { TypePicker } from './TypePicker'
@@ -144,7 +145,7 @@ export function RecurrencesSettings() {
       const updated = await syncOccurrences(orgId, todayIso(membership?.timezone))
       return { created, updated }
     },
-    onSuccess: ({ created, updated }) => { toast.success(`${created} evento(s) gerado(s); ${updated} próximo(s) atualizado(s) conforme a recorrência.`); refresh() },
+    onSuccess: ({ created, updated }) => { toast.success(`${plural(created, 'evento gerado', 'eventos gerados')}; ${plural(updated, 'próximo atualizado', 'próximos atualizados')} conforme a recorrência.`); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const end = useMutation({
@@ -153,7 +154,7 @@ export function RecurrencesSettings() {
       if (error) throw error
       return data as number
     },
-    onSuccess: (n) => { toast.success(`Recorrência na lixeira. ${n} evento(s) futuro(s) cancelado(s).`); refresh() },
+    onSuccess: (n) => { toast.success(`Recorrência na lixeira. ${plural(n, 'evento futuro cancelado', 'eventos futuros cancelados')}.`); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
@@ -174,20 +175,18 @@ export function RecurrencesSettings() {
       if (error) throw error
       return data as number
     },
-    onSuccess: (n) => { toast.success(`Recorrência apagada de vez. ${n} evento(s) removido(s).`); refresh() },
+    onSuccess: (n) => { toast.success(`Recorrência apagada de vez. ${plural(n, 'evento removido', 'eventos removidos')}.`); refresh() },
     onError: (e) => toast.error(friendlyError(e)),
   })
 
   const summary = (r: Rule) => WEEKDAYS[r.weekday] + (r.start_time ? ' · ' + formatTime(r.start_time) + (r.end_time ? '–' + formatTime(r.end_time) : '') : '') + (r.location ? ' · ' + r.location : '') + ' · desde ' + formatDate(r.starts_on) + (r.until ? ' até ' + formatDate(r.until) : '')
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>Recorrências</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" disabled={generate.isPending} onClick={() => generate.mutate()}>Atualizar próximas datas</Button>
-          <Button variant="add" onClick={() => setSheet({ rule: null })}><Plus className="h-4 w-4" /> Nova</Button>
-        </div>
-      </div>
+      <h2>Recorrências</h2>
+      <ButtonRow>
+        <Button variant="add" onClick={() => setSheet({ rule: null })}><Plus className="h-4 w-4" /> Nova recorrência</Button>
+        <Button variant="outline" disabled={generate.isPending} onClick={() => generate.mutate()}>Atualizar próximas datas</Button>
+      </ButtonRow>
       <p className="text-muted-foreground">As próximas 12 semanas são geradas automaticamente quando a direção abre a agenda.</p>
       {data?.filter((r) => r.is_active).length === 0 && <EmptyState>Nenhuma recorrência.</EmptyState>}
       <div className="grid gap-2">

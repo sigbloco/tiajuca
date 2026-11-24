@@ -22,7 +22,7 @@ export function HighlightCards({ items, today, onPick }: { items: Activity[]; to
         <button key={a.id} type="button" onClick={() => onPick(a)} className="flex w-full flex-wrap items-baseline gap-x-1.5 gap-y-0.5 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-left transition hover:bg-primary/10">
           <span className="text-sm font-semibold capitalize text-muted-foreground">{formatDayShort(a.activity_date)}{a.start_time ? ` · ${hourLabel(a.start_time)}` : ''} ·</span>
           <span className="font-semibold">{a.title}</span>
-          <span className="text-xs font-bold uppercase text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · à confirmar' : ''}</span>
+          <span className="text-xs font-bold uppercase text-primary">{daysUntilText(a.activity_date, today)}{a.to_confirm ? ' · a confirmar' : ''}</span>
         </button>
       ))}
     </div>

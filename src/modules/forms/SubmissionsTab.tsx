@@ -1,7 +1,5 @@
-import { StepNav } from '@/components/shared/StepNav'
 import { RichTextarea } from '@/components/shared/RichText'
 import { PageLink } from '@/components/shared/PageLink'
-import { ProgressiveList } from '@/components/shared/LoadMore'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, Eye, EyeOff } from 'lucide-react'
@@ -9,13 +7,14 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Label, Select, Sheet, SheetContent, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatDateTime } from '@/core/format'
+import { formatDateTime, plural } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 import { SUB_STATUS_CLASS, SUB_STATUS_LABEL, type FormRow, type SubmissionRow } from './service'
 import { MAPPING_LABEL, type FieldOption } from './types'
 
-const PAGE = 20
+/** Respostas carregadas de 5 em 5 ("Ver mais 5"), como as outras listas do app. */
+const STEP = 5
 interface SnapField { key: string; label: string; type: string; options: FieldOption[]; mapping: string | null }
 interface Version { id: string; version: number; snapshot: { fields: SnapField[] } }
 interface FileRow { id: string; field_key: string; storage_path: string; file_name: string }
@@ -152,20 +151,20 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
   const [q, setQ] = useState('')
-  const [page, setPage] = useState(0)
+  const [shown, setShown] = useState(STEP)
   const [selected, setSelected] = useState<SubmissionRow | null>(null)
-  useEffect(() => { const t = setTimeout(() => { setQ(search); setPage(0) }, 300); return () => clearTimeout(t) }, [search])
-  useEffect(() => setPage(0), [status])
+  useEffect(() => { const t = setTimeout(() => { setQ(search); setShown(STEP) }, 300); return () => clearTimeout(t) }, [search])
+  useEffect(() => setShown(STEP), [status])
 
   const versions = useQuery({
     queryKey: ['form-versions', orgId, form.id],
     queryFn: async () => { const { data, error } = await supabase.from('form_versions').select('id, version, snapshot').eq('form_id', form.id).order('version'); if (error) throw error; return (data ?? []) as Version[] },
   })
   const list = useQuery({
-    queryKey: ['submissions', orgId, form.id, status, q, page],
+    queryKey: ['submissions', orgId, form.id, status, q, shown],
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      let qy = supabase.from('form_submissions').select('*', { count: 'exact' }).eq('form_id', form.id).order('submitted_at', { ascending: false }).range(page * PAGE, page * PAGE + PAGE - 1)
+      let qy = supabase.from('form_submissions').select('*', { count: 'exact' }).eq('form_id', form.id).order('submitted_at', { ascending: false }).range(0, shown - 1)
       if (status) qy = qy.eq('status', status)
       const term = q.replace(/[%*,()]/g, ' ').trim()
       if (term) qy = qy.ilike('applicant_email', `%${term}%`)
@@ -201,7 +200,7 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
     toast.message('CSV sem dados sensíveis (gênero, cor/raça, deficiência) e sem arquivos.')
   }
   const total = list.data?.total ?? 0
-  const pages = Math.max(1, Math.ceil(total / PAGE))
+  const left = Math.max(0, total - (list.data?.rows.length ?? 0))
 
   return (
     <div className="space-y-3">
@@ -216,10 +215,16 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
         <Input placeholder="Buscar por e-mail" value={search} onChange={(e) => setSearch(e.target.value)} />
         <Select aria-label="Situação" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">Todas as situações</option>{Object.entries(SUB_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
       </div>
+      {list.isError && (
+        <Card className="space-y-2 p-3">
+          <p role="alert" className="text-destructive">Não foi possível carregar as respostas.{friendlyError(list.error, '') && ` ${friendlyError(list.error, '')}`}</p>
+          <Button variant="outline" disabled={list.isFetching} onClick={() => void list.refetch()}>{list.isFetching ? 'Carregando' : 'Tentar de novo'}</Button>
+        </Card>
+      )}
       {list.isLoading && <Skeleton className="h-24" />}
-      {list.data?.rows.length === 0 && <EmptyState>Nenhuma resposta.</EmptyState>}
-      <div className="grid gap-2">
-        <ProgressiveList items={(list.data?.rows) ?? []} render={(s) => (
+      {!list.isError && list.data?.rows.length === 0 && <EmptyState>Nenhuma resposta.</EmptyState>}
+      {!list.isError && <div className="grid gap-2">
+        {(list.data?.rows ?? []).map((s) => (
           <Card key={s.id} className="flex items-center justify-between gap-3 p-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setSelected(s)}>
               <p className="break-words font-semibold">{s.purged_at ? 'Resposta removida (retenção)' : nameOf(s)}</p>
@@ -227,12 +232,10 @@ export function SubmissionsTab({ form }: { form: FormRow }) {
             </button>
             <Badge className={SUB_STATUS_CLASS[s.status]}>{SUB_STATUS_LABEL[s.status]}</Badge>
           </Card>
-        )} />
-      </div>
-      <div className="space-y-2">
-        <p className="text-muted-foreground">{total} resposta(s)</p>
-        <StepNav prevLabel="Página anterior" nextLabel="Próxima página" prevDisabled={page === 0} nextDisabled={page + 1 >= pages} onPrev={() => setPage(page - 1)} onNext={() => setPage(page + 1)}>{page + 1} / {pages}</StepNav>
-      </div>
+        ))}
+        {left > 0 && <Button type="button" variant="outline" size="sm" className="w-full" disabled={list.isFetching} onClick={() => setShown(shown + STEP)}>Ver mais {Math.min(STEP, left)}</Button>}
+      </div>}
+      {!list.isError && list.data && total > 0 && <p className="text-muted-foreground">{plural(total, 'resposta', 'respostas')}</p>}
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         {selected && <SubmissionSheet key={selected.id} sub={selected} version={versions.data?.find((v) => v.id === selected.form_version_id)} form={form} onClose={() => setSelected(null)} />}
       </Sheet>

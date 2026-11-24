@@ -7,7 +7,7 @@ import { StepNav } from '@/components/shared/StepNav'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton, cn } from '@/components/ui/primitives'
-import { addDaysIso, formatCompetence, formatDayLong, formatDayShort, monthGridDays, todayIso } from '@/core/format'
+import { addDaysIso, formatCompetence, formatDayLong, formatDayShort, monthGridDays, plural, todayIso } from '@/core/format'
 import { supabase } from '@/core/supabase'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { usePermission } from '@/core/permissions'
@@ -171,7 +171,7 @@ export function EventsPage() {
       {header}
       {pending.length > 0 && (
         <Button variant={onlyPending ? 'default' : 'outline'} className="w-full" aria-pressed={onlyPending} onClick={() => setOnlyPending(!onlyPending)}>
-          À confirmar ({pending.length})
+          A confirmar ({pending.length})
         </Button>
       )}
       {onlyPending && (
@@ -205,7 +205,7 @@ export function EventsPage() {
                   selectedDay === d.iso && 'bg-muted ring-2 ring-foreground',
                 )}
                 title={holidayOf(d.iso)}
-                aria-label={`${formatDayLong(d.iso)}${holidayOf(d.iso) ? `, feriado: ${holidayOf(d.iso)}` : ""}${list.length ? `, ${list.length} evento(s)` : ""}${birthdaysOn(d.iso).length ? `, ${birthdaysOn(d.iso).length} aniversário(s)` : ""}`}
+                aria-label={`${formatDayLong(d.iso)}${holidayOf(d.iso) ? `, feriado: ${holidayOf(d.iso)}` : ""}${list.length ? `, ${plural(list.length, 'evento', 'eventos')}` : ""}${birthdaysOn(d.iso).length ? `, ${plural(birthdaysOn(d.iso).length, 'aniversário', 'aniversários')}` : ""}`}
               >
                 <span className={cn('text-xs font-semibold leading-none', holidayOf(d.iso) && 'rounded-full bg-destructive px-1.5 py-0.5 text-destructive-foreground')}>{Number(d.iso.slice(8))}</span>
                 <span className="mt-0.5 flex h-1.5 flex-wrap items-center justify-center gap-0.5">

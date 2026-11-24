@@ -1,7 +1,7 @@
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { shortName } from '@/core/format'
+import { plural, pluralWord, shortName } from '@/core/format'
 import { ClipboardCopy, Search } from 'lucide-react'
 import { StepNav } from '@/components/shared/StepNav'
 import { useEffect, useMemo, useState } from 'react'
@@ -194,7 +194,7 @@ function AdminBilling() {
   const gen = useMutation({
     mutationFn: () => generateCharges(orgId, competence),
     onSuccess: (r) => {
-      toast.success(`${r.created} cobrança(s) criada(s)${r.already_existing ? `, ${r.already_existing} já existiam` : ''}.`)
+      toast.success(`${plural(r.created, 'cobrança criada', 'cobranças criadas')}${r.already_existing ? `, ${r.already_existing} ${pluralWord(r.already_existing, 'já existia', 'já existiam')}` : ''}.`)
       if (r.skipped_no_price) toast.warning(`${r.skipped_no_price} sem valor definido para a categoria.`)
       qc.invalidateQueries({ queryKey: ['billing', orgId] })
     },
@@ -313,7 +313,7 @@ function AdminBilling() {
           </Collapsible>
         )
       })}
-      <p className="text-muted-foreground">{total} cobrança(s)</p>
+      <p className="text-muted-foreground">{plural(total, 'cobrança', 'cobranças')}</p>
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         {selected && <ChargeSheet key={selected.id} charge={selected} onClose={() => setSelected(null)} />}

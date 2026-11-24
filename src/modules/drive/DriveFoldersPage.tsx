@@ -243,13 +243,8 @@ export function DriveFoldersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1>Google Drive</h1>
-        <div className="flex gap-2">
-
-          {canManage && <Button variant="add" onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
-        </div>
-      </div>
+      <h1>Google Drive</h1>
+      {canManage && <Button variant="add" className="w-full" onClick={() => setSheet({ folder: null })}><Plus className="h-4 w-4" /> Adicionar pasta</Button>}
       <ReadMore>{canManage
         ? 'Pastas do Google Drive do bloco: partituras, fotos, documentos, atas Adicione quantas quiser e escolha quem vê cada uma (por papel, naipe ou instrumento). Use “Sincronizar acesso” para compartilhar a pasta no Drive com essas pessoas.'
         : 'Pastas do Google Drive liberadas para o seu perfil.'}</ReadMore>

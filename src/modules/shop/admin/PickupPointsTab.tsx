@@ -109,7 +109,7 @@ function PickupSheet({ point, onClose }: { point: PickupPoint | null; onClose: (
           <Input id="pp-hours" placeholder="Ex.: Entrada pela portaria lateral" value={f.opening_hours} onChange={(e) => setF({ ...f, opening_hours: e.target.value })} /></div>}
 
         {!person && <p className="rounded-lg bg-muted p-3 text-sm"><strong>O cliente verá:</strong> {preview.text || 'nenhum horário informado'}
-          {preview.expired > 0 && <span className="text-muted-foreground"> ({preview.expired} data(s) já passada(s) não aparece(m))</span>}</p>}
+          {preview.expired > 0 && <span className="text-muted-foreground"> ({preview.expired === 1 ? '1 data já passada não aparece' : `${preview.expired} datas já passadas não aparecem`})</span>}</p>}
         {!person && slots.length > 0 && !hasFutureSlot(slots, today) && <p role="alert" className="text-sm text-destructive">Todas as datas já passaram: este ponto não vai aparecer no checkout.</p>}
 
         {errors.length > 0 && <ul role="alert" className="list-disc space-y-1 pl-5 text-sm text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}

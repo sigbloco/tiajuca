@@ -1,6 +1,5 @@
-import { StepNav } from '@/components/shared/StepNav'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { shortName } from '@/core/format'
+import { plural, shortName } from '@/core/format'
 import { useEffect, useState } from 'react'
 import { EMPTY_FILTER, FilterBar, type FilterValue } from '@/components/shared/FilterBar'
 import { DateInput } from '@/components/ui/masked-inputs'
@@ -10,7 +9,8 @@ import { formatDateTime } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 
-const PAGE = 25
+/** Registros carregados de 5 em 5 ("Ver mais 5"), como as outras listas do app. */
+const STEP = 5
 const ENTITY_LABEL: Record<string, string> = {
   members: 'Cadastro de integrante', member_sensitive_data: 'Dados sensíveis', member_access_roles: 'Papel de acesso', role_permissions: 'Permissões do papel',
   classifications: 'Classificação', member_classifications: 'Classificação do integrante', organizations: 'Organização', org_settings: 'Configuração',
@@ -58,16 +58,16 @@ export function AuditLogTab() {
   const [action, setAction] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const [page, setPage] = useState(0)
+  const [shown, setShown] = useState(STEP)
   const [open, setOpen] = useState<number | null>(null)
-  useEffect(() => setPage(0), [entity, action, from, to])
+  useEffect(() => setShown(STEP), [entity, action, from, to])
 
   const logs = useQuery({
-    queryKey: ['audit', orgId, entity, action, from, to, page],
+    queryKey: ['audit', orgId, entity, action, from, to, shown],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       let q = supabase.from('audit_logs').select('id, actor_member_id, action, entity_type, entity_id, old_data, new_data, created_at', { count: 'exact' })
-        .eq('organization_id', orgId).order('created_at', { ascending: false }).range(page * PAGE, page * PAGE + PAGE - 1)
+        .eq('organization_id', orgId).order('created_at', { ascending: false }).range(0, shown - 1)
       if (entity) q = q.eq('entity_type', entity)
       if (action) q = q.eq('action', action)
       if (from) q = q.gte('created_at', `${from}T00:00:00-03:00`)
@@ -89,7 +89,7 @@ export function AuditLogTab() {
   })
 
   const total = logs.data?.total ?? 0
-  const pages = Math.max(1, Math.ceil(total / PAGE))
+  const left = Math.max(0, total - (logs.data?.rows.length ?? 0))
   return (
     <div className="space-y-4">
       <h2>Registro de alterações</h2>
@@ -128,11 +128,9 @@ export function AuditLogTab() {
             {open === r.id && <div className="mt-2 border-t border-border pt-2"><Diff log={r} /></div>}
           </Card>
         ))}
+        {!logs.isError && left > 0 && <Button type="button" variant="outline" size="sm" className="w-full" disabled={logs.isFetching} onClick={() => setShown(shown + STEP)}>Ver mais {Math.min(STEP, left)}</Button>}
       </div>
-      {!logs.isError && logs.data && <div className="space-y-2">
-        <p className="text-muted-foreground">{total} registro(s)</p>
-        <StepNav prevLabel="Página anterior" nextLabel="Próxima página" prevDisabled={page === 0} nextDisabled={page + 1 >= pages} onPrev={() => setPage(page - 1)} onNext={() => setPage(page + 1)}>{page + 1} / {pages}</StepNav>
-      </div>}
+      {!logs.isError && logs.data && total > 0 && <p className="text-muted-foreground">{plural(total, 'registro', 'registros')}</p>}
     </div>
   )
 }

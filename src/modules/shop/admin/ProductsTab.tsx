@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { ShowMore, TrashSection, usePaged } from '@/components/shared/TrashSection'
 import { Badge, Button, Card, EmptyState, Sheet, Skeleton } from '@/components/ui/primitives'
-import { formatCurrency } from '@/core/format'
+import { formatCurrency, plural } from '@/core/format'
 import { friendlyError } from '@/core/errors'
 import { useOrgId } from '@/core/organization'
 import { fromCents, memberPriceCents, variantUnits } from '../catalog'
@@ -19,7 +19,7 @@ function stockSummary(p: ShopProduct, items: Map<string, StockItem>): string {
   if (p.kind === 'made_to_order') return `Sob encomenda · ${p.lead_time_days ?? '?'}`
   const units = p.shop_product_variants.filter((v) => v.is_active).reduce((n, v) => n + variantUnits(v.shop_variant_stock ?? [], items), 0)
   if (units === 0) return 'Esgotado'
-  return units === Infinity ? 'Estoque ilimitado' : `${units} ${p.is_kit ? 'kit(s) possível(is)' : 'em estoque'}`
+  return units === Infinity ? 'Estoque ilimitado' : p.is_kit ? plural(units, 'kit possível', 'kits possíveis') : `${units} em estoque`
 }
 
 /** Lista de produtos ou, com `kits`, só os kits (cada um numa aba própria do painel). */

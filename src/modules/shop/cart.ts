@@ -65,7 +65,7 @@ export function reconcileCart(lines: CartLine[], index: CatalogIndex): { lines: 
     const max = maxQuantity(entry)
     if (max <= 0) { notices.push(`${label} esgotou e foi removido do carrinho.`); continue }
     const q = Math.min(max, Math.max(1, Math.floor(l.quantity) || 1))
-    if (q < l.quantity) notices.push(`${label}: só restam ${q} unidade(s); a quantidade foi ajustada.`)
+    if (q < l.quantity) notices.push(`${label}: ${q === 1 ? 'só resta 1 unidade' : `só restam ${q} unidades`}; a quantidade foi ajustada.`)
     out.push({ variantId: l.variantId, quantity: q })
   }
   return { lines: out, notices }

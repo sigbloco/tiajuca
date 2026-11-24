@@ -66,7 +66,7 @@ Bem resolvido: "Sem acesso" em vez de página vazia quando a URL é digitada; av
 | I4 | média | todas | "Em destaque" mostra até 12 eventos de uma vez, sem "Ver mais". | `HomePage.tsx:124,146-151` |
 | I5 | baixa | todas | Se a consulta da situação falhar, o esqueleto cinza fica para sempre (`if (!data) return <Skeleton>`), sem mensagem de erro. O mesmo para os próximos eventos (só o esqueleto e depois nada). | `HomePage.tsx:192`, `HomePage.tsx:142` |
 | I6 | baixa | 375 | "Ver agenda" é texto vermelho de 14 px ao lado do título, sem altura mínima. | `HomePage.tsx:141` |
-| I7 | baixa | todas | "Aniversariante(s) do dia:" em vez de singular/plural calculado. | `HomePage.tsx:87` |
+| I7 | baixa | todas | "Aniversariante(s) do dia:" em vez de singular/plural calculado. **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `HomePage.tsx:87` |
 | I8 | baixa | todas | Os cartões de evento alternam fundo branco e cinza (zebra), como linhas de tabela; num cartão isolado ou em dias diferentes a alternância parece aleatória. | `EventCard.tsx:41`, `MergedEventCard.tsx:9` |
 
 Bem resolvido: convite "Termine seu perfil" com link para o perfil; aniversariantes com `MemberLink` (vira texto para quem não pode abrir fichas, que é o caso do integrante); "hoje" antes dos destaques.
@@ -103,7 +103,7 @@ Bem resolvido: busca com rótulo, contagem "N integrantes ativos", 5 em 5, link 
 
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
-| N1 | média | 768+ | Organograma em grade de 2 colunas sem esticar a última linha: com número ímpar de naipes o último cartão fica com meia largura (regra 5; mesma causa do F1 da área 1). | `Organogram.tsx:55` |
+| N1 | média | 768+ | Organograma em grade de 2 colunas sem esticar a última linha: com número ímpar de naipes o último cartão fica com meia largura (regra 5; mesma causa do F1 da área 1). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `Organogram.tsx:55` |
 | N2 | média | todas | "Para mudar, vá a Naipes." cita a página sem `PageLink` (regra 6) e aparece para quem não pode mudar nada. | `Organogram.tsx:52` |
 | N3 | baixa | todas | Nota administrativa ("Itens desativados somem das novas escolhas… Só dá para excluir o que nunca foi usado.") aparece para o integrante, que não edita. | `NaipesPage.tsx:428` |
 | N4 | baixa | todas | As abas usam `role="tablist"`/`role="tab"` em links que trocam de página (leitor de tela anuncia abas e espera setas). | `NaipesTabs.tsx:22,27` |
@@ -120,7 +120,7 @@ Bem resolvido: busca com rótulo, contagem "N integrantes ativos", 5 em 5, link 
 | C5 | média | todas | "Em destaque" com até 12 itens, sem "Ver mais". | `EventsPage.tsx:116`, `Highlights.tsx:18-28` |
 | C6 | baixa | todas | Hoje (anel vermelho) e feriado (número em pílula vermelha) usam a mesma cor; o dia escolhido usa `bg-muted`, a mesma cor das semanas alternadas, e só se distingue pelo anel. | `EventsPage.tsx:202-205,210` |
 | C7 | baixa | todas | "FALTAM N DIAS" em vermelho, 12 px, maiúsculas (4,19:1 sobre o fundo rosado do cartão). | `Highlights.tsx:25` |
-| C8 | baixa | todas | Rótulo para leitor de tela "N evento(s)", "N aniversário(s)". | `EventsPage.tsx:208` |
+| C8 | baixa | todas | Rótulo para leitor de tela "N evento(s)", "N aniversário(s)". **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `EventsPage.tsx:208` |
 | C9 | baixa | todas | Erro ao carregar eventos não aparece (só some a lista). | `EventsPage.tsx:52-56` |
 
 Bem resolvido: cada dia tem `aria-label` completo (data, feriado, eventos, aniversários); navegação de mês com `StepNav` de 40 px de largura total; aniversários com `MemberLink`; detalhe do evento sem botões para quem não gerencia; aviso "Data, horário ou local ainda podem mudar" no detalhe.
@@ -132,7 +132,7 @@ Bem resolvido: cada dia tem `aria-label` completo (data, feriado, eventos, anive
 | R1 | média | todas | Filtro com "Situação: Ativos e inativos / Somente ativos / Somente inativos" no repertório de quem só lê, mas a lista já mostra só as músicas ativas: "Somente inativos" dá sempre "Nenhuma música encontrada". | `RepertoireDetailPage.tsx:76,78` |
 | R2 | média | 375 | Três "voltar" empilhados: o "Voltar para…" do topo, o caminho de navegação e um botão de seta só com ícone ao lado do título (mesma causa do H2 da área 2). | `RepertoireDetailPage.tsx:63` |
 | R3 | baixa | todas | Os repertórios aparecem todos de uma vez (grade), sem 5 em 5. Com poucos repertórios não aparece; vigiar. | `RepertoirePage.tsx:107` |
-| R4 | baixa | todas | `ButtonRow` vazio ao lado do título para quem não gerencia (deixa um espaço à direita do "Repertório"). | `RepertoirePage.tsx:100-103` |
+| R4 | baixa | todas | `ButtonRow` vazio ao lado do título para quem não gerencia (deixa um espaço à direita do "Repertório"). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `RepertoirePage.tsx:100-103` |
 
 ### Financeiro do integrante (`/:org/financeiro`, `/:org/cobrancas`; hoje não liberados) — `Hub.tsx`, `BillingPage.tsx`
 
@@ -150,7 +150,7 @@ Bem resolvido: cada dia tem `aria-label` completo (data, feriado, eventos, anive
 - **Última linha de grade que não estica (mesma causa da área 1):** `BalancedGrid` resolve, mas há grades fixas com quantidade variável: `Organogram.tsx:55`, `EventSettingsPage.tsx:102,106` (`ProgressiveList` em `sm:grid-cols-2`: 5 tipos viram 2+2+1), e a conferir na 3c: `DistributionPage.tsx:306`, `SubmissionsTab.tsx:215`, `DriveFoldersPage.tsx`, `ReportsPage.tsx:163`.
 - **Contraste de selos e textos coloridos:** `text-warning` sobre `bg-warning/15` (2,72:1) e sobre branco (3,19:1), `text-success` sobre `bg-success/15` (3,57:1), `text-primary` em texto de 12 a 14 px (4,23:1 sobre o fundo creme, 4,49:1 sobre branco, 3,88:1 sobre `bg-muted`). Aqui o `text-muted-foreground` passa (5,04:1 sobre o creme, 4,62:1 sobre `bg-muted`), ao contrário da loja.
 - **Foco de teclado (mesma causa das áreas 1 e 2):** `Button` e campos têm `focus-visible:ring-2`; botões feitos à mão não têm (itens do menu lateral e da barra inferior, "Voltar para…", `Collapsible`, `HighlightCards`, dias do calendário, botões do perfil, `RouteError`). Não testado por teclado.
-- **Plural com "(s)" em vez de concordância:** `HomePage.tsx:87,257,261,262`, `EventsPage.tsx:208`, `BillingPage.tsx:187,305`, `AuditPage.tsx:128`, `RecurrencesSettings.tsx:147`, `DistributionPage.tsx:232`, `FieldSheet.tsx:317`, `FieldsTab.tsx:60`, `FormsPage.tsx:128,141`, `SubmissionsTab.tsx:224,233`, `PickupPointsTab.tsx:112`, `ProductSheet.tsx:129,371`, `ProductsTab.tsx:22`.
+- **Plural com "(s)" em vez de concordância:** `HomePage.tsx:87,257,261,262`, `EventsPage.tsx:208`, `BillingPage.tsx:187,305`, `AuditPage.tsx:128`, `RecurrencesSettings.tsx:147`, `DistributionPage.tsx:232`, `FieldSheet.tsx:317`, `FieldsTab.tsx:60`, `FormsPage.tsx:128,141`, `SubmissionsTab.tsx:224,233`, `PickupPointsTab.tsx:112`, `ProductSheet.tsx:129,371`, `ProductsTab.tsx:22`. **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7).
 - **"Voltar" repetido:** o "Voltar para…" do topo e o caminho de navegação já existem em toda página; botões de voltar próprios repetem (`RepertoireDetailPage.tsx:63`; conferir outras páginas de detalhe na 3b/3c).
 - **Estados de erro silenciosos:** várias consultas mostram esqueleto ou nada quando falham (`HomePage.tsx:142,192`, `MyParticipation.tsx:63`, `EventsPage.tsx:52`). Onde há erro tratado, o desenho é um `Card` com texto vermelho (`MemberDirectory.tsx:41`).
 - **Vazio com dois desenhos:** `EmptyState` (tracejado, 39 arquivos) e `Card p-8 text-center` (`MemberDirectory.tsx:54`, `MembersPage.tsx`).
@@ -158,9 +158,9 @@ Bem resolvido: cada dia tem `aria-label` completo (data, feriado, eventos, anive
 
 ## Indícios para 3b e 3c (da varredura do código; não revisados a fundo)
 
-- **"(opcional)" escrito** (proibido pela regra 4): placeholder "Descrição (opcional)" em `FormListsPage.tsx:145`, `CatalogEditor.tsx:186`, `OrgPages.tsx:101`.
+- **"(opcional)" escrito** (proibido pela regra 4): placeholder "Descrição (opcional)" em `FormListsPage.tsx:145`, `CatalogEditor.tsx:186`, `OrgPages.tsx:101`. **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7).
 - **Caixa do navegador** em vez do `DialogHost`: `window.prompt`/`window.alert` ao inserir link no editor de texto rico (`RichText.tsx:86,88`).
-- **Botão de adicionar no topo fora do padrão** (regra 7): "Novo naipe" é um ícone `h-8 w-8` com contorno, não o `variant="add"` tracejado com "+" e texto (`NaipesPage.tsx:391`); "Novo repertório" fica ao lado do título, não abaixo em 100 % (`RepertoirePage.tsx:98-103`).
+- **Botão de adicionar no topo fora do padrão** (regra 7): "Novo naipe" é um ícone `h-8 w-8` com contorno, não o `variant="add"` tracejado com "+" e texto (`NaipesPage.tsx:391`); "Novo repertório" fica ao lado do título, não abaixo em 100 % (`RepertoirePage.tsx:98-103`). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7).
 - **Tabela larga:** `PageReleasesTab.tsx:81` (`min-w-[34rem]` com rolagem horizontal) no celular.
 - **Barra "Visualizar como"** (`ViewAsBar.tsx`): seletores de 32 px, texto de explicação de 12 px que aumenta o topo fixo.
 - **Barra "Página liberada para"** (`PageReleaseBar.tsx`): caixas de 32 px de altura e marca de 16 px; o motivo de cada caixa desabilitada fica só no `title`.
@@ -270,7 +270,7 @@ Bem resolvido: grupos por naipe e instrumento recolhíveis, "Ver mais 5" dentro 
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
 | V1 | média | todas | Capacidade duas vezes, "lotado" só por cor, "∞" sem explicação (ver resumo 7). | `CapacityPage.tsx:103-111` |
-| V2 | média | 1280 | Grade `auto-fill` de 4 colunas com 9 cartões: última linha com 1 cartão de 174 px em 718 px (regra 5; mesma causa da área 1). | `CapacityPage.tsx:101` |
+| V2 | média | 1280 | Grade `auto-fill` de 4 colunas com 9 cartões: última linha com 1 cartão de 174 px em 718 px (regra 5; mesma causa da área 1). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `CapacityPage.tsx:101` |
 | V3 | baixa | 375 | Um cartão por linha (a grade pede 168 px por coluna e sobram 341 px): nome e número ocupam um terço do cartão. | `CapacityPage.tsx:101` |
 | V4 | baixa | 375 | Abas Naipes/Vagas/Organograma só com ícone no celular (o nome fica no `aria-label`); "Lista de espera" desabilitada com o motivo só no `title`. | `structure/NaipesTabs.tsx`, `CapacityPage.tsx:152` |
 
@@ -375,7 +375,7 @@ Telas cobertas: moldura do Titular ("Visualizar como" e "Página liberada para")
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
 | DI1 | média | todas | Caixas sem link e "Integrantes 191" sem explicação (ver resumo 10). | `HomePage.tsx:241-245` |
-| DI2 | baixa | todas | Plurais com "(s)": "lotado(s)", "inadimplente(s)", "bolsa(s) integral(is)" (mesma causa da 3a). | `HomePage.tsx:257,261,262` |
+| DI2 | baixa | todas | Plurais com "(s)": "lotado(s)", "inadimplente(s)", "bolsa(s) integral(is)" (mesma causa da 3a). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `HomePage.tsx:257,261,262` |
 Bem resolvido: 2 colunas no celular e 4 a partir de 1024 px, sem linha incompleta; barras por naipe com o número ao lado; os números em verde (`text-success` sobre branco, 4,3:1) passam por serem texto grande (20 px em negrito).
 
 ##### Integrantes em modo de gestão e ficha — `MembersPage.tsx`, `MemberDetailSheet.tsx`, `ArtisticLinks.tsx`, `MemberBilling.tsx`
@@ -563,7 +563,7 @@ Bem resolvido: o texto do topo explica que cobranças já geradas não mudam e o
 | CB4 | média | todas | "Impacto das bolsas" diferente do "Impacto mensal estimado" de Bolsas e igual ao "Total isento" (ver resumo 9). | `BillingPage.tsx:243-244` |
 | CB5 | baixa | todas | "Motivo do ajuste (obrigatório)" escrito no placeholder, e não com asterisco; o campo de valor do ajuste não tem rótulo. | `BillingPage.tsx:127-128` |
 | CB6 | baixa | 375 | "Gerar cobranças" é o maior botão da página (vermelho, 341 × 40 px), entre o resumo e os filtros, para uma ação de uma vez por mês; o dia a dia (buscar, abrir uma cobrança) vem abaixo dele. | `BillingPage.tsx:249-252` |
-| CB7 | baixa | todas | "24 cobrança(s)" e, no aviso de geração, "cobrança(s) criada(s)" (concordância). | `BillingPage.tsx:187,305` |
+| CB7 | baixa | todas | "24 cobrança(s)" e, no aviso de geração, "cobrança(s) criada(s)" (concordância). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `BillingPage.tsx:187,305` |
 
 Bem resolvido: seis caixas de resumo sem linha incompleta (2 colunas no celular e 3 a partir de 1024 px); "Gerar cobranças" pede confirmação e avisa que não duplica; "Ver mais 5" em cada categoria; o painel explica o que o ajuste registra e que o link antigo deixa de dar baixa.
 
@@ -668,7 +668,7 @@ Telas cobertas: Formulários (lista; editor com Configurações, Cabeçalho, Cam
 | FO7 | baixa | todas | Dois "voltar": o "Voltar para Formulários" do topo e uma seta de 40 px ao lado do título (mesma causa do R2 da 3a). | `FormEditorPage.tsx` |
 | FO8 | baixa | 375 | Na lista, o link completo de cada formulário ocupa três linhas, partido no meio das palavras (`break-all`), em vermelho. | `FormsPage.tsx:122` |
 | FO9 | baixa | todas | Listas do cadastro mostra as 6 listas de uma vez (regra 3) e a lixeira aparece vazia ("Lixeira 0"), enquanto nas outras páginas ela some quando está vazia. | `FormListsPage.tsx` |
-| FO10 | baixa | todas | Confirmação com "(em Inscrições)" e "resposta(s)" (ver resumo 10). | `SettingsTab.tsx:121`, `FormsPage.tsx:128,141` |
+| FO10 | baixa | todas | Confirmação com "(em Inscrições)" e "resposta(s)" (ver resumo 10). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `SettingsTab.tsx:121`, `FormsPage.tsx:128,141` |
 
 Bem resolvido: Configurações e "Novo formulário" em 2 colunas iguais sob o título; "Apagar" vai para a lixeira, com confirmação; "Vale para todos os ciclos" no lugar do seletor de ciclo; aviso de que mudar o endereço quebra links já divulgados; "Seções modelo" com "Ver mais 1".
 
@@ -681,7 +681,7 @@ Bem resolvido: Configurações e "Novo formulário" em 2 colunas iguais sob o t�
 | LJ3 | média | 375 | Pedidos: "Exportar PDF", "Arquivar encerrados" e cinco filtros empilhados (cerca de 340 px) antes do primeiro pedido. | `OrdersTab.tsx:52-60` |
 | LJ4 | baixa | todas | "Configurações" é uma engrenagem com `role="tab"` fora da fileira de abas (`tablist`): para o leitor de tela, é uma aba solta. | `ShopAdminPage.tsx:48,62` |
 | LJ5 | baixa | 375 | Produtos e Kits: alça de 28 px, Subir/Descer de 32 × 28 px e "Mover para a lixeira" de 64 × 32 px; selo "KIT" de 10,4 px. | `ProductsTab.tsx` |
-| LJ6 | baixa | todas | "15 kit(s) possível(is)"; "0 reservado" (com zero, o plural é "0 reservados"). | `ProductsTab.tsx:22`, `StockTab.tsx:103` |
+| LJ6 | baixa | todas | "15 kit(s) possível(is)"; "0 reservado" (com zero, o plural é "0 reservados"). **Corrigido em 24/11/2026** (ver "o que atacar primeiro", item 7). | `ProductsTab.tsx:22`, `StockTab.tsx:103` |
 
 Bem resolvido: as seis abas em 3+3 com 44 px de altura (as maiores da área); "Arquivar encerrados" com confirmação; "Ver mais 5" nos pedidos; Configurações com asterisco nos obrigatórios e "Salvar" fixo; Estoque explica o que cada item consome.
 
@@ -753,6 +753,7 @@ Lista curta para os pedidos de correção, pela ordem de risco:
 6. **Quebras de layout no celular:** "titul / ar", "Novo" fora da margem em Fornecedores, busca de 50 px em Cobranças, "Desmarcar tudo" vazando, `ButtonRow` com 3 ou 5 itens indo para 1 coluna.
    **Feito em 23/11/2026:** `ButtonRow` mede cada linha pelo próprio botão mais largo e tenta, antes de um por linha, os arranjos equilibrados (5 → 3+2 ou 2+3, 6 → 3+3, nunca um sozinho embaixo); rótulo com versões curtas (`FitChoice`) entra na medida pela versão mais curta (chamada). Acesso e papéis: abas "Permissões"/"Liberação" quando apertam (cabem as três numa linha) e frase do titular sem colunas. Fornecedores: "Filtrar" desceu para uma linha própria e "Categorias"/"Novo" quebram dentro da margem. Cobranças: busca na largura toda, com rótulo, e os dois seletores lado a lado embaixo. Liberação de páginas: tabela cabe em 375 px (colunas estreitas, "Prof./Mon." em duas linhas), "Marcar tudo" com 36 px de altura e "Desmarcar tudo" quebrando dentro do botão. Não conferido na tela (sem login no navegador embutido).
 7. **Regras de interface em série:** botão de adicionar (regra 7), última linha da grade (regra 5), "(opcional)", plurais com "(s)", "Ver mais 5" e paginação.
+   **Feito em 24/11/2026:** concordância calculada (`plural`/`pluralWord` em `format.ts`, com teste) no lugar de todos os "(s)" do app: Auditoria, Backups, Cobranças, Valores, Checklists, Início (aniversariantes, vagas, inadimplentes, bolsas), Calendário, Recorrências, Distribuição, Formulários (campos, seções, respostas), Loja (pedidos, pontos, fotos, reservas, kits, carrinho), Álbuns e lixeira do Repertório; "0 reservado" virou "0 reservados". "À confirmar" virou "A confirmar" no Calendário inteiro. Backups com "4,1 MB". Lixeira do formulário cita "a página Formulários". "(opcional)" saiu dos três placeholders de descrição. Botão de adicionar (regra 7): título sozinho e, embaixo, o botão tracejado com "+" e texto em 100 % da largura em Naipes ("Novo naipe" e "Copiar de {ciclo}" com texto), Fornecedores ("Novo fornecedor" e Categorias), Recorrências, Bolsas, Receitas/Despesas, Pagamentos da equipe, Ciclos, Drive e Repertório; o "+" dos grupos de Categorias e de Fornecedores virou "+ Nova"/"+ Novo" tracejado. Última linha da grade (regra 5): Organograma (naipe ímpar ocupa as duas colunas), Vagas (cartões que esticam) e Receitas/Despesas (saldo na largura toda no celular; três iguais na tela grande). Respostas e Auditoria trocaram "Página anterior/Próxima" por "Ver mais 5", sem contagem com zero e com aviso de erro e "Tentar de novo" nas Respostas. Ficou de fora: "Novo integrante" (`MembersPage.tsx`, em edição por outra sessão). Não conferido na tela (sem login no navegador embutido).
 
 ## Próxima etapa
 

@@ -1,3 +1,4 @@
+import { plural } from '@/core/format'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { ArrowDown, ArrowUp, Ban, BookmarkPlus, CopyPlus, RotateCcw, LogIn, ChevronDown, ChevronRight, Layers, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
@@ -14,6 +15,11 @@ import { supabase } from '@/core/supabase'
 import { useFormFields, type FormFieldRow } from './service'
 import { FIELD_TYPE_LABEL, MAPPING_LABEL, isLoginSection, isSection } from './types'
 import { sectionIds, FieldSheet } from './FieldSheet'
+
+/** Aviso dos campos que não puderam manter a ligação com o cadastro (com a concordância do número). */
+const unlinkedText = (n: number) => n === 1
+  ? '1 ficou sem ligação com o cadastro porque este formulário já usa essa ligação.'
+  : `${n} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.`
 
 /** Construtor de campos: adicionar, ordenar, condições simples e ligação com o cadastro. */
 export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string; /** Abre a aba Envio (o card fixo "Envio" leva para lá). */ onOpenSend?: () => void; /** Editando uma seção modelo: só a seção do modelo (sem criar outras, sem apagar a seção). */ templateMode?: boolean }) {
@@ -57,7 +63,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
   const askRemove = async (x: FormFieldRow) => {
     const n = groupOf(x).length - 1
     const msg = isSection(x)
-      ? `Apagar a seção “${x.label}”${n > 0 ? ` e os ${n} campo(s) dela` : ''}? As versões já publicadas e as respostas não mudam.`
+      ? `Apagar a seção “${x.label}”${n > 0 ? (n === 1 ? ' e o campo dela' : ` e os ${n} campos dela`) : ''}? As versões já publicadas e as respostas não mudam.`
       : `Apagar o campo “${x.label}”? As versões já publicadas e as respostas não mudam.`
     if (await confirmBox(msg)) remove.mutate(x)
   }
@@ -85,7 +91,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
   })
   const resetFromTemplate = useMutation({
     mutationFn: async (sectionId: string) => { const { data, error } = await supabase.rpc('reset_section_from_template', { p_section: sectionId }); if (error) throw error; return data as { fields: number; unlinked: number } },
-    onSuccess: (r) => { refresh(); toast.success(`Seção restaurada do modelo: ${r.fields} campo(s).${r.unlinked > 0 ? ` ${r.unlinked} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.` : ''}`) },
+    onSuccess: (r) => { refresh(); toast.success(`Seção restaurada do modelo: ${plural(r.fields, 'campo', 'campos')}.${r.unlinked > 0 ? ` ${unlinkedText(r.unlinked)}` : ''}`) },
     onError: (e) => toast.error(friendlyError(e)),
   })
   const drag = useHoldReorder()
@@ -111,7 +117,7 @@ export function FieldsTab({ formId, templateMode, onOpenSend }: { formId: string
     },
     onSuccess: (r) => {
       refresh(); setPickOpen(false)
-      toast.success(r.unlinked > 0 ? `Seção inserida com ${r.fields} campo(s). ${r.unlinked} ficaram sem ligação com o cadastro porque este formulário já usa essa ligação.` : `Seção inserida com ${r.fields} campo(s).`)
+      toast.success(r.unlinked > 0 ? `Seção inserida com ${plural(r.fields, 'campo', 'campos')}. ${unlinkedText(r.unlinked)}` : `Seção inserida com ${plural(r.fields, 'campo', 'campos')}.`)
     },
     onError: (e) => toast.error(friendlyError(e)),
   })

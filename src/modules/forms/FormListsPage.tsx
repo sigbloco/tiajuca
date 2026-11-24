@@ -142,7 +142,7 @@ function CustomListBody({ list, items, canEdit }: { list: ListRow; items: ItemRo
             </div>
             <SaveInput value={item.name} disabled={!canEdit} aria-label={`Nome de ${item.name}`} onSave={(v) => patch.mutateAsync({ id: item.id, patch: { name: v } })} />
             {canEdit && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Mover ${item.name} para a lixeira`} title="Mover para a lixeira" onClick={() => patch.mutate({ id: item.id, patch: { is_active: false } })}><Trash2 className="h-4 w-4" /></Button>}
-            <div className="basis-full"><SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${item.name}`} onSave={(v) => patch.mutateAsync({ id: item.id, patch: { description: v.trim() || null } })} /></div>
+            <div className="basis-full"><SaveInput value={item.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição" aria-label={`Descrição de ${item.name}`} onSave={(v) => patch.mutateAsync({ id: item.id, patch: { description: v.trim() || null } })} /></div>
           </Card>
         )} />
       </div>

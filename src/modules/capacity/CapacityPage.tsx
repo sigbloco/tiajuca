@@ -95,14 +95,14 @@ function FitName({ children }: { children: string }) {
 /** Quadro "ocupadas/vagas": largura fixa e nunca quebra, igual nos cartões e nos títulos dos naipes (ficam alinhados). */
 const TOTAL_BOX = 'flex w-[4.75rem] shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-muted/60 px-1 font-display text-xl font-bold'
 
-/** Cartões de um naipe: mostra todos os instrumentos (sem "Ver mais"). */
+/** Cartões de um naipe: mostra todos os instrumentos (sem "Ver mais"). A última linha, se incompleta, estica até a largura toda. */
 function SectionGrid({ rows, cycleId, canManage }: { rows: Row[]; cycleId: string; canManage: boolean }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
+    <div className="flex flex-wrap gap-2">
       {rows.map((r) => (
-        <Card key={r.instrument_id} className={cn('flex items-stretch gap-2 p-2.5', r.is_full && 'border-destructive/50')}>
+        <Card key={r.instrument_id} className={cn('flex min-w-0 grow basis-[10.5rem] items-stretch gap-2 p-2.5', r.is_full && 'border-destructive/50')}>
           {/* Esquerda: nome (quebra de linha se faltar espaço) e, embaixo, o número de vagas. Direita: ocupadas/vagas, que nunca quebra. */}
-          <div className="min-w-0 space-y-1.5">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <FitName>{r.instrument_name}</FitName>
             {canManage ? <CapacityInput row={r} cycleId={cycleId} /> : <span className="font-display text-xl font-bold">{r.capacity ?? '∞'}</span>}
           </div>

@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { useMemo, useState } from 'react'
 import { Badge, Button, Card, EmptyState, Input, Select, Sheet, Skeleton, cn } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatCurrency, formatDateTime } from '@/core/format'
+import { formatCurrency, formatDateTime, plural } from '@/core/format'
 import { useOrgId } from '@/core/organization'
 import { fromCents } from '../catalog'
 import { KIND_LABEL, ORDER_STATUSES, ORDER_STATUS_LABEL, fulfillmentLabel } from '../orders/transitions'
@@ -32,7 +32,7 @@ export function OrdersTab() {
   const current = openId ? orders.data?.find((o) => o.id === openId) ?? null : null
   const bulk = useMutation({
     mutationFn: () => archiveFinished(orgId),
-    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'orders'] }); toast.success(n > 0 ? `${n} pedido(s) arquivado(s).` : 'Nenhum pedido encerrado para arquivar.') },
+    onSuccess: (n) => { qc.invalidateQueries({ queryKey: ['shop', orgId, 'orders'] }); toast.success(n > 0 ? `${plural(n, 'pedido arquivado', 'pedidos arquivados')}.` : 'Nenhum pedido encerrado para arquivar.') },
     onError: (e) => toast.error(friendlyError(e)),
   })
   // PDF dos pedidos a entregar: usa os pedidos ativos (não arquivados) do ponto de retirada escolhido, sem os outros filtros da tela.

@@ -129,10 +129,8 @@ export function StaffTab({ competence }: { competence: string }) {
   const paid = open.filter((p) => p.status === 'paid').reduce((n, p) => n + Number(p.amount), 0)
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2>Pagamentos da equipe</h2>
-        {canManage && <Button variant="add" onClick={() => setNewSheet(true)}><Plus className="h-4 w-4" /> Novo pagamento</Button>}
-      </div>
+      <h2>Pagamentos da equipe</h2>
+      {canManage && <Button variant="add" className="w-full" onClick={() => setNewSheet(true)}><Plus className="h-4 w-4" /> Novo pagamento</Button>}
       <div className="grid grid-cols-2 gap-2">
         <Card className="p-3"><p className="text-xs text-muted-foreground">Pago</p><p className="font-display text-xl font-bold text-success">{formatCurrency(paid)}</p></Card>
         <Card className="p-3"><p className="text-xs text-muted-foreground">Pendente</p><p className="font-display text-xl font-bold text-warning">{formatCurrency(pending)}</p></Card>

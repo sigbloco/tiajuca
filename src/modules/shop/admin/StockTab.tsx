@@ -1,3 +1,4 @@
+import { pluralWord } from '@/core/format'
 import { usePurge } from '@/core/purge'
 import { requireFields } from '@/core/required'
 import { confirmBox } from '@/components/shared/DialogHost'
@@ -14,7 +15,7 @@ import { availableUnits } from '../catalog'
 import { createStockItem, listProducts, listStockItems, updateStockItem, type StockItem } from './service'
 
 /** Singular para 0 e 1, plural a partir de 2 (português). */
-const plural = (n: number, one: string, many: string) => (n >= 2 ? many : one)
+const plural = pluralWord
 
 function ItemSheet({ item, minStock, onClose }: { item: StockItem | null; minStock: number; onClose: () => void }) {
   const orgId = useOrgId()

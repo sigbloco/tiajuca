@@ -6,13 +6,13 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, EmptyState, Input, Skeleton } from '@/components/ui/primitives'
 import { friendlyError } from '@/core/errors'
-import { formatDateTime } from '@/core/format'
+import { formatDateTime, plural } from '@/core/format'
 import { useOrgId, useOrganization } from '@/core/organization'
 import { supabase } from '@/core/supabase'
 
 interface BackupRow { id: string; label: string; kind: 'manual' | 'auto' | 'imported'; created_at: string; created_by_name: string | null; size_bytes: number; table_counts: Record<string, number> }
 const KIND_LABEL = { manual: 'Manual', auto: 'Automático', imported: 'Carregado de arquivo' } as const
-const size = (b: number) => (b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
+const size = (b: number) => (b > 1024 * 1024 ? `${(b / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
 const TABLE_LABEL: Record<string, string> = {
   members: 'integrantes', monthly_charges: 'mensalidades', cycles: 'ciclos', member_cycles: 'participações', activities: 'eventos', songs: 'músicas',
   shop_orders: 'pedidos da loja', financial_entries: 'lançamentos', forms: 'formulários', form_submissions: 'inscrições',
@@ -61,7 +61,7 @@ export function BackupsTab() {
     },
     onSuccess: (r) => {
       const n = Object.values(r.changed ?? {}).reduce((s, v) => s + v, 0)
-      toast.success(n === 0 ? 'Nada precisou mudar: os dados já estavam iguais ao backup.' : `Restaurado: ${n} registro(s) em ${Object.keys(r.changed).length} tabela(s). Um backup automático do estado anterior foi guardado.`)
+      toast.success(n === 0 ? 'Nada precisou mudar: os dados já estavam iguais ao backup.' : `Restaurado: ${plural(n, 'registro', 'registros')} em ${plural(Object.keys(r.changed).length, 'tabela', 'tabelas')}. Um backup automático do estado anterior foi guardado.`)
       qc.invalidateQueries()
     },
     onError: (e) => toast.error(friendlyError(e)),

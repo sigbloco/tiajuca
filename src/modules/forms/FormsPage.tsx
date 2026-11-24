@@ -1,3 +1,4 @@
+import { plural } from '@/core/format'
 import { loadSendDefaults } from './SendDefaultsPage'
 import { requireFields } from '@/core/required'
 import { ButtonRow } from '@/components/shared/ButtonRow'
@@ -125,7 +126,7 @@ export function FormsPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <Badge className={FORM_STATUS_CLASS[f.status]}>{FORM_STATUS_LABEL[f.status]}</Badge>
-                  <span className="text-xs text-muted-foreground">{f.form_submissions?.[0]?.count ?? 0} resposta(s)</span>
+                  <span className="text-xs text-muted-foreground">{plural(f.form_submissions?.[0]?.count ?? 0, 'resposta', 'respostas')}</span>
                 </div>
               </div>
               <ButtonRow>
@@ -138,7 +139,7 @@ export function FormsPage() {
         }} />
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>{sheet && <NewFormSheet />}</Sheet>
-      <TrashGroup entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: `${f.form_submissions?.[0]?.count ?? 0} resposta(s)` }))}
+      <TrashGroup entries={trashed.map((f) => ({ id: f.id, name: f.title, detail: plural(f.form_submissions?.[0]?.count ?? 0, 'resposta', 'respostas') }))}
       onRestore={(id) => setStatus.mutate({ id, status: 'draft', prev: 'draft' })} onPurge={(id) => purge.mutate(id)} />
     </div>
   )

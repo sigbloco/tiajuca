@@ -14,6 +14,7 @@ import { TrashGroup } from '@/components/shared/TrashGroup'
 import { Collapsible } from '@/components/shared/Collapsible'
 import { EMPTY_FILTER, matchesStatus, matchesText, type FilterValue } from '@/components/shared/FilterBar'
 import { Button, EmptyState, Input, Skeleton, cn } from '@/components/ui/primitives'
+import { ButtonRow } from '@/components/shared/ButtonRow'
 import { friendlyError } from '@/core/errors'
 import { useHoldReorder } from '@/core/holdReorder'
 import { useOrgId } from '@/core/organization'
@@ -385,17 +386,16 @@ export function NaipesPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1>Naipes e instrumentos</h1>
-          {canEdit && <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Novo naipe" title="Novo naipe" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /></Button>}
-          {canEdit && prev && cur && (
-            <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Copiar do ciclo ${prev.name}`} title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
-              onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /></Button>
+      <h1>Naipes e instrumentos</h1>
+      {canEdit && (
+        <ButtonRow>
+          <Button variant="add" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Novo naipe</Button>
+          {prev && cur && (
+            <Button variant="outline" title={`Copiar estrutura, oficinas, vagas e equipe do ciclo ${prev.name}`} disabled={copyFromPrev.isPending}
+              onClick={async () => { if (await confirmBox(`Copiar do ciclo ${prev.name} para ${cur.name}: naipes, instrumentos, oficinas, vagas e equipe? O que já existe aqui é mantido.`)) copyFromPrev.mutate() }}><CopyPlus className="h-4 w-4" /> Copiar de {prev.name}</Button>
           )}
-
-        </div>
-      </div>
+        </ButtonRow>
+      )}
       <NaipesTabs />
       <Sheet open={creating} onOpenChange={setCreating}>{creating && <NewSectionSheet onClose={() => setCreating(false)} />}</Sheet>
       {sections.isLoading && <Skeleton className="h-24" />}

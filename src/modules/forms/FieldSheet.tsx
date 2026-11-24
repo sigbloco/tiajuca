@@ -1,3 +1,4 @@
+import { plural } from '@/core/format'
 import { VarsHint } from '@/components/shared/VarsHint'
 import { StickySave } from '@/components/shared/StickySave'
 import { requireFields } from '@/core/required'
@@ -314,7 +315,7 @@ export function FieldSheet({ formId, field, fields, nextOrder, onClose, asSectio
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => setShownPicked(true)}>Marcar todos</Button>
               <Button type="button" size="sm" variant="outline" onClick={() => setShownPicked(false)}>Desmarcar todos</Button>
-              <span className="text-xs text-muted-foreground">{catalogItems.filter((i) => picked.has(i.id)).length} marcado(s): só eles aparecem para a pessoa escolher.</span>
+              <span className="text-xs text-muted-foreground">{plural(catalogItems.filter((i) => picked.has(i.id)).length, 'marcado: só ele aparece', 'marcados: só eles aparecem')} para a pessoa escolher.</span>
             </div>
             <label className="flex items-center gap-2 font-semibold"><input type="checkbox" className="h-5 w-5" checked={showDesc} onChange={(e) => setShowDesc(e.target.checked)} /> Mostrar a descrição de cada item</label>
             {showDesc && (

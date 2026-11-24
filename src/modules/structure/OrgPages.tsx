@@ -98,7 +98,7 @@ export function FunctionsPage() {
           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={`Mover ${f.name} para a lixeira`} title="Mover para a lixeira"
             onClick={async () => { if (await confirmBox(`Mover a categoria “${f.name}” para a lixeira? Você pode restaurar depois.`)) patch.mutate({ f, fields: { is_active: false } }) }}><Trash2 className="h-4 w-4" /></Button>
         )}
-        <div className="basis-full"><SaveInput value={f.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição (opcional)" aria-label={`Descrição de ${f.name}`} onSave={(v) => patch.mutateAsync({ f, fields: { description: v.trim() || null } })} /></div>
+        <div className="basis-full"><SaveInput value={f.description ?? ''} allowEmpty disabled={!canEdit} placeholder="Descrição" aria-label={`Descrição de ${f.name}`} onSave={(v) => patch.mutateAsync({ f, fields: { description: v.trim() || null } })} /></div>
         {fee && (
           <div className="grid basis-full grid-cols-2 gap-2">
             <div className="space-y-1"><Label htmlFor={`tp-${f.id}`} className="text-xs">Tipo</Label>
@@ -128,8 +128,8 @@ export function FunctionsPage() {
         return (
           <Collapsible key={s.kind} open={opened.has(s.kind)} onToggle={() => toggle(s.kind)} title={s.title} count={items.length}
             right={canEdit && (
-              <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-card hover:bg-muted" aria-label={`Adicionar em ${s.title}`} title={`Adicionar em ${s.title}`}
-                onClick={() => { const on = adding === s.kind; setAdding(on ? null : s.kind); setName(''); setExempt(false); if (!on) setOpened((cur) => new Set(cur).add(s.kind)) }}><Plus className="h-4 w-4" /></button>
+              <Button type="button" size="sm" variant="add" aria-label={`Nova categoria em ${s.title}`} aria-expanded={adding === s.kind}
+                onClick={() => { const on = adding === s.kind; setAdding(on ? null : s.kind); setName(''); setExempt(false); if (!on) setOpened((cur) => new Set(cur).add(s.kind)) }}><Plus className="h-4 w-4" /> Nova</Button>
             )}>
             {s.hint && <p className="text-sm text-muted-foreground">{s.hint}</p>}
             {canEdit && adding === s.kind && (

@@ -52,7 +52,8 @@ export function Organogram() {
       <p className="text-muted-foreground">Naipes e instrumentos com seus regentes, professores e monitores. Para mudar, vá a Naipes.</p>
       {loading && <Skeleton className="h-32" />}
       {!loading && secs.length === 0 && <EmptyState>Nenhum naipe cadastrado.</EmptyState>}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Número ímpar de naipes: o último ocupa as duas colunas (a última linha nunca fica com meia largura). */}
+      <div className="grid gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
         {secs.map((s) => {
           const insts = (instruments.data ?? []).filter((i) => i.section_id === s.id && i.is_active).sort(byOrder)
           const instLine = (i: (typeof insts)[number]) => (
