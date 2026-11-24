@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 import { OrgLogo } from '@/components/shared/OrgLogo'
 import { applyTheme } from '@/core/theme'
 import { readBrand } from '@/modules/auth/AuthLayout'
@@ -26,6 +26,9 @@ function loadingStart(): number {
   if (started === null || (mounted === 0 && now - lastGone > HANDOFF_MS)) started = now
   return started
 }
+
+/** Começo do giro dos raios (abertura do app): cada tela de carregando nova continua do mesmo ângulo, em vez de voltar ao começo. */
+const raysStart = typeof performance !== 'undefined' ? performance.now() : 0
 
 /** Vale por carga da página: ao recarregar volta a valer; ao navegar dentro do app, não. */
 let splashShown = false
@@ -71,11 +74,13 @@ export function LoadingScreen({ children }: { children?: ReactNode }) {
   const brand = readBrand()
   useLayoutEffect(() => { if (brand?.theme) applyTheme(brand.theme) }, [])
   const pct = useProgress()
+  // Os raios não mudam enquanto a barra anda: criados uma vez por tela, não a cada quadro.
+  const rays = useMemo(() => <RaysBackdrop count={9} opacity={100} color="rgb(var(--primary))" animate speed={8} phaseMs={performance.now() - raysStart} />, [])
   return (
     <div role="status" aria-live="polite" className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center" style={{ backgroundColor: 'rgb(var(--secondary))' }}>
       {/* Fundo na cor secundária (100%) e 9 raios na cor principal, em SVG (bordas lisas), saindo do centro da logo. */}
       <div className="relative h-20 w-20">
-        <RaysBackdrop count={9} opacity={100} color="rgb(var(--primary))" animate speed={8} />
+        {rays}
         {brand && <OrgLogo name={brand.name} logoPath={brand.logo_path} className="relative h-20 w-20" />}
       </div>
       <div className="relative h-3 w-52 overflow-hidden rounded-full bg-white p-0.5 shadow-sm" aria-hidden>

@@ -6,7 +6,7 @@ export interface RaysConfig {
 }
 
 /** Raios (como na camiseta): cunhas em SVG (as bordas ficam suavizadas, mesmo girando) num quadrado bem maior que a tela, centrado; quem contém corta o excesso (overflow hidden). */
-export function RaysBackdrop({ count = 16, opacity = 100, rotation = 0, color, animate, speed = 4 }: Omit<RaysConfig, 'on'>) {
+export function RaysBackdrop({ count = 16, opacity = 100, rotation = 0, color, animate, speed = 4, phaseMs = 0 }: Omit<RaysConfig, 'on'> & { /** Quanto do giro já passou (ms): uma tela nova continua do mesmo ângulo, sem voltar ao começo. */ phaseMs?: number }) {
   const n = Math.max(2, count)
   const period = 360 / n
   const c = color || 'rgb(var(--secondary))'
@@ -17,7 +17,7 @@ export function RaysBackdrop({ count = 16, opacity = 100, rotation = 0, color, a
   }).join(' ')
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[260vmax] w-[260vmax] -translate-x-1/2 -translate-y-1/2" style={{ opacity: opacity / 100 }}>
-      <svg viewBox="-100 -100 200 200" className={animate ? 'rays-spin h-full w-full' : 'h-full w-full'} shapeRendering="geometricPrecision" style={animate ? { animationDuration: `${720 / Math.min(20, Math.max(1, speed))}s` } : undefined}>
+      <svg viewBox="-100 -100 200 200" className={animate ? 'rays-spin h-full w-full will-change-transform' : 'h-full w-full'} shapeRendering="geometricPrecision" style={animate ? { animationDuration: `${720 / Math.min(20, Math.max(1, speed))}s`, animationDelay: phaseMs ? `-${Math.round(phaseMs)}ms` : undefined } : undefined}>
         <path d={d} fill={c} />
       </svg>
     </div>
