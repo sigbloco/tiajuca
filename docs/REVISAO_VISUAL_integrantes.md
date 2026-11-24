@@ -255,7 +255,7 @@ Bem resolvido: contadores fixos que também filtram (`aria-pressed`), busca por 
 
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
-| IG1 | alta | 375, 768 | Os 5 tipos um por linha, com 29 px de altura e texto de 12 px (ver resumo 3). | `MembersPage.tsx:44`, `ButtonRow.tsx:29-33` |
+| IG1 | alta | 375, 768 | Os 5 tipos um por linha, com 29 px de altura e texto de 12 px (ver resumo 3). **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6). | `MembersPage.tsx:44`, `ButtonRow.tsx:29-33` |
 | IG2 | média | 375 | Seletor de atividade desabilitado mostra "Escolha o naipe an…" cortado (regra: sem texto truncado). | `MembersPage.tsx:392` |
 | IG3 | média | todas | Lápis "Editar ficha" para quem só vê; "Situação" como seletor desabilitado a 50 % (ver resumo 5). | `MembersPage.tsx:308`, `MemberDetailSheet.tsx:96` |
 | IG4 | média | todas | "Sêniors" e "Músico convidado" (ver resumo 9). | `MembersPage.tsx:44,117` |
@@ -311,8 +311,8 @@ Confirmados na tela, da 3a: C1 (dias com 36 px), C2 (pontos sem legenda), C3 (li
 
 ### Causas repetidas novas (3b)
 
-- **`ButtonRow` com 5 itens vai para 1 coluna** quando 3 não cabem (pula 2+2+1 e não tenta 3+2 com fonte menor): Integrantes (tipos), e onde houver 5 botões longos. `ButtonRow.tsx:29-33`.
-- **`FitChoice` dentro de `ButtonRow`:** a medida usa a opção mais longa, então o chip nunca deixa a fileira caber, mesmo tendo versões curtas ("Profs. + Mons."). `AttendanceRosterPage.tsx:244`.
+- **`ButtonRow` com 5 itens vai para 1 coluna** quando 3 não cabem (pula 2+2+1 e não tenta 3+2 com fonte menor): Integrantes (tipos), e onde houver 5 botões longos. `ButtonRow.tsx:29-33`. **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6).
+- **`FitChoice` dentro de `ButtonRow`:** a medida usa a opção mais longa, então o chip nunca deixa a fileira caber, mesmo tendo versões curtas ("Profs. + Mons."). `AttendanceRosterPage.tsx:244`. **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6).
 - **Ícone de edição para quem só lê:** lápis em Integrantes; conferir na 3c outras listas com `Pencil` sem checar permissão.
 - **Configuração de liberação deixando entradas mortas:** Oficina, menu e barra inferior mostram páginas com permissão e sem liberação. Sugestão para a 3c: rever a matriz de liberação junto com a matriz de permissões.
 
@@ -423,7 +423,7 @@ Bem resolvido: Organização com cartões que explicam cada página; Ciclos agru
 
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
-| DF1 | média | 375 | "Novo" sai da margem direita (ver resumo 6). | `SuppliersPage.tsx:207-212` |
+| DF1 | média | 375 | "Novo" sai da margem direita (ver resumo 6). **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6). | `SuppliersPage.tsx:207-212` |
 | DF2 | média | todas | O "+" de cada categoria (42 × 36 px) não tem `aria-label` nem `title`: o leitor de tela anuncia só "botão". | `SuppliersPage.tsx:219` |
 | DF3 | baixa | todas | "Novo", sem dizer o quê (o painel se chama "Novo fornecedor"); "Filtrar" com 36 px. | `SuppliersPage.tsx:211` |
 | DD1 | baixa | todas | Falta ponto: "…documentos, atas Adicione quantas quiser…". | `DriveFoldersPage.tsx:254` |
@@ -558,7 +558,7 @@ Bem resolvido: o texto do topo explica que cobranças já geradas não mudam e o
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
 | CB1 | alta | todas | No painel da cobrança pendente, "Marcar como pago" grava num toque e "Ajustar valor" grava sozinho (o ajuste também invalida o link); os dois ficam logo abaixo de "Gerar link de pagamento" (ver resumo 1). Pelo código. | `BillingPage.tsx:103-131` |
-| CB2 | média | 375, 768 | Busca de 50 px, "Todos os naipe" cortado e busca sem rótulo (ver resumo 4). | `BillingPage.tsx:255-258` |
+| CB2 | média | 375, 768 | Busca de 50 px, "Todos os naipe" cortado e busca sem rótulo (ver resumo 4). **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6). | `BillingPage.tsx:255-258` |
 | CB3 | média | todas | Três níveis de grupo, valor do grupo sem nome, isentos com "bolsa 100% · vence …" (ver resumo 8). | `BillingPage.tsx:262-305` |
 | CB4 | média | todas | "Impacto das bolsas" diferente do "Impacto mensal estimado" de Bolsas e igual ao "Total isento" (ver resumo 9). | `BillingPage.tsx:243-244` |
 | CB5 | baixa | todas | "Motivo do ajuste (obrigatório)" escrito no placeholder, e não com asterisco; o campo de valor do ajuste não tem rótulo. | `BillingPage.tsx:127-128` |
@@ -701,10 +701,10 @@ Bem resolvido: prévia ao vivo das cores, que dá para tocar para escolher; "Res
 
 | # | Sev. | Largura | Achado | Arquivo provável |
 |---|---|---|---|---|
-| AC1 | alta | 375 | "titul / ar": a frase do titular em colunas (ver resumo 3). | `PeopleTab.tsx:146` |
+| AC1 | alta | 375 | "titul / ar": a frase do titular em colunas (ver resumo 3). **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6). | `PeopleTab.tsx:146` |
 | AC2 | alta | todas | Papéis e matriz gravam num toque (ver resumo 2). | `PeopleTab.tsx:126-131`, `PermissionsMatrix.tsx:96-121` |
-| AC3 | média | 375 | As três abas (Pessoas, Permissões dos papéis, Liberação de páginas) ficam uma por linha, com 38 px (mesma causa do `ButtonRow` da 3b). | `AccessPage.tsx:73-78` |
-| AC4 | média | 375 | Liberação de páginas: tabela com rolagem lateral, "Desmarcar tudo" com texto vazando do botão, "Marcar tudo" de 84 × 22 px (ver resumo 6). | `PageReleasesTab.tsx:76,81,93-95` |
+| AC3 | média | 375 | As três abas (Pessoas, Permissões dos papéis, Liberação de páginas) ficam uma por linha, com 38 px (mesma causa do `ButtonRow` da 3b). **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6). | `AccessPage.tsx:73-78` |
+| AC4 | média | 375 | Liberação de páginas: tabela com rolagem lateral, "Desmarcar tudo" com texto vazando do botão, "Marcar tudo" de 84 × 22 px (ver resumo 6). **Corrigido em 23/11/2026** (ver "o que atacar primeiro", item 6). | `PageReleasesTab.tsx:76,81,93-95` |
 | AC5 | média | 375 | Matriz: 19 seletores de 32 px por papel, que gravam ao trocar. | `PermissionsMatrix.tsx:118` |
 | AC6 | baixa | todas | Pessoas: "Direção" (77 px) e "Professor/Monitor" (151 px) lado a lado, com larguras desiguais e 36 px de altura (regra 2). | `PeopleTab.tsx:123-136` |
 
@@ -751,6 +751,7 @@ Lista curta para os pedidos de correção, pela ordem de risco:
 4. **Topo fixo do Titular** (294 a 350 px no celular) e a barra de liberação. **Feito em 23/11/2026:** a "Página liberada para" saiu do topo fixo e virou uma linha recolhida no começo da página ("Página liberada para: Direção, Professor/Monitor" + "Alterar"); a barra "Visualizar como" só fica fixa com a visualização ligada, com aviso mais curto, sem o "você ainda é direção" e com "Voltar" no lugar do "Sair" no celular. Pela conta das medidas da revisão, o topo fixo do Titular cai de cerca de 294 para cerca de 145 px (falta medir na tela depois de publicar).
 5. **Alvos de toque:** os "+" de 20 px, Subir/Descer de 20 a 28 px, "× Tirar" de 16 px, "Remover" de 18 px, os botões da chamada (36 px) e o X de cancelar aula (22 px). **Feito em 23/11/2026:** os "+" de adicionar passaram a 28 px com área de toque de 44 px (utilitário `tap-44`); Subir/Descer com 36 × 44 px em todas as listas; lápis, lixeira, Duplicar e Restaurar com 40 px; X de fechar painel com 40 px; "× Tirar" com 44 px de altura; "Remover" contato não encolhe mais; botões da chamada com 44 px; X de cancelar aula com 36 px, separado do atalho por um traço; cancelar evento com 40 px. Fica para depois a causa geral (`Button` e campos com 40/36 px) e os dias do calendário.
 6. **Quebras de layout no celular:** "titul / ar", "Novo" fora da margem em Fornecedores, busca de 50 px em Cobranças, "Desmarcar tudo" vazando, `ButtonRow` com 3 ou 5 itens indo para 1 coluna.
+   **Feito em 23/11/2026:** `ButtonRow` mede cada linha pelo próprio botão mais largo e tenta, antes de um por linha, os arranjos equilibrados (5 → 3+2 ou 2+3, 6 → 3+3, nunca um sozinho embaixo); rótulo com versões curtas (`FitChoice`) entra na medida pela versão mais curta (chamada). Acesso e papéis: abas "Permissões"/"Liberação" quando apertam (cabem as três numa linha) e frase do titular sem colunas. Fornecedores: "Filtrar" desceu para uma linha própria e "Categorias"/"Novo" quebram dentro da margem. Cobranças: busca na largura toda, com rótulo, e os dois seletores lado a lado embaixo. Liberação de páginas: tabela cabe em 375 px (colunas estreitas, "Prof./Mon." em duas linhas), "Marcar tudo" com 36 px de altura e "Desmarcar tudo" quebrando dentro do botão. Não conferido na tela (sem login no navegador embutido).
 7. **Regras de interface em série:** botão de adicionar (regra 7), última linha da grade (regra 5), "(opcional)", plurais com "(s)", "Ver mais 5" e paginação.
 
 ## Próxima etapa

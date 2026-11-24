@@ -144,7 +144,7 @@ export function PeopleTab({ canTouchDirection, hasTitular, isTitular, onTransfer
     <div className="space-y-3">
       {hasTitular && (
         <Card className="flex flex-wrap items-center justify-between gap-2 border-primary/40 bg-primary/5 p-3">
-          <p className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /> O bloco tem um <strong>titular</strong>: só ele concede ou remove a direção.</p>
+          <p className="min-w-0 flex-1 basis-56"><Crown className="mr-1.5 inline h-4 w-4 align-[-3px] text-primary" aria-hidden />O bloco tem um <strong>titular</strong>: só ele concede ou remove a direção.</p>
           {isTitular && <Button size="sm" variant="outline" onClick={onTransfer}>Transferir titularidade</Button>}
         </Card>
       )}

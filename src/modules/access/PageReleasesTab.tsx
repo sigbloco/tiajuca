@@ -73,24 +73,24 @@ export function PageReleasesTab() {
         )}
         <button type="button" className="text-sm font-semibold text-primary hover:underline" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Ocultar' : 'Ler mais'}</button>
         {isTitular
-          ? <Button variant="outline" className="w-full" disabled={!ready || set.isPending} onClick={closeAll}>Desmarcar tudo (todas as categorias, menos Direção)</Button>
+          ? <Button variant="outline" className="h-auto min-h-10 w-full whitespace-normal py-2 text-center" disabled={!ready || set.isPending} onClick={closeAll}>Desmarcar tudo (todas as categorias, menos Direção)</Button>
           : <p className="text-sm text-muted-foreground">Só o Titular altera a liberação. Aqui você pode conferir.</p>}
       </Card>
 
       <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[34rem] border-collapse text-sm">
+        <table className="w-full border-collapse text-sm md:min-w-[34rem]">
           <thead>
             <tr className="bg-muted">
-              <th scope="col" className="sticky left-0 z-10 min-w-[9.5rem] bg-muted px-3 py-2 text-left font-semibold">Página</th>
+              <th scope="col" className="sticky left-0 z-10 bg-muted px-2 py-2 text-left font-semibold md:min-w-[9.5rem] md:px-3">Página</th>
               {RELEASE_CATEGORIES.map((c) => {
                 const col = columnAll(c.key)
                 return (
-                  <th key={c.key} scope="col" className="min-w-[5.5rem] px-1 py-2 text-center font-semibold" title={c.label}>
-                    <span className="block"><span className="hidden md:inline">{c.label}</span><span className="md:hidden">{c.short}</span></span>
+                  <th key={c.key} scope="col" className="w-[3.25rem] px-0.5 py-2 text-center align-top font-semibold md:w-auto md:min-w-[5.5rem] md:px-1" title={c.label}>
+                    <span className="block"><span className="hidden md:inline">{c.label}</span><span className="text-xs md:hidden">{c.short.split('/').map((part, i) => <span key={part}>{i > 0 && <>/<wbr /></>}{part}</span>)}</span></span>
                     {isTitular && (
                       // O rótulo não muda: ligado (destacado) = tudo marcado; clicar de novo desmarca tudo.
                       <button type="button" aria-pressed={col.allOn} disabled={!ready || set.isPending || col.cells.length === 0} onClick={col.toggle}
-                        className={cn('mt-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50',
+                        className={cn('mt-1 min-h-9 w-full rounded-md border px-1 py-0.5 text-xs font-semibold leading-tight disabled:opacity-50 md:w-auto md:whitespace-nowrap md:px-1.5',
                           col.allOn ? 'border-primary bg-primary text-primary-foreground hover:bg-primary' : 'border-border bg-card hover:bg-muted')}>
                         Marcar tudo
                       </button>
@@ -103,7 +103,7 @@ export function PageReleasesTab() {
           <tbody>
             {RELEASE_PAGES.map((p) => (
               <tr key={p.key} className={cn('border-t border-border', p.isHub && 'bg-muted/40')}>
-                <th scope="row" className={cn('sticky left-0 z-10 px-3 py-2 text-left', p.isHub ? 'bg-muted font-bold' : 'bg-background font-normal', p.hub && 'pl-7')}>{p.label}</th>
+                <th scope="row" className={cn('sticky left-0 z-10 break-words px-2 py-2 text-left md:px-3', p.isHub ? 'bg-muted font-bold' : 'bg-background font-normal', p.hub && 'pl-5 md:pl-7')}>{p.label}</th>
                 {RELEASE_CATEGORIES.map((c) => {
                   const ok = hasAccess(p.key, c.key)
                   const off = hubOff(p.key, c.key)
@@ -112,7 +112,7 @@ export function PageReleasesTab() {
                   const changed = draft.has(rowKey(p.key, c.key))
                   const why = !ok ? `${c.label} não tem acesso a esta página em Permissões dos papéis.` : off ? `Libere primeiro a área ${releasePage(p.hub!)?.label} para ${c.label}.` : undefined
                   return (
-                    <td key={c.key} className={cn('px-1 py-2 text-center', changed && 'bg-warning/20')} title={why}>
+                    <td key={c.key} className={cn('px-0.5 py-2 text-center md:px-1', changed && 'bg-warning/20')} title={why}>
                       <input type="checkbox" className="h-5 w-5 align-middle" aria-label={`${p.label} para ${c.label}`} checked={checked} disabled={disabled}
                         onChange={(e) => stage([{ page: p.key, category: c.key, released: e.target.checked }])} />
                     </td>

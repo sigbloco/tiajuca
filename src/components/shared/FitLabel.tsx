@@ -48,8 +48,8 @@ export function FitChoice({ options }: { options: string[] }) {
   }, [key])
   return (
     <>
-      <span ref={label}>{options[idx]}</span>
-      {options.map((o, i) => <span key={o} ref={(el) => { probes.current[i] = el }} aria-hidden className="pointer-events-none invisible absolute left-0 top-0 -z-10 whitespace-nowrap">{o}</span>)}
+      <span ref={label} data-fit-choice>{options[idx]}</span>
+      {options.map((o, i) => <span key={o} ref={(el) => { probes.current[i] = el }} data-fit-probe aria-hidden className="pointer-events-none invisible absolute left-0 top-0 -z-10 whitespace-nowrap">{o}</span>)}
     </>
   )
 }

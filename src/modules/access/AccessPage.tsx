@@ -1,4 +1,4 @@
-import { FitWord } from '@/components/shared/FitText'
+import { FitChoice } from '@/components/shared/FitLabel'
 import { ButtonRow } from '@/components/shared/ButtonRow'
 import { useRememberedState } from '@/core/rememberedState'
 import { useRegisterCrumb } from '@/core/breadcrumb'
@@ -71,9 +71,10 @@ export function AccessPage() {
     <div className="space-y-4">
       <h1>Acesso e papéis</h1>
       <ButtonRow role="tablist">
-        {[['people', 'Pessoas'], ['perms', 'Permissões dos papéis'], ['releases', 'Liberação de páginas']].map(([k, l]) => (
+        {([['people', ['Pessoas']], ['perms', ['Permissões dos papéis', 'Permissões']], ['releases', ['Liberação de páginas', 'Liberação']]] as const).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k as typeof tab)}
-            className={cn('rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === k && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitWord>{l}</FitWord></button>
+            aria-label={l[0]}
+            className={cn('relative min-h-11 rounded-lg border border-border px-3 py-2 font-semibold hover:bg-muted', tab === k && 'border-primary bg-primary text-primary-foreground hover:bg-primary')}><FitChoice options={[...l]} /></button>
         ))}
       </ButtonRow>
       {tab === 'people' ? <PeopleTabContainer /> : tab === 'perms' ? <PermissionsMatrix /> : <PageReleasesTab />}

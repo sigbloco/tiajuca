@@ -262,17 +262,18 @@ function AdminBilling() {
         <Button variant="outline" disabled={copy.isPending} onClick={() => copy.mutate()}><ClipboardCopy className="h-4 w-4" /> Copiar inadimplentes</Button>
       </ButtonRow>
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      {/* Celular: a busca na largura toda e os dois seletores lado a lado embaixo; da tela pequena em diante, tudo numa linha. */}
+      <div className="grid grid-cols-2 gap-2 sm:flex">
+        <div className="relative col-span-2 min-w-0 sm:flex-1">
           <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar pelo nome" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+          <Input className="pl-9" aria-label="Buscar pelo nome" placeholder="Buscar pelo nome" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
         </div>
-        <Select className="w-44" aria-label="Naipe" value={naipe} onChange={(e) => setNaipe(e.target.value)}>
+        <Select className="min-w-0 sm:w-44 sm:shrink-0" aria-label="Naipe" value={naipe} onChange={(e) => setNaipe(e.target.value)}>
           <option value="">Todos os naipes</option>
           {(sections.data ?? []).map((x) => <option key={x.id} value={x.name}>{x.name}</option>)}
           <option value="Sem naipe">Sem naipe</option>
         </Select>
-        <Select className="w-40" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as ChargeStatus | '')}>
+        <Select className="min-w-0 sm:w-40 sm:shrink-0" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as ChargeStatus | '')}>
           <option value="">Todos</option>
           {Object.entries(CHARGE_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </Select>

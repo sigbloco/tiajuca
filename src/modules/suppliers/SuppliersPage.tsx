@@ -204,13 +204,12 @@ export function SuppliersPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1>Fornecedores</h1>
-        <div className="flex gap-2">
-          <FilterBar value={filter} onChange={setFilter} />
-
+        <div className="flex flex-wrap gap-2">
           {canManage && <Button variant="outline" onClick={() => setCatSheet(true)}><Tags className="h-4 w-4" /> Categorias</Button>}
           {canManage && <Button variant="add" onClick={() => setSheet({ sup: null, category: '' })} disabled={!(cats.data ?? []).some((c) => c.is_active)}><Plus className="h-4 w-4" /> Novo</Button>}
         </div>
       </div>
+      <FilterBar value={filter} onChange={setFilter} />
       {loading && <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14" />)}</div>}
       {!loading && (cats.data ?? []).length === 0 && <EmptyState>Nenhuma categoria ainda.{canManage ? ' Crie categorias (ex.: Sonorização) e depois cadastre os fornecedores.' : ''}</EmptyState>}
       {groups.map(({ cat, items }) => (
