@@ -1,7 +1,8 @@
-import { Lock } from 'lucide-react'
+import { ChevronDown, Lock } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { confirmBox } from '@/components/shared/DialogHost'
 import { useLocation } from 'react-router-dom'
-import { cn } from '@/components/ui/primitives'
+import { Button, cn } from '@/components/ui/primitives'
 import { useOrganization } from '@/core/organization'
 import { hasPermission } from '@/core/permissions'
 import { useCategoryAccess, usePageReleaseRows, useSetReleases } from '@/modules/access/pageReleaseData'
@@ -13,6 +14,7 @@ import { RELEASE_CATEGORIES, pageAccessible, pageKeyForPath, rawReleased, releas
  * Subpágina de uma área só pode ser marcada com a área liberada.
  * Só aparece na própria página (não nas subpáginas, como configurações, editor ou chamada, que mudariam a página-mãe sem
  * que se perceba), e cada toque pede confirmação: muda o que um papel inteiro vê.
+ * Fica no começo da página (rola junto, fora do topo fixo) e recolhida numa linha com o resumo; "Alterar" abre as caixas.
  */
 export function PageReleaseBar({ base }: { base: string }) {
   const { realMembership } = useOrganization()
@@ -22,18 +24,31 @@ export function PageReleaseBar({ base }: { base: string }) {
   const rows = usePageReleaseRows()
   const access = useCategoryAccess(seen)
   const set = useSetReleases()
+  const [open, setOpen] = useState(false)
+  useEffect(() => setOpen(false), [pathname])
   const rest = pathname.slice(base.length)
   const segs = rest.split('/').filter(Boolean)
   const key = segs.length > 1 || segs[0] === 'vagas' ? null : pageKeyForPath(rest)
   const page = key ? releasePage(key) : undefined
   if (!seen || !page || page.alias) return null
   const ready = !!rows.data && !!access.data
+  const released = RELEASE_CATEGORIES.filter((c) => {
+    const hasAccess = !access.data || pageAccessible(page, access.data[c.key])
+    const hubOff = !!page.hub && !rawReleased(rows.data ?? new Map(), page.hub, c.key)
+    return hasAccess && !hubOff && rawReleased(rows.data ?? new Map(), page.key, c.key)
+  }).map((c) => c.label)
+  const summary = !ready ? 'carregando' : released.length ? released.join(', ') : 'só o Titular'
 
   return (
-    <div className="border-t border-border/60 py-1.5" role="group" aria-label="Página liberada para">
-      <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Lock className="h-3.5 w-3.5" aria-hidden /> Página liberada para:</p>
+    <div className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-1.5" role="group" aria-label="Página liberada para">
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5 align-[-2px]" aria-hidden /><span className="font-semibold">Página liberada para:</span> {summary}</p>
+        <Button type="button" size="sm" variant="outline" className="shrink-0" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {isTitular ? 'Alterar' : 'Detalhes'} <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+        </Button>
+      </div>
       {/* Celular: 2+2 de colunas iguais. A partir da tela média: as 4 numa linha, também de colunas iguais. */}
-      <div className="grid grid-cols-2 items-center gap-1.5 md:grid-cols-4">
+      {open && <div className="mt-1.5 grid grid-cols-2 items-center gap-1.5 md:grid-cols-4">
         {RELEASE_CATEGORIES.map((c) => {
           const hasAccess = !access.data || pageAccessible(page, access.data[c.key])
           const hubOff = !!page.hub && !rawReleased(rows.data ?? new Map(), page.hub, c.key)
@@ -56,7 +71,7 @@ export function PageReleaseBar({ base }: { base: string }) {
             </label>
           )
         })}
-      </div>
+      </div>}
     </div>
   )
 }

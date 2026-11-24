@@ -257,8 +257,6 @@ export function AppShell() {
             <p className="ml-auto hidden min-w-0 break-words text-right font-semibold md:block">{membership.display_name}</p>
             <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" aria-label="Sair" title="Sair" onClick={() => signOut()}><LogOut className="h-4 w-4 shrink-0" /><span className="hidden md:inline">Sair</span></Button>
           </div>
-          {/* Titular marca para quem a página aberta está liberada; a Direção só vê. */}
-          <PageReleaseBar base={base} />
         </div>
         {/* Topo fixo: caminho de navegação e ciclo acompanham a rolagem em todo o app. */}
         <div ref={topRef} className="sticky top-[calc(var(--viewas-h,0px)+var(--appbar-h,3rem))] z-30 -mx-4 -mt-3 mb-3 [&:not(:has(>:not(#edit-actions-slot:empty)))]:hidden border-b border-border bg-background px-4 pb-1.5 pt-1.5 md:top-[calc(var(--viewas-h,0px)+var(--appbar-h,3rem))] md:-mx-8 md:-mt-3 md:px-8 md:pt-3">
@@ -283,6 +281,8 @@ export function AppShell() {
           </div>
         <div id="edit-slot" className="-mx-4 md:-mx-8" />
         <div className="page-body">
+          {/* Titular marca para quem a página aberta está liberada; a Direção só vê. Rola com a página (fora do topo fixo). */}
+          <PageReleaseBar base={base} />
           <InactiveNotice />
           {denied ? <NoAccess base={base} /> : blocked ? <NotReleased base={base} /> : <Outlet />}
         </div>

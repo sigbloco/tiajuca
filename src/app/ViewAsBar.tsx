@@ -40,12 +40,15 @@ export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à col
   const { isInactive } = useMemberStatus()
   const barRef = useRef<HTMLDivElement>(null)
   const [chosen, setChosen] = useState<CatKey | ''>('')
-  // Altura da barra, para o topo fixo do app ficar logo abaixo dela (sem sobrepor).
+  // Altura da barra, para o topo fixo do app ficar logo abaixo dela (sem sobrepor). Só fica fixa durante a visualização;
+  // fora dela rola com a página, e o topo fixo começa no alto da tela.
+  const sticky = !!viewAs
   useEffect(() => {
     const el = barRef.current
-    document.documentElement.style.setProperty('--viewas-h', (el?.offsetHeight ?? 0) + 'px')
+    const h = () => (sticky && el ? el.offsetHeight : 0) + 'px'
+    document.documentElement.style.setProperty('--viewas-h', h())
     if (!el) return
-    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--viewas-h', el.offsetHeight + 'px'))
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--viewas-h', h()))
     ro.observe(el)
     return () => ro.disconnect()
   })
@@ -123,7 +126,7 @@ export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à col
   const apply = (p: Person | undefined) => setViewAs(p ? { member_id: p.id, display_name: p.name, ...(p.virtual ? { virtual: p.virtual } : {}) } : null)
 
   return (
-    <div ref={barRef} className={cn('sticky top-0 z-50 border-b border-border px-3 py-1.5 text-sm', viewAs ? 'bg-warning text-foreground' : 'bg-muted', contained && 'px-4')}>
+    <div ref={barRef} className={cn('border-b border-border px-3 py-1.5 text-sm', viewAs ? 'sticky top-0 z-50 bg-warning text-foreground' : 'relative bg-muted', contained && 'px-4')}>
       <div className={contained ? 'mx-auto max-w-xl' : undefined}>
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4 shrink-0" aria-hidden />
@@ -153,14 +156,14 @@ export function ViewAsBar({ contained = false }: { /** Alinha o conteúdo à col
         )}
         {viewAs && (
           <Button size="sm" variant="outline" className="h-8 shrink-0 bg-card" onClick={() => { setViewAs(null); setChosen('') }}>
-            <X className="h-4 w-4" /> <span className="hidden sm:inline">Voltar a mim</span><span className="sm:hidden">Sair</span>
+            <X className="h-4 w-4" /> <span className="hidden sm:inline">Voltar a mim</span><span className="sm:hidden">Voltar</span>
           </Button>
         )}
       </div>
       {viewAs && (
         <p className="mt-1 text-xs">
           {viewAsLoading ? 'Carregando o acesso deste perfil' : 'Menus e telas seguem o acesso de um perfil'}{catLabel ? <>: <strong>{catLabel}</strong>{viewAs.virtual ? '' : <> · {viewAs.display_name}</>}</> : null}.
-          {' '}Os dados e as ações continuam sendo os <strong>seus</strong> (você ainda é direção): confira o que o perfil vê, mas edite com cuidado.
+          {' '}Dados e ações continuam sendo os <strong>seus</strong>: edite com cuidado.
         </p>
       )}
       </div>
