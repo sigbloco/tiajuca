@@ -22,8 +22,7 @@ import { maskPhone } from '@/components/ui/masked-inputs'
 import { WhatsAppIcon } from './MemberSection'
 import { isPastCycle, useCycleStatuses, useCycles } from '@/modules/cycles/service'
 import { useCatalog } from '@/modules/structure/CatalogEditor'
-import { MemberDetailSheet } from './MemberDetailSheet'
-import { MemberDirectory } from './MemberDirectory'
+import { MemberCardSheet, MemberDetailSheet } from './MemberDetailSheet'
 import { ReactivationRequests } from './Reactivation'
 import { type MemberRow } from './service'
 import { NewMemberSheet } from './NewMemberSheet'
@@ -31,6 +30,8 @@ import { MembersTrash } from './MembersTrash'
 
 interface GroupMember extends MemberRow {
 }
+/** Linha da função `member_directory_tree` (integrante ativo): só campos permitidos, sem e-mail, ano de nascimento nem remuneração. */
+interface DirRow { member_id: string; full_name: string; display_name: string | null; phone: string | null; social_handle: string | null; birth_md: string | null; kinds: string[] | null; parts: { instrument_id: string | null; function_id: string | null }[] | null }
 interface Leaf { key: string; label: string; members: GroupMember[] }
 interface TreeData { sectionList: { id: string; name: string; sort_order: number; is_active: boolean }[]; map: Map<string, Map<string, Map<string, Leaf>>>; total: number }
 
@@ -50,13 +51,25 @@ const TYPE_OPTIONS: [string, string][] = [['aluno', 'Alunos'], ['regente', 'Rege
  */
 export function MembersPage({ lockedCategory, title = 'Integrantes' }: { lockedCategory?: string; title?: string } = {}) {
   const seesOthers = usePermission('members.read', 'group')
-  if (!seesOthers && !lockedCategory) return <MemberDirectory title={title} />
-  return <MembersTree lockedCategory={lockedCategory} title={title} />
+  // Integrante e colaborador (sem leitura do grupo): a mesma árvore, só com os ativos do ciclo atual e campos permitidos.
+  return <MembersTree lockedCategory={lockedCategory} title={title} directory={!seesOthers && !lockedCategory} />
 }
 
-function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title: string }) {
+function MembersTree({ lockedCategory, title, directory = false }: { lockedCategory?: string; title: string; /** Visão do integrante: dados da função `member_directory_tree`, ficha só de leitura. */ directory?: boolean }) {
   const orgId = useOrgId()
   const qc = useQueryClient()
+  const dir = useQuery({
+    queryKey: ['members', orgId, 'directory-tree'],
+    enabled: directory,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('member_directory_tree', { p_org: orgId })
+      if (error) throw error
+      return (data ?? []) as DirRow[]
+    },
+  })
+  // Ano de nascimento nunca chega aqui: a data vira "2000-MM-DD" só para a ficha mostrar dia e mês (o ano não é exibido para quem não é da equipe).
+  const dirMembers = useMemo(() => (dir.data ?? []).map((r): GroupMember => ({ id: r.member_id, full_name: r.full_name, display_name: r.display_name, email: null, phone: r.phone, social_handle: r.social_handle, birth_date: r.birth_md ? `2000-${r.birth_md}` : null, user_id: null, archived_at: null })), [dir.data])
+  const dirById = useMemo(() => new Map((dir.data ?? []).map((r) => [r.member_id, r])), [dir.data])
   // Quem não gerencia (ex.: Professor/Monitor) abre a ficha só para ver: olho e "Ver ficha", não lápis.
   const canEditMembers = usePermission('members.manage')
   const wantedCategory = lockedCategory ?? ''
@@ -90,6 +103,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
   })
   const staffKinds = useQuery({
     queryKey: ['staff-assignments', orgId, 'kinds'],
+    enabled: !directory,
     queryFn: async () => {
       const { data, error } = await supabase.from('staff_assignments').select('member_id, staff_kind, cycles!inner(is_current)').eq('organization_id', orgId).is('valid_to', null).eq('cycles.is_current', true).limit(3000)
       if (error) throw error
@@ -105,6 +119,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
   const baseKey = (n: string) => { const w = baseName(n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()); return w === 'aluno' ? 'aluno' : w === 'senior' ? 'senior' : w.startsWith('musico') ? 'musico' : undefined }
   const keyByName = new Map((feeCats.data ?? []).filter((c) => c.base_key || c.system_key).map((c) => [c.name, (c.base_key ?? c.system_key) as string]))
   const typesOf = (memberId: string) => {
+    if (directory) return new Set<string>(dirById.get(memberId)?.kinds ?? [])
     const out = new Set<string>(staffKinds.data?.get(memberId) ?? [])
     for (const cat of allCategories(memberId)) {
       const k = keyByName.get(cat) ?? baseKey(cat)
@@ -148,6 +163,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
   // Só ciclos com gente (o Junino vazio não vira botão). Mais recente primeiro.
   const allRows = useQuery({
     queryKey: ['members', orgId, 'cycle-rows'],
+    enabled: !directory,
     queryFn: async () => {
       const { data, error } = await supabase.from('member_cycles').select('member_id, cycle_id, status_id').limit(20000)
       if (error) throw error
@@ -155,14 +171,15 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
     },
   })
   const currentCycle = cycles?.find((c) => c.is_current)
-  const activeCycleId = globalCycleId || currentCycle?.id || ''
+  // A visão do integrante é sempre a do ciclo atual (a função só entrega os ativos dele).
+  const activeCycleId = directory ? currentCycle?.id ?? '' : globalCycleId || currentCycle?.id || ''
   const activeCycle = cycles?.find((c) => c.id === activeCycleId)
   const pastCycle = !!activeCycle && isPastCycle(activeCycle)
 
   // Categoria e participação (instrumento/função) de cada pessoa NO CICLO escolhido.
   const cats = useQuery({
     queryKey: ['members', orgId, 'categories', activeCycleId],
-    enabled: !!activeCycleId,
+    enabled: !!activeCycleId && !directory,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('list_member_categories', { p_org: orgId, p_cycle: activeCycleId })
       if (error) throw error
@@ -174,7 +191,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
   const allCategories = (id: string) => (cats.data ?? []).filter((c) => c.member_id === id).map((c) => c.category_name)
   const parts = useQuery({
     queryKey: ['members', orgId, 'cycle-participations', activeCycleId],
-    enabled: !!activeCycleId,
+    enabled: !!activeCycleId && !directory,
     queryFn: async () => {
       const { data, error } = await supabase.from('cycle_participations').select('member_id, instrument_id, function_id').eq('cycle_id', activeCycleId).limit(5000)
       if (error) throw error
@@ -186,6 +203,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
 
   const members = useQuery({
     queryKey: ['members', orgId, 'grouped'],
+    enabled: !directory,
     queryFn: async () => {
       const { data, error } = await supabase.from('members')
         .select('id, full_name, display_name, email, phone, social_handle, birth_date, user_id, archived_at')
@@ -208,8 +226,11 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
     }
     return out
   }, [statuses, allRows.data])
-  const statusOf = (memberId: string) => statusByCycle.get(activeCycleId)?.get(memberId)
-  const inCycle = (memberId: string, cycleId: string) => !!statusByCycle.get(cycleId)?.has(memberId)
+  // Na visão do integrante todos são ativos do ciclo atual (é o que a função entrega).
+  const activeStatus = useMemo(() => (statuses ?? []).find((s) => s.counts_as_active && !s.is_waitlist), [statuses])
+  const statusOf = (memberId: string) => (directory ? activeStatus : statusByCycle.get(activeCycleId)?.get(memberId))
+  const inCycle = (memberId: string, cycleId: string) => directory || !!statusByCycle.get(cycleId)?.has(memberId)
+  const partsOf = (memberId: string) => (directory ? dirById.get(memberId)?.parts ?? [] : parts.data?.get(memberId) ?? [])
 
   const tree = useMemo(() => {
     const secs = sections.data ?? []
@@ -225,7 +246,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
       if (!leaf.members.includes(m)) leaf.members.push(m)
       leaves.set(leafKey, leaf); subs.set(subId, leaves); map.set(secId, subs)
     }
-    for (const m of members.data ?? []) {
+    for (const m of directory ? dirMembers : members.data ?? []) {
       if (!inCycle(m.id, activeCycleId)) continue
       const st = statusOf(m.id)
       if (showActive !== showInactive) {
@@ -239,7 +260,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
       if (wantedCategory && !allCategories(m.id).includes(wantedCategory)) continue
       if (!matchesText(`${m.full_name} ${m.display_name ?? ''} ${m.email ?? ''}`, filter.search)) continue
       // Instrumento/função NAQUELE ciclo (participação do próprio ciclo).
-      const links = parts.data?.get(m.id) ?? []
+      const links = partsOf(m.id)
       let placed = false
       const filtering = Boolean(naipeF || atvF || mine)
       const mineRules = myStaff.data ?? []
@@ -261,7 +282,7 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
     const none = { id: 'none', name: 'Sem naipe definido', sort_order: 9999, is_active: true }
     const sectionList = [...secs, none].filter((s) => map.has(s.id) && (!sectionFilter || s.id === sectionFilter))
     return { searching, data: { sectionList, map, total: seen.size } as TreeData }
-  }, [members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
+  }, [directory, dirMembers, dirById, activeStatus, members.data, sections.data, instruments.data, functions.data, statusByCycle, activeCycleId, filter, sectionFilter, wantedCategory, cats.data, parts.data, showActive, showInactive, types, staffKinds.data, naipeF, atvF, mine, myStaff.data])
   const total = tree.data.total
 
   const toggle = (k: string, current: boolean) => setOpen((o) => ({ ...o, [k]: !current }))
@@ -280,7 +301,20 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
     const leaves = [...(tree.data.map.get(sec.id)?.get('')?.values() ?? [])].filter((l) => !wantInst || l.label === wantInst)
     setOpen((o) => ({ ...o, [sk0]: true, ...Object.fromEntries(leaves.map((l) => [`${sk0}:${l.key}`, true])) }))
   }, [wantNaipe, wantInst, tree, activeCycleId])
-  const loading = members.isLoading || sections.isLoading || instruments.isLoading || allRows.isLoading
+  const loading = members.isLoading || dir.isLoading || sections.isLoading || instruments.isLoading || allRows.isLoading
+  // Onde a pessoa toca/atua no ciclo (para a ficha de leitura do integrante): "Caixa de guerra · Percussão".
+  const placesOf = (memberId: string) => {
+    const secName = new Map((sections.data ?? []).map((s) => [s.id, s.name]))
+    const instById = new Map((instruments.data ?? []).map((i) => [i.id, i]))
+    const fnById = new Map((functions.data ?? []).map((x) => [x.id, x]))
+    return [...new Set(partsOf(memberId).map((l) => {
+      const inst = l.instrument_id ? instById.get(l.instrument_id) : undefined
+      const fn = l.function_id ? fnById.get(l.function_id) : undefined
+      const name = inst?.name ?? fn?.name
+      const sec = secName.get(inst?.section_id ?? fn?.section_id ?? '')
+      return name ? (sec && sec !== name ? `${name} · ${sec}` : name) : ''
+    }).filter(Boolean))]
+  }
 
   // Dois integrantes com o mesmo primeiro nome (dois "Leonardo"): a linha ganha o último sobrenome, além do "como prefere ser chamado" embaixo.
   const givenCounts = new Map<string, number>()
@@ -365,15 +399,15 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
       <ParticipationRequests />
 
       <div className="space-y-3">
-        <ButtonRow role="group" aria-label="Situação">
+        {!directory && <ButtonRow role="group" aria-label="Situação">
           {([[showActive, setShowActive, showInactive, pastCycle ? 'Participaram' : 'Ativos'], [showInactive, setShowInactive, showActive, pastCycle ? 'Não participaram' : 'Inativos']] as const).map(([on, set, other, label]) => (
             <button key={label} type="button" aria-pressed={on} className={chip(on)} onClick={() => { if (on && !other) return; set(!on) }}>{label}</button>
           ))}
-        </ButtonRow>
+        </ButtonRow>}
         {!lockedCategory && (
           <>
             {/* Divisória sutil entre a situação (Ativos/Inativos) e o tipo: uma linha fina que some nas pontas. */}
-            <div aria-hidden className="h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+            {!directory && <div aria-hidden className="h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />}
             {/* Sem caber numa linha, 3 + 2 (nunca um por linha): os curtos em cima, os longos embaixo. */}
             <ButtonRow role="group" aria-label="Tipo de integrante" split={[3, 2]}>
               {TYPE_OPTIONS.map(([k, label0]) => { const label = typeChip(k, label0); return (
@@ -410,13 +444,15 @@ function MembersTree({ lockedCategory, title }: { lockedCategory?: string; title
 
       <ReactivationRequests />
       {members.isError && <Card className="p-4 text-destructive">{friendlyError(members.error)}</Card>}
+      {dir.isError && <Card className="p-4 text-destructive">{friendlyError(dir.error)}</Card>}
       {loading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
 
       {renderSections(tree.data)}
       {!loading && total === 0 && <Card className="p-8 text-center text-muted-foreground">Nenhum integrante encontrado neste ciclo com esses filtros.</Card>}
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && closeSheet()}>
-        {selected && <MemberDetailSheet onArchived={() => { qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }); closeSheet() }} onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
+        {selected && directory && <MemberCardSheet member={selected} onCrumbClick={stayOnList} places={placesOf(selected.id)} />}
+        {selected && !directory && <MemberDetailSheet onArchived={() => { qc.invalidateQueries({ queryKey: ['members'] }); qc.invalidateQueries({ queryKey: ['members-archived'] }); closeSheet() }} onCrumbClick={stayOnList} member={selected} category={categoryOf.get(selected.id)?.category_name} onChanged={(p) => setSelected((s) => (s ? { ...s, ...p } : s))} />}
       </Sheet>
 
       <MembersTrash />

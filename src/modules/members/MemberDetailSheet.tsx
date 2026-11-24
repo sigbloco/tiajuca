@@ -389,6 +389,25 @@ function RelationWithBlock({ memberId }: { memberId: string }) {
   )
 }
 
+/**
+ * Ficha de leitura do integrante comum (página Integrantes sem leitura do grupo): foto, contato (sem e-mail),
+ * aniversário com dia e mês e onde a pessoa toca no ciclo atual. Os dados vêm de `member_directory_tree`, já filtrados no banco.
+ */
+export function MemberCardSheet({ member, places, onCrumbClick }: { member: MemberRow; places: string[]; onCrumbClick?: () => void }) {
+  const labeler = usePersonLabeler()
+  return (
+    <SheetContent onCrumbClick={onCrumbClick} title={labeler(member)} description={member.full_name} className="w-full rounded-none border-0 p-2 shadow-none md:p-2">
+      <MemberPhotoEditor memberId={member.id} name={member.full_name} canEdit={false} />
+      <ContactLinks member={member} />
+      {places.length > 0 && (
+        <MemberSection title="No ciclo atual">
+          <ul className="space-y-1">{places.map((p) => <li key={p}>{p}</li>)}</ul>
+        </MemberSection>
+      )}
+    </SheetContent>
+  )
+}
+
 export function MemberDetailSheet({ member, category, onChanged = () => {}, onCrumbClick, onArchived }: { member: MemberRow; category?: string; onCrumbClick?: () => void; onChanged?: (p: Partial<MemberRow>) => void; onArchived?: () => void }) {
   const canManage = usePermission('members.manage')
   const canSensitive = usePermission('members.sensitive.read')

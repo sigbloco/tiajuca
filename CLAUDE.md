@@ -47,7 +47,7 @@ Comandos: `npm run typecheck`, `npm test`, `npx vite build`, `npm audit`. Não h
 | Backups, auditoria, matriz de permissões | — | — | — | sim (`members.manage` e `backups.manage` são travadas: não se delegam) |
 | Conceder papéis | — | — | — | Titular concede Direção; titularidade só por transferência |
 
-Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes de quem só vê o próprio cadastro: nomes dos ativos do ciclo atual (`member_directory_active`), sem ficha nem contato. Os escopos "Meu grupo" só existem onde o banco os usa. Tabela detalhada: seção 6 do [REVISAO.md](REVISAO.md).
+Inativo: só o próprio cadastro e o pedido de reativação. Página Integrantes de quem só vê o próprio cadastro (integrante ativo, colaborador): a mesma árvore por naipe e instrumento, só com os ativos do ciclo atual, por `member_directory_tree` (telefone/WhatsApp só de quem tem naipe em comum no ciclo atual, redes, aniversário só dia e mês, onde toca; nunca e-mail, ano de nascimento/idade nem participação remunerada) e ficha só de leitura (`MemberCardSheet`). Os escopos "Meu grupo" só existem onde o banco os usa. Tabela detalhada: seção 6 do [REVISAO.md](REVISAO.md).
 
 ## Convenções de código
 
